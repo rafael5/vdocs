@@ -517,9 +517,13 @@ distributions above become exact unit assertions.
 
 ## 9. Mapping onto the vdocs architecture
 
-vdocs already splits **inventory** (no downloads) from **fetch** (downloads), which matches the desired
-workflow. This spec's crawl = vdocs `crawl`; this spec's enrichment = vdocs `catalog`. Required changes
-to the current vdocs stages so they implement this spec from the outset:
+This spec *is* the **inventory medallion** — its own bronze→silver→gold track, independent of the
+document medallion and gating it at `fetch` (vdocs design §4, §8): **inv-bronze** = `crawl` →
+`catalog.raw`; **inv-silver** = `catalog` → `catalog.enriched` (this spec's enrichment); **inv-gold** =
+`serve-inventory` → the **gold inventory** (curated/validated/queryable selection surface + the fetch
+gate, joined with `state.db:acquisitions`, §9.5). The lake path is `inventory/{bronze,silver,gold}/…`,
+*not* `documents/bronze/…`. Required changes to the current vdocs stages so they implement this from the
+outset:
 
 ### 9.1 `kernel/http`
 Add a descriptive **User-Agent**, **retry/backoff on 5xx**, follow redirects, and **return the final
@@ -528,12 +532,13 @@ URL**. Expose an inter-request **delay** (config). (Design §9.2 already lists `
 ### 9.2 `crawl` stage
 - Resolve level-3 links against the **final** application-page URL (already fixed: commit `209361a`).
 - Honor the config delay; skip non-200 pages with a WARN; de-dup by secid/appid (already done).
-- Output `bronze/catalog/raw.{json,csv}` = the §3.5 raw inventory.
+- Output `inventory/bronze/catalog.raw.{json,csv}` = the §3.5 raw inventory (inv-bronze).
 
 ### 9.3 `catalog` stage = the enrichment
 Implement passes 1–5 **and Stage C** as **pure functions** (`catalog_pure.py`) + a thin driver,
-producing the §5 **36-column** enriched inventory as `bronze/catalog/enriched.{json,csv}` (plus the
-schema JSON). The current vdocs `catalog` is a thin subset (patch id, doc_type, group_key, drift) — it
+producing the §5 **36-column** enriched inventory as `inventory/silver/catalog.enriched.{json,csv}`
+(inv-silver, plus the schema JSON); `serve-inventory` then promotes it to the gold inventory (inv-gold)
+behind the fetch gate. The current vdocs `catalog` is a thin subset (patch id, doc_type, group_key, drift) — it
 must be extended to the full column set, the 5-pass ordering, noise classification, companion pairing,
 canonical labels, the manual/peer layers, and `system_type`/`cots_dependent`. **Vocabularies live in
 `registries/`** (the discovery-is-data tenet): `registries/doc-types` (DOC_TYPE_PATTERNS + suffix map),

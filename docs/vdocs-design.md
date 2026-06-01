@@ -215,40 +215,37 @@ Recorded so the rewrite doesn't drift back. (Full analysis: `vista-docs-code-rev
 ## 4. Architecture at a glance — the medallion model
 
 v2 is organized as a **medallion data lake** (bronze → silver → gold), the data-engineering
-industry's standard frame for exactly this raw→curated progression. Each layer is a set of
-**declared artifacts**; each arrow is a **stage** with a contract.
+industry's standard frame for the raw→curated progression. Crucially there are **two independent
+medallion tracks**, not one — the **inventory medallion** (control plane; site-wide; metadata only)
+and the **document medallion** (data plane; the selected subset; the heavy ETL on real bytes). Each
+track runs bronze→silver→gold on its own scope and cadence; they are joined only at the **fetch gate**.
+Each arrow is a **stage** with a contract. (The crawl/inventory is *not* document-bronze — it is the
+bronze of its own track.)
 
 ```
-                          ┌──────────────── BRONZE (immutable evidence) ─────────────────┐
-  VDL website ──crawl──►  catalog.raw ──catalog──►  catalog.enriched ──fetch──►  raw/ (docx·pdf, write-once)
-                          └───────────────────────────────────────────────────────────────┘
-                                                                                  │
-                          ┌──────────── SILVER (conformed, per-doc, versioned text) ─────┐
-                          │  convert ──►  text@converted  + assets/ (CAS images, write-once)
-                          │  discover ─►  reports/patterns ─curate─► registries/ (boilerplate · templates[doc_type×era] · phrases · glossary)
-                          │  enrich  ──►  text@enriched    (identity frontmatter baked)
-                          │  normalize ─►  text@normalized  + bundle sidecars (history, tables…)  [subtracts registries/ patterns]
-                          └───────────────────────────────────────────────────────────────┘
-                                                                                  │
-                          ┌──────────── GOLD (curated, derived, computable) ─────────────┐
-                          │  consolidate ─► consolidated/ (version groups)
-                          │  index       ─► index.db (documents, sections+FTS5, entities, quality; stable IDs) ← derived shred
-                          │  relate      ─► index.db:relations (doc↔entity, doc↔doc xref — knowledge graph)
-                          │  embed       ─► vectors.db (per-chunk embeddings — semantic index)
-                          │  fidelity    ─► reports/fidelity (per-doc S→T verdict; feeds the gate)
-                          │  manifest    ─► corpus-manifest.json + discovery.json (lineage + machine catalog)
-                          │  publish     ─► publish/ (human tree, markdown-only)
-                          │  validate    ─► HARD GATE (schema + lineage + anchors + fidelity verdict)
-                          └───────────────────────────────────────────────────────────────┘
-                                       │                                          │
-            ┌──────── SERVE (read-only over gold) ─────────┐                      │
-            │  push ─► github.com/vistadocs/vdl  (humans)  │◄─────────────────────┘
-            │  mcp  ─► MCP endpoint (agents):              │
-            │          hybrid search · fetch · entities ·  │◄── index.db + vectors.db + corpus bundles
-            │          xref · lineage                      │
-            └──────────────────────────────────────────────┘
+INVENTORY MEDALLION  ── control plane · entire VDL site · metadata only, no documents downloaded
+  🥉 BRONZE   VDL site ──crawl──►      catalog.raw          (raw scraped catalog — immutable evidence)
+  🥈 SILVER            ──catalog──►     catalog.enriched     (conformed per-record: patch identity,
+                                                             doc-type/labels, noise class, group +
+                                                             anchor keys, companion pairing, drift)
+  🥇 GOLD     ──validate+serve-inventory──►  the GOLD INVENTORY
+                                   (curated · validated · browsable + machine-queryable selection
+                                    surface, joined with state.db:acquisitions fetch status)
+                                            │
+        ═══════════════ FETCH GATE — gold inventory green + an explicit selection ═══════════════
+                                            ▼
+DOCUMENT MEDALLION  ── data plane · only the selected subset · turns bytes into corpus + machine views
+  🥉 BRONZE   ──fetch──►   raw/<sha256>.<docx|pdf> (write-once)  +  raw/index.json (derived CAS manifest)
+  🥈 SILVER   ──convert──► text@converted + assets/ (CAS images) ──discover──► reports/patterns ─curate─► registries/
+              ──enrich──►  text@enriched (identity FM) ──normalize──► text@normalized + sidecars (history·tables·refs)
+  🥇 GOLD     ──consolidate──► consolidated/ ──index──► index.db (+FTS5; stable IDs) ──relate──► index.db:relations
+              ──embed──► vectors.db ──fidelity──► reports/fidelity ──manifest──► corpus-manifest.json + discovery.json
+              ──publish──► publish/ ──validate──► HARD GATE (schema · lineage · anchors · fidelity verdict)
+                                            │
+   SERVE (read-only over document gold):  push ─► github.com/vistadocs/vdl (humans)  ·  mcp ─► MCP endpoint (agents)
+                                          ◄── index.db + vectors.db + corpus bundles
 
-  Orchestration state + lineage  ──►  state.db  (stage_runs, fingerprints)   [cross-cutting]
+  Cross-cutting:  state.db  (stage_runs · fingerprints · acquisitions)
 ```
 
 **Layer invariants:**
@@ -262,26 +259,30 @@ industry's standard frame for exactly this raw→curated progression. Each layer
   from silver). The publish tree is the human deliverable. Nothing in gold is a source of
   truth that isn't reproducible from silver + bronze.
 
-**Two planes: the inventory (control) plane and the document (data) plane.** The medallion layers
-(bronze→silver→gold) are the *vertical* axis; **orthogonal** to them the pipeline runs on two distinct
-planes, joined at the **fetch gate**. The medallion describes *how raw becomes curated*; the two planes
-describe *what scope each part operates at* — they are complementary views of the same one DAG, not two
-pipelines.
+**Two medallion tracks (not one): the inventory medallion and the document medallion.** This is the
+key structural fact and the thing most easily gotten wrong: **`crawl`/`catalog` are not document-bronze
+— they are the bronze and silver of a *separate* medallion.** Each track runs its own bronze→silver→gold:
 
-- **Inventory / control plane — `crawl` → `catalog`.** A **site-wide, metadata-only census** of *every*
-  document the VDL exposes (~8.8k links): identity, classification, noise, version/anchor keys, drift,
-  and per-document acquisition status. It downloads nothing. It is the **control plane** — the selection
-  surface, the gate on fetch (§8), the `state.db:acquisitions` status record (§5.5), and the drift/refresh
-  loop (§7.6) — and it refreshes on its **own cadence**, independently of document processing.
-- **Document / data plane — `fetch` → … → `publish`/`serve`.** The heavy ETL that turns *the selected
-  subset's* actual bytes into the markdown corpus and machine views. It advances **only for documents
-  that were selected and fetched**, always *driven from* the inventory.
+- **Inventory medallion — control plane** (`crawl` → `catalog` → serve-inventory). A **site-wide,
+  metadata-only census** of *every* document the VDL exposes (~8.8k links), downloading nothing.
+  *Bronze:* `catalog.raw` (raw scraped catalog — immutable evidence). *Silver:* `catalog.enriched`
+  (conformed per-record — identity, doc-type/labels, noise class, group + anchor keys, companion pairing,
+  drift). *Gold:* the **gold inventory** — the curated, validated, browsable + machine-queryable
+  selection surface, joined with `state.db:acquisitions` status. This track is the control plane: the
+  selection surface, the gate on fetch (§8), the acquisition-status record (§5.5), and the drift/refresh
+  loop (§7.6); it refreshes on its **own cadence**, independently of document processing.
+- **Document medallion — data plane** (`fetch` → … → `publish`/`serve`). The heavy ETL that turns *the
+  selected subset's* actual bytes into the markdown corpus and machine views. *Bronze:* `raw/<sha>`
+  fetched docx/pdf (write-once) + `raw/index.json`. *Silver:* `text@{converted,enriched,normalized}` +
+  `assets/`. *Gold:* `consolidated/`, `index.db`, `vectors.db`, `publish/`. It advances **only for
+  documents selected and fetched**, always *driven from* the inventory.
 
-The two are **decoupled by the fetch gate**: the inventory (full breadth) feeds a curated *selection*
-into the document plane (depth on a subset), and the `acquisitions` table (§5.5) is the join between
-"what exists" and "what we've acquired." You can re-crawl and re-enrich the inventory without touching
-the document plane; the document plane never runs ahead of a green inventory. Tenet #8 (the DAG is data)
-holds across both — this is one declared graph, viewed along two axes.
+The two tracks are **decoupled by the fetch gate**: the inventory medallion's *gold* (full breadth) feeds
+a curated *selection* into the document medallion's *bronze* (depth on a subset), and the `acquisitions`
+table (§5.5) is the join between "what exists" (inventory) and "what we've acquired" (documents). You can
+re-crawl and re-enrich the inventory — advancing the inventory track to gold — without touching the
+document track; the document track never runs ahead of a green gold inventory. Both are one declared DAG
+(tenet #8); the medallion layers below apply **within each track**.
 
 ---
 
@@ -323,34 +324,45 @@ A bundle is the unit of versioning in silver. The `text@*` trees are trees *of b
 
 ### 5.3 Layer → directory map
 
+The lake has **two medallion subtrees** — one per track (§4) — plus cross-cutting stores:
+
 ```
-$LAKE/                                   # DATA_DIR, default ~/data/vdocs, env-overridable
-  bronze/
-    catalog/raw.{csv,json}               # crawl
-    catalog/enriched.{csv,json}          # catalog
-    raw/<sha256>.<docx|pdf>              # fetch (content-addressed)
-    raw/index.json                       # sha256 → (app_code, title, source_url) map
-  assets/<sha256>.<ext>                  # convert (content-addressed image store)
-  silver/
-    text/01-converted/<app>/<slug>/...   # convert  (bundles)
-    text/02-enriched/<app>/<slug>/...    # enrich
-    text/03-normalized/<app>/<slug>/...  # normalize  (gold-quality bodies live here)
-  gold/
-    consolidated/<app>/<type>/...        # consolidate
-    corpus-manifest.json                 # manifest (lineage)
-    discovery.json                       # manifest (machine-discovery descriptor for agents — §14)
-    _shared/boilerplate/<id>.md          # normalize (canonical single-sourced boilerplate blocks; bodies reference these — §9.6)
-    glossary.md                          # normalize (single-sourced corpus glossary)
-    publish/<section>/<pkg>/...          # publish (human tree; markdown-only, images materialized+gitignored)
-  state.db                               # orchestration: stage_runs, fingerprints, lineage
-  index.db                               # derived corpus index + knowledge graph (rebuildable)
-  vectors.db                             # semantic index: per-chunk embeddings (rebuildable)
+$LAKE/                                       # DATA_DIR, default ~/data/vdocs, env-overridable
+
+  inventory/                                 # ── INVENTORY MEDALLION (control plane; metadata only)
+    bronze/catalog.raw.{csv,json}            #   crawl   — raw scraped catalog (immutable evidence)
+    silver/catalog.enriched.{csv,json}       #   catalog — conformed/enriched per-record inventory
+    gold/inventory.{json,db}                 #   serve-inventory — the GOLD INVENTORY (curated, queryable
+                                             #     selection surface + the fetch gate)
+    gold/inventory-publish/...               #   (optional human-browsable inventory table)
+    # inventory_status = inventory.gold ⋈ state.db:acquisitions  (fetch status — a view, §5.5)
+
+  documents/                                 # ── DOCUMENT MEDALLION (data plane; the selected subset)
+    bronze/raw/<sha256>.<docx|pdf>           #   fetch   — content-addressed, write-once
+    bronze/raw/index.json                    #   fetch   — derived CAS manifest (sha256 → provenance)
+    assets/<sha256>.<ext>                    #   convert — content-addressed image store
+    silver/text/01-converted/<app>/<slug>/   #   convert (bundles)
+    silver/text/02-enriched/<app>/<slug>/    #   enrich
+    silver/text/03-normalized/<app>/<slug>/  #   normalize (gold-quality bodies live here)
+    gold/consolidated/<app>/<type>/...       #   consolidate (version groups)
+    gold/_shared/boilerplate/<id>.md         #   normalize (single-sourced boilerplate — §9.6)
+    gold/glossary.md                         #   normalize (single-sourced corpus glossary)
+    gold/corpus-manifest.json                #   manifest (lineage)
+    gold/discovery.json                      #   manifest (machine-discovery descriptor — §14)
+    gold/publish/<section>/<pkg>/...         #   publish (human tree; markdown-only, images materialized+gitignored)
+
+  state.db                                   # cross-cutting: stage_runs, fingerprints, lineage, acquisitions
+  index.db                                   # derived document index + knowledge graph (rebuildable)
+  vectors.db                                 # semantic index: per-chunk embeddings (rebuildable)
   reports/
-    survey|headings|lexicon/...          # analyze (diagnostic, off critical path)
-    patterns/...                         # discover (CANDIDATE patterns + evidence, pre-curation — §9.6)
+    survey|headings|lexicon/...              # analyze (diagnostic, off critical path)
+    patterns/...                             # discover (CANDIDATE patterns + evidence, pre-curation — §9.6)
+    fidelity/...                             # fidelity (per-document verdicts)
 ```
 
-Numbered text trees (`01-`, `02-`, `03-`) make the silver progression self-evident on `ls`.
+Each track carries its own `bronze/ silver/ gold/`. Numbered text trees (`01-`, `02-`, `03-`) make the
+document-silver progression self-evident on `ls`. (The crawl/inventory artifacts are **not** under
+`documents/bronze/` — they are the inventory track's own bronze/silver/gold.)
 
 The **curated** pattern registries themselves are *not* in the lake — they are version-controlled
 config in the repo (`registries/`, §9.6/§11), because curation is a reviewable decision (a git PR),
@@ -752,42 +764,47 @@ schedulable via cron / systemd-timer; `vdocs run` remains the full build. Both d
 
 ## 8. The pipeline — stages and contracts
 
-The DAG, by medallion layer. This table is authoritative; the orchestrator derives order
-from it.
+The DAG, by track + medallion layer. This table is authoritative; the orchestrator derives order
+from it. The **Layer** column reads `<track>·<level>`: **INV** = the inventory medallion (control
+plane), **DOC** = the document medallion (data plane) (§4). The inventory track runs bronze→silver→gold
+(`crawl`→`catalog`→`serve-inventory`) and gates the document track at `fetch`; `crawl`/`catalog` are
+**not** document-bronze.
 
 | Layer | Stage | requires | produces | idempotency |
 |---|---|---|---|---|
-| 🥉 | **crawl** | `vdl` (external) | `catalog.raw` | FORCE_ONLY (network) |
-| 🥉 | **catalog** | `catalog.raw` | `catalog.enriched` — the **enriched VDL inventory** (the foundational bronze layer): full multi-pass enrichment + system classification per **[`vdl-crawl-spec.md`](vdl-crawl-spec.md)** (patch identity incl. multi-NS, doc-type/labels, `group_key` + version-free `anchor_key`, **noise classification**, companion pairing, drift). **Postflight HARD GATE** — inventory complete vs. the crawl, enriched, noise-classified, no information loss + sane distributions (crawl-spec §7) — `ok` only if green | SKIP_IF_UNCHANGED |
-| 🥉 | **fetch** | `catalog.enriched` **+ catalog `ok` (the inventory gate, green)** + an explicit **selection** + `state.db:acquisitions` (prior status) | `raw` (CAS docx/pdf), `state.db:acquisitions` (per-doc fetch status — the system of record), `raw/index.json` (derived CAS manifest) | SKIP_IF_UNCHANGED |
-| 🥈 | **convert** | `raw`, `raw/index.json` | `text@converted`, `assets` (CAS) | SKIP_IF_UNCHANGED |
-| 🥈 | **discover** | `text@converted` (corpus-global) | `reports/patterns` (candidate boilerplate / `(doc_type, era)` templates / dead phrases / glossary terms / structural patterns + evidence + proposed disposition) → proposes `registries/` updates (§9.6) | SKIP_IF_UNCHANGED |
-| 🥈 | **enrich** | `text@converted`, `catalog.enriched` | `text@enriched` (identity FM baked), `index.db:doc_meta_staged` | SKIP_IF_UNCHANGED |
-| 🥈 | **normalize** | `text@enriched`, `raw` (for source_sha256), `registries` (curated patterns) | `text@normalized` (+ `history.yaml`, `tables/*.csv`, `refs.yaml` sidecars; boilerplate referenced, template-scaffold stripped + `template_id` stamped, dead phrases deleted, glossary single-sourced; **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** §6.7) | SKIP_IF_UNCHANGED |
-| 🥇 | **consolidate** | `text@normalized`, `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage + retained prior bodies captured as travel-with sidecars; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
-| 🥇 | **index** | `text@normalized`, `consolidated` (grouping) | `index.db` (documents, doc_sections [all, with `is_latest`] **+ FTS5 over `is_latest` only — the search surface**, entities, quality, views; **stable IDs**) | SKIP_IF_UNCHANGED |
-| 🥇 | **relate** | `index.db` (documents, entities, sections) | `index.db:relations` (doc↔entity, doc↔doc xref, entity↔entity — the knowledge graph) | SKIP_IF_UNCHANGED |
-| 🥇 | **embed** | `index.db:doc_sections` (**`is_latest` only**) | `vectors.db` (per-chunk embeddings + ANN index over anchor/current sections; prior-version chunks excluded — §14.6) | SKIP_IF_UNCHANGED |
-| 🥇 | **fidelity** | `text@normalized`, `raw` (bronze `S`), `index.db` (structure/sections/template schema), `registries` (to dereference single-sourced content) | `reports/fidelity` (per-document migration-fidelity records — content/provenance/history axes, template compliance, TOC integrity — + corpus report; `fidelity-framework.md`) | SKIP_IF_UNCHANGED |
-| 🥇 | **manifest** | `consolidated`, `index.db`, `vectors.db`, `state.db` (lineage) | `corpus-manifest.json` + `discovery.json` | SKIP_IF_UNCHANGED |
-| 🥇 | **publish** | `corpus-manifest.json`, `text@normalized`, `consolidated`, `assets`, `catalog.enriched`, `glossary` | `publish` (markdown-only human tree + INDEX) | SKIP_IF_UNCHANGED |
-| 🥇 | **validate** | `publish`, `text@normalized`, `index.db`, `vectors.db`, `reports/fidelity` | (HARD GATE — schema + lineage + dead-anchor + ID/vector integrity + **fidelity verdict** [PASS / REVIEW-with-sign-off only; QUARANTINE blocks]; sets its own `ok`) | ALWAYS_RERUN |
-| 🚀 | **push** | `publish` (+ validate `ok`) | `git:vistadocs/vdl` (one anchor file per version group + travel-with lineage sidecars; **commit-replay deferred behind opt-in `--replay-history`**, §6.6) | FORCE_ONLY |
-| ⬩ | **analyze** (off critical path) | `text@normalized` | `reports/` (survey, headings, lexicon) | SKIP_IF_UNCHANGED |
+| 🥉 INV | **crawl** | `vdl` (external) | `inventory/bronze:catalog.raw` (raw scraped catalog — immutable evidence) | FORCE_ONLY (network) |
+| 🥈 INV | **catalog** | `catalog.raw` | `inventory/silver:catalog.enriched` — the **conformed enriched inventory**: full multi-pass enrichment + system classification per **[`vdl-crawl-spec.md`](vdl-crawl-spec.md)** (patch identity incl. multi-NS, doc-type/labels, `group_key` + version-free `anchor_key`, **noise classification**, companion pairing, drift) | SKIP_IF_UNCHANGED |
+| 🥇 INV | **serve-inventory** | `catalog.enriched`, `state.db:acquisitions` | `inventory/gold` — the **GOLD INVENTORY** (curated · browsable + machine-queryable selection surface; `inventory_status` = enriched ⋈ acquisitions). **Postflight HARD GATE** — complete vs. the crawl, enriched, noise-classified, no information loss + sane distributions (crawl-spec §7); `ok` only if green. **This `ok` is the fetch gate.** | SKIP_IF_UNCHANGED |
+| 🥉 DOC | **fetch** | **gold inventory `ok` (the gate, green)** + an explicit **selection** + `state.db:acquisitions` (prior status) | `documents/bronze:raw` (CAS docx/pdf), `state.db:acquisitions` (per-doc fetch status — the system of record), `raw/index.json` (derived CAS manifest) | SKIP_IF_UNCHANGED |
+| 🥈 DOC | **convert** | `raw`, `raw/index.json` | `text@converted`, `assets` (CAS) | SKIP_IF_UNCHANGED |
+| 🥈 DOC | **discover** | `text@converted` (corpus-global) | `reports/patterns` (candidate boilerplate / `(doc_type, era)` templates / dead phrases / glossary terms / structural patterns + evidence + proposed disposition) → proposes `registries/` updates (§9.6) | SKIP_IF_UNCHANGED |
+| 🥈 DOC | **enrich** | `text@converted`, `catalog.enriched` | `text@enriched` (identity FM baked), `index.db:doc_meta_staged` | SKIP_IF_UNCHANGED |
+| 🥈 DOC | **normalize** | `text@enriched`, `raw` (for source_sha256), `registries` (curated patterns) | `text@normalized` (+ `history.yaml`, `tables/*.csv`, `refs.yaml` sidecars; boilerplate referenced, template-scaffold stripped + `template_id` stamped, dead phrases deleted, glossary single-sourced; **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** §6.7) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **consolidate** | `text@normalized`, `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage + retained prior bodies captured as travel-with sidecars; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **index** | `text@normalized`, `consolidated` (grouping) | `index.db` (documents, doc_sections [all, with `is_latest`] **+ FTS5 over `is_latest` only — the search surface**, entities, quality, views; **stable IDs**) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **relate** | `index.db` (documents, entities, sections) | `index.db:relations` (doc↔entity, doc↔doc xref, entity↔entity — the knowledge graph) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **embed** | `index.db:doc_sections` (**`is_latest` only**) | `vectors.db` (per-chunk embeddings + ANN index over anchor/current sections; prior-version chunks excluded — §14.6) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **fidelity** | `text@normalized`, `raw` (bronze `S`), `index.db` (structure/sections/template schema), `registries` (to dereference single-sourced content) | `reports/fidelity` (per-document migration-fidelity records — content/provenance/history axes, template compliance, TOC integrity — + corpus report; `fidelity-framework.md`) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **manifest** | `consolidated`, `index.db`, `vectors.db`, `state.db` (lineage) | `corpus-manifest.json` + `discovery.json` | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **publish** | `corpus-manifest.json`, `text@normalized`, `consolidated`, `assets`, `catalog.enriched`, `glossary` | `publish` (markdown-only human tree + INDEX) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **validate** | `publish`, `text@normalized`, `index.db`, `vectors.db`, `reports/fidelity` | (HARD GATE — schema + lineage + dead-anchor + ID/vector integrity + **fidelity verdict** [PASS / REVIEW-with-sign-off only; QUARANTINE blocks]; sets its own `ok`) | ALWAYS_RERUN |
+| 🚀 DOC | **push** | `publish` (+ validate `ok`) | `git:vistadocs/vdl` (one anchor file per version group + travel-with lineage sidecars; **commit-replay deferred behind opt-in `--replay-history`**, §6.6) | FORCE_ONLY |
+| ⬩ DOC | **analyze** (off critical path) | `text@normalized` | `reports/` (survey, headings, lexicon) | SKIP_IF_UNCHANGED |
 
 Notes:
-- **The enriched VDL inventory is a foundational layer and a hard gate before any fetch.** `crawl` +
-  `catalog` build a complete, enriched, noise-classified inventory of the *entire* VDL site — metadata
-  only, no documents downloaded — specified in full by **[`vdl-crawl-spec.md`](vdl-crawl-spec.md)** (the
-  authoritative component spec for the crawl→inventory layer). `catalog`'s postflight is a **HARD GATE**:
-  it blesses `catalog.enriched` as `ok` only when the inventory is complete relative to the crawl, fully
-  enriched, noise-classified, and passes the crawl-spec §7 acceptance (no information loss + sane
-  distributions). **`fetch` cannot run until that gate is green** — the consumer-preflight rule (§7.3)
-  makes this automatic (fetch requires `catalog` `ok` + fingerprint match), and there is **no blind/full
-  download**: `fetch` acquires only an explicit, curated *selection* of the inventory (genuine
-  candidates = rows with `noise_type==""`; selection by app/section/doc_type/group or a curated list).
-  Deciding *what* to fetch is done by inspecting the green inventory; building the inventory is the
-  prerequisite, not an afterthought.
+- **The inventory medallion is a foundational track and a hard gate before any fetch.** `crawl` →
+  `catalog` → `serve-inventory` build a complete, enriched, noise-classified inventory of the *entire*
+  VDL site — metadata only, no documents downloaded — its own bronze→silver→gold (§4), specified in full
+  by **[`vdl-crawl-spec.md`](vdl-crawl-spec.md)** (the authoritative component spec for that track).
+  `serve-inventory`'s postflight is a **HARD GATE**: it blesses the **gold inventory** as `ok` only when
+  the inventory is complete relative to the crawl, fully enriched, noise-classified, and passes the
+  crawl-spec §7 acceptance (no information loss + sane distributions). **`fetch` (document-bronze) cannot
+  run until that gate is green** — the consumer-preflight rule (§7.3) makes this automatic (fetch requires
+  the gold-inventory stage `ok` + fingerprint match), and there is **no blind/full download**: `fetch`
+  acquires only an explicit, curated *selection* of the inventory (genuine candidates = rows with
+  `noise_type==""`; selection by app/section/doc_type/group or a curated list). Deciding *what* to fetch
+  is done by inspecting the green gold inventory; building the inventory track is the prerequisite, not an
+  afterthought.
 - **`catalog`** is the promoted, first-class home of v1's hidden `enrich_inventory.py`
   logic. It is a normal stage with a contract — never a hand-run script.
 - **`crawl` + `catalog` are the drift detector.** On a scheduled re-run, `catalog` diffs the fresh
@@ -1434,12 +1451,14 @@ Each phase ends with a runnable, tested increment. Build the spine before the st
    abstraction, `state.db`, the generic DAG runner, the shared kernel (one mojibake/
    frontmatter/fingerprint/CAS each), Pydantic config. A no-op two-stage DAG proves
    preflight→run→postflight + completion records + skip/force end-to-end.
-2. **Bronze:** `crawl` → `catalog` → **inventory gate** → `fetch`, with the CAS raw store and lineage.
-   Build the **enriched VDL inventory first** ([`vdl-crawl-spec.md`](vdl-crawl-spec.md)): a complete,
-   enriched, noise-classified inventory of the whole site (metadata only). `catalog`'s postflight HARD
-   GATE must be **green** (complete + enriched + crawl-spec §7 acceptance) before `fetch` may download
-   anything, and `fetch` pulls only a curated **selection** — never a blind full download. The inventory
-   is the foundation the rest of the pipeline (and the decision of what to fetch) stands on.
+2. **Inventory medallion (its own bronze→silver→gold), then document-bronze:** `crawl` (inv-bronze) →
+   `catalog` (inv-silver) → `serve-inventory` (inv-gold + the gate) → **fetch gate** → `fetch`
+   (doc-bronze), with the CAS raw store, `acquisitions` status, and lineage. Build the **gold inventory
+   first** ([`vdl-crawl-spec.md`](vdl-crawl-spec.md)): a complete, enriched, noise-classified inventory of
+   the whole site (metadata only). `serve-inventory`'s postflight HARD GATE must be **green** (complete +
+   enriched + crawl-spec §7 acceptance) before `fetch` may download anything, and `fetch` pulls only a
+   curated **selection** — never a blind full download. The inventory medallion is the foundation the
+   document medallion (and the decision of what to fetch) stands on.
 3. **Silver:** convert (Pandoc+Docling) → **discover** (mine boilerplate / per-era template /
    glossary / structure candidates → curate into `registries/`) → enrich (identity FM + staged
    meta) → normalize (F1–F10 + bundle sidecars: history, tables, refs; *subtracts the curated
