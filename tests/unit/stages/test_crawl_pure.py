@@ -107,6 +107,20 @@ def test_parse_index_skips_empty_section_text():
     assert [s.name for s in cp.parse_index(html)] == ["Clinical"]
 
 
+def test_parse_application_page_uses_given_base_not_host_root():
+    # The driver feeds the page's FINAL (post-redirect) URL as base_url; a relative doc href
+    # must resolve against that, NOT the module default host root (regression for the
+    # /documents vs /vdl/documents bug, spec §8 acquisition-URL lesson).
+    html = (
+        "<table><tr><td>RN</td>"
+        '<td><a href="documents/Clinical/PSO/pso_rn.pdf">PDF</a></td></tr></table>'
+    )
+    base = "https://www.va.gov/vdl/application.asp?appid=42"
+    docs = cp.parse_application_page(html, base_url=base)
+    assert docs[0].url == "https://www.va.gov/vdl/documents/Clinical/PSO/pso_rn.pdf"
+    assert "/vdl/documents/" in docs[0].url
+
+
 def test_parse_application_page_title_in_link_text_and_skips_noise_rows():
     # link text is the title itself (not a "DOCX" format label) → title/label fallback;
     # a header-only short row and a non-file link in a data row are both ignored.

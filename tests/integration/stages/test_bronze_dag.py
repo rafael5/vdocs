@@ -9,6 +9,7 @@ import json
 
 import pytest
 
+from vdocs.kernel.http import Page
 from vdocs.models.catalog import DriftStatus, EnrichedCatalog
 from vdocs.orchestrator.engine import Orchestrator
 from vdocs.stages.catalog.stage import CatalogStage
@@ -43,8 +44,8 @@ DOCX_URL = "https://vdl.test/documents/Clinical/ADT/dg_5_3_1057_dibr.docx"
 DOC_BYTES = {DOCX_URL: b"PK\x03\x04 fake docx bytes"}
 
 
-def fake_text(url: str) -> str:
-    return PAGES.get(url, "<html></html>")
+def fake_page(url: str) -> Page:
+    return Page(text=PAGES.get(url, "<html></html>"), url=url, status_code=200)
 
 
 def fake_bytes(url: str) -> bytes | None:
@@ -60,7 +61,7 @@ def bronze_ctx(ctx):
 
 def _stages():
     return [
-        CrawlStage(fetch_text=fake_text),
+        CrawlStage(page_fetcher=fake_page),
         CatalogStage(),
         FetchStage(fetch_bytes=fake_bytes),
     ]
@@ -76,7 +77,7 @@ def test_bronze_dag_runs_end_to_end(bronze_ctx):
     # crawl wrote catalog.raw with the ADT doc pair
     assert ctx.cfg.catalog_raw.exists()
     crawl_run = ctx.state.get("crawl")
-    assert crawl_run.counts == {"sections": 2, "applications": 1, "documents": 2}
+    assert crawl_run.counts == {"sections": 2, "applications": 1, "documents": 2, "skipped": 0}
 
     # catalog enriched both docs as NEW with the version-free group key
     ecat = EnrichedCatalog.model_validate_json(ctx.cfg.catalog_enriched.read_text())
@@ -111,7 +112,7 @@ def test_fetch_falls_back_to_pdf_when_docx_missing(bronze_ctx):
     pdf_url = DOCX_URL.replace(".docx", ".pdf")
     Orchestrator(
         [
-            CrawlStage(fetch_text=fake_text),
+            CrawlStage(page_fetcher=fake_page),
             CatalogStage(),
             FetchStage(fetch_bytes={pdf_url: b"%PDF-1.5 fake"}.get),
         ]
@@ -126,7 +127,7 @@ def test_fetch_records_failure_when_no_format_available(bronze_ctx):
     ctx = bronze_ctx
     # neither DOCX nor PDF is available upstream → the doc is counted failed, not stored
     Orchestrator(
-        [CrawlStage(fetch_text=fake_text), CatalogStage(), FetchStage(fetch_bytes=lambda u: None)]
+        [CrawlStage(page_fetcher=fake_page), CatalogStage(), FetchStage(fetch_bytes=lambda u: None)]
     ).run(ctx, force=True)
 
     assert ctx.state.get("fetch").counts == {"targets": 1, "fetched": 0, "failed": 1}

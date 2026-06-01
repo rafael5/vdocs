@@ -33,36 +33,60 @@ class Settings(BaseSettings):
         default="https://www.va.gov/vdl/",
         validation_alias=AliasChoices("VDL_BASE_URL", "VDOCS_VDL_BASE_URL", "vdl_base_url"),
     )
+    crawl_delay: float = Field(
+        default=1.5,
+        validation_alias=AliasChoices("CRAWL_DELAY", "VDOCS_CRAWL_DELAY", "crawl_delay"),
+    )
 
     @property
     def tool_ver(self) -> str:
         return __version__
+
+    @property
+    def user_agent(self) -> str:
+        """Descriptive crawl/fetch User-Agent — VA infra 403s the default client UA (§3.1)."""
+        return f"vdocs/{__version__} (+github.com/rafael5/vdocs)"
 
     # --- the lake root (§5.3) ---
     @property
     def lake(self) -> Path:
         return self.data_dir
 
-    # --- bronze (immutable evidence) ---
+    # --- inventory medallion (control plane; metadata only — §4, §5.3) ---
+    @property
+    def inventory(self) -> Path:
+        return self.lake / "inventory"
+
+    @property
+    def inventory_bronze(self) -> Path:
+        return self.inventory / "bronze"
+
+    @property
+    def inventory_silver(self) -> Path:
+        return self.inventory / "silver"
+
+    @property
+    def inventory_gold(self) -> Path:
+        return self.inventory / "gold"
+
+    @property
+    def catalog_raw(self) -> Path:
+        """inv-bronze: the raw scraped catalog (immutable crawl evidence)."""
+        return self.inventory_bronze / "catalog.raw.json"
+
+    @property
+    def catalog_enriched(self) -> Path:
+        """inv-silver: the conformed/enriched per-record inventory."""
+        return self.inventory_silver / "catalog.enriched.json"
+
+    # --- document medallion bronze (data plane; the fetched subset — §5.3) ---
     @property
     def bronze(self) -> Path:
         return self.lake / "bronze"
 
     @property
-    def bronze_catalog(self) -> Path:
-        return self.bronze / "catalog"
-
-    @property
     def bronze_raw(self) -> Path:
         return self.bronze / "raw"
-
-    @property
-    def catalog_raw(self) -> Path:
-        return self.bronze_catalog / "raw.json"
-
-    @property
-    def catalog_enriched(self) -> Path:
-        return self.bronze_catalog / "enriched.json"
 
     @property
     def raw_index(self) -> Path:

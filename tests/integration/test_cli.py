@@ -11,6 +11,7 @@ from typer.testing import CliRunner
 from vdocs.cli.app import app
 from vdocs.config import Settings
 from vdocs.contracts.registry import CATALOG_RAW
+from vdocs.kernel.http import Page
 from vdocs.models.stage import StageRun
 from vdocs.orchestrator.state import StateStore
 
@@ -43,10 +44,10 @@ RAW_CATALOG = {
 
 def _seed_catalog_raw(tmp_path):
     """Place catalog.raw AND record a matching `crawl` completion (as a real crawl would)."""
-    raw = tmp_path / "bronze" / "catalog" / "raw.json"
+    cfg = Settings(data_dir=tmp_path)
+    raw = cfg.catalog_raw
     raw.parent.mkdir(parents=True, exist_ok=True)
     raw.write_text(json.dumps(RAW_CATALOG))
-    cfg = Settings(data_dir=tmp_path)
     store = StateStore.open(cfg.state_db)
     store.record(
         StageRun(
@@ -74,9 +75,10 @@ def test_help_lists_stage_subcommands():
 
 def test_catalog_command_enriches(tmp_path):
     _seed_catalog_raw(tmp_path)
+    cfg = Settings(data_dir=tmp_path)
     result = runner.invoke(app, ["catalog"], env={"DATA_DIR": str(tmp_path)})
     assert result.exit_code == 0, result.stdout
-    enriched = json.loads((tmp_path / "bronze" / "catalog" / "enriched.json").read_text())
+    enriched = json.loads(cfg.catalog_enriched.read_text())
     assert enriched["documents"][0]["patch_id"] == "DG*5.3*1057"
 
 
@@ -84,7 +86,7 @@ def test_run_only_catalog(tmp_path):
     _seed_catalog_raw(tmp_path)
     result = runner.invoke(app, ["run", "--only", "catalog"], env={"DATA_DIR": str(tmp_path)})
     assert result.exit_code == 0, result.stdout
-    assert (tmp_path / "bronze" / "catalog" / "enriched.json").exists()
+    assert Settings(data_dir=tmp_path).catalog_enriched.exists()
 
 
 def test_failure_exits_nonzero_with_remediation(tmp_path):
@@ -116,8 +118,11 @@ def _faked_stages():
     from vdocs.stages.crawl.stage import CrawlStage
     from vdocs.stages.fetch.stage import FetchStage
 
+    def page(u: str) -> Page:
+        return Page(text=_PAGES.get(u, "<html></html>"), url=u, status_code=200)
+
     return [
-        CrawlStage(fetch_text=lambda u: _PAGES.get(u, "<html></html>")),
+        CrawlStage(page_fetcher=page),
         CatalogStage(),
         FetchStage(fetch_bytes=_BYTES.get),
     ]
@@ -125,13 +130,14 @@ def _faked_stages():
 
 def test_crawl_catalog_fetch_commands_in_sequence(tmp_path, monkeypatch):
     monkeypatch.setattr("vdocs.cli.app.build_stages", _faked_stages)
+    cfg = Settings(data_dir=tmp_path)
     env = {"DATA_DIR": str(tmp_path), "VDL_BASE_URL": "https://vdl.test/"}
 
     assert runner.invoke(app, ["crawl"], env=env).exit_code == 0
-    assert (tmp_path / "bronze" / "catalog" / "raw.json").exists()
+    assert cfg.catalog_raw.exists()
 
     assert runner.invoke(app, ["catalog"], env=env).exit_code == 0
-    assert (tmp_path / "bronze" / "catalog" / "enriched.json").exists()
+    assert cfg.catalog_enriched.exists()
 
     assert runner.invoke(app, ["fetch"], env=env).exit_code == 0
-    assert json.loads((tmp_path / "bronze" / "raw" / "index.json").read_text())
+    assert json.loads(cfg.raw_index.read_text())

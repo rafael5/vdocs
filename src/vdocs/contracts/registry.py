@@ -43,23 +43,24 @@ VDL = ArtifactContract(
 )
 
 
-# --- bronze layer (§5.3, §8) ---
-# The catalog manifests are bronze bookkeeping describing what was acquired — regenerated
-# each crawl, so STATE-class (not content-addressed evidence, not versioned text). The
-# actual write-once evidence is the content-addressed `raw` tree.
+# --- inventory medallion (§4, §5.3, §8) ---
+# The inventory catalog manifests are control-plane bookkeeping describing what exists
+# upstream — regenerated each crawl, so STATE-class (not content-addressed evidence, not
+# versioned text). They live on the inventory track's own bronze/silver, separate from the
+# document medallion's content-addressed `raw` tree.
 CATALOG_RAW = ArtifactContract(
-    key="bronze/catalog.raw",
+    key="inventory/catalog.raw",
     kind=Kind.FILE,
     storage_class=StorageClass.STATE,
     produced_by="crawl",
-    relpath="bronze/catalog/raw.json",
+    relpath="inventory/bronze/catalog.raw.json",
 )
 CATALOG_ENRICHED = ArtifactContract(
-    key="bronze/catalog.enriched",
+    key="inventory/catalog.enriched",
     kind=Kind.FILE,
     storage_class=StorageClass.STATE,
     produced_by="catalog",
-    relpath="bronze/catalog/enriched.json",
+    relpath="inventory/silver/catalog.enriched.json",
 )
 RAW_TREE = ArtifactContract(
     key="bronze/raw",

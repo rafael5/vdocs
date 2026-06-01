@@ -59,8 +59,8 @@ def test_default_registry_declares_bronze_artifacts():
     keys = {c.key for c in reg.all()}
     assert {
         "vdl",
-        "bronze/catalog.raw",
-        "bronze/catalog.enriched",
+        "inventory/catalog.raw",
+        "inventory/catalog.enriched",
         "bronze/raw",
         "bronze/raw/index.json",
     } <= keys

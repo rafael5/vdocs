@@ -1,23 +1,30 @@
-"""The `crawl` stage driver — walk the VDL site into ``catalog.raw`` (§8).
+"""The `crawl` stage driver — walk the VDL site into the inventory bronze catalog (§8, §3).
 
-Thin I/O around the pure parsers: it fetches each page (via an injected text fetcher, so
-tests need no network) and writes the assembled catalog as JSON + a flat CSV. FORCE_ONLY:
-network crawls run only when explicitly requested.
+Thin I/O around the pure parsers (``crawl_pure``): it fetches each page through a polite
+client (``kernel.http.PoliteClient``: descriptive UA, retry/backoff, capped redirects, an
+inter-request delay) and resolves every level's links against **that page's final URL**
+(post-redirect) — live VDL doc links are relative ("documents/…"), so the application
+page's own resolved URL is the correct base (§3.4, lessons §8). A section/app that returns
+non-200 is skipped with a WARN, never aborting the whole crawl (§3.6). The assembled raw
+catalog lands at ``inventory/bronze/catalog.raw.{json,csv}``. FORCE_ONLY: network crawls
+run only when explicitly requested.
 """
 
 from __future__ import annotations
 
 import csv
 import io
-from collections.abc import Callable
+
+import structlog
 
 from vdocs.contracts.registry import CATALOG_RAW, VDL
-from vdocs.kernel import cas, http
+from vdocs.kernel import cas
+from vdocs.kernel.http import PageFetcher, PoliteClient
 from vdocs.models.catalog import Catalog
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
 
-TextFetcher = Callable[[str], str]
+log = structlog.get_logger(__name__)
 
 _CSV_COLUMNS = [
     "section_name",
@@ -35,26 +42,44 @@ _CSV_COLUMNS = [
 
 class CrawlStage(Stage):
     name = "crawl"
-    description = "walk the VDL site (index → sections → applications) into catalog.raw"
+    description = "walk the VDL site (index → sections → applications) into inventory bronze"
     requires = [VDL]
     produces = [CATALOG_RAW]
     idempotency = Idempotency.FORCE_ONLY
 
-    def __init__(self, fetch_text: TextFetcher | None = None) -> None:
-        self._get = fetch_text or http.get_text
+    def __init__(self, page_fetcher: PageFetcher | None = None) -> None:
+        self._fetch = page_fetcher
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
-        base = ctx.cfg.vdl_base_url
         from vdocs.stages.crawl import crawl_pure as cp
 
-        # Resolve each page's relative links against *that page's own URL* — live VDL doc
-        # links are relative ("documents/…"), so the application-page URL is the correct base.
-        sections = cp.parse_index(self._get(base), base)
-        n_apps = n_docs = 0
+        fetch = (
+            self._fetch
+            or PoliteClient(user_agent=ctx.cfg.user_agent, delay=ctx.cfg.crawl_delay).get_page
+        )
+
+        index = fetch(ctx.cfg.vdl_base_url)
+        if index.status_code != 200:
+            log.warning("crawl-index-non-200", url=ctx.cfg.vdl_base_url, status=index.status_code)
+            sections = []
+        else:
+            sections = cp.parse_index(index.text, index.url)
+
+        n_apps = n_docs = n_skipped = 0
         for section in sections:
-            apps = cp.parse_section_page(self._get(section.url), base_url=section.url)
+            page = fetch(section.url)
+            if page.status_code != 200:
+                log.warning("crawl-section-skipped", url=section.url, status=page.status_code)
+                n_skipped += 1
+                continue
+            apps = cp.parse_section_page(page.text, base_url=page.url)
             for app in apps:
-                app.documents = cp.parse_application_page(self._get(app.url), base_url=app.url)
+                app_page = fetch(app.url)
+                if app_page.status_code != 200:
+                    log.warning("crawl-app-skipped", url=app.url, status=app_page.status_code)
+                    n_skipped += 1
+                    continue
+                app.documents = cp.parse_application_page(app_page.text, base_url=app_page.url)
                 n_docs += len(app.documents)
             section.applications = apps
             n_apps += len(apps)
@@ -63,7 +88,12 @@ class CrawlStage(Stage):
         cas.atomic_write(ctx.cfg.catalog_raw, catalog.model_dump_json(indent=2).encode("utf-8"))
         cas.atomic_write(ctx.cfg.catalog_raw.with_suffix(".csv"), _to_csv(catalog).encode("utf-8"))
         return RunResult(
-            counts={"sections": len(sections), "applications": n_apps, "documents": n_docs}
+            counts={
+                "sections": len(sections),
+                "applications": n_apps,
+                "documents": n_docs,
+                "skipped": n_skipped,
+            }
         )
 
 
