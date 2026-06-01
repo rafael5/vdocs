@@ -1,0 +1,204 @@
+system_type:
+  XU: VistA
+  DI: VistA
+  XM: VistA
+  XWB: VistA
+  HL7: VistA
+  HL: VistA
+  XT: VistA
+  SQLI: VistA
+  VALM: VistA
+  VDEF: VistA
+  MPIF: VistA
+  MXML: VistA
+  KMPD: VistA
+  KMPR: VistA
+  KMPS: VistA
+  KMPV: VistA
+  RUM: VistA
+  SAGG: VistA
+  SSO: VistA
+  SSO/UC: VistA
+  IFR: VistA
+  XQOR: VistA
+  ZSLOT: VistA
+  VAQ: VistA
+  QAP: VistA
+  NOIS: VistA
+  E3R: VistA
+  XOB: VistA
+  LEX: Data patch
+  ADT: VistA
+  DGBT: VistA
+  DGJ: VistA
+  FFP: VistA
+  PRF: VistA
+  PCMM: VistA
+  PAIT: VistA
+  RT: VistA
+  OR: VistA
+  TIU: VistA
+  PX: VistA
+  GMPL: VistA
+  GMRA: VistA
+  GMRC: VistA
+  GMRV: VistA
+  GMTS: VistA
+  ASU: VistA
+  GMR: VistA
+  VPR: VistA
+  HMP: VistA
+  LR: VistA
+  LA: VistA
+  LEDI: VistA
+  EPI: VistA
+  POC: VistA
+  VBECS: VistA
+  RA: VistA
+  SR: VistA
+  SRA: VistA
+  MC: VistA
+  NUR: VistA
+  FH: VistA
+  WV: VistA
+  HBPC: VistA
+  RMDS: VistA
+  FIM: VistA
+  CRHD: VistA
+  DRM+: VistA
+  EDIS: VistA
+  MMRS: VistA
+  TBI: VistA
+  ROR: VistA
+  ONC: VistA
+  NCR: VistA
+  EFR: VistA
+  ROEB: VistA
+  ROEG: VistA
+  ROEV: VistA
+  ACKQ: VistA
+  ANRV: VistA
+  ONCO: VistA
+  PSO: VistA
+  PSJ: VistA
+  PSS: VistA
+  PSB: VistA
+  PSD: VistA
+  PSX: VistA
+  PSN: VistA
+  PSU: VistA
+  PSA: VistA
+  PREA: VistA
+  AR/WS: VistA
+  PPP: VistA
+  PXRM: VistA
+  SD: VistA
+  RMPR: VistA
+  AMT: VistA
+  NUPA: VistA
+  ACR: VistA
+  ASCD: VistA
+  MJCF: VistA
+  ORRC: VistA
+  SOW: VistA
+  SPN: VistA
+  ICR: VistA
+  DVBA: VistA
+  IVMB: VistA
+  CHDS: VistA
+  IB: VistA
+  PRCA: VistA
+  ECME: VistA
+  EC: VistA
+  ECX: VistA
+  FB: VistA
+  PRC: VistA
+  PRCN: VistA
+  PRPF: VistA
+  PRS: VistA
+  IBD: VistA
+  EN: VistA
+  GEN: VistA
+  LBR: VistA
+  VSS: VistA
+  QAC: VistA
+  QAN: VistA
+  OOPS: VistA
+  QAM: VistA
+  QAO: VistA
+  QMIM: VistA
+  WII: VistA
+  ES: VistA
+  CPRS: VistA + GUI
+  MAG: VistA + GUI
+  MD: VistA + COTS
+  YS: VistA + COTS
+  ROI: VistA + COTS
+  JLV: Web client
+  WEBP: Web client
+  WEBV: Web client
+  WEBE: Web client
+  WEBG: Web client
+  WEBHR: Web client
+  MBAA: Web client
+  EPSI: Web client
+  MED: Web client
+  ROES: Web client
+  CCRA: Web client
+  PECS: Web client
+  PRED: Web client
+  PPS-N: Web client
+  MHV: Web client
+  NUMI: Web client
+  VODA: Web client
+  VPFS: Web client
+  WEBS: Web client
+  SAMH: Web client
+  XOBV: VistA + middleware
+  KAAJEE: Integration middleware
+  VIAB: Integration middleware
+  MDWS: Integration middleware
+  AFJX: Integration middleware
+  FMDC: Integration middleware
+  KDC: Integration middleware
+  XOBE: Integration middleware
+  XOBW: Integration middleware
+  TMP: Integration middleware
+  PREM: Integration middleware
+  HDR: VA enterprise service
+  VHIE: VA enterprise service
+  NHIN: VA enterprise service
+  ETS: VA enterprise service
+  STS: VA enterprise service
+  VAP: VA enterprise service
+  EAS: VA enterprise service
+  IVM: VA enterprise service
+  HINQ: VA enterprise service
+  VHIC: VA enterprise service
+  VES: VA enterprise service
+  MPI: VA enterprise service
+  LHS: VA enterprise service
+  CDSP: VA enterprise service
+  CISS: VA enterprise service
+  WEBD: VA enterprise service
+  OHRS: VA enterprise service
+  NPM: VA enterprise service
+  HDI: VA enterprise service
+  VDIF-EP: VA enterprise service
+  DHT: VA enterprise service
+  CAPRI: VBA system
+  BMS: COTS product
+  CRMS: COTS product
+  VPS: COTS product
+  CPT: Data patch
+  ICD: Data patch
+  DRG: Data patch
+  EHM: Program documentation
+  MON: Program documentation
+cots_dependency:
+  MD: COTS clinical device systems (EKG/Holter/bedside monitors)
+  YS: Netsmart Mental Health Suite (treatment planning / DSIU)
+  ROI: COTS ROI vendor system (Ciox / DSSI)
+  CPT: AMA CPT code set (commercial license required)
+  DRG: 3M DRG Grouper (commercial classification algorithm + weight tables)
+  PREM: First Databank drug interaction service (MOCHA dosing checks)

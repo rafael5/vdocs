@@ -1,0 +1,1176 @@
+# data/package_master.yaml
+# Authoritative VistA package master table.
+#
+# Source: bootstrapped from vdl_inventory_enriched.csv via
+# scripts/seed_package_master.py + hand curation per
+# guides/vdl-search-assessment.md §3.3, §3.4, §3.6.
+#
+# Schema:
+#   <abbrev>:
+#     canonical_name: human-readable package name
+#     pkg_ns:         M namespace (FileMan #9.4)
+#     canonical_pkg:  post-consolidation identity (= self for non-merged)
+#     aliases:        list of other abbrevs that resolve to this entry
+#     notes:          curation rationale (optional)
+
+packages:
+  ACKQ:
+    canonical_name: "Quality Audiology and Speech Analysis and Reporting (QUASAR)"
+    pkg_ns: "ACKQ"
+    canonical_pkg: "ACKQ"
+    aliases: []
+
+  ACR:
+    canonical_name: "Ambulatory Care Reporting"
+    pkg_ns: "SD"
+    canonical_pkg: "ACR"
+    aliases: []
+
+  ADT:
+    canonical_name: "Admission Discharge Transfer"
+    pkg_ns: "DG"
+    canonical_pkg: "ADT"
+    aliases: []
+
+  AFJX:
+    canonical_name: "Network Health Exchange (NHE)"
+    pkg_ns: "AFJX"
+    canonical_pkg: "AFJX"
+    aliases: []
+
+  AMT:
+    canonical_name: "Anticoagulation Management Tool"
+    pkg_ns: ""
+    canonical_pkg: "AMT"
+    aliases: []
+
+  ANRV:
+    canonical_name: "Visual Impairment Service Team (VIST)"
+    pkg_ns: "ANRV"
+    canonical_pkg: "ANRV"
+    aliases: []
+
+  AR/WS:
+    canonical_name: "Pharmacy: Automatic Replenish / Ward Stock"
+    pkg_ns: "PSGW"
+    canonical_pkg: "AR/WS"
+    aliases: []
+
+  ASCD:
+    canonical_name: "Automated Service Connected Designation"
+    pkg_ns: "ASCD"
+    canonical_pkg: "ASCD"
+    aliases: []
+
+  ASU:
+    canonical_name: "CPRS: Authorization Subscription Utility"
+    pkg_ns: "USR"
+    canonical_pkg: "ASU"
+    aliases: []
+
+  BMS:
+    canonical_name: "Bed Management Solution"
+    pkg_ns: "BMS"
+    canonical_pkg: "BMS"
+    aliases: []
+
+  CAPRI:
+    canonical_name: "Compensation and Pension Record Interchange"
+    pkg_ns: "DVBA"
+    canonical_pkg: "CAPRI"
+    aliases: []
+
+  CCRA:
+    canonical_name: "Community Care Referral and Authorization"
+    pkg_ns: "CCRA"
+    canonical_pkg: "CCRA"
+    aliases: []
+
+  CDSP:
+    canonical_name: "Clinical Decision Support Platform"
+    pkg_ns: "CDSP"
+    canonical_pkg: "CDSP"
+    aliases: []
+
+  CHDS:
+    canonical_name: "Clinical/Health Data Repository"
+    pkg_ns: "CHDS"
+    canonical_pkg: "CHDS"
+    aliases: []
+
+  CISS:
+    canonical_name: "Clinical Information Support System"
+    pkg_ns: "CISS"
+    canonical_pkg: "CISS"
+    aliases: []
+
+  CPRS:
+    canonical_name: "Computerized Patient Record System"
+    pkg_ns: "OR"
+    canonical_pkg: "CPRS"
+    aliases: []
+
+  CPT:
+    canonical_name: "Current Procedural Terminology"
+    pkg_ns: "CPT"
+    canonical_pkg: "CPT"
+    aliases: []
+
+  CRHD:
+    canonical_name: "Shift Handoff Tool"
+    pkg_ns: "CRHD"
+    canonical_pkg: "CRHD"
+    aliases: []
+
+  CRMS:
+    canonical_name: "Customer Relationship Management - SalesForce"
+    pkg_ns: ""
+    canonical_pkg: "CRMS"
+    aliases: []
+
+  DGBT:
+    canonical_name: "Beneficiary Travel"
+    pkg_ns: "DGBT"
+    canonical_pkg: "DGBT"
+    aliases: []
+
+  DGJ:
+    canonical_name: "Incomplete Records Tracking (IRT)"
+    pkg_ns: "DGJ"
+    canonical_pkg: "DGJ"
+    aliases: []
+
+  DHT:
+    canonical_name: "Home Telehealth"
+    pkg_ns: ""
+    canonical_pkg: "DHT"
+    aliases: []
+
+  DI:
+    canonical_name: "FileMan"
+    pkg_ns: "DI"
+    canonical_pkg: "DI"
+    aliases: []
+
+  DRG:
+    canonical_name: "Diagnostic Related Group (DRG) Grouper"
+    pkg_ns: "ICD"
+    canonical_pkg: "DRG"
+    aliases: []
+
+  DRM+:
+    canonical_name: "Dentistry"
+    pkg_ns: "DENT"
+    canonical_pkg: "DRM+"
+    aliases: []
+
+  DVBA:
+    canonical_name: "Automated Medical Information Exchange (AMIE)"
+    pkg_ns: "DVBA"
+    canonical_pkg: "DVBA"
+    aliases: []
+
+  E3R:
+    canonical_name: "Electronic Error and Enhancement Reporting"
+    pkg_ns: ""
+    canonical_pkg: "E3R"
+    aliases: []
+
+  EAS:
+    canonical_name: "Enrollment Application System"
+    pkg_ns: "EAS"
+    canonical_pkg: "EAS"
+    aliases: []
+
+  EC:
+    canonical_name: "Event Capture System (ECS)"
+    pkg_ns: "EC"
+    canonical_pkg: "EC"
+    aliases: []
+
+  ECME:
+    canonical_name: "Electronic Claims Management Engine"
+    pkg_ns: "BPS"
+    canonical_pkg: "ECME"
+    aliases: []
+
+  ECX:
+    canonical_name: "Decision Support System (DSS) Extracts"
+    pkg_ns: "ECX"
+    canonical_pkg: "ECX"
+    aliases: []
+
+  EDIS:
+    canonical_name: "Emergency Department Integration Software"
+    pkg_ns: "EDIS"
+    canonical_pkg: "EDIS"
+    aliases: []
+
+  EFR:
+    canonical_name: "Registry: Embedded Fragments"
+    pkg_ns: "EFR"
+    canonical_pkg: "EFR"
+    aliases: []
+
+  EHM:
+    canonical_name: "Electronic Health Modernization"
+    pkg_ns: ""
+    canonical_pkg: "EHM"
+    aliases: []
+
+  EN:
+    canonical_name: "Engineering (AEMS / MERS)"
+    pkg_ns: "EN"
+    canonical_pkg: "EN"
+    aliases: []
+
+  EPI:
+    canonical_name: "Laboratory: Emerging Pathogens Initiative"
+    pkg_ns: "EPI"
+    canonical_pkg: "EPI"
+    aliases: []
+
+  EPSI:
+    canonical_name: "Enterprise Precision Scanning and Indexing"
+    pkg_ns: "EPSI"
+    canonical_pkg: "EPSI"
+    aliases: []
+
+  ES:
+    canonical_name: "Police and Security"
+    pkg_ns: "ES"
+    canonical_pkg: "ES"
+    aliases: []
+
+  ETS:
+    canonical_name: "Enterprise Terminology Service"
+    pkg_ns: "ETS"
+    canonical_pkg: "ETS"
+    aliases: []
+
+  FB:
+    canonical_name: "Fee Basis"
+    pkg_ns: "FB"
+    canonical_pkg: "FB"
+    aliases: []
+
+  FFP:
+    canonical_name: "Fugitive Felon Program"
+    pkg_ns: ""
+    canonical_pkg: "FFP"
+    aliases: []
+
+  FH:
+    canonical_name: "Nutrition and Food Service"
+    pkg_ns: "FH"
+    canonical_pkg: "FH"
+    aliases: []
+
+  FIM:
+    canonical_name: "Functional Independence Measurement"
+    pkg_ns: "FIM"
+    canonical_pkg: "FIM"
+    aliases: []
+
+  FMDC:
+    canonical_name: "FileMan Delphi Components"
+    pkg_ns: "FMDC"
+    canonical_pkg: "FMDC"
+    aliases: []
+
+  GEN:
+    canonical_name: "Generic Code Sheet (GCS)"
+    pkg_ns: "GEN"
+    canonical_pkg: "GEN"
+    aliases: []
+
+  GMPL:
+    canonical_name: "CPRS: Problem List"
+    pkg_ns: "GMPL"
+    canonical_pkg: "GMPL"
+    aliases: []
+
+  GMR:
+    canonical_name: "Intake and Output"
+    pkg_ns: ""
+    canonical_pkg: "GMR"
+    aliases: []
+
+  GMRA:
+    canonical_name: "CPRS: Adverse Reaction Tracking (ART)"
+    pkg_ns: "GMRA"
+    canonical_pkg: "GMRA"
+    aliases: []
+
+  GMRC:
+    canonical_name: "CPRS: Consult/Request Tracking"
+    pkg_ns: "GMRC"
+    canonical_pkg: "GMRC"
+    aliases: []
+
+  GMRV:
+    canonical_name: "Vitals/Measurements"
+    pkg_ns: "GMRV"
+    canonical_pkg: "GMRV"
+    aliases: []
+
+  GMTS:
+    canonical_name: "CPRS: Health Summary"
+    pkg_ns: "GMTS"
+    canonical_pkg: "GMTS"
+    aliases: []
+
+  HBPC:
+    canonical_name: "Home Based Primary Care"
+    pkg_ns: "HBPC"
+    canonical_pkg: "HBPC"
+    aliases: []
+
+  HDI:
+    canonical_name: "Health Data Informatics"
+    pkg_ns: ""
+    canonical_pkg: "HDI"
+    aliases: []
+
+  HDR:
+    canonical_name: "HDR - Historical (HDR-Hx)"
+    pkg_ns: ""
+    canonical_pkg: "HDR"
+    aliases: []
+
+  HINQ:
+    canonical_name: "Hospital Inquiry"
+    pkg_ns: "DVB"
+    canonical_pkg: "HINQ"
+    aliases: []
+
+  HL:
+    canonical_name: "Standard Files and Tables"
+    pkg_ns: ""
+    canonical_pkg: "HL"
+    aliases: []
+
+  HL7:
+    canonical_name: "HL7 (VistA Messaging)"
+    pkg_ns: ""
+    canonical_pkg: "HL7"
+    aliases: []
+
+  HMP:
+    canonical_name: "Health Management Platform"
+    pkg_ns: ""
+    canonical_pkg: "HMP"
+    aliases: []
+
+  IB:
+    canonical_name: "Integrated Billing"
+    pkg_ns: "IB"
+    canonical_pkg: "IB"
+    aliases: []
+
+  IBD:
+    canonical_name: "Automated Information Collection System (AICS)"
+    pkg_ns: "IBD"
+    canonical_pkg: "IBD"
+    aliases: []
+
+  ICD:
+    canonical_name: "ICD-9-CM"
+    pkg_ns: ""
+    canonical_pkg: "ICD"
+    aliases: []
+
+  ICR:
+    canonical_name: "Immunology Case Registry"
+    pkg_ns: "ICR"
+    canonical_pkg: "ICR"
+    aliases: []
+
+  IFR:
+    canonical_name: "Institution File Redesign"
+    pkg_ns: "XU"
+    canonical_pkg: "IFR"
+    aliases: []
+
+  IVM:
+    canonical_name: "Income Verification Match"
+    pkg_ns: "IVM"
+    canonical_pkg: "IVM"
+    aliases: []
+
+  IVMB:
+    canonical_name: "Health Eligibility Center (HEC)"
+    pkg_ns: "IVMB"
+    canonical_pkg: "IVMB"
+    aliases: []
+
+  JLV:
+    canonical_name: "Joint Longitudinal Viewer"
+    pkg_ns: "JLV"
+    canonical_pkg: "JLV"
+    aliases: []
+
+  KAAJEE:
+    canonical_name: "KAAJEE"
+    pkg_ns: ""
+    canonical_pkg: "KAAJEE"
+    aliases: []
+
+  KDC:
+    canonical_name: "Kernel Delphi Components"
+    pkg_ns: ""
+    canonical_pkg: "KDC"
+    aliases: []
+
+  KMPD:
+    canonical_name: "Capacity Management Tools"
+    pkg_ns: "KMPD"
+    canonical_pkg: "KMPD"
+    aliases: []
+
+  KMPR:
+    canonical_name: "Resource Usage Monitor"
+    pkg_ns: "KMPR"
+    canonical_pkg: "KMPR"
+    aliases: ["RUM"]
+    notes: "KMP* consolidation absorbed legacy RUM abbrev (assessment §3.4)"
+
+  KMPS:
+    canonical_name: "Statistical Analysis of Global Growth"
+    pkg_ns: "KMPS"
+    canonical_pkg: "KMPS"
+    aliases: ["SAGG"]
+    notes: "KMP* consolidation absorbed legacy SAGG abbrev (assessment §3.4)"
+
+  KMPV:
+    canonical_name: "VistA System Monitor (VSM)"
+    pkg_ns: "KMPV"
+    canonical_pkg: "KMPV"
+    aliases: []
+
+  LA:
+    canonical_name: "Laboratory: Universal Interface"
+    pkg_ns: "LA"
+    canonical_pkg: "LA"
+    aliases: []
+
+  LBR:
+    canonical_name: "Library"
+    pkg_ns: "LBR"
+    canonical_pkg: "LBR"
+    aliases: []
+
+  LEDI:
+    canonical_name: "Laboratory: Electronic Data Interchange"
+    pkg_ns: "LA"
+    canonical_pkg: "LEDI"
+    aliases: []
+
+  LEX:
+    canonical_name: "Lexicon Utility"
+    pkg_ns: "LEX"
+    canonical_pkg: "LEX"
+    aliases: []
+
+  LHS:
+    canonical_name: "Lighthouse"
+    pkg_ns: "LHS"
+    canonical_pkg: "LHS"
+    aliases: []
+
+  LR:
+    canonical_name: "Laboratory"
+    pkg_ns: "LR"
+    canonical_pkg: "LR"
+    aliases: []
+
+  MAG:
+    canonical_name: "VistA Imaging System"
+    pkg_ns: "MAG"
+    canonical_pkg: "MAG"
+    aliases: []
+
+  MBAA:
+    canonical_name: "Mobile Scheduling Applications Suite"
+    pkg_ns: "MBAA"
+    canonical_pkg: "MBAA"
+    aliases: []
+
+  MC:
+    canonical_name: "Medicine"
+    pkg_ns: "MC"
+    canonical_pkg: "MC"
+    aliases: []
+
+  MD:
+    canonical_name: "Clinical Procedures"
+    pkg_ns: "MD"
+    canonical_pkg: "MD"
+    aliases: []
+
+  MDWS:
+    canonical_name: "Medical Domain Web Services"
+    pkg_ns: ""
+    canonical_pkg: "MDWS"
+    aliases: []
+
+  MED:
+    canonical_name: "Mobile Electronic Documentation"
+    pkg_ns: "TIU"
+    canonical_pkg: "MED"
+    aliases: []
+
+  MHV:
+    canonical_name: "My HealtheVet"
+    pkg_ns: "MHV"
+    canonical_pkg: "MHV"
+    aliases: []
+
+  MJCF:
+    canonical_name: "Bar Code Expansion (BCE)"
+    pkg_ns: ""
+    canonical_pkg: "MJCF"
+    aliases: []
+
+  MMRS:
+    canonical_name: "Methicillin Resistant Staph Aureus (MRSA)"
+    pkg_ns: "MMRS"
+    canonical_pkg: "MMRS"
+    aliases: []
+
+  MON:
+    canonical_name: "Monograph"
+    pkg_ns: ""
+    canonical_pkg: "MON"
+    aliases: []
+
+  MPI:
+    canonical_name: "Person Services"
+    pkg_ns: ""
+    canonical_pkg: "MPI"
+    aliases: []
+
+  MPIF:
+    canonical_name: "Master Patient Index"
+    pkg_ns: "MPIF"
+    canonical_pkg: "MPIF"
+    aliases: []
+
+  MXML:
+    canonical_name: "XML Parser (VistA)"
+    pkg_ns: "XT"
+    canonical_pkg: "MXML"
+    aliases: []
+
+  NCR:
+    canonical_name: "Registry: National Clozapine Coordination"
+    pkg_ns: "NCR"
+    canonical_pkg: "NCR"
+    aliases: []
+
+  NHIN:
+    canonical_name: "Nationwide Health Information Network Adapter"
+    pkg_ns: "NHIN"
+    canonical_pkg: "NHIN"
+    aliases: []
+
+  NOIS:
+    canonical_name: "National Online Information Sharing"
+    pkg_ns: "NOIS"
+    canonical_pkg: "NOIS"
+    aliases: []
+
+  NPM:
+    canonical_name: "National Patch Module"
+    pkg_ns: ""
+    canonical_pkg: "NPM"
+    aliases: []
+
+  NUMI:
+    canonical_name: "National Utilization Management Integration"
+    pkg_ns: "NUMI"
+    canonical_pkg: "NUMI"
+    aliases: []
+
+  NUPA:
+    canonical_name: "Patient Assessment Documentation Package (PADP)"
+    pkg_ns: "NUPA"
+    canonical_pkg: "NUPA"
+    aliases: []
+
+  NUR:
+    canonical_name: "Nursing"
+    pkg_ns: "NUR"
+    canonical_pkg: "NUR"
+    aliases: []
+
+  OHRS:
+    canonical_name: "Occupational Health Record-keeping System"
+    pkg_ns: "OHRS"
+    canonical_pkg: "OHRS"
+    aliases: []
+
+  ONC:
+    canonical_name: "Registry: Oncology"
+    pkg_ns: "ONC"
+    canonical_pkg: "ONC"
+    aliases: []
+
+  ONCO:
+    canonical_name: "Registries"
+    pkg_ns: ""
+    canonical_pkg: "ONCO"
+    aliases: []
+
+  OOPS:
+    canonical_name: "Automated Safety Incident Surveillance Tracking System"
+    pkg_ns: "OOPS"
+    canonical_pkg: "OOPS"
+    aliases: []
+
+  OR:
+    canonical_name: "Order Entry / CPRS"
+    pkg_ns: "OR"
+    canonical_pkg: "OR"
+    aliases: []
+
+  ORRC:
+    canonical_name: "Care Management"
+    pkg_ns: "ORRC"
+    canonical_pkg: "ORRC"
+    aliases: []
+
+  PAIT:
+    canonical_name: "Patient Appointment Info. Transmission"
+    pkg_ns: "PAIT"
+    canonical_pkg: "PAIT"
+    aliases: []
+
+  PCMM:
+    canonical_name: "Primary Care Management Module"
+    pkg_ns: "SD"
+    canonical_pkg: "PCMM"
+    aliases: []
+
+  PECS:
+    canonical_name: "Pharmacy: Pharmacy Enterprise Customization System"
+    pkg_ns: "PREC"
+    canonical_pkg: "PECS"
+    aliases: []
+
+  POC:
+    canonical_name: "Laboratory: Point of Care"
+    pkg_ns: "LA"
+    canonical_pkg: "POC"
+    aliases: []
+
+  PPP:
+    canonical_name: "Pharmacy: Prescription Practices"
+    pkg_ns: ""
+    canonical_pkg: "PPP"
+    aliases: []
+
+  PPS-N:
+    canonical_name: "Pharmacy: Pharmacy Product System - National"
+    pkg_ns: "PPS-N"
+    canonical_pkg: "PPS-N"
+    aliases: []
+
+  PRC:
+    canonical_name: "IFCAP"
+    pkg_ns: "PRC"
+    canonical_pkg: "PRC"
+    aliases: []
+
+  PRCA:
+    canonical_name: "Accounts Receivable (AR)"
+    pkg_ns: "PRCA"
+    canonical_pkg: "PRCA"
+    aliases: []
+
+  PRCN:
+    canonical_name: "Equipment / Turn-In Request"
+    pkg_ns: "PRCN"
+    canonical_pkg: "PRCN"
+    aliases: []
+
+  PREA:
+    canonical_name: "Pharmacy: Advanced Medication Platform"
+    pkg_ns: "PREA"
+    canonical_pkg: "PREA"
+    aliases: []
+
+  PRED:
+    canonical_name: "Pharmacy: Pharmacy Data Update (DATUP)"
+    pkg_ns: "PRED"
+    canonical_pkg: "PRED"
+    aliases: []
+
+  PREM:
+    canonical_name: "Pharmacy: Medication Order Check Healthcare Application (MOCHA)"
+    pkg_ns: "PREM"
+    canonical_pkg: "PREM"
+    aliases: []
+
+  PRF:
+    canonical_name: "Patient Record Flags"
+    pkg_ns: "DG"
+    canonical_pkg: "PRF"
+    aliases: []
+
+  PRPF:
+    canonical_name: "Integrated Patient Funds"
+    pkg_ns: "PRPF"
+    canonical_pkg: "PRPF"
+    aliases: []
+
+  PRS:
+    canonical_name: "Personnel and Accounting Integrated Data (PAID)"
+    pkg_ns: "PRS"
+    canonical_pkg: "PRS"
+    aliases: []
+
+  PSA:
+    canonical_name: "Pharmacy: Drug Accountability"
+    pkg_ns: "PSA"
+    canonical_pkg: "PSA"
+    aliases: []
+
+  PSB:
+    canonical_name: "Pharmacy: Bar Code Medication Administration (BCMA)"
+    pkg_ns: "PSB"
+    canonical_pkg: "PSB"
+    aliases: []
+
+  PSD:
+    canonical_name: "Pharmacy: Controlled Substances"
+    pkg_ns: "PSD"
+    canonical_pkg: "PSD"
+    aliases: []
+
+  PSJ:
+    canonical_name: "Pharmacy: Inpatient Medications"
+    pkg_ns: "PSJ"
+    canonical_pkg: "PSJ"
+    aliases: []
+
+  PSN:
+    canonical_name: "Pharmacy: National Drug File (NDF)"
+    pkg_ns: "PSN"
+    canonical_pkg: "PSN"
+    aliases: []
+
+  PSO:
+    canonical_name: "Pharmacy: Outpatient Pharmacy"
+    pkg_ns: "PSO"
+    canonical_pkg: "PSO"
+    aliases: []
+
+  PSS:
+    canonical_name: "Pharmacy: Data Management"
+    pkg_ns: "PSS"
+    canonical_pkg: "PSS"
+    aliases: []
+
+  PSU:
+    canonical_name: "Pharmacy: Benefits Management"
+    pkg_ns: "PSU"
+    canonical_pkg: "PSU"
+    aliases: []
+
+  PSX:
+    canonical_name: "Pharmacy: Consolidated Mail Outpatient Pharmacy"
+    pkg_ns: "PSX"
+    canonical_pkg: "PSX"
+    aliases: []
+
+  PX:
+    canonical_name: "Patient Care Encounter (PCE)"
+    pkg_ns: "PX"
+    canonical_pkg: "PX"
+    aliases: []
+
+  PXRM:
+    canonical_name: "Clinical Reminders"
+    pkg_ns: "PXRM"
+    canonical_pkg: "PXRM"
+    aliases: []
+
+  QAC:
+    canonical_name: "Patient Advocate Tracking System (PATS)"
+    pkg_ns: "QAC"
+    canonical_pkg: "QAC"
+    aliases: []
+
+  QAM:
+    canonical_name: "Clinical Monitoring System"
+    pkg_ns: "QAM"
+    canonical_pkg: "QAM"
+    aliases: []
+
+  QAN:
+    canonical_name: "Incident Reporting"
+    pkg_ns: "QAN"
+    canonical_pkg: "QAN"
+    aliases: []
+
+  QAO:
+    canonical_name: "Occurrence Screen"
+    pkg_ns: "QAO"
+    canonical_pkg: "QAO"
+    aliases: []
+
+  QAP:
+    canonical_name: "Survey Generator"
+    pkg_ns: "QAP"
+    canonical_pkg: "QAP"
+    aliases: []
+
+  QMIM:
+    canonical_name: "Quality Management Integration Module"
+    pkg_ns: ""
+    canonical_pkg: "QMIM"
+    aliases: []
+
+  RA:
+    canonical_name: "Radiology/Nuclear Medicine"
+    pkg_ns: "RA"
+    canonical_pkg: "RA"
+    aliases: []
+
+  RMDS:
+    canonical_name: "RAI/MDS"
+    pkg_ns: ""
+    canonical_pkg: "RMDS"
+    aliases: []
+
+  RMPR:
+    canonical_name: "Prosthetics"
+    pkg_ns: "RMPR"
+    canonical_pkg: "RMPR"
+    aliases: []
+
+  ROEB:
+    canonical_name: "Registry: Breast Cancer (BCR)"
+    pkg_ns: "ROEB"
+    canonical_pkg: "ROEB"
+    aliases: []
+
+  ROEG:
+    canonical_name: "Registry: Multiple Sclerosis Surveillance (MSSR)"
+    pkg_ns: "ROEG"
+    canonical_pkg: "ROEG"
+    aliases: []
+
+  ROES:
+    canonical_name: "Remote Order Entry System"
+    pkg_ns: "ROES"
+    canonical_pkg: "ROES"
+    aliases: []
+
+  ROEV:
+    canonical_name: "Registry: Military Eye Vision Injury (MEVIR)"
+    pkg_ns: "ROEV"
+    canonical_pkg: "ROEV"
+    aliases: []
+
+  ROI:
+    canonical_name: "Release of Information (ROI) Manager"
+    pkg_ns: ""
+    canonical_pkg: "ROI"
+    aliases: []
+
+  ROR:
+    canonical_name: "Registry: Clinical Case (CCR)"
+    pkg_ns: "ROR"
+    canonical_pkg: "ROR"
+    aliases: []
+
+  RT:
+    canonical_name: "Record Tracking"
+    pkg_ns: "RT"
+    canonical_pkg: "RT"
+    aliases: []
+
+  SAMH:
+    canonical_name: "Health Information Gateway and Exchange (HINGE)"
+    pkg_ns: ""
+    canonical_pkg: "SAMH"
+    aliases: []
+
+  SD:
+    canonical_name: "Scheduling"
+    pkg_ns: "SD"
+    canonical_pkg: "SD"
+    aliases: []
+
+  SOW:
+    canonical_name: "Social Work"
+    pkg_ns: "SOW"
+    canonical_pkg: "SOW"
+    aliases: []
+
+  SPN:
+    canonical_name: "Spinal Cord Injury and Disorders Outcomes (SCIDO)"
+    pkg_ns: "SPN"
+    canonical_pkg: "SPN"
+    aliases: []
+
+  SQLI:
+    canonical_name: "SQL Interface"
+    pkg_ns: "DI"
+    canonical_pkg: "SQLI"
+    aliases: []
+
+  SR:
+    canonical_name: "MailMan"
+    pkg_ns: "SR"
+    canonical_pkg: "SR"
+    aliases: []
+
+  SRA:
+    canonical_name: "Surgery Risk Assessment"
+    pkg_ns: "SRA"
+    canonical_pkg: "SRA"
+    aliases: []
+
+  SSO:
+    canonical_name: "Single Signon/User Context"
+    pkg_ns: "XUSC"
+    canonical_pkg: "SSO"
+    aliases: ["SSO/UC"]
+    notes: "SSO and SSO/UC are naming variants for the same package (assessment §3.4)"
+
+  STS:
+    canonical_name: "Standards & Terminology Services"
+    pkg_ns: "STS"
+    canonical_pkg: "STS"
+    aliases: []
+
+  TBI:
+    canonical_name: "Registry: Traumatic Brain Injury"
+    pkg_ns: "TBI"
+    canonical_pkg: "TBI"
+    aliases: []
+
+  TIU:
+    canonical_name: "CPRS: Text Integration Utility"
+    pkg_ns: "TIU"
+    canonical_pkg: "TIU"
+    aliases: []
+
+  TMP:
+    canonical_name: "Telehealth Management Platform"
+    pkg_ns: "TMP"
+    canonical_pkg: "TMP"
+    aliases: []
+
+  VALM:
+    canonical_name: "List Manager"
+    pkg_ns: "VALM"
+    canonical_pkg: "VALM"
+    aliases: []
+
+  VAP:
+    canonical_name: "Veterans Authorization and Preferences"
+    pkg_ns: "VAP"
+    canonical_pkg: "VAP"
+    aliases: []
+
+  VAQ:
+    canonical_name: "Patient Data Exchange (PDX)"
+    pkg_ns: "VAQ"
+    canonical_pkg: "VAQ"
+    aliases: []
+
+  VBECS:
+    canonical_name: "Laboratory: VistA Blood Establishment Computer Software"
+    pkg_ns: "VBECS"
+    canonical_pkg: "VBECS"
+    aliases: []
+
+  VDEF:
+    canonical_name: "VistA Data Extraction Framework"
+    pkg_ns: "VDEF"
+    canonical_pkg: "VDEF"
+    aliases: []
+
+  VDIF-EP:
+    canonical_name: "Veterans Data Integration and Federation Enterprise Platform"
+    pkg_ns: ""
+    canonical_pkg: "VDIF-EP"
+    aliases: []
+
+  VES:
+    canonical_name: "VA Enrollment System"
+    pkg_ns: "VES"
+    canonical_pkg: "VES"
+    aliases: []
+
+  VHIC:
+    canonical_name: "Veterans Health Identification Card"
+    pkg_ns: "VHIC"
+    canonical_pkg: "VHIC"
+    aliases: []
+
+  VHIE:
+    canonical_name: "Veterans Health Information Exchange (VHIE) Portal"
+    pkg_ns: ""
+    canonical_pkg: "VHIE"
+    aliases: []
+
+  VIAB:
+    canonical_name: "VistA Integration Adapter (VIA)"
+    pkg_ns: "VIAB"
+    canonical_pkg: "VIAB"
+    aliases: []
+
+  VODA:
+    canonical_name: "Veterans Online Debt Access"
+    pkg_ns: ""
+    canonical_pkg: "VODA"
+    aliases: []
+
+  VPFS:
+    canonical_name: "Veterans Personal Finance System"
+    pkg_ns: "VPFS"
+    canonical_pkg: "VPFS"
+    aliases: []
+
+  VPR:
+    canonical_name: "Virtual Patient Record"
+    pkg_ns: ""
+    canonical_pkg: "VPR"
+    aliases: []
+
+  VPS:
+    canonical_name: "VHA Point of Service (Kiosks)"
+    pkg_ns: "VPS"
+    canonical_pkg: "VPS"
+    aliases: []
+
+  VSS:
+    canonical_name: "Voluntary Service System"
+    pkg_ns: "VSS"
+    canonical_pkg: "VSS"
+    aliases: []
+
+  WEBD:
+    canonical_name: "Direct Secure Messaging"
+    pkg_ns: ""
+    canonical_pkg: "WEBD"
+    aliases: []
+
+  WEBE:
+    canonical_name: "Community Viewer (CV)"
+    pkg_ns: "WEBE"
+    canonical_pkg: "WEBE"
+    aliases: []
+
+  WEBG:
+    canonical_name: "Web VistA Remote Access Mgmt (WEBVRAM)"
+    pkg_ns: "WEBG"
+    canonical_pkg: "WEBG"
+    aliases: []
+
+  WEBHR:
+    canonical_name: "WebHR"
+    pkg_ns: ""
+    canonical_pkg: "WEBHR"
+    aliases: []
+
+  WEBP:
+    canonical_name: "Patient Centered Management Module (PCMM Web)"
+    pkg_ns: "WEBP"
+    canonical_pkg: "WEBP"
+    aliases: []
+
+  WEBS:
+    canonical_name: "VistA Audit Solution"
+    pkg_ns: "WEBS"
+    canonical_pkg: "WEBS"
+    aliases: []
+
+  WEBV:
+    canonical_name: "VistAWeb"
+    pkg_ns: "WEBV"
+    canonical_pkg: "WEBV"
+    aliases: []
+
+  WII:
+    canonical_name: "Wounded Ill and Injured Warriors"
+    pkg_ns: "WII"
+    canonical_pkg: "WII"
+    aliases: []
+
+  WV:
+    canonical_name: "Womens Health"
+    pkg_ns: "WV"
+    canonical_pkg: "WV"
+    aliases: []
+
+  XM:
+    canonical_name: "MailMan"
+    pkg_ns: "XM"
+    canonical_pkg: "XM"
+    aliases: []
+
+  XOB:
+    canonical_name: "Name Standardization"
+    pkg_ns: ""
+    canonical_pkg: "XOB"
+    aliases: []
+
+  XOBE:
+    canonical_name: "Electronic Signature (ESig)"
+    pkg_ns: "XOBE"
+    canonical_pkg: "XOBE"
+    aliases: []
+
+  XOBV:
+    canonical_name: "VistALink"
+    pkg_ns: "XOBV"
+    canonical_pkg: "XOBV"
+    aliases: []
+
+  XOBW:
+    canonical_name: "HealtheVet Web Services Client (HWSC)"
+    pkg_ns: "XOBW"
+    canonical_pkg: "XOBW"
+    aliases: []
+
+  XQOR:
+    canonical_name: "Kernel Unwinder"
+    pkg_ns: ""
+    canonical_pkg: "XQOR"
+    aliases: []
+
+  XT:
+    canonical_name: "Kernel Toolkit"
+    pkg_ns: "XT"
+    canonical_pkg: "XT"
+    aliases: []
+
+  XU:
+    canonical_name: "Kernel"
+    pkg_ns: "XU"
+    canonical_pkg: "XU"
+    aliases: []
+
+  XWB:
+    canonical_name: "Remote Procedure Call (RPC) Broker"
+    pkg_ns: "XWB"
+    canonical_pkg: "XWB"
+    aliases: []
+
+  YS:
+    canonical_name: "Mental Health"
+    pkg_ns: "YS"
+    canonical_pkg: "YS"
+    aliases: []
+
+  ZSLOT:
+    canonical_name: "SlotMaster (Kernel ZSLOT)"
+    pkg_ns: ""
+    canonical_pkg: "ZSLOT"
+    aliases: []

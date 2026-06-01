@@ -1,0 +1,29 @@
+# data/typo_corrections.yaml
+#
+# Hand-curated source-document typo corrections for the enrich-inventory pass.
+# Each entry replaces `source` with `corrected` in the listed `fields`.
+#
+# Add new entries when a search-affecting typo is discovered in the source
+# VA documents. The original spelling is preserved per-row in
+# `doc_search_aliases` so search UIs continue to match either spelling.
+#
+# Drives remediation §3 (assessment §3.2).
+
+corrections:
+
+  # MRSA application: 25 rows carry "Aurerus" in app_name_full.
+  - source: "Staph Aurerus"
+    corrected: "Staph Aureus"
+    fields: [doc_title, doc_subject, app_name_full]
+
+  # 16 HTRE/DHT rows carry "DIBORG" instead of "DIBRG" in the title.
+  # NOTE: doc_filename is intentionally excluded — filenames are part of
+  # canonical va.gov URLs and must remain literal.
+  - source: "DIBORG"
+    corrected: "DIBRG"
+    fields: [doc_title, doc_subject]
+
+  # HDI rows where app_name_full has a stray double space.
+  - source: "Health Data  Informatics"
+    corrected: "Health Data Informatics"
+    fields: [app_name_full, doc_title, doc_subject]

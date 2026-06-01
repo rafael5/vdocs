@@ -1,0 +1,6 @@
+section_code:
+  Clinical: CLI
+  Financial-Administrative: FIN
+  VistA/GUI Hybrids (formerly HealtheVet): GUI
+  Infrastructure: INF
+  Monograph: MON

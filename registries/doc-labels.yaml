@@ -1,0 +1,46 @@
+# data/doc_labels.yaml
+#
+# Authoritative doc_code → canonical doc_label table.
+#
+# Source: bootstrapped from the most-frequent doc_label per doc_code in
+# vdl_inventory_enriched.csv, with the 5 drift cases (CFG, INT, REF, UG, UM)
+# resolved per assessment §3.5.
+#
+# When a row's existing doc_label diverges from the canonical entry here, the
+# original wording is preserved per-row in `doc_subtitle` so docs like
+# "Manager/ADPAC Guide" don't lose that subtitle text.
+#
+# Drives remediation §4 (assessment issue 3.5).
+
+labels:
+  AG:     "Administrator's Guide"
+  API:    "API Manual"
+  APX:    "Appendix"
+  CFG:    "Configuration Guide"               # §3.5 drift: drop "Setup and "
+  CRU:    "Clinical Reminder Update"
+  CVG:    "Conversion Guide"
+  DESC:   "Description Document"
+  DG:     "Developer Guide"
+  DIBR:   "Deployment, Installation, Back-Out, and Rollback Guide"
+  FAQ:    "Frequently Asked Questions"
+  FORM:   "VBA Form"
+  IG:     "Installation Guide"
+  IG-IMP: "Implementation Guide"
+  INT:    "Interface Specification"           # §3.5 drift: not "Interface Feed Guide"
+  PDD:    "Patch Description Document"
+  POM:    "Production Operations Manual"
+  QRG:    "Quick Reference Guide"
+  REF:    "Reference"                          # §3.5 drift: not "Interface Toolkit"
+  RN:     "Release Notes"
+  RS:     "Requirements Specification"
+  SG:     "Security Guide"
+  SG-SET: "Setup Guide"
+  SM:     "Site Manual / Systems Management Guide"
+  SUP:    "Supplement"
+  TG:     "Technical Guide"
+  TM:     "Technical Manual"
+  TRG:    "Training Guide"
+  UG:     "User Guide"                         # §3.5 drift: not "Manager/ADPAC Guide"
+  UM:     "User Manual"                        # §3.5 drift: not "Clinical Coordinator Manual"
+  VDD:    "Version Description Document"
+  WF:     "Workflow Guide"

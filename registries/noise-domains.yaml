@@ -1,0 +1,6 @@
+vba_form_hosts:
+- www.vba.va.gov
+- vba.va.gov
+- www.benefits.va.gov
+- benefits.va.gov
+va_ref_rule: doc_url path lacks '/vdl/'

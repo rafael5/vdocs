@@ -21,10 +21,10 @@ status, §5.5) is scaffolded here only as far as the `inventory_status` join nee
 
 | ID | Phase | Stage / deliverable | Goal | Spec / design ref | Status | Evidence (tests / artifact) | Notes |
 |---|---|---|---|---|---|---|---|
-| **A** | Foundations | | shared machinery + vocabularies before any inventory stage | | ◐ | A1+A2 ✅; A3 todo | |
+| **A** | Foundations | | shared machinery + vocabularies before any inventory stage | | ✅ | A1+A2+A3 ✅ | |
 | A1 | Foundations | `kernel/http` hardening | descriptive User-Agent · retry/backoff on 5xx · 429 backoff · `max_redirects=5` · **return final URL** · config inter-request delay | spec §3.1, §9.1 | ✅ | `test_http` (10 tests, httpx `MockTransport`, no network) | `PoliteClient` (UA/retry/429-backoff/redirect-cap/final-URL/delay); `get_page→Page(text,url,status)`; module `get_text/get_bytes` keep back-compat |
 | A2 | Foundations | config + lake layout (inventory medallion) | `inventory/{bronze,silver,gold}` paths; `vdl_base_url`, delay, UA in `Settings` | design §5.3, §4 | ✅ | `test_config` (10 tests; inventory-path + crawl-session assertions) | `catalog_raw`→`inventory/bronze/catalog.raw.json`, `catalog_enriched`→`inventory/silver/catalog.enriched.json`; `crawl_delay`/`user_agent`; contracts repointed (keys `inventory/catalog.*`) |
-| A3 | Foundations | `registries/` + vocabularies (verbatim from v1) | port doc-types, packages, doc-labels, typo-corrections, manual-labels, noise-domains, system-types | spec §6, §10; design §9.6 | ☐ | load/parse tests per registry | discovery-is-data: data, not inline code — feeds `catalog` (Phase C), not the crawler |
+| A3 | Foundations | `registries/` + vocabularies (verbatim from v1) | port doc-types, packages, doc-labels, typo-corrections, manual-labels, noise-domains, system-types | spec §6, §10; design §9.6 | ✅ | `test_registries` (16 tests) | 9 YAML files **AST-generated** from v1 (no hand-transcription): doc_type_patterns=57, slug_suffix=54, manual_slugs=154, system_type=196 apps, COTS={MD,YS,ROI,CPT,DRG,PREM}, doc_labels=31; loader in `stages/catalog/registries.py` (I/O), pure `parse_*`; `Settings.registries` (repo, env-overridable) |
 | **B** | Inv-bronze (`crawl`) | | site-wide raw catalog (metadata only) | | ◐ | B1+B2 ✅; B3 (live) todo | |
 | B1 | Inv-bronze | `crawl_pure` parsers (verify vs spec) | index/section/application parsers; relative-href resolution; status/app-code parse | spec §3.2–3.4 | ✅ | `test_crawl_pure` (9 tests; + final-URL-base regression) | verified vs spec; final-URL base confirmed against A1's `Page.url` |
 | B2 | Inv-bronze | `CrawlStage` driver | 3-level polite walk → `inventory/bronze/catalog.raw.{json,csv}`; skip non-200 (WARN); dedup | spec §3.5; design §8 | ✅ | `test_crawl_stage` (3) + `test_bronze_dag` + `test_cli` | reworked to `PoliteClient.get_page`; resolves each level vs page **final URL**; non-200 section/app skipped (WARN, `skipped` count) and retained empty; writes inventory-bronze path |
@@ -61,6 +61,14 @@ politeness-gated smoke check, intentionally not run in CI.
 ## Lessons Learned
 
 *Append implementation lessons as they accrue (newest first). Spec-level lessons live in `vdl-crawl-spec.md` §8; this section is for things discovered while building.*
+
+- **2026-06-01 — Generate the registries from v1, don't hand-copy them.** The 196-app system
+  map, 95 manual overrides, 57 ordered doc-type regexes, etc. were ported by a one-off generator
+  that `ast.literal_eval`-extracts the literal constants from the v1 sources (no import side-effects)
+  and imports the side-effect-free `classify_vista_type` for the system map, then dumps YAML — then
+  the generator was deleted and the YAML committed as the in-repo source of truth (§9.7). Exact-count
+  matches (manual_slugs 154, system_type 196, COTS 6, doc_labels 31) verify fidelity; the spec's
+  "~47/~90/~55/168" were estimates — the **as-built counts are 57/95/54/193** and are authoritative.
 
 - **2026-06-01 — Final-URL contract threaded end-to-end, not just in the parser.** A1 made the HTTP
   layer return the post-redirect URL (`Page.url`); B2's driver now feeds *that* (not the requested URL)

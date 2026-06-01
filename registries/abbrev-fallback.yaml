@@ -1,0 +1,44 @@
+abbrev_fallback:
+  'CPRS: Clinical Reminder Updates': PXRM
+  KAAJEE: KAAJEE
+  KAAJEE (XU and XWB): KAAJEE
+  HL7 (VistA Messaging): HL7
+  'Laboratory: Universal Interface': LA
+  Laboratory (LA and LR): LR
+  'Laboratory: Anatomic Pathology': LR
+  'Laboratory: Blood Bank': LR
+  'Laboratory: Blood Bank Workarounds': LR
+  'Laboratory: Howdy Computerized Phlebotomy Login Process': LR
+  'Laboratory: National Laboratory Tests (NLT) Documents and LOINC Request Form': LR
+  Patient Record Flags: PRF
+  Home Telehealth: DHT
+  HDR - Historical (HDR-Hx): HDR
+  Release of Information (ROI) Manager: ROI
+  Registries: ONCO
+  Intake and Output: GMR
+  'Duplicate Record Merge: Patient Merge': MPIF
+  Diagnostic Related Group (DRG) Grouper: DRG
+  Person Services: MPI
+  Health Management Platform: HMP
+  Quality Management Integration Module: QMIM
+  Decision Support System (DSS) Extracts: ECX
+  Group Notes: OR
+  SlotMaster (Kernel ZSLOT): ZSLOT
+  VHA Point of Service (Kiosks): VPS
+  'Pharmacy: API': PSA
+  RAI/MDS: RMDS
+  Veterans Health Information Exchange (VHIE) Portal: VHIE
+  'CPRS: Bulk Parameter Editor for Notifications': OR
+  Name Standardization: XOB
+  Health Data Informatics: HDI
+  Health Data  Informatics: HDI
+  Standard Files and Tables: HL
+  List Manager: VALM
+  M-to-M Broker: XWB
+  XML Parser (VistA): MXML
+  ICD-9-CM: ICD
+  WebHR: WEBHR
+  Electronic Wait List: SD
+  Single Signon/User Context (SSO/UC) (XU and XWB): SSO
+  Remote Procedure Call (RPC) Broker: XWB
+  Monograph: MON

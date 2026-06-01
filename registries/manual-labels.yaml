@@ -1,0 +1,444 @@
+overrides:
+  cons3_p57_rn:
+    code: IG
+    label: Installation Guide
+  fb_pm:
+    code: POM
+    label: Production Operations Manual
+  ifcp5_1pou_manual:
+    code: UM
+    label: User Manual
+  la_1_ig:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  mpif_1_63_ig:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  nois_1_1_adpac:
+    code: TRG
+    label: Training Guide
+  nois_1_1_irms:
+    code: TRG
+    label: Training Guide
+  rai_mds_electronic_transmission_training_manual:
+    code: TRG
+    label: Training Guide
+  sd_5_3_879_dibrg:
+    code: RN
+    label: Release Notes
+  viab_1_14_installation_back_out_rollback_plan_release_notes:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  xobw_1_0_p4_ig:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  usr_1_33rn:
+    code: RN
+    label: Release Notes
+  icd_18_57_disk_req:
+    code: SUP
+    label: Supplement
+  508_workflow_v3:
+    code: WF
+    label: Workflow Guide
+  es_1_p46_retire:
+    code: SUP
+    label: Supplement
+  fmdc1_0p2rm:
+    code: RN
+    label: Release Notes
+  ivmb_2_p395_hec:
+    code: UM
+    label: User Manual
+  ldsi_implementation_plan_v1_10:
+    code: IG
+    label: Installation Guide
+  la_5_2hl7spec_68:
+    code: INT
+    label: Interface Specification
+  md1_0p72term:
+    code: SUP
+    label: Supplement
+  prec_6_0_tg_r0516:
+    code: SUP
+    label: Supplement
+  prec_6_1_tg_r0717:
+    code: SUP
+    label: Supplement
+  pss_1_p127_drug_exceptions_list:
+    code: SUP
+    label: Supplement
+  pxrm_2_0_54_cds:
+    code: UM
+    label: User Manual
+  lessons_learned:
+    code: SUP
+    label: Supplement
+  dg_5_3_887_implement_guide:
+    code: IG
+    label: Installation Guide
+  sqli_vendor:
+    code: UG
+    label: User Guide
+  tiu_1_357_util:
+    code: UG
+    label: User Guide
+  tcpip_service_for_mailman:
+    code: TM
+    label: Technical Manual
+  xt7_3p98sp:
+    code: SUP
+    label: Supplement
+  state_patch_follow_up_xu_8_105:
+    code: SUP
+    label: Supplement
+  kdc1_0rm:
+    code: RN
+    label: Release Notes
+  krn8_0p283sp:
+    code: SUP
+    label: Supplement
+  xu8_0p512sp:
+    code: SUP
+    label: Supplement
+  vista_state_patch_xu_999_3:
+    code: SUP
+    label: Supplement
+  vista_monograph_0723_r:
+    code: SUP
+    label: Supplement
+  ahobpr_clinicalportal_manual_v2:
+    code: UM
+    label: User Manual
+  aics3_0modifcations:
+    code: SUP
+    label: Supplement
+  fm22_2ig:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  fm22_krn8_file_security:
+    code: SG
+    label: Security Guide
+  fmdc1_0gs:
+    code: QRG
+    label: Quick Reference Guide
+  ehmp_icr_status_mfr_20180312:
+    code: SUP
+    label: Supplement
+  imr_read_me:
+    code: SUP
+    label: Supplement
+  labautorelease1_0installationguidewarranty:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  labautorelease_1_0_installationguide:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  lab_ui_specs_lab_micro_interface_rel_1_0:
+    code: INT
+    label: Interface Specification
+  mpi_psim_implementation_plan_v1:
+    code: IG
+    label: Installation Guide
+  nlt_wkld_code_request_form:
+    code: SUP
+    label: Supplement
+  nois_1_1_dev:
+    code: TRG
+    label: Training Guide
+  nois_1_1_getting_started:
+    code: TRG
+    label: Training Guide
+  nois_1_1_manager:
+    code: TRG
+    label: Training Guide
+  nois_1_1_overview:
+    code: RN
+    label: Release Notes
+  nois_1_1_support:
+    code: TRG
+    label: Training Guide
+  noistm:
+    code: TM
+    label: Technical Manual
+  patch_module_enhancements:
+    code: SUP
+    label: Supplement
+  pats_1_1_datamigrationguide:
+    code: IG
+    label: Installation Guide
+  pats_notificationsfornonadvocates:
+    code: SUP
+    label: Supplement
+  pcmmugappx:
+    code: SUP
+    label: Supplement
+  pims_tm_4909:
+    code: TM
+    label: Technical Manual
+  pmuser:
+    code: POM
+    label: Production Operations Manual
+  ppp_1_message:
+    code: SUP
+    label: Supplement
+  ra5_0hl7:
+    code: INT
+    label: Interface Specification
+  ra_5_aa_s_1:
+    code: SUP
+    label: Supplement
+  readme:
+    code: RN
+    label: Release Notes
+  spn_2_conversion_information:
+    code: SUP
+    label: Supplement
+  sts_vets_10_setup_guide:
+    code: IG
+    label: Installation Guide
+  tiu_util:
+    code: UG
+    label: User Guide
+  vistamessagingoverview_vdef_100105:
+    code: TM
+    label: Technical Manual
+  ese_vss_kiosk_baseline_resource_document:
+    code: SUP
+    label: Supplement
+  xm_8_0_getstartguide:
+    code: QRG
+    label: Quick Reference Guide
+  xtmp_rules:
+    code: SUP
+    label: Supplement
+  krn_8_0_dg_binder:
+    code: DG
+    label: Developer Guide
+  krn8_0st:
+    code: SG
+    label: Security Guide
+  zslot_mg:
+    code: SM
+    label: Site Manual / Systems Management Guide
+  edis_2_2_glossary_r:
+    code: SUP
+    label: Supplement
+  hl71_6p109sp:
+    code: SUP
+    label: Supplement
+  hl71_6p118_sp2:
+    code: SUP
+    label: Supplement
+  hl71_6p84sp:
+    code: SUP
+    label: Supplement
+  hl71_6p93sp:
+    code: SUP
+    label: Supplement
+  kaajee_classic_8_depg:
+    code: IG
+    label: Installation Guide
+  mag_imgerrormsg:
+    code: SUP
+    label: Supplement
+  mag_telereader_configuration:
+    code: IG
+    label: Installation Guide
+  instructions:
+    code: SUP
+    label: Supplement
+  tmp_deployment_installation_rollback_backout_guide_tmp_4_6:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  vbecs_product_information:
+    code: SUP
+    label: Supplement
+  vista_blood_bank_v5_2_package_status_july_18_2011:
+    code: SUP
+    label: Supplement
+  vista_pacs_hl7_profile_1_2:
+    code: INT
+    label: Interface Specification
+  vistarad_quick_start_guide:
+    code: QRG
+    label: Quick Reference Guide
+  vistarad_shortcut_list:
+    code: QRG
+    label: Quick Reference Guide
+  vix_admin_guide:
+    code: AG
+    label: Administrator's Guide
+  vle_micro_mmrs_1_0_4_remediation_guide:
+    code: SUP
+    label: Supplement
+  xwb1_1p44um:
+    code: TM
+    label: Technical Manual
+  xwb_1_1_72_rm_r:
+    code: RN
+    label: Release Notes
+  xwb_1_1_73_rm_r:
+    code: RN
+    label: Release Notes
+  capri_gui_isg:
+    code: IG
+    label: Installation Guide
+noise:
+- archive_placeholder
+- test_document_vdl
+manual_slugs:
+- 508_workflow_v3
+- ackq3_0p13_tm
+- ahobpr_clinicalportal_manual_v2
+- aics3_0modifcations
+- archive_placeholder
+- bms_5_0_ag
+- capri_gui_isg
+- cons3_p57_rn
+- dde_tutorial
+- dg_5_3_887_implement_guide
+- dvba_27_p150_audio_wf
+- dvba_27_p151_a_and_a_wf
+- dvba_27_p151_tbi_wf
+- dvba_27_p159_dbq_leukemia_wf
+- dvba_27_p159_dbq_parkinsons_wf
+- dvba_27_p161_dbq_eatingdisorders_wf
+- dvba_27_p161_dbq_ihd_wf
+- dvba_27_p163_dbq_hemicandlymphatic_wf
+- dvba_27_p163_dbq_kidneyconditions_wf
+- dvba_27_p163_dbq_malereproductive_wf
+- dvba_27_p163_dbq_prostatecancer_wf
+- ecx_3_178_ddd
+- ecx_3_ddd
+- edis_2_1_2_glossary
+- edis_2_2_glossary_r
+- ehmp_icr_status_mfr_20180312
+- emergency_patch_mhv_backup_n_rollback_plan
+- es_1_p46_retire
+- ese_vss_kiosk_baseline_resource_document
+- fb_pm
+- fm22_2ig
+- fm22_krn8_file_security
+- fm22_tutorial
+- fmdc1_0gs
+- fmdc1_0p2rm
+- hl71_6p109sp
+- hl71_6p118_sp2
+- hl71_6p84sp
+- hl71_6p93sp
+- icd_18_57_disk_req
+- ifcp5_1pou_manual
+- imr_read_me
+- instructions
+- ivmb_2_p395_hec
+- ivmb_2_p865_rn
+- kaajee_1_0_1_readme
+- kaajee_classic_8_depg
+- kaajee_sspi_8_748_bckout
+- kaajee_sspi_xu_8_781_bckout
+- kdc1_0rm
+- krn8_0p283sp
+- krn8_0st
+- krn_8_0_dg_binder
+- la_1_ig
+- la_5_2hl7spec_68
+- lab_ui_specs_lab_micro_interface_rel_1_0
+- labautorelease1_0installationguidewarranty
+- labautorelease_1_0_installationguide
+- ldsi_implementation_plan_v1_10
+- lessons_learned
+- mag_imgerrormsg
+- mag_telereader_configuration
+- md1_0p72term
+- mpi_psim_implementation_plan_v1
+- mpif_1_63_ig
+- nlt_wkld_code_request_form
+- nois_1_1_adpac
+- nois_1_1_dev
+- nois_1_1_getting_started
+- nois_1_1_irms
+- nois_1_1_manager
+- nois_1_1_overview
+- nois_1_1_support
+- noistm
+- patch_module_enhancements
+- pats_1_1_datamigrationguide
+- pats_notificationsfornonadvocates
+- pcmmugappx
+- pims_tm
+- pims_tm_4909
+- pmuser
+- ppp_1_message
+- prec_6_0_tg_r0516
+- prec_6_1_tg_r0717
+- psb_3_p47_pss_1_p141_ig
+- psb_3_p84_bcbu_sg
+- pso_7_p522_opai_dibrg
+- pss_1_p127_drug_exceptions_list
+- pxrm_2_0_54_cds
+- pxrm_va_covid_19_cprs_status_version_5_ig
+- ra5_0hl7
+- ra_5_aa_s_1
+- rai_mds_electronic_transmission_training_manual
+- readme
+- rtls_ese_interfaces_technical_manual
+- scrn_tut
+- sd_5_3_879_dibrg
+- spn_2_conversion_information
+- sqli_sm
+- sqli_vendor
+- sr_3_p164_rn
+- state_patch_follow_up_xu_8_105
+- sts_vets_10_setup_guide
+- tcpip_service_for_mailman
+- test_document_vdl
+- tiu_1_357_util
+- tiu_util
+- tmp_4_6_rs
+- tmp_4_8_requirements_signed
+- tmp_5_2_4_dibr
+- tmp_deployment_installation_rollback_backout_guide_tmp_4_6
+- usr_1_33rn
+- vbecs_2_3_0_kda
+- vbecs_2_3_1_kda
+- vbecs_2_3_2_kda
+- vbecs_2_3_3_kda
+- vbecs_2_3_4_kda
+- vbecs_2_4_0_kda
+- vbecs_2_4_1_kda
+- vbecs_product_information
+- viab_1_14_installation_back_out_rollback_plan_release_notes
+- vista_blood_bank_v5_2_package_status_july_18_2011
+- vista_monograph_0723_r
+- vista_pacs_hl7_profile_1_2
+- vista_state_patch_xu_999_3
+- vistamessagingoverview_vdef_100105
+- vistarad_quick_start_guide
+- vistarad_shortcut_list
+- vix_admin_guide
+- vle_micro_mmrs_1_0_4_remediation_guide
+- vs_gui_1_7_0_2_user_guide_addendum
+- vs_gui_1_7_10_1_user_guide_addendum
+- vs_gui_1_7_11_user_guide_addendum
+- vs_gui_1_7_12_user_guide_addendum
+- vs_gui_1_7_14_1_user_guide_addendum
+- vs_gui_1_7_15_0_user_guide_addendum
+- vs_gui_1_7_16_2_user_guide_addendum
+- vs_gui_1_7_17_2_user_guide_addendum
+- vs_gui_1_7_1_user_guide_addendum
+- vs_gui_1_7_20_1_user_guide_addendum
+- vs_gui_1_7_21_0_user_guide_addendum
+- vs_gui_1_7_22_0_user_guide_addendum
+- vs_gui_1_7_23_0_user_guide_addendum
+- xm_8_0_getstartguide
+- xobw_1_0_p4_ig
+- xt7_3p98sp
+- xtmp_rules
+- xu8_0p512sp
+- xu_8_0_608_sp
+- xu_8_0_702_qr
+- xwb1_1p44um
+- xwb_1_1_72_rm_r
+- xwb_1_1_73_rm_r
+- zslot_mg

@@ -47,6 +47,19 @@ class Settings(BaseSettings):
         """Descriptive crawl/fetch User-Agent — VA infra 403s the default client UA (§3.1)."""
         return f"vdocs/{__version__} (+github.com/rafael5/vdocs)"
 
+    registries_dir: Path | None = Field(
+        default=None,
+        validation_alias=AliasChoices("REGISTRIES_DIR", "VDOCS_REGISTRIES_DIR", "registries_dir"),
+    )
+
+    @property
+    def registries(self) -> Path:
+        """The curated, version-controlled vocabularies — in the **repo**, not the lake (§9.7)."""
+        if self.registries_dir is not None:
+            return self.registries_dir
+        # repo root = src/vdocs/config.py → parents[2]
+        return Path(__file__).resolve().parents[2] / "registries"
+
     # --- the lake root (§5.3) ---
     @property
     def lake(self) -> Path:

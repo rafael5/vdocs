@@ -1,0 +1,344 @@
+doc_type_patterns:
+- pattern: Deployment[,\s]+Installation[,\s]+Back.?Out[,\s]+and[,\s]+Rollback
+  code: DIBR
+  label: Deployment, Installation, Back-Out, and Rollback Guide
+- pattern: Deploy.*Install.*(?:Rollback|Back.?Out)
+  code: DIBR
+  label: Deployment, Installation, Back-Out, and Rollback Guide
+- pattern: \bDIBRG?\b|\bDIRB\b|\bDIBORG\b
+  code: DIBR
+  label: Deployment, Installation, Back-Out, and Rollback Guide
+- pattern: Set\s*[Uu]p\s+and\s+Config(?:uration)?\s+Guide
+  code: CFG
+  label: Setup and Configuration Guide
+- pattern: Config(?:uration)?\s+Guide
+  code: CFG
+  label: Configuration Guide
+- pattern: Quick\s+Reference\s+(?:Guide|Card)
+  code: QRG
+  label: Quick Reference Guide
+- pattern: \bbrochure\b
+  code: QRG
+  label: Quick Reference Guide
+- pattern: \bchecklist\b
+  code: QRG
+  label: Quick Reference Guide
+- pattern: Implementation\s+Guide
+  code: IG-IMP
+  label: Implementation Guide
+- pattern: Deployment\s+Guide
+  code: IG
+  label: Installation Guide
+- pattern: Install(?:ation)?\s+(?:and\s+)?(?:Configuration\s+)?Guide
+  code: IG
+  label: Installation Guide
+- pattern: Install(?:ation)?\s+Manual
+  code: IG
+  label: Installation Guide
+- pattern: Install\s+Deploy\s+Guide
+  code: IG
+  label: Installation Guide
+- pattern: Install\s*/\s*Implement\s+Guide
+  code: IG
+  label: Installation Guide
+- pattern: \bAction\s+Item\b
+  code: IG
+  label: Installation Guide
+- pattern: \bsetup\s+notes?\b|\bset.up\s+notes?\b
+  code: IG
+  label: Installation Guide
+- pattern: User\s+Manual
+  code: UM
+  label: User Manual
+- pattern: User.?s?\s+Guide
+  code: UG
+  label: User Guide
+- pattern: (?:Manager|Supervisor|ADPAC)\s+(?:Manual|Guide)
+  code: UG
+  label: Manager/ADPAC Guide
+- pattern: (?:Site\s+)?Manager.*Manual\b
+  code: UG
+  label: Manager/ADPAC Guide
+- pattern: Administrator.?s?\s+Guide
+  code: AG
+  label: Administrator's Guide
+- pattern: System.?s?\s+Management
+  code: SM
+  label: Site Manual / Systems Management Guide
+- pattern: Clinical\s+Coordinator\s+Manual
+  code: UM
+  label: Clinical Coordinator Manual
+- pattern: \bHandbook\b
+  code: UG
+  label: User Guide
+- pattern: \bMenu\b
+  code: UM
+  label: User Manual
+- pattern: Technical\s+Manual
+  code: TM
+  label: Technical Manual
+- pattern: Technical\s+Guide
+  code: TG
+  label: Technical Guide
+- pattern: API\s+Manual
+  code: API
+  label: API Manual
+- pattern: Programmer\s+Manual
+  code: API
+  label: API Manual
+- pattern: Developer.*Manual
+  code: API
+  label: API Manual
+- pattern: Developer.?s?\s+Guide
+  code: DG
+  label: Developer Guide
+- pattern: (?:HL7\s+)?Interface\s+(?:Document|Specification|Spec)
+  code: INT
+  label: Interface Specification
+- pattern: Interface\s+Toolkit
+  code: REF
+  label: Interface Toolkit
+- pattern: Feed\s+Guide
+  code: INT
+  label: Interface Feed Guide
+- pattern: Security\s+Guide
+  code: SG
+  label: Security Guide
+- pattern: Security\s+Manual
+  code: SG
+  label: Security Guide
+- pattern: Productions?\s+Operations?\s+Manual
+  code: POM
+  label: Production Operations Manual
+- pattern: Operations?\s+Manual\b
+  code: POM
+  label: Production Operations Manual
+- pattern: \bPOM\b
+  code: POM
+  label: Production Operations Manual
+- pattern: Setup\s+Guide
+  code: SG-SET
+  label: Setup Guide
+- pattern: Troubleshooting\s+Guide
+  code: SUP
+  label: Supplement
+- pattern: Release\s+Notes?\b
+  code: RN
+  label: Release Notes
+- pattern: Patch\s+Description
+  code: PDD
+  label: Patch Description Document
+- pattern: Version\s+Description\s+Document
+  code: VDD
+  label: Version Description Document
+- pattern: Description\s+Document
+  code: DESC
+  label: Description Document
+- pattern: Clinical\s+Reminder\s+Update
+  code: CRU
+  label: Clinical Reminder Update
+- pattern: Conversion\s+Guide
+  code: CVG
+  label: Conversion Guide
+- pattern: Frequently\s+Asked\s+Questions
+  code: FAQ
+  label: Frequently Asked Questions
+- pattern: \bAppendix\b
+  code: APX
+  label: Appendix
+- pattern: Training\s+Guide
+  code: TRG
+  label: Training Guide
+- pattern: Training\s+Manual
+  code: TRG
+  label: Training Manual
+- pattern: (?:Quick\s+)?Reference\s+(?:Card|Guide|Manual)
+  code: REF
+  label: Reference
+- pattern: (?:Information\s+)?Flowchart
+  code: REF
+  label: Reference
+- pattern: '^\d{3}:'
+  code: SUP
+  label: Supplement
+- pattern: ^\d{2}[–\-]\d+
+  code: FORM
+  label: VBA Form
+- pattern: ^(?:VA|VBA|SF)\d
+  code: FORM
+  label: VBA Form
+- pattern: (?:Application|Form)\s+\d{2}-\d+
+  code: FORM
+  label: VBA Form
+slug_suffix_map:
+  rn:
+    code: RN
+    label: Release Notes
+  readme:
+    code: RN
+    label: Release Notes
+  notes:
+    code: RN
+    label: Release Notes
+  dibrg:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  dibr:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  diborg:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  dirb:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  bckout:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  plan:
+    code: DIBR
+    label: Deployment, Installation, Back-Out, and Rollback Guide
+  ig:
+    code: IG
+    label: Installation Guide
+  um:
+    code: UM
+    label: User Manual
+  ug:
+    code: UG
+    label: User Guide
+  addendum:
+    code: UG
+    label: User Guide
+  mm:
+    code: UG
+    label: User Guide
+  iug:
+    code: UG
+    label: User Guide
+  rec:
+    code: UM
+    label: User Manual
+  sm:
+    code: SM
+    label: Site Manual / Systems Management Guide
+  puse:
+    code: UG
+    label: User Guide
+  adpac:
+    code: UG
+    label: Manager/ADPAC Guide
+  irms:
+    code: UG
+    label: User Guide
+  clerk:
+    code: UG
+    label: User Guide
+  coord:
+    code: UG
+    label: User Guide
+  orders:
+    code: UG
+    label: User Guide
+  card:
+    code: UG
+    label: User Guide
+  agent:
+    code: UG
+    label: User Guide
+  tech:
+    code: UG
+    label: User Guide
+  analyst:
+    code: UG
+    label: User Guide
+  menu:
+    code: UM
+    label: User Manual
+  tm:
+    code: TM
+    label: Technical Manual
+  manual:
+    code: TM
+    label: Technical Manual
+  tg:
+    code: TRG
+    label: Training Guide
+  dg:
+    code: DG
+    label: Developer Guide
+  ag:
+    code: AG
+    label: Administrator's Guide
+  pm:
+    code: API
+    label: API / Programmer Manual
+  id:
+    code: INT
+    label: Interface Specification
+  spec:
+    code: INT
+    label: Interface Specification
+  pom:
+    code: POM
+    label: Production Operations Manual
+  raci:
+    code: POM
+    label: Production Operations Manual
+  sg:
+    code: SG
+    label: Security Guide
+  cfg:
+    code: CFG
+    label: Configuration Guide
+  qr:
+    code: QRG
+    label: Quick Reference Guide
+  faq:
+    code: FAQ
+    label: Frequently Asked Questions
+  tut:
+    code: TRG
+    label: Training Guide
+  tutorial:
+    code: TRG
+    label: Training Guide
+  sp:
+    code: SUP
+    label: Supplement
+  kda:
+    code: SUP
+    label: Supplement
+  ddd:
+    code: SUP
+    label: Supplement
+  glossary:
+    code: SUP
+    label: Supplement
+  wf:
+    code: WF
+    label: Workflow Guide
+  vdd:
+    code: VDD
+    label: Version Description Document
+  impg:
+    code: IG-IMP
+    label: Implementation Guide
+  cig:
+    code: IG-IMP
+    label: Implementation Guide
+  img:
+    code: IG-IMP
+    label: Implementation Guide
+  rs:
+    code: RS
+    label: Requirements Specification
+app_specific_suffix:
+- app: PRC
+  suffix: signed
+  code: POM
+  label: Production Operations Manual
+- app: TMP
+  suffix: signed
+  code: RS
+  label: Requirements Specification
