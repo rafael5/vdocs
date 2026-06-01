@@ -1,17 +1,26 @@
 # VDL Crawl & Inventory-Enrichment Specification
 
-**Status:** Replication spec (derived from the v1 `vista-docs` implementation). **Date:** 2026-06-01.
+**Status:** Replication-grade spec (derived from the v1 `vista-docs` implementation). **Date:** 2026-06-01.
 **Purpose:** define, exactly, how to crawl the VA VistA Document Library (VDL) website and enrich the
-result into the canonical **inventory** so the vdocs `crawl` + `catalog` stages reproduce the
-**identical `vdl_inventory_enriched.csv`** that v1 produced after extensive trial and error.
+result into the canonical **inventory**, so the vdocs `crawl` + `catalog` stages reproduce **everything
+v1 derived** and may improve on it.
 
-> This document is the contract. It is reverse-engineered from the authoritative v1 sources:
+> **Contract — superset, not identity (decided 2026-06-01).** vdocs does **not** have to emit a
+> byte-identical `vdl_inventory_enriched.csv`. The binding requirement is **no information loss**: every
+> signal v1 derived (every column's meaning in §5) must be present and at least as correct. vdocs is
+> **free to add columns, finer fields, extra signals, or richer structure** wherever that makes the
+> enrichment better — and free to choose its own column order, types, and on-disk shape (JSON is the
+> primary artifact; CSV is a convenience view). v1's exact columns and the §7 distributions are the
+> **reference floor and sanity targets**, not a diff gate.
+>
+> This document is reverse-engineered from the authoritative v1 sources:
 > `src/vista_docs/crawl/{parser,crawler,session}.py`, `scripts/enrich_inventory.py` (1,448 lines),
-> `src/vista_docs/enrich/{doc_labels,package_master,text_fixers}.py`, the `data/*.yaml` vocabularies,
-> and validated against the live output `~/data/vista-docs/inventory/vdl_inventory_enriched.csv`
-> (8,834 rows × 34 columns). Where vdocs should *implement* this rather than copy it, §9 maps each
-> piece onto the vdocs `crawl`/`catalog` stage contracts (design §8). **Inventory is metadata only —
-> no documents are downloaded.** Selecting and fetching a subset is a separate, later step (§9.5).
+> `scripts/classify_vista_type.py`, `src/vista_docs/enrich/{doc_labels,package_master,text_fixers}.py`,
+> the `data/*.yaml` vocabularies, and validated against the live output
+> `~/data/vista-docs/inventory/vdl_inventory_enriched.csv` (8,834 rows × 34→36 columns). Where vdocs
+> should *implement* this rather than copy it, §9 maps each piece onto the vdocs `crawl`/`catalog` stage
+> contracts (design §8). **Inventory is metadata only — no documents are downloaded.** Selecting and
+> fetching a subset is a separate, later step (§9.5).
 
 ---
 
@@ -288,7 +297,7 @@ edge cases are in §8(d); the 196-app map is reference data → vdocs `registrie
 
 ---
 
-## 5. Column reference (34 columns + 2 from Stage C = 36)
+## 5. Column reference (v1's 34 + 2 Stage C = 36 — the information floor; vdocs may add more)
 
 Output order is **fixed** (this is part of the contract):
 
@@ -336,11 +345,11 @@ Output order is **fixed** (this is part of the contract):
 | 8a | `system_type` | str | no | `SYSTEM_TYPE[app_name_abbrev]`; 11 categories; `"unclassified"` if unmapped |
 | 8b | `cots_dependent` | bool | no | `app_name_abbrev ∈ {MD, YS, ROI, CPT, DRG, PREM}` |
 
-**+1 vdocs-native column (§9.4 decision), appended LAST → 37-column vdocs output:**
+**+ vdocs-native column(s) (§9.4 decision); column order is free under the superset contract:**
 
-| pos | Column | Type | Null? | Derivation / values |
-|---|---|---|---|---|
-| 37 | `anchor_key` | str | yes | `app_name_abbrev:pkg_ns:doc_code` (version-free, §6.6); the design's anchor-document identity, consumed by `consolidate`. **Appended last** so the preceding 36 columns stay byte-identical to v1. Not part of v1's CSV. |
+| Column | Type | Null? | Derivation / values |
+|---|---|---|---|
+| `anchor_key` | str | yes | `app_name_abbrev:pkg_ns:doc_code` (version-free, §6.6); the design's anchor-document identity, consumed by `consolidate`. A vdocs addition beyond v1 — add more such fields freely where they improve enrichment. |
 
 ---
 
@@ -389,16 +398,25 @@ residual label-gap cases (v1 `vdl_inventory_label_gaps_residual.md`, 2026-03-30)
 
 ---
 
-## 7. Invariants & acceptance test (identical CSV)
+## 7. Acceptance — no information loss + reference distributions
 
-The replication is correct iff, run against the same crawl, it reproduces these. **All figures below
-were measured directly from the on-disk `vdl_inventory_enriched.csv` on 2026-06-01** and supersede any
-differing tallies in the v1 narrative docs (which are stale — e.g. the docs state `anchor 1,918 /
-plain 3,332`; the actual file is `anchor 3,466 / plain 1,784`).
+The contract is **superset, not identity** (see header). Correctness has two parts:
 
-- **Rows:** 8,834 (1:1 with raw); **columns:** 34 (enrich) / 36 (after Stage C) in the exact order of
-  §5. The identical-CSV test compares **only the v1 columns**; vdocs appends `anchor_key` as a 37th
-  column (§9.4) which is excluded from the diff against v1's reference.
+1. **No information loss (binding).** Every v1 signal in §5 is present in the vdocs output with at least
+   v1's correctness: `noise_type`, `doc_layer`, `doc_code`/`doc_label`, patch identity (incl.
+   `multi_ns`/`patch_id_full`), `companion_url`, `doc_slug`, `group_key`, `system_type`, etc. vdocs may
+   add more columns/fields/structure; it may **not** drop or weaken any of these.
+2. **Reference distributions (sanity targets, not a diff gate).** Run against the same crawl, the
+   vdocs output should land **at or above** these figures (more-correct enrichment may legitimately
+   shift them — e.g. fewer blank `doc_code`). Investigate large regressions; small improvements are fine.
+
+**All figures below were measured directly from the on-disk `vdl_inventory_enriched.csv` on
+2026-06-01** and supersede any differing tallies in the v1 narrative docs (which are stale — e.g. the
+docs state `anchor 1,918 / plain 3,332`; the actual file is `anchor 3,466 / plain 1,784`).
+
+- **Rows:** 8,834 (1:1 with raw — enrichment never adds/drops rows). **Columns:** at least the v1
+  signals of §5 (34 enrich / 36 with Stage C); vdocs adds `anchor_key` and may add more. Column order
+  and on-disk shape are vdocs's choice.
 - **`noise_type`:** `""`=7,491 · `vba_form`=1,192 · `va_ref`=149 · `test_document`=2.
 - **`doc_layer`:** anchor=3,466 · patch=3,584 · plain=1,784.
 - **`doc_format`:** pdf=5,097 · docx=3,730 · doc=7.
@@ -531,14 +549,12 @@ canonical labels, the manual/peer layers, and `system_type`/`cots_dependent`. **
   unify, but the inventory pass uses ftfy as the reference implementation.
 
 ### 9.4 Decisions (resolved 2026-06-01)
-- **`group_key` granularity — DECIDED: keep both keys.** `group_key` stays exactly v1's
-  `app:pkg:patch_ver` (so the replication invariant §7 holds, byte-for-byte). The design §6.6
-  version-free anchor identity is provided as a **separate, vdocs-native column `anchor_key`**
-  (`app_name_abbrev:pkg_ns:doc_code`, version/patch stripped), **appended as the last column** so it
-  never disturbs the position or value of any v1 column. The acceptance test (§7) compares the v1
-  columns only; `anchor_key` is a vdocs superset field consumed downstream by `consolidate` (anchor-doc
-  rollup). v1's `group_key` clusters patches within one version; `anchor_key` clusters every version of
-  a logical document under one living anchor.
+- **`group_key` granularity — DECIDED: keep both keys.** Provide v1's `group_key = app:pkg:patch_ver`
+  (clusters patches within one version) **and** the design §6.6 version-free `anchor_key =
+  app:pkg:doc_code` (clusters every version of a logical document under one living anchor, consumed by
+  `consolidate`). Both carry distinct, useful signal, so vdocs keeps both rather than choosing. With the
+  superset contract (§7) there is no byte-diff to preserve, so column order is free — place `anchor_key`
+  wherever is clearest (e.g. beside `group_key`).
 - **`noise_type` vs. `drift_status` — DECIDED: two separate columns.** Noise classification stays in
   `catalog` enrichment (§4.2) as `noise_type` (a static property: genuine doc vs. chrome/form). It is
   orthogonal to and kept separate from the §7.6 `drift_status` (a temporal property: changed since last
