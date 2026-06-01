@@ -1,0 +1,159 @@
+"""The Stage abstraction and the generic preflight/postflight engine (§7.1, §7.3).
+
+The §7.3 preflight/postflight algorithms live here **once** as concrete methods on the
+``Stage`` base class — every stage inherits the identical logic and overrides only
+``run`` (and optionally ``deep_gate``). This is the anti-duplication rule (§9.2) applied
+to orchestration: there is no second code path, and no stage re-implements gating.
+"""
+
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+
+import structlog
+
+from vdocs.config import Settings
+from vdocs.models.artifact import ArtifactContract
+from vdocs.models.stage import (
+    Idempotency,
+    PostflightResult,
+    PreflightResult,
+    RunResult,
+    StageRun,
+)
+from vdocs.orchestrator.state import StateStore
+
+log = structlog.get_logger(__name__)
+
+
+def _utc_now() -> str:
+    return datetime.now(UTC).isoformat()
+
+
+@dataclass
+class StageContext:
+    """Everything a stage needs at runtime — resolved config + state, no globals (§9.1)."""
+
+    cfg: Settings
+    state: StateStore
+    scope: str = ""
+    verify: bool = False
+    clock: Callable[[], str] = field(default=_utc_now)
+
+
+class PostflightError(RuntimeError):
+    """Raised when a stage's outputs fail validation or the deep gate (§7.3)."""
+
+
+class Stage(ABC):
+    """One node of the pipeline DAG: a pure transform from ``requires`` to ``produces``."""
+
+    name: str
+    description: str = ""
+    requires: list[ArtifactContract] = []
+    produces: list[ArtifactContract] = []
+    idempotency: Idempotency = Idempotency.SKIP_IF_UNCHANGED
+    contract_ver: int = 1
+
+    # --- the work (the only thing a concrete stage must implement) ---
+    @abstractmethod
+    def run(self, ctx: StageContext, force: bool) -> RunResult:
+        """Do the transform. Write to a temp location and atomic-swap on success (§7.4)."""
+
+    def deep_gate(self, ctx: StageContext) -> PostflightResult:
+        """Stage-specific output gate; default passes. ``validate`` overrides this (§7.3)."""
+        return PostflightResult(ok=True)
+
+    # --- generic preflight (§7.3) ---
+    def preflight(self, ctx: StageContext, force: bool) -> PreflightResult:
+        cfg = ctx.cfg
+        # 1. Every required input must be present & usable (or a loud-WARN if optional).
+        for c in self.requires:
+            res = c.validate(cfg)
+            if not res.ok:
+                if c.optional:
+                    log.warning(
+                        "optional-input-missing", stage=self.name, artifact=c.key, detail=res.detail
+                    )
+                    continue
+                remediation = f"Run: vdocs {c.produced_by}" if c.produced_by else f"Provide {c.key}"
+                return PreflightResult.fail(
+                    f"required input {c.key} is not usable: {res.detail}",
+                    remediation=remediation,
+                )
+        # 2. Internal upstreams must have completed ok and not drifted since (§7.3).
+        for c in self.requires:
+            if c.produced_by is None or not c.validate(cfg).ok:
+                continue
+            up = ctx.state.get(c.produced_by, ctx.scope)
+            if up is None or up.status != "ok":
+                return PreflightResult.fail(
+                    f"upstream {c.produced_by} has not completed ok for scope {ctx.scope!r}",
+                    remediation=f"Run: vdocs {c.produced_by}",
+                )
+            if up.outputs_fp.get(c.key) != c.fingerprint(cfg, verify=ctx.verify):
+                return PreflightResult.fail(
+                    f"{c.key} changed since {c.produced_by} produced it",
+                    remediation=f"re-run {c.produced_by}",
+                )
+        # 3 & 4. Skip decision.
+        if force or self.idempotency == Idempotency.ALWAYS_RERUN:
+            return PreflightResult.proceed()
+        if self.idempotency == Idempotency.FORCE_ONLY:
+            return PreflightResult.skip("force-only stage; not forced")
+        prior = ctx.state.get(self.name, ctx.scope)
+        if prior is not None and prior.status == "ok":
+            produces_ok = all(p.validate(cfg).ok for p in self.produces)
+            if prior.inputs_fp == self._input_fps(ctx) and produces_ok:
+                return PreflightResult.skip("inputs unchanged")
+        return PreflightResult.proceed()
+
+    # --- generic postflight (§7.3) ---
+    def postflight(self, ctx: StageContext, run: RunResult, started_at: str) -> StageRun:
+        cfg = ctx.cfg
+        finished_at = ctx.clock()
+        inputs_fp = self._input_fps(ctx)
+        invalid = [p.key for p in self.produces if not p.validate(cfg).ok]
+        gate = self.deep_gate(ctx)
+        if invalid or not gate.ok:
+            self._write(ctx, "failed", started_at, finished_at, inputs_fp, {}, run.counts)
+            reason = f"invalid outputs {invalid}" if invalid else gate.reason
+            raise PostflightError(f"{self.name} postflight failed: {reason}")
+        outputs_fp = {p.key: p.fingerprint(cfg, verify=ctx.verify) for p in self.produces}
+        return self._write(ctx, "ok", started_at, finished_at, inputs_fp, outputs_fp, run.counts)
+
+    # --- helpers ---
+    def _input_fps(self, ctx: StageContext) -> dict[str, str]:
+        return {
+            c.key: c.fingerprint(ctx.cfg, verify=ctx.verify)
+            for c in self.requires
+            if c.validate(ctx.cfg).ok
+        }
+
+    def _write(
+        self,
+        ctx: StageContext,
+        status: str,
+        started_at: str,
+        finished_at: str,
+        inputs_fp: dict[str, str],
+        outputs_fp: dict[str, str],
+        counts: dict[str, int],
+    ) -> StageRun:
+        run = StageRun(
+            stage=self.name,
+            scope=ctx.scope,
+            status=status,  # type: ignore[arg-type]
+            started_at=started_at,
+            finished_at=finished_at,
+            inputs_fp=inputs_fp,
+            outputs_fp=outputs_fp,
+            counts=counts,
+            contract_ver=self.contract_ver,
+            tool_ver=ctx.cfg.tool_ver,
+        )
+        ctx.state.record(run)
+        return run
