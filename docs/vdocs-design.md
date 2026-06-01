@@ -262,6 +262,27 @@ industry's standard frame for exactly this raw→curated progression. Each layer
   from silver). The publish tree is the human deliverable. Nothing in gold is a source of
   truth that isn't reproducible from silver + bronze.
 
+**Two planes: the inventory (control) plane and the document (data) plane.** The medallion layers
+(bronze→silver→gold) are the *vertical* axis; **orthogonal** to them the pipeline runs on two distinct
+planes, joined at the **fetch gate**. The medallion describes *how raw becomes curated*; the two planes
+describe *what scope each part operates at* — they are complementary views of the same one DAG, not two
+pipelines.
+
+- **Inventory / control plane — `crawl` → `catalog`.** A **site-wide, metadata-only census** of *every*
+  document the VDL exposes (~8.8k links): identity, classification, noise, version/anchor keys, drift,
+  and per-document acquisition status. It downloads nothing. It is the **control plane** — the selection
+  surface, the gate on fetch (§8), the `state.db:acquisitions` status record (§5.5), and the drift/refresh
+  loop (§7.6) — and it refreshes on its **own cadence**, independently of document processing.
+- **Document / data plane — `fetch` → … → `publish`/`serve`.** The heavy ETL that turns *the selected
+  subset's* actual bytes into the markdown corpus and machine views. It advances **only for documents
+  that were selected and fetched**, always *driven from* the inventory.
+
+The two are **decoupled by the fetch gate**: the inventory (full breadth) feeds a curated *selection*
+into the document plane (depth on a subset), and the `acquisitions` table (§5.5) is the join between
+"what exists" and "what we've acquired." You can re-crawl and re-enrich the inventory without touching
+the document plane; the document plane never runs ahead of a green inventory. Tenet #8 (the DAG is data)
+holds across both — this is one declared graph, viewed along two axes.
+
 ---
 
 ## 5. Storage model
