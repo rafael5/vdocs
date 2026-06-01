@@ -336,6 +336,12 @@ Output order is **fixed** (this is part of the contract):
 | 8a | `system_type` | str | no | `SYSTEM_TYPE[app_name_abbrev]`; 11 categories; `"unclassified"` if unmapped |
 | 8b | `cots_dependent` | bool | no | `app_name_abbrev ∈ {MD, YS, ROI, CPT, DRG, PREM}` |
 
+**+1 vdocs-native column (§9.4 decision), appended LAST → 37-column vdocs output:**
+
+| pos | Column | Type | Null? | Derivation / values |
+|---|---|---|---|---|
+| 37 | `anchor_key` | str | yes | `app_name_abbrev:pkg_ns:doc_code` (version-free, §6.6); the design's anchor-document identity, consumed by `consolidate`. **Appended last** so the preceding 36 columns stay byte-identical to v1. Not part of v1's CSV. |
+
 ---
 
 ## 6. Vocabularies & regexes
@@ -390,7 +396,9 @@ were measured directly from the on-disk `vdl_inventory_enriched.csv` on 2026-06-
 differing tallies in the v1 narrative docs (which are stale — e.g. the docs state `anchor 1,918 /
 plain 3,332`; the actual file is `anchor 3,466 / plain 1,784`).
 
-- **Rows:** 8,834 (1:1 with raw); **columns:** 34 in the exact order of §5.
+- **Rows:** 8,834 (1:1 with raw); **columns:** 34 (enrich) / 36 (after Stage C) in the exact order of
+  §5. The identical-CSV test compares **only the v1 columns**; vdocs appends `anchor_key` as a 37th
+  column (§9.4) which is excluded from the diff against v1's reference.
 - **`noise_type`:** `""`=7,491 · `vba_form`=1,192 · `va_ref`=149 · `test_document`=2.
 - **`doc_layer`:** anchor=3,466 · patch=3,584 · plain=1,784.
 - **`doc_format`:** pdf=5,097 · docx=3,730 · doc=7.
@@ -515,18 +523,26 @@ canonical labels, the manual/peer layers, and `system_type`/`cots_dependent`. **
 `registries/typo-corrections`, `registries/manual-labels` (overrides/noise/slugs),
 `registries/noise-domains` (VBA/benefits hosts), `registries/system-types` (SYSTEM_TYPE + COTS). `catalog`
 `requires` them.
-- **Mojibake fidelity:** the field repair must match **ftfy + NFC + nbsp-strip** (§4.1), not vdocs'
-  custom `kernel/text.repair_mojibake`. Either add `ftfy` as a `catalog` dependency, or property-test
-  `kernel/text` to byte-equivalence against ftfy on the corpus before relying on it. Until verified,
-  use ftfy for this pass — a divergent repair changes `doc_title`/`doc_subject` and breaks the identical-CSV invariant.
+- **Mojibake fidelity — DECIDED: adopt ftfy for the inventory text pass.** The `doc_title`/`doc_subject`/
+  `app_name(_full)` repair uses **`ftfy.fix_text(text, normalization="NFC")` + nbsp-strip** (§4.1) — add
+  `ftfy` as a `catalog` dependency. vdocs' custom `kernel/text.repair_mojibake` is **not** used for this
+  pass (it is not byte-identical to ftfy and would silently diverge those columns). `kernel/text` remains
+  the repair for the rest of the pipeline; a future change may property-test it to ftfy-equivalence and
+  unify, but the inventory pass uses ftfy as the reference implementation.
 
-### 9.4 Decisions to confirm (divergence from v1)
-- **`group_key` granularity.** v1 = `app:pkg:patch_ver` (per-version). The vdocs design §6.6 says strip
-  the version/patch component (version-free anchor across all versions). For *exact CSV replication*,
-  use v1's `app:pkg:patch_ver`. If vdocs wants the design's version-free anchor, add it as a **separate
-  column** (e.g. `anchor_key`) rather than changing `group_key`, so the replication invariant (§7) holds.
-- **`noise_type` as drift vs. enrichment.** Keep noise classification in `catalog` enrichment (§4.2);
-  it is independent of the §7.6 drift status (`drift_status` is a separate column already in vdocs).
+### 9.4 Decisions (resolved 2026-06-01)
+- **`group_key` granularity — DECIDED: keep both keys.** `group_key` stays exactly v1's
+  `app:pkg:patch_ver` (so the replication invariant §7 holds, byte-for-byte). The design §6.6
+  version-free anchor identity is provided as a **separate, vdocs-native column `anchor_key`**
+  (`app_name_abbrev:pkg_ns:doc_code`, version/patch stripped), **appended as the last column** so it
+  never disturbs the position or value of any v1 column. The acceptance test (§7) compares the v1
+  columns only; `anchor_key` is a vdocs superset field consumed downstream by `consolidate` (anchor-doc
+  rollup). v1's `group_key` clusters patches within one version; `anchor_key` clusters every version of
+  a logical document under one living anchor.
+- **`noise_type` vs. `drift_status` — DECIDED: two separate columns.** Noise classification stays in
+  `catalog` enrichment (§4.2) as `noise_type` (a static property: genuine doc vs. chrome/form). It is
+  orthogonal to and kept separate from the §7.6 `drift_status` (a temporal property: changed since last
+  crawl). Neither is folded into the other.
 
 ### 9.5 Selection & fetch (separate, later)
 `fetch` consumes the enriched inventory and downloads **only a selected subset** (never blind/all). The
