@@ -29,6 +29,10 @@ class Settings(BaseSettings):
         default_factory=_default_data_dir,
         validation_alias=AliasChoices("DATA_DIR", "VDOCS_DATA_DIR", "data_dir"),
     )
+    vdl_base_url: str = Field(
+        default="https://www.va.gov/vdl/",
+        validation_alias=AliasChoices("VDL_BASE_URL", "VDOCS_VDL_BASE_URL", "vdl_base_url"),
+    )
 
     @property
     def tool_ver(self) -> str:
@@ -51,6 +55,18 @@ class Settings(BaseSettings):
     @property
     def bronze_raw(self) -> Path:
         return self.bronze / "raw"
+
+    @property
+    def catalog_raw(self) -> Path:
+        return self.bronze_catalog / "raw.json"
+
+    @property
+    def catalog_enriched(self) -> Path:
+        return self.bronze_catalog / "enriched.json"
+
+    @property
+    def raw_index(self) -> Path:
+        return self.bronze_raw / "index.json"
 
     @property
     def assets(self) -> Path:

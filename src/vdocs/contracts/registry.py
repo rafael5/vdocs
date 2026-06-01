@@ -43,8 +43,50 @@ VDL = ArtifactContract(
 )
 
 
+# --- bronze layer (§5.3, §8) ---
+# The catalog manifests are bronze bookkeeping describing what was acquired — regenerated
+# each crawl, so STATE-class (not content-addressed evidence, not versioned text). The
+# actual write-once evidence is the content-addressed `raw` tree.
+CATALOG_RAW = ArtifactContract(
+    key="bronze/catalog.raw",
+    kind=Kind.FILE,
+    storage_class=StorageClass.STATE,
+    produced_by="crawl",
+    relpath="bronze/catalog/raw.json",
+)
+CATALOG_ENRICHED = ArtifactContract(
+    key="bronze/catalog.enriched",
+    kind=Kind.FILE,
+    storage_class=StorageClass.STATE,
+    produced_by="catalog",
+    relpath="bronze/catalog/enriched.json",
+)
+RAW_TREE = ArtifactContract(
+    key="bronze/raw",
+    kind=Kind.TREE_ASSET_CAS,
+    storage_class=StorageClass.ASSET_WRITE_ONCE,
+    produced_by="fetch",
+    relpath="bronze/raw",
+)
+RAW_INDEX = ArtifactContract(
+    key="bronze/raw/index.json",
+    kind=Kind.FILE,
+    storage_class=StorageClass.STATE,
+    produced_by="fetch",
+    relpath="bronze/raw/index.json",
+)
+
+
 def foundational_registry() -> ArtifactRegistry:
     """Build a registry seeded with the artifacts that exist before any stage runs."""
     reg = ArtifactRegistry()
     reg.register(VDL)
+    return reg
+
+
+def default_registry() -> ArtifactRegistry:
+    """The registry of every artifact declared so far (foundational + bronze)."""
+    reg = foundational_registry()
+    for contract in (CATALOG_RAW, CATALOG_ENRICHED, RAW_TREE, RAW_INDEX):
+        reg.register(contract)
     return reg

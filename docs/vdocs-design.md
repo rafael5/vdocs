@@ -802,6 +802,10 @@ by every stage:
 - `kernel/db/` — SQLite open/migrate/upsert helpers; one place that knows pragmas.
 - `kernel/discovery/` — shingling/MinHash near-duplicate detection + structural-fingerprint/
   clustering miners (§9.6), shared by every `discover` instance.
+- `kernel/http` — the one HTTP GET client (text + bytes), shared by `crawl` (HTML) and
+  `fetch` (binaries). Stages take it as an injected callable, so the network is faked in
+  tests and only this wrapper touches the wire. (Added in the Phase-2 build: two stages
+  need network reads, so per the anti-duplication rule the client lives here once.)
 
 **Rule:** if a second stage needs a primitive, it imports it from `kernel/` or the primitive
 is promoted *into* `kernel/`. Copy-paste across stages is a build-breaking review failure.

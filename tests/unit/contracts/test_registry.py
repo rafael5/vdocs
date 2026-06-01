@@ -2,7 +2,11 @@
 
 import pytest
 
-from vdocs.contracts.registry import ArtifactRegistry, foundational_registry
+from vdocs.contracts.registry import (
+    ArtifactRegistry,
+    default_registry,
+    foundational_registry,
+)
 from vdocs.models.artifact import ArtifactContract, Kind, StorageClass
 
 
@@ -48,3 +52,16 @@ def test_foundational_registry_declares_external_vdl():
     vdl = reg.get("vdl")
     assert vdl.kind is Kind.EXTERNAL
     assert vdl.produced_by is None
+
+
+def test_default_registry_declares_bronze_artifacts():
+    reg = default_registry()
+    keys = {c.key for c in reg.all()}
+    assert {
+        "vdl",
+        "bronze/catalog.raw",
+        "bronze/catalog.enriched",
+        "bronze/raw",
+        "bronze/raw/index.json",
+    } <= keys
+    assert reg.get("bronze/raw").produced_by == "fetch"
