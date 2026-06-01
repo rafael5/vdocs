@@ -560,11 +560,22 @@ canonical labels, the manual/peer layers, and `system_type`/`cots_dependent`. **
   orthogonal to and kept separate from the §7.6 `drift_status` (a temporal property: changed since last
   crawl). Neither is folded into the other.
 
-### 9.5 Selection & fetch (separate, later)
+### 9.5 Selection, fetch & acquisition status (separate, later)
 `fetch` consumes the enriched inventory and downloads **only a selected subset** (never blind/all). The
 genuine candidate set = rows with `noise_type==""`; selection (by app/section/doc_type/group, or a
-curated list) is applied before fetch. This spec stops at the inventory — it is the basis for *deciding*
-what to fetch.
+curated list) is applied before fetch. This spec's inventory is the basis for *deciding* what to fetch.
+
+**The inventory is the gatekeeper; fetch status is a separate system of record.** Per-document fetch
+status (fetched-or-not, last-attempt/fetched dates, success/failure, http status, retries, resulting
+`sha256`, error) is mutable, action-derived state — **not** written back into `catalog.enriched` (that
+would break `catalog` idempotency and churn the artifact). It lives in a dedicated **`acquisitions`**
+table in `state.db`, keyed by the inventory **stable `doc_id` = `app_code:doc_slug`** (vdocs design §5.5,
+where the full schema lives). The inventory stays the gatekeeper in three senses: (1) nothing is fetched
+that isn't a green `noise_type==''` row; (2) `doc_id` is the join key; (3) the operational "inventory +
+fetch status" an operator inspects is the **join** `enriched ⋈ acquisitions` (`vdocs fetch --status` / an
+`inventory_status` view), not status baked into the inventory. `raw/index.json` is a derived projection
+of `acquisitions`. Fetch is naturally incremental (skip `status==fetched` unless stale) and is where
+`CHANGED_IN_PLACE` drift is decided (stored `acquisitions.sha256` vs. a fresh fetch — design §7.6).
 
 ### 9.6 Suggested build order
 1. `kernel/http` hardening (UA/retry/redirect/final-URL/delay) + tests.
