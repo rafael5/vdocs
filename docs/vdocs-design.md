@@ -16,6 +16,12 @@ to be read top-to-bottom by someone who has never seen the project. Every non-ob
 choice is an explicit decision with rationale (the ADR tables in §10). If the code and
 this document disagree, the document is the bug report.
 
+**Companion specs.** Two documents specify a layer in full and are subordinate-but-authoritative
+for it: **[`vdl-crawl-spec.md`](vdl-crawl-spec.md)** — the crawl→**enriched-inventory** layer (`crawl` +
+`catalog`), a *foundational layer* that must be built and validated **green before any document is
+fetched** (it is the gate on `fetch`, §8); and **[`fidelity-framework.md`](fidelity-framework.md)** — the
+per-document QA verdict that gates `publish`/`push`. Both are bounded by, and consistent with, this design.
+
 ---
 
 ## Contents
@@ -697,8 +703,8 @@ from it.
 | Layer | Stage | requires | produces | idempotency |
 |---|---|---|---|---|
 | 🥉 | **crawl** | `vdl` (external) | `catalog.raw` | FORCE_ONLY (network) |
-| 🥉 | **catalog** | `catalog.raw` | `catalog.enriched` (patch identity, doc labels, app/section, search aliases) | SKIP_IF_UNCHANGED |
-| 🥉 | **fetch** | `catalog.enriched` | `raw` (CAS docx/pdf), `raw/index.json` | SKIP_IF_UNCHANGED |
+| 🥉 | **catalog** | `catalog.raw` | `catalog.enriched` — the **enriched VDL inventory** (the foundational bronze layer): full multi-pass enrichment + system classification per **[`vdl-crawl-spec.md`](vdl-crawl-spec.md)** (patch identity incl. multi-NS, doc-type/labels, `group_key` + version-free `anchor_key`, **noise classification**, companion pairing, drift). **Postflight HARD GATE** — inventory complete vs. the crawl, enriched, noise-classified, no information loss + sane distributions (crawl-spec §7) — `ok` only if green | SKIP_IF_UNCHANGED |
+| 🥉 | **fetch** | `catalog.enriched` **+ catalog `ok` (the inventory gate, green)** + an explicit **selection** | `raw` (CAS docx/pdf), `raw/index.json` | SKIP_IF_UNCHANGED |
 | 🥈 | **convert** | `raw`, `raw/index.json` | `text@converted`, `assets` (CAS) | SKIP_IF_UNCHANGED |
 | 🥈 | **discover** | `text@converted` (corpus-global) | `reports/patterns` (candidate boilerplate / `(doc_type, era)` templates / dead phrases / glossary terms / structural patterns + evidence + proposed disposition) → proposes `registries/` updates (§9.6) | SKIP_IF_UNCHANGED |
 | 🥈 | **enrich** | `text@converted`, `catalog.enriched` | `text@enriched` (identity FM baked), `index.db:doc_meta_staged` | SKIP_IF_UNCHANGED |
@@ -715,6 +721,18 @@ from it.
 | ⬩ | **analyze** (off critical path) | `text@normalized` | `reports/` (survey, headings, lexicon) | SKIP_IF_UNCHANGED |
 
 Notes:
+- **The enriched VDL inventory is a foundational layer and a hard gate before any fetch.** `crawl` +
+  `catalog` build a complete, enriched, noise-classified inventory of the *entire* VDL site — metadata
+  only, no documents downloaded — specified in full by **[`vdl-crawl-spec.md`](vdl-crawl-spec.md)** (the
+  authoritative component spec for the crawl→inventory layer). `catalog`'s postflight is a **HARD GATE**:
+  it blesses `catalog.enriched` as `ok` only when the inventory is complete relative to the crawl, fully
+  enriched, noise-classified, and passes the crawl-spec §7 acceptance (no information loss + sane
+  distributions). **`fetch` cannot run until that gate is green** — the consumer-preflight rule (§7.3)
+  makes this automatic (fetch requires `catalog` `ok` + fingerprint match), and there is **no blind/full
+  download**: `fetch` acquires only an explicit, curated *selection* of the inventory (genuine
+  candidates = rows with `noise_type==""`; selection by app/section/doc_type/group or a curated list).
+  Deciding *what* to fetch is done by inspecting the green inventory; building the inventory is the
+  prerequisite, not an afterthought.
 - **`catalog`** is the promoted, first-class home of v1's hidden `enrich_inventory.py`
   logic. It is a normal stage with a contract — never a hand-run script.
 - **`crawl` + `catalog` are the drift detector.** On a scheduled re-run, `catalog` diffs the fresh
@@ -1361,7 +1379,12 @@ Each phase ends with a runnable, tested increment. Build the spine before the st
    abstraction, `state.db`, the generic DAG runner, the shared kernel (one mojibake/
    frontmatter/fingerprint/CAS each), Pydantic config. A no-op two-stage DAG proves
    preflight→run→postflight + completion records + skip/force end-to-end.
-2. **Bronze:** crawl → catalog → fetch, with the CAS raw store and lineage.
+2. **Bronze:** `crawl` → `catalog` → **inventory gate** → `fetch`, with the CAS raw store and lineage.
+   Build the **enriched VDL inventory first** ([`vdl-crawl-spec.md`](vdl-crawl-spec.md)): a complete,
+   enriched, noise-classified inventory of the whole site (metadata only). `catalog`'s postflight HARD
+   GATE must be **green** (complete + enriched + crawl-spec §7 acceptance) before `fetch` may download
+   anything, and `fetch` pulls only a curated **selection** — never a blind full download. The inventory
+   is the foundation the rest of the pipeline (and the decision of what to fetch) stands on.
 3. **Silver:** convert (Pandoc+Docling) → **discover** (mine boilerplate / per-era template /
    glossary / structure candidates → curate into `registries/`) → enrich (identity FM + staged
    meta) → normalize (F1–F10 + bundle sidecars: history, tables, refs; *subtracts the curated
