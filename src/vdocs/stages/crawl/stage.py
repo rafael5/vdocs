@@ -47,12 +47,14 @@ class CrawlStage(Stage):
         base = ctx.cfg.vdl_base_url
         from vdocs.stages.crawl import crawl_pure as cp
 
+        # Resolve each page's relative links against *that page's own URL* — live VDL doc
+        # links are relative ("documents/…"), so the application-page URL is the correct base.
         sections = cp.parse_index(self._get(base), base)
         n_apps = n_docs = 0
         for section in sections:
-            apps = cp.parse_section_page(self._get(section.url), base)
+            apps = cp.parse_section_page(self._get(section.url), base_url=section.url)
             for app in apps:
-                app.documents = cp.parse_application_page(self._get(app.url))
+                app.documents = cp.parse_application_page(self._get(app.url), base_url=app.url)
                 n_docs += len(app.documents)
             section.applications = apps
             n_apps += len(apps)

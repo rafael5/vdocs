@@ -22,12 +22,13 @@ INDEX_HTML = """
 SECTION1_HTML = """
 <a href="application.asp?appid=55">Admission Discharge Transfer (ADT)</a>
 """
+# RELATIVE doc hrefs, exactly as live VDL serves them — must resolve against the app-page URL.
 APP_HTML = """
 <table>
   <tr><td>DG*5.3*1057 Deployment, Installation, Back-Out, and Rollback Guide</td>
-      <td><a href="/documents/Clinical/ADT/dg_5_3_1057_dibr.docx">DOCX</a></td><td>03/2024</td></tr>
+      <td><a href="documents/Clinical/ADT/dg_5_3_1057_dibr.docx">DOCX</a></td><td>03/2024</td></tr>
   <tr><td>DG*5.3*1057 Deployment, Installation, Back-Out, and Rollback Guide</td>
-      <td><a href="/documents/Clinical/ADT/dg_5_3_1057_dibr.pdf">PDF</a></td><td>03/2024</td></tr>
+      <td><a href="documents/Clinical/ADT/dg_5_3_1057_dibr.pdf">PDF</a></td><td>03/2024</td></tr>
 </table>
 """
 
@@ -37,7 +38,8 @@ PAGES = {
     "https://vdl.test/section.asp?secid=2": "<html></html>",
     "https://vdl.test/application.asp?appid=55": APP_HTML,
 }
-DOCX_URL = "https://www.va.gov/documents/Clinical/ADT/dg_5_3_1057_dibr.docx"
+# relative href resolves against the app-page URL (.../application.asp?appid=55)
+DOCX_URL = "https://vdl.test/documents/Clinical/ADT/dg_5_3_1057_dibr.docx"
 DOC_BYTES = {DOCX_URL: b"PK\x03\x04 fake docx bytes"}
 
 

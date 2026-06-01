@@ -88,6 +88,19 @@ def test_parse_application_page_empty_when_no_file_links():
     assert cp.parse_application_page("<html><body><p>nothing</p></body></html>") == []
 
 
+def test_parse_application_page_resolves_relative_href_against_page_url():
+    # Live VDL serves RELATIVE doc links ("documents/…") that must resolve against the
+    # application-page URL — not the host root. Regression guard for the crawl base bug.
+    html = (
+        "<table><tr><td>NPM Operational Summary</td>"
+        '<td><a href="documents/Infrastructure/NPM/pmuser.docx">DOCX</a></td></tr></table>'
+    )
+    docs = cp.parse_application_page(
+        html, base_url="https://www.va.gov/vdl/application.asp?appid=20"
+    )
+    assert docs[0].url == "https://www.va.gov/vdl/documents/Infrastructure/NPM/pmuser.docx"
+
+
 def test_parse_index_skips_empty_section_text():
     # a section.asp link with no visible text is skipped (no name)
     html = '<a href="section.asp?secid=9"></a><a href="section.asp?secid=1">Clinical</a>'
