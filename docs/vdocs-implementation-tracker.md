@@ -152,6 +152,16 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **Reconciled `acquisitions` / `inventory_status` doc-vs-code (§8, §5.5).** Pre-Phase-4
+  compliance fix B1, resolved in the **doc-amend** direction (the code was already right). §8 listed
+  `state.db:acquisitions` in `serve-inventory.requires`, but the stage requires only `catalog.enriched`
+  and acquisitions is deliberately mutable orchestrator state (§5.5), not an `ArtifactContract`. Amended §8
+  (serve-inventory requires `catalog.enriched`; fetch reads/writes acquisitions as *out-of-contract* state)
+  and §5.5 (acquisitions is not a contract; `inventory_status` = enriched ⋈ acquisitions is a query-time
+  **CLI report/view**, never baked into the gold artifact — modelling it as a serve-inventory input would
+  churn the artifact and create a serve-inventory→fetch→acquisitions→serve-inventory cycle). Marked
+  `serve_pure.inventory_status` as the `vdocs inventory --status` report helper, not a stage output. No
+  behavior change; 277 tests, 100% cov.
 - **2026-06-02** — **`registries` is now a declared `ArtifactContract` in `normalize.requires` (§8, §7.3).**
   Pre-Phase-4 compliance fix B2. `normalize` loaded `registries/phrases.yaml` locally but declared only
   `[text@enriched, raw/index]`, so a curation edit did **not** change its input fingerprint —

@@ -68,7 +68,10 @@ def evaluate_gate(records: list[EnrichedRecord], crawl_documents: int | None) ->
     return GateResult(ok=True, unclassified=unclassified)
 
 
-# --- inventory_status = enriched ⋈ acquisitions (the operator view, §5.5, §9.5) ---
+# --- inventory_status = enriched ⋈ acquisitions (the CLI report/view, §5.5, §9.5) ---
+# NOT a serve-inventory stage output: acquisitions is mutable orchestrator state, kept out of the
+# deterministic-artifact contract (§5.5). This join is computed at query time for the
+# operator-facing `vdocs inventory --status` report; the gold artifact never embeds fetch status.
 
 _STATUS_ORDER = ("fetched", "pending", "failed", "withdrawn", "not_acquired", "out_of_scope")
 
@@ -91,7 +94,9 @@ def inventory_status(
     records: list[EnrichedRecord], acquisitions: dict[str, Acquisition]
 ) -> list[InventoryStatus]:
     """Join the genuine inventory rows (``noise_type==''``) with their acquisition status by
-    ``doc_id`` — one entry per logical document (PDF/DOCX collapse). A logical document with no
+    ``doc_id`` — the CLI-report/view helper behind ``vdocs inventory --status`` (§5.5), **not** a
+    serve-inventory stage output (acquisitions is out-of-contract mutable state). One entry per
+    logical document (PDF/DOCX collapse). A logical document with no
     in-scope (DOCX) representation is flagged ``out_of_scope`` (PDF-only, §1) — never fetchable,
     so its acquisition status is moot. Otherwise the status is the acquisition's, or
     ``not_acquired`` when none exists yet. The inventory stays the gatekeeper; status is joined
