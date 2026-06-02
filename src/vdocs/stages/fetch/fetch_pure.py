@@ -52,6 +52,15 @@ def select_fetch_targets(records: list[EnrichedRecord]) -> list[EnrichedRecord]:
     return list(best.values())
 
 
-def index_entry(*, app_code: str, title: str, source_url: str, ext: str) -> dict[str, str]:
-    """A ``raw/index.json`` entry: sha256 → (app_code, title, source_url, ext)."""
-    return {"app_code": app_code, "title": title, "source_url": source_url, "ext": ext}
+def index_entry(
+    *, app_code: str, doc_slug: str, title: str, source_url: str, ext: str
+) -> dict[str, str]:
+    """A ``raw/index.json`` entry: sha256 → provenance. ``app_code``/``doc_slug`` give the
+    downstream bundle path (``<app>/<slug>/`` in ``text@converted``)."""
+    return {
+        "app_code": app_code,
+        "doc_slug": doc_slug,
+        "title": title,
+        "source_url": source_url,
+        "ext": ext,
+    }

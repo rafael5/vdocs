@@ -24,14 +24,14 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 
 ## Overall status
 
-**Pipeline stages (§8): 3 ✅ · 1 ◐ · 15 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
+**Pipeline stages (§8): 3 ✅ · 2 ◐ · 14 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
 counted separately below). Last updated **2026-06-01**.
 
 | Phase | Title | Status | Progress |
 |---|---|---|---|
 | 1 | Spine (kernel · config · models · contracts · orchestrator) | ✅ | 4/4 |
 | 2 | Inventory medallion + doc-bronze | ◐ | 3/4 ✅ · `fetch` ◐ (selection flags) |
-| 3 | Silver — document text (convert · discover · enrich · normalize) | ☐ | 0/4 |
+| 3 | Silver — document text (convert · discover · enrich · normalize) | ◐ | `convert` ◐ (DOCX); discover/enrich/normalize ☐ |
 | 4 | Gold derive (consolidate · index · relate · manifest) | ☐ | 0/4 |
 | 5 | Gold deliver (fidelity · publish · validate · push · analyze) | ☐ | 0/5 |
 | 6 | Machine interface (embed · serve-mcp) | ☐ | 0/2 |
@@ -51,8 +51,8 @@ counted separately below). Last updated **2026-06-01**.
 | 2 | **catalog** | 🥈 INV | `catalog.raw` → `catalog.enriched` (5-pass enrichment + system classification, §5 cols) | §8; spec §4 | ✅ | `test_enrich_pure`, `test_catalog_inventory` | **§7 distributions reproduce exactly** vs the pinned 8,834-row fixture |
 | 2 | **serve-inventory** | 🥇 INV | `catalog.enriched` → gold `inventory.{json,csv,db}`; **HARD GATE = the fetch gate** | §8, §7.3; spec §7 | ✅ | `test_serve_pure`, `test_serve_inventory` | gate green on the full corpus; `vdocs inventory --status` |
 | 2 | **fetch** | 🥉 DOC | gate `ok` + selection + `acquisitions` → `documents/bronze:raw` (CAS) + `index.json` + `acquisitions` | §8, §9.5 | ◐ | `test_fetch_pure`, `test_bronze_dag` | works (CAS, DOCX-pref, index, acquisitions, gate-wired); **explicit selection flags pending** (fetches all `noise==''`) |
-| **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ☐ 0/4 | | build discover→registry **before** normalize so no pattern is hard-coded |
-| 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc + Docling; CAS images) | §8 | ☐ | | DOCX/PDF → markdown; image extraction to CAS |
+| **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ◐ 0.5/4 | | build discover→registry **before** normalize so no pattern is hard-coded |
+| 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc + Docling; CAS images) | §8 | ◐ | `test_convert_pure`, `test_convert_stage` | DOCX→md via Pandoc (GFM + `--extract-media`) works; bundles `<app>/<slug>/body.md`, images→asset CAS, refs rewritten; **PDF backend (Docling) deferred**; `assets` made an optional produce |
 | 3 | **discover** | 🥈 DOC | `text@converted` → `reports/patterns` (candidate boilerplate/templates/glossary/structure + disposition) | §8, §9.6 | ☐ | | inductive, corpus-global; **proposes** `registries/` updates via a curation gate; mutates no content |
 | 3 | **enrich** | 🥈 DOC | `text@converted`,`catalog.enriched` → `text@enriched` (identity FM baked) + `index.db:doc_meta_staged` | §8 | ☐ | | joins inventory identity onto each bundle |
 | 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7 | ☐ | | F1–F10; subtracts curated patterns; single-sources boilerplate/glossary; strips version apparatus |
@@ -78,10 +78,9 @@ counted separately below). Last updated **2026-06-01**.
 | 7 | `push --replay-history` | — | build git commit history from `history.yaml` sidecars + retained prior bodies | §6.6 | ⬚ | | deferred git-native payoff |
 | 7 | `refresh` | — | scheduled crawl-diff + incremental re-processing; refresh fidelity/currency verdicts | §7.6 | ☐ | | drift: NEW/SUPERSEDED/CHANGED propagate only |
 
-**Current focus:** **Phase 1 ✅ and the inventory medallion ✅** (Phase 2 is ◐ — only `fetch`'s explicit
-selection flags remain; the gate + a select-all-genuine bronze work). `make check` green (208 tests, 100%
-cov, ruff + mypy clean); the gold inventory is populated in the real lake and the fetch gate is green.
-**Next: Phase 3 — the document silver**, and the
+**Current focus:** **Phase 1 ✅, inventory medallion ✅, and Phase 3 underway** — `convert` (DOCX→markdown
+bundles + image-CAS) is in. `make check` green (215 tests, 100% cov, ruff + mypy clean). **Next in Phase 3:
+`discover` (mine pattern candidates → `registries/`) before `enrich`/`normalize`** — and the
 load-bearing ordering rule is to **build `discover` → `registries/` before `normalize`** so no pattern is
 ever hard-coded (§9.6, tenet #13): `convert` → `discover` → `enrich` → `normalize`.
 
@@ -97,6 +96,14 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 *Append implementation lessons as they accrue (newest first). Inventory-track lessons live in
 [`vdl-crawl-tracker.md`](vdl-crawl-tracker.md); cross-phase / architectural lessons go here.*
 
+- **2026-06-01 — Optional outputs don't gate.** A doc with no images yields an *empty* asset CAS, which
+  `TREE_ASSET_CAS.validate()` rejects as empty. Rather than special-case it, the generic postflight/skip
+  now ignore `optional` produces (and only fingerprint produced artifacts that actually validate). `convert`
+  marks `assets` optional. This is a reusable rule for any stage whose output is conditionally present.
+- **2026-06-01 — Inject the heavy backend; keep the stage pure-testable.** `convert`'s binary→markdown step
+  (Pandoc/Docling) is an injected callable, so the stage is fully tested with a fake converter (no Pandoc in
+  the test path) and the real Pandoc default is exercised by a one-off smoke check. Same pattern as the
+  crawl page-fetcher and the fetch byte-fetcher.
 - **2026-06-01 — Generate replication data from the v1 source, don't hand-copy.** The registries (196-app
   system map, 95 manual overrides, 57 ordered doc-type regexes, …) were ported by a one-off generator that
   `ast.literal_eval`-extracts the v1 literals — then deleted, with the YAML committed as the in-repo source
@@ -121,6 +128,13 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-01** — **Phase 3 `convert` shipped (◐).** New `convert` stage: reads the fetched raw CAS +
+  `raw/index.json`, converts each doc to markdown via an injected backend (Pandoc DOCX→GFM with
+  `--extract-media`; PDF/Docling deferred), extracts images into the shared asset CAS, rewrites body image
+  refs to `<sha>.<ext>`, and writes `text@converted` bundles at `<app>/<slug>/body.md`. Added `doc_slug`
+  to the fetch index entry (the bundle path key), `silver_converted` config path, `TEXT_CONVERTED` +
+  (optional) `ASSETS` contracts, the `vdocs convert` CLI command, and the optional-produces rule in the
+  orchestrator. 215 tests, 100% cov. Pandoc default smoke-verified end-to-end.
 - **2026-06-01** — Added an **Overall status** rollup (per-phase status + progress counts + a
   pipeline-stage tally: 3 ✅ · 1 ◐ · 15 ☐) above the table, and per-phase progress on each header row.
   Corrected Phase 2 to ◐ (the inventory medallion is ✅; `fetch`'s explicit selection flags remain).

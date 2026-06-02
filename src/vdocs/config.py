@@ -133,6 +133,11 @@ class Settings(BaseSettings):
     def silver_text(self) -> Path:
         return self.silver / "text"
 
+    @property
+    def silver_converted(self) -> Path:
+        """document-silver 01: raw markdown bundles from ``convert`` (pre-identity-FM)."""
+        return self.silver_text / "01-converted"
+
     # --- gold (curated, derived, computable) ---
     @property
     def gold(self) -> Path:

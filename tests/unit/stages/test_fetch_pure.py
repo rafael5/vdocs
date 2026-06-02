@@ -59,10 +59,11 @@ def test_select_fetch_targets_excludes_noise():
 
 def test_index_entry_shape():
     entry = fp.index_entry(
-        app_code="ADT", title="T", source_url="https://va.gov/x.docx", ext="docx"
+        app_code="ADT", doc_slug="x_um", title="T", source_url="https://va.gov/x.docx", ext="docx"
     )
     assert entry == {
         "app_code": "ADT",
+        "doc_slug": "x_um",
         "title": "T",
         "source_url": "https://va.gov/x.docx",
         "ext": "docx",

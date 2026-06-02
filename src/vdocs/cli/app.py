@@ -14,6 +14,7 @@ from vdocs.orchestrator.engine import Orchestrator, StageFailed
 from vdocs.orchestrator.stage import Stage, StageContext
 from vdocs.orchestrator.state import StateStore
 from vdocs.stages.catalog.stage import CatalogStage
+from vdocs.stages.convert.stage import ConvertStage
 from vdocs.stages.crawl.stage import CrawlStage
 from vdocs.stages.fetch.stage import FetchStage
 from vdocs.stages.serve_inventory.stage import ServeInventoryStage
@@ -25,7 +26,7 @@ app = typer.Typer(
 
 def build_stages() -> list[Stage]:
     """All implemented stages, wired with their real (network) I/O defaults."""
-    return [CrawlStage(), CatalogStage(), ServeInventoryStage(), FetchStage()]
+    return [CrawlStage(), CatalogStage(), ServeInventoryStage(), FetchStage(), ConvertStage()]
 
 
 def _drive(
@@ -77,6 +78,12 @@ def serve_inventory(force: bool = typer.Option(False, "--force", "-f")) -> None:
 def fetch(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Download catalog documents into the content-addressed bronze raw store."""
     _drive(only="fetch", force=force)
+
+
+@app.command()
+def convert(force: bool = typer.Option(False, "--force", "-f")) -> None:
+    """Convert fetched documents to markdown bundles (text@converted) + extract images."""
+    _drive(only="convert", force=force)
 
 
 @app.command()

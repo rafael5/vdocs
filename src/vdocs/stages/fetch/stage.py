@@ -71,7 +71,11 @@ class FetchStage(Stage):
             ext = fp.url_ext(used_url) or doc.doc_format
             sha = store.put(data, ext=ext)
             index[sha] = fp.index_entry(
-                app_code=doc.app_name_abbrev, title=doc.doc_title, source_url=used_url, ext=ext
+                app_code=doc.app_name_abbrev,
+                doc_slug=doc.doc_slug,
+                title=doc.doc_title,
+                source_url=used_url,
+                ext=ext,
             )
             ctx.state.record_acquisition(
                 Acquisition(

@@ -69,7 +69,7 @@ def _seed_catalog_raw(tmp_path):
 def test_help_lists_stage_subcommands():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for cmd in ("crawl", "catalog", "serve-inventory", "fetch", "run"):
+    for cmd in ("crawl", "catalog", "serve-inventory", "fetch", "convert", "inventory", "run"):
         assert cmd in result.stdout
 
 
@@ -115,6 +115,8 @@ _BYTES = {"https://vdl.test/dg_5_3_1_dibr.docx": b"PK\x03\x04 fake"}
 
 def _faked_stages():
     from vdocs.stages.catalog.stage import CatalogStage
+    from vdocs.stages.convert.convert_pure import ConvertedDoc
+    from vdocs.stages.convert.stage import ConvertStage
     from vdocs.stages.crawl.stage import CrawlStage
     from vdocs.stages.fetch.stage import FetchStage
     from vdocs.stages.serve_inventory.stage import ServeInventoryStage
@@ -127,6 +129,7 @@ def _faked_stages():
         CatalogStage(),
         ServeInventoryStage(),
         FetchStage(fetch_bytes=_BYTES.get),
+        ConvertStage(convert=lambda data, ext: ConvertedDoc(markdown="# Converted\n")),
     ]
 
 
@@ -155,6 +158,12 @@ def test_crawl_catalog_fetch_commands_in_sequence(tmp_path, monkeypatch):
     # the bare inventory command reports record + genuine-document counts
     plain = runner.invoke(app, ["inventory"], env=env)
     assert plain.exit_code == 0 and "genuine documents" in plain.stdout
+
+    # convert turns the fetched doc into a text@converted bundle
+    assert runner.invoke(app, ["convert"], env=env).exit_code == 0
+    bodies = list(cfg.silver_converted.rglob("body.md"))
+    assert len(bodies) == 1 and bodies[0].read_text() == "# Converted\n"
+    assert bodies[0].parent.name == "dg_5_3_1_dibr"  # <app>/<slug>/body.md
 
 
 def test_inventory_status_without_gold_inventory_errors(tmp_path):

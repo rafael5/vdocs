@@ -51,6 +51,7 @@ def test_tool_ver_matches_package_version(tmp_path):
 def test_remaining_derived_paths(tmp_path):
     cfg = Settings(data_dir=tmp_path)
     assert cfg.silver == tmp_path / "silver"
+    assert cfg.silver_converted == tmp_path / "silver" / "text" / "01-converted"
     assert cfg.gold_consolidated == tmp_path / "gold" / "consolidated"
     assert cfg.corpus_manifest == tmp_path / "gold" / "corpus-manifest.json"
     assert cfg.discovery_json == tmp_path / "gold" / "discovery.json"

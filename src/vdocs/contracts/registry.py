@@ -95,6 +95,26 @@ RAW_INDEX = ArtifactContract(
 )
 
 
+# --- document silver (§5.2, §8) ---
+# Per-document markdown bundles (trees of bundles); a new immutable tree per conforming stage.
+# `convert` writes the first (raw conversion, pre-identity-FM) + the shared image asset CAS.
+TEXT_CONVERTED = ArtifactContract(
+    key="silver/text@converted",
+    kind=Kind.TREE_TEXT,
+    storage_class=StorageClass.TEXT_VERSIONED,
+    produced_by="convert",
+    relpath="silver/text/01-converted",
+)
+ASSETS = ArtifactContract(
+    key="assets",
+    kind=Kind.TREE_ASSET_CAS,
+    storage_class=StorageClass.ASSET_WRITE_ONCE,
+    produced_by="convert",
+    relpath="assets",
+    optional=True,  # a corpus slice with no images yields an empty asset store — still valid
+)
+
+
 def foundational_registry() -> ArtifactRegistry:
     """Build a registry seeded with the artifacts that exist before any stage runs."""
     reg = ArtifactRegistry()
@@ -112,6 +132,8 @@ def default_registry() -> ArtifactRegistry:
         GOLD_INVENTORY_DB,
         RAW_TREE,
         RAW_INDEX,
+        TEXT_CONVERTED,
+        ASSETS,
     ):
         reg.register(contract)
     return reg

@@ -106,7 +106,9 @@ class Stage(ABC):
             return PreflightResult.skip("force-only stage; not forced")
         prior = ctx.state.get(self.name, ctx.scope)
         if prior is not None and prior.status == "ok":
-            produces_ok = all(p.validate(cfg).ok for p in self.produces)
+            # Optional outputs may legitimately be absent (e.g. a doc with no images → empty
+            # asset CAS); they don't gate the skip decision.
+            produces_ok = all(p.validate(cfg).ok for p in self.produces if not p.optional)
             if prior.inputs_fp == self._input_fps(ctx) and produces_ok:
                 return PreflightResult.skip("inputs unchanged")
         return PreflightResult.proceed()
@@ -116,13 +118,19 @@ class Stage(ABC):
         cfg = ctx.cfg
         finished_at = ctx.clock()
         inputs_fp = self._input_fps(ctx)
-        invalid = [p.key for p in self.produces if not p.validate(cfg).ok]
+        # Required outputs must validate; optional outputs that are absent/empty don't fail
+        # the gate (but if present they're fingerprinted below).
+        invalid = [p.key for p in self.produces if not p.optional and not p.validate(cfg).ok]
         gate = self.deep_gate(ctx)
         if invalid or not gate.ok:
             self._write(ctx, "failed", started_at, finished_at, inputs_fp, {}, run.counts)
             reason = f"invalid outputs {invalid}" if invalid else gate.reason
             raise PostflightError(f"{self.name} postflight failed: {reason}")
-        outputs_fp = {p.key: p.fingerprint(cfg, verify=ctx.verify) for p in self.produces}
+        outputs_fp = {
+            p.key: p.fingerprint(cfg, verify=ctx.verify)
+            for p in self.produces
+            if p.validate(cfg).ok
+        }
         return self._write(ctx, "ok", started_at, finished_at, inputs_fp, outputs_fp, run.counts)
 
     # --- helpers ---
