@@ -161,6 +161,17 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **CSV serialiser promoted to `kernel/csv` (§9.2/§11) + §8 `normalize.requires`
+  tightened.** Two follow-ups from the doc-vs-code deviation audit. (A3) The flat-table CSV writer
+  was copy-pasted three ways — `_to_csv` in `crawl`/`catalog`/`serve-inventory` stages, each rolling
+  its own `csv.DictWriter` over slightly different columns — a §11 "primitive used by ≥2 stages lives
+  in the kernel" violation. Collapsed the serialisation mechanics (header + ordered cells, tolerate
+  `model_dump()` extras) into one pure `kernel/csv.to_csv(columns, rows, *, strict=False)`; each stage
+  keeps only its stage-specific row-building and delegates. Test-first (`tests/unit/kernel/test_csv.py`);
+  the three stages' integration CSV outputs are byte-identical. (B3) Amended §8 to say `normalize`
+  requires `raw/index.json` (metadata only, for `source_sha256`) not the misleadingly-broad `raw` —
+  the code (`requires=[…, RAW_INDEX, …]`) never reads the binary tree; the doc now matches. No behavior
+  change. 302 tests, 100% cov.
 - **2026-06-02** — **`fetch` selection surface (§5.6) — Phase 2 finished.** Replaced fetch's
   "download every genuine row" with an explicit selection: a pure `Selection` value object (six
   dimension filters — `--app/--section/--status/--doc-type/--group/--select`, AND across dimensions,
