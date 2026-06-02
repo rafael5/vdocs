@@ -99,6 +99,11 @@ def test_bronze_dag_runs_end_to_end(bronze_ctx):
     assert entry["app_code"] == "ADT" and entry["ext"] == "docx"
     assert list(ctx.cfg.bronze_raw.glob("*.docx"))  # the content-addressed file exists
 
+    # fetch recorded the per-document acquisition status (§5.5) keyed by doc_id
+    acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_dibr")
+    assert acq is not None and acq.status == "fetched"
+    assert acq.sha256 and acq.bytes and acq.fetched_at
+
 
 def test_bronze_dag_skips_on_clean_rerun(bronze_ctx):
     ctx = bronze_ctx
@@ -141,4 +146,6 @@ def test_fetch_records_failure_when_no_format_available(bronze_ctx):
     ).run(ctx, force=True)
 
     assert ctx.state.get("fetch").counts == {"targets": 1, "fetched": 0, "failed": 1}
+    acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_dibr")
+    assert acq is not None and acq.status == "failed" and acq.error == "no format available"
     assert json.loads(ctx.cfg.raw_index.read_text()) == {}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from vdocs.models.catalog import EnrichedRecord
+from vdocs.models.stage import Acquisition
 from vdocs.stages.serve_inventory import serve_pure as sp
 
 
@@ -61,3 +62,40 @@ def test_gate_fails_on_missing_section_or_format():
 def test_gate_passes_but_reports_unclassified_as_soft_signal():
     g = sp.evaluate_gate([_rec(system_type="unclassified")], crawl_documents=1)
     assert g.ok and g.unclassified == 1
+
+
+# --- inventory_status join -------------------------------------------------
+def test_inventory_status_collapses_formats_and_joins_acquisitions():
+    docx = _rec(doc_format="docx", doc_code="DIBR", doc_title="T")
+    pdf = _rec(doc_format="pdf", doc_code="DIBR", doc_title="T")  # same doc_id (shared slug)
+    other = _rec(doc_slug="other_doc", doc_code="RN")
+    noise = _rec(doc_slug="vba", noise_type="vba_form")  # excluded — not a candidate
+    acqs = {
+        "ADT:dg_5_3_1057_dibr": Acquisition(
+            doc_id="ADT:dg_5_3_1057_dibr",
+            source_url="u",
+            status="fetched",
+            sha256="abc",
+            fetched_at="2026-06-01",
+        )  # fmt: skip
+    }
+    rows = sp.inventory_status([docx, pdf, other, noise], acqs)
+    by_id = {r.doc_id: r for r in rows}
+    # PDF/DOCX collapse to one logical doc; noise excluded
+    assert set(by_id) == {"ADT:dg_5_3_1057_dibr", "ADT:other_doc"}
+    assert by_id["ADT:dg_5_3_1057_dibr"].status == "fetched"
+    assert by_id["ADT:dg_5_3_1057_dibr"].sha256 == "abc"
+    assert by_id["ADT:other_doc"].status == "not_acquired"  # no acquisition yet
+
+
+def test_status_summary_counts():
+    docx = _rec(doc_format="docx")
+    other = _rec(doc_slug="other_doc")
+    third = _rec(doc_slug="third_doc")
+    acqs = {
+        "ADT:dg_5_3_1057_dibr": Acquisition(
+            doc_id="ADT:dg_5_3_1057_dibr", source_url="u", status="fetched"
+        )
+    }
+    summary = sp.status_summary(sp.inventory_status([docx, other, third], acqs))
+    assert summary == {"total": 3, "fetched": 1, "not_acquired": 2}

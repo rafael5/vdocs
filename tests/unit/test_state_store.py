@@ -1,6 +1,6 @@
-"""Unit tests for the StateStore — the stage_runs completion-record store (§7.2)."""
+"""Unit tests for the StateStore — stage_runs + acquisitions (§7.2, §5.5)."""
 
-from vdocs.models.stage import StageRun
+from vdocs.models.stage import Acquisition, StageRun
 from vdocs.orchestrator.state import StateStore
 
 
@@ -73,3 +73,42 @@ def test_persists_across_reopen(tmp_path):
         assert s2.get("alpha") is not None
     finally:
         s2.close()
+
+
+# --- acquisitions (§5.5) ---------------------------------------------------
+def test_acquisition_round_trip_and_upsert(tmp_path):
+    store = StateStore.open(tmp_path / "state.db")
+    try:
+        assert store.get_acquisition("ADT:x") is None  # missing → None
+        store.record_acquisition(
+            Acquisition(doc_id="ADT:x", source_url="u", status="failed", attempts=1, tool_ver="0.1")
+        )
+        store.record_acquisition(
+            Acquisition(
+                doc_id="ADT:x",
+                source_url="u2",
+                status="fetched",
+                sha256="abc",
+                bytes=42,
+                attempts=2,
+                fetched_at="t",
+                tool_ver="0.1",
+            )
+        )  # upsert by doc_id
+        got = store.get_acquisition("ADT:x")
+        assert got is not None
+        assert got.status == "fetched" and got.sha256 == "abc" and got.bytes == 42
+    finally:
+        store.close()
+
+
+def test_all_acquisitions_keyed_by_doc_id(tmp_path):
+    store = StateStore.open(tmp_path / "state.db")
+    try:
+        store.record_acquisition(Acquisition(doc_id="A:1", source_url="u", status="fetched"))
+        store.record_acquisition(Acquisition(doc_id="B:2", source_url="u", status="pending"))
+        acqs = store.all_acquisitions()
+        assert set(acqs) == {"A:1", "B:2"}
+        assert acqs["B:2"].status == "pending"
+    finally:
+        store.close()

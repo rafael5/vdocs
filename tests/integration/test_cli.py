@@ -146,3 +146,18 @@ def test_crawl_catalog_fetch_commands_in_sequence(tmp_path, monkeypatch):
 
     assert runner.invoke(app, ["fetch"], env=env).exit_code == 0
     assert json.loads(cfg.raw_index.read_text())
+
+    # the inventory ⋈ acquisitions status view reflects the fetched document
+    status = runner.invoke(app, ["inventory", "--status"], env=env)
+    assert status.exit_code == 0
+    assert "fetched=1" in status.stdout and "total=1" in status.stdout
+
+    # the bare inventory command reports record + genuine-document counts
+    plain = runner.invoke(app, ["inventory"], env=env)
+    assert plain.exit_code == 0 and "genuine documents" in plain.stdout
+
+
+def test_inventory_status_without_gold_inventory_errors(tmp_path):
+    result = runner.invoke(app, ["inventory", "--status"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 1
+    assert "serve-inventory" in result.stdout

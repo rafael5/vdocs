@@ -7,9 +7,11 @@ offline. The driver (`stage.py`) reads/writes the artifacts and calls these.
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 
 from vdocs.models.catalog import EnrichedRecord
+from vdocs.models.stage import Acquisition
 
 # The inventory is the gatekeeper: nothing outside these noise classes is a valid value.
 VALID_NOISE = frozenset({"", "vba_form", "va_ref", "test_document"})
@@ -64,3 +66,57 @@ def evaluate_gate(records: list[EnrichedRecord], crawl_documents: int | None) ->
     # Soft signal: every app should map to a system_type; surface (don't block on) any gaps.
     unclassified = sum(1 for r in records if r.system_type == "unclassified")
     return GateResult(ok=True, unclassified=unclassified)
+
+
+# --- inventory_status = enriched ⋈ acquisitions (the operator view, §5.5, §9.5) ---
+
+_STATUS_ORDER = ("fetched", "pending", "failed", "withdrawn", "not_acquired")
+
+
+@dataclass(frozen=True)
+class InventoryStatus:
+    """One genuine logical document, annotated with its fetch status (the join, per doc_id)."""
+
+    doc_id: str
+    app_name_abbrev: str
+    section_code: str
+    doc_code: str
+    doc_title: str
+    status: str  # fetched | pending | failed | withdrawn | not_acquired
+    sha256: str = ""
+    fetched_at: str = ""
+
+
+def inventory_status(
+    records: list[EnrichedRecord], acquisitions: dict[str, Acquisition]
+) -> list[InventoryStatus]:
+    """Join the genuine inventory rows (``noise_type==''``) with their acquisition status by
+    ``doc_id`` — one entry per logical document (PDF/DOCX collapse). Status is ``not_acquired``
+    when no acquisition exists yet. The inventory stays the gatekeeper; status is joined *to* it."""
+    seen: dict[str, InventoryStatus] = {}
+    for r in records:
+        if r.noise_type:
+            continue
+        did = doc_id(r)
+        if did in seen:
+            continue
+        acq = acquisitions.get(did)
+        seen[did] = InventoryStatus(
+            doc_id=did,
+            app_name_abbrev=r.app_name_abbrev,
+            section_code=r.section_code,
+            doc_code=r.doc_code,
+            doc_title=r.doc_title,
+            status=acq.status if acq is not None else "not_acquired",
+            sha256=(acq.sha256 or "") if acq is not None else "",
+            fetched_at=(acq.fetched_at or "") if acq is not None else "",
+        )
+    return list(seen.values())
+
+
+def status_summary(statuses: list[InventoryStatus]) -> dict[str, int]:
+    """Counts by fetch status (+ ``total``) for the ``vdocs inventory --status`` report."""
+    counts = Counter(s.status for s in statuses)
+    out = {"total": len(statuses)}
+    out.update({k: counts[k] for k in _STATUS_ORDER if counts[k]})
+    return out

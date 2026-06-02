@@ -14,7 +14,7 @@ from vdocs.contracts.registry import GOLD_INVENTORY, RAW_INDEX, RAW_TREE
 from vdocs.kernel import http
 from vdocs.kernel.cas import Cas, atomic_write
 from vdocs.models.catalog import EnrichedInventory
-from vdocs.models.stage import Idempotency, RunResult
+from vdocs.models.stage import Acquisition, Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
 
 ByteFetcher = Callable[[str], bytes | None]
@@ -43,7 +43,9 @@ class FetchStage(Stage):
         store = Cas(ctx.cfg.bronze_raw)
         index: dict[str, dict[str, str]] = {}
         fetched = failed = 0
+        now = ctx.clock()
         for doc in targets:
+            doc_id = f"{doc.app_name_abbrev}:{doc.doc_slug}"
             data: bytes | None = None
             used_url = ""
             for url in fp.candidate_urls(doc.doc_url):
@@ -53,11 +55,37 @@ class FetchStage(Stage):
                     break
             if data is None:
                 failed += 1
+                ctx.state.record_acquisition(
+                    Acquisition(
+                        doc_id=doc_id,
+                        source_url=doc.doc_url,
+                        status="failed",
+                        attempts=1,
+                        first_attempt_at=now,
+                        last_attempt_at=now,
+                        error="no format available",
+                        tool_ver=ctx.cfg.tool_ver,
+                    )
+                )
                 continue
             ext = fp.url_ext(used_url) or doc.doc_format
             sha = store.put(data, ext=ext)
             index[sha] = fp.index_entry(
                 app_code=doc.app_name_abbrev, title=doc.doc_title, source_url=used_url, ext=ext
+            )
+            ctx.state.record_acquisition(
+                Acquisition(
+                    doc_id=doc_id,
+                    source_url=used_url,
+                    status="fetched",
+                    sha256=sha,
+                    bytes=len(data),
+                    attempts=1,
+                    first_attempt_at=now,
+                    last_attempt_at=now,
+                    fetched_at=now,
+                    tool_ver=ctx.cfg.tool_ver,
+                )
             )
             fetched += 1
 

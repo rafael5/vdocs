@@ -80,3 +80,22 @@ class StageRun(BaseModel):
     counts: dict[str, int]
     contract_ver: int
     tool_ver: str
+
+
+class Acquisition(BaseModel):
+    """Per-document fetch status — ``state.db:acquisitions``, keyed by the inventory stable
+    ``doc_id`` (``app_code:doc_slug``). Mutable, action-derived state owned by ``fetch`` —
+    deliberately *not* baked into the deterministic ``catalog.enriched`` (§5.5, §9.5)."""
+
+    doc_id: str
+    source_url: str
+    status: Literal["pending", "fetched", "failed", "withdrawn"]
+    sha256: str | None = None
+    bytes: int | None = None
+    http_status: int | None = None
+    attempts: int = 0
+    first_attempt_at: str | None = None
+    last_attempt_at: str | None = None
+    fetched_at: str | None = None
+    error: str | None = None
+    tool_ver: str = ""

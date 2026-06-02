@@ -80,6 +80,35 @@ def fetch(force: bool = typer.Option(False, "--force", "-f")) -> None:
 
 
 @app.command()
+def inventory(
+    status: bool = typer.Option(False, "--status", help="show per-document fetch status"),
+) -> None:
+    """Inspect the gold inventory. ``--status`` prints the inventory ⋈ acquisitions join
+    (genuine docs annotated with fetch status — fetched / pending / failed / not_acquired)."""
+    from vdocs.models.catalog import EnrichedInventory
+    from vdocs.stages.serve_inventory import serve_pure as sp
+
+    cfg = Settings()
+    if not cfg.gold_inventory_json.exists():
+        typer.echo("no gold inventory yet — run: vdocs serve-inventory")
+        raise typer.Exit(code=1)
+    records = EnrichedInventory.model_validate_json(
+        cfg.gold_inventory_json.read_text(encoding="utf-8")
+    ).records
+    store = StateStore.open(cfg.state_db)
+    try:
+        rows = sp.inventory_status(records, store.all_acquisitions())
+    finally:
+        store.close()
+    if status:
+        summary = sp.status_summary(rows)
+        parts = [f"{k}={v}" for k, v in summary.items()]
+        typer.echo("inventory status: " + "  ".join(parts))
+    else:
+        typer.echo(f"gold inventory: {len(records)} records, {len(rows)} genuine documents")
+
+
+@app.command()
 def run(
     from_stage: str = typer.Option(None, "--from", help="start at this stage"),
     to_stage: str = typer.Option(None, "--to", help="stop after this stage"),
