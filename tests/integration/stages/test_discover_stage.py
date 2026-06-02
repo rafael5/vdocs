@@ -48,10 +48,10 @@ def test_discover_emits_candidate_patterns(ctx):
     (result,) = Orchestrator([DiscoverStage()]).run(ctx)
     assert result.status == "ok"
     assert result.counts["documents"] == 4
-    assert result.counts["boilerplate"] >= 1
+    assert result.counts["boilerplate"] >= 1  # per-registry count
 
     report = PatternReport.model_validate_json(ctx.cfg.patterns_report.read_text())
-    boiler = [c for c in report.boilerplate if "how to use this manual" in c.key]
+    boiler = [c for c in report.blocks if "how to use this manual" in c.key]
     assert boiler and boiler[0].disposition == "REFERENCE" and boiler[0].doc_count == 4
     # CPRS appears in all 4 docs → a glossary candidate
     assert "CPRS" in {c.key for c in report.glossary}

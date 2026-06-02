@@ -34,15 +34,12 @@ class DiscoverStage(Stage):
         }
 
         report = dp.PatternReport(
-            boilerplate=dp.mine_recurring_blocks(docs),
+            blocks=dp.mine_recurring_blocks(docs),
             glossary=dp.mine_glossary(docs),
         )
         cas.atomic_write(ctx.cfg.patterns_report, report.model_dump_json(indent=2).encode("utf-8"))
 
-        return RunResult(
-            counts={
-                "documents": len(docs),
-                "boilerplate": len(report.boilerplate),
-                "glossary": len(report.glossary),
-            }
-        )
+        counts = {"documents": len(docs), "glossary": len(report.glossary)}
+        for c in report.blocks:  # per-registry: templates / phrases / boilerplate
+            counts[c.registry] = counts.get(c.registry, 0) + 1
+        return RunResult(counts=counts)
