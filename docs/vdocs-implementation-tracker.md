@@ -56,7 +56,7 @@ end-to-end on a real 469-doc VA corpus** (seeded offline from v1's `raw/`), not 
 | 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc/Docling; CAS images) | §8, §1, ADR-010 | ✅ | `test_convert_pure`, `test_convert_stage` + real 469-doc run | **DOCX-only** (§1). Pandoc GFM + `--extract-media`; images→asset CAS, refs rewritten (markdown + HTML `<img>` by basename). **Per-doc converter routing** via `registries/converter-routing` → Docling (out-of-process CLI; typer conflict forbids in-proc), **routes `CPRS/cprsguium`** — verified end-to-end: bare markers 3,058→0, list items 332→3,230, +559 image refs. EMF/WMF→PNG + the few residual `<!-- image -->` deferred |
 | 3 | **discover** | 🥈 DOC | `text@converted` → `reports/patterns` (candidate boilerplate/templates/glossary/structure/converter-routing + disposition) | §8, §9.6 | ✅ | `test_discover_pure`, `test_discover_stage` + real run | recurring-block miner (template RETAIN / phrase DELETE / boilerplate REFERENCE) + acronym glossary (PROMOTE) + **convert-quality probe** (`mine_converter_routing`: flags structureless Pandoc output → Docling ROUTE candidates; real corpus = 45 flagged, 25 CPRS); evidence + grade; **mutates no content** |
 | 3 | **enrich** | 🥈 DOC | `text@converted`,`catalog.enriched` → `text@enriched` (identity FM baked) + `index.db:doc_meta_staged` | §8 | ✅ | `test_enrich_doc_pure`, `test_enrich_stage` | joins each bundle to its inventory record (by `<app>/<slug>`, DOCX-preferred), bakes identity FM via the kernel codec; **computed fields (word_count) staged to index.db, never in the body** (§6.3) |
-| 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7 | ◐ | `test_normalize_pure`, `test_normalize_stage` + real 469-doc run | **v1 F-steps**: strip Pandoc artifacts, subtract curated `registries/phrases`, regenerate `## Contents` TOC from the heading tree (GitHub-slug anchors), stamp `source_sha256`. Verified real (dead `<!-- -->` 79→0, nested TOC on real DIBR). **Deferred**: tables→csv, revision-history→history.yaml, boilerplate REFERENCE, template STRIP+STAMP, refs.yaml + back-links + bookmark rewrite, old-gen heading recovery |
+| 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7 | ◐ | `test_normalize_pure`, `test_normalize_stage` + real 469-doc run | **v1 F-steps**: **heading recovery** from Word `_Toc` bookmarks for flattened docs (real `or_30_243rn` 0→56 headings), strip Pandoc artifacts, subtract curated `registries/phrases`, regenerate `## Contents` TOC (GitHub-slug anchors), stamp `source_sha256`. **Deferred**: tables→csv, revision-history→history.yaml, boilerplate REFERENCE, template STRIP+STAMP, refs.yaml + back-links + bookmark rewrite, heading-level inference |
 | **4 — Gold derive (machine)** | | | version groups + the queryable index + knowledge graph + manifests | §17.4 | ☐ 0/4 | | |
 | 4 | **consolidate** | 🥇 DOC | `text@normalized`,`assets` → `consolidated` (one anchor per version group; ordered lineage) | §8, §6.6 | ☐ | | `is_latest`; prior bodies as travel-with sidecars |
 | 4 | **index** | 🥇 DOC | `text@normalized`,`consolidated` → `index.db` (docs, sections + **FTS5 over is_latest**, entities, quality, **stable IDs**) | §8 | ☐ | | the lexical/structured search surface |
@@ -152,6 +152,20 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **Docling image handling: alt-text + media from the DOCX XML (Thread A).** Docling
+  parses no alt-text and emits `<!-- image -->` placeholders. Ported v1's approach to a pure
+  `convert/docx_images.py`: read each picture's alt-text + media straight from the DOCX OOXML (document
+  order: `<wp:docPr descr>` → `<pic:cNvPr>` fallback; `<mc:AlternateContent>`→Choice; VML `<v:imagedata>`)
+  and inject `![alt](media)` 1:1 against the placeholders. `_docling_convert` now uses placeholder mode +
+  injection. Verified on real cprsguium: 564 pics ↔ 564 placeholders → **562 image refs with alt-text**
+  ("VA logo", …), only 2 residual (linked, no bytes) — and lists still clean (bare markers 0). Caught a
+  latent bug porting it (ElementTree truthiness on empty `<mc:Choice>`). 266 tests, 100% cov.
+- **2026-06-02** — **Heading recovery in `normalize` (Thread B, §6.7).** Docs Pandoc flattened (no Word
+  heading styles) carry their headings as plain paragraphs behind Word `_Toc` bookmark anchors.
+  `recover_headings` promotes `<span id="_Toc…"></span>Heading` paragraphs to `## ` (only when the body
+  has no markdown headings), run before TOC regen. Real `CPRS/or_30_243rn`: 0 → 56 headings with a full
+  navigable TOC. The genuinely-structureless docs Docling couldn't help now get structure from their own
+  bookmarks — confirming the earlier finding that this was a `normalize` job, not a converter swap.
 - **2026-06-01** — **Corrected the convert-quality probe to v1's signal; Docling now routes `cprsguium`.**
   The probe was measuring heading count (wrong — missed `cprsguium`, which has 573 headings *and* 3,058
   bare markers). Re-read the v1 `vista-docs` converter: the real trigger is the Word `[[…]](#_Toc…)`

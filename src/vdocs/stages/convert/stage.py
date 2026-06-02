@@ -81,16 +81,19 @@ def _load_converter_routing(path) -> frozenset[str]:  # type: ignore[no-untyped-
 
 
 def _docling_convert(data: bytes, ext: str) -> ConvertedDoc:  # pragma: no cover - subprocess I/O
-    """Docling DOCX→markdown for the routed allowlist (ADR-010): its layout/structure analysis
-    recovers headings Pandoc flattens. Run **out-of-process** via the ``docling`` CLI (installed
-    isolated, e.g. ``uv tool install 'docling-slim[standard]'``) — it pins ``typer<0.22`` which
-    conflicts with the CLI's ``typer``, so it must not share this environment."""
+    """Docling DOCX→markdown for the routed allowlist (ADR-010): it reconstructs the lists Pandoc
+    shreds into bare markers. Run **out-of-process** via the ``docling`` CLI (installed isolated,
+    e.g. ``uv tool install 'docling-slim[standard]'``) — it pins ``typer<0.22`` which conflicts
+    with the CLI's ``typer``, so it must not share this environment. Docling parses no alt-text and
+    emits ``<!-- image -->`` placeholders; we recover alt-text + media from the DOCX XML (1:1) and
+    inject ``![alt](media)`` refs (:mod:`docx_images`, the v1 approach)."""
     import shutil
     import subprocess
     import tempfile
     from pathlib import Path
 
-    from vdocs.stages.convert.convert_pure import ConvertedDoc, ConvertedImage
+    from vdocs.stages.convert.convert_pure import ConvertedDoc
+    from vdocs.stages.convert.docx_images import extract_pictures, inject_placeholders
 
     exe = shutil.which("docling") or str(Path.home() / ".local" / "bin" / "docling")
     if not Path(exe).exists():
@@ -103,16 +106,12 @@ def _docling_convert(data: bytes, ext: str) -> ConvertedDoc:  # pragma: no cover
         src.write_bytes(data)
         out = Path(td) / "out"
         out.mkdir()
-        cmd = [exe, "--to", "md", "--image-export-mode", "referenced", "--output", str(out)]
+        cmd = [exe, "--to", "md", "--image-export-mode", "placeholder", "--output", str(out)]
         subprocess.run([*cmd, str(src)], capture_output=True, text=True, check=True)
         md_files = list(out.glob("*.md"))
-        markdown = md_files[0].read_text(encoding="utf-8") if md_files else ""
-        images = tuple(
-            ConvertedImage(ref=p.name, data=p.read_bytes(), ext=p.suffix.lstrip(".").lower())
-            for p in sorted(out.rglob("*"))
-            if p.is_file() and p.suffix.lower() != ".md"
-        )
-        return ConvertedDoc(markdown=markdown, images=images)
+        raw_markdown = md_files[0].read_text(encoding="utf-8") if md_files else ""
+    markdown, images = inject_placeholders(raw_markdown, extract_pictures(data))
+    return ConvertedDoc(markdown=markdown, images=tuple(images))
 
 
 def _pandoc_convert(data: bytes, ext: str) -> ConvertedDoc:  # pragma: no cover - subprocess I/O
