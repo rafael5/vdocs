@@ -141,6 +141,69 @@ def test_normalize_writes_history_sidecar_and_strips_table(ctx):
     }
 
 
+def test_normalize_writes_refs_yaml_sidecar(ctx):
+    import yaml
+
+    # a bundle with an in-body _Toc cross-ref + a real heading carrying that bookmark (§6.7)
+    enriched = frontmatter.emit(
+        {"title": "Ref Manual", "app_code": "ADT", "tool_ver": "0.1.0"},
+        "# Ref Manual\n\nSee [the setup](#_Toc555) below.\n\n"
+        '## <span id="_Toc555" class="anchor"></span>Setup\n\nsteps\n',
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "rm_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(
+        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "rm_doc", "ext": "docx"}})
+    )
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["refs_sidecars"] == 1
+
+    bundle = ctx.cfg.silver_normalized / "ADT" / "rm_doc"
+    _, body = frontmatter.parse((bundle / "body.md").read_text())
+    # the dead _Toc cross-ref became a live GitHub slug link + back-link inserted
+    assert "[the setup](#setup)" in body and "#_Toc555" not in body
+    assert "[↑ Back to Contents](#contents)" in body
+
+    refs = yaml.safe_load((bundle / "refs.yaml").read_text())
+    assert refs["doc_id"] == "ADT/rm_doc" and refs["toc_depth"] == [2, 3]
+    by_slug = {a["slug"]: a for a in refs["anchors"]}
+    assert by_slug["setup"]["stable_id"] == "ADT/rm_doc/setup"
+    assert by_slug["setup"]["bookmark"] == "_Toc555" and by_slug["setup"]["toc_level"] is True
+    assert refs["outbound"]["_Toc555"] == "setup"
+
+
+def test_no_refs_yaml_when_no_headings(ctx):
+    # a heading-less bundle has no anchors → no refs.yaml, and the count reflects it
+    enriched = frontmatter.emit(
+        {"title": "Flat", "app_code": "ADT", "tool_ver": "0.1.0"},
+        "Just a paragraph with no headings at all.\n",
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "flat_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text("{}")
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["refs_sidecars"] == 0
+    assert not (ctx.cfg.silver_normalized / "ADT" / "flat_doc" / "refs.yaml").exists()
+
+
 def test_normalize_is_idempotent(ctx):
     _seed(ctx)
     orch = Orchestrator([NormalizeStage()])

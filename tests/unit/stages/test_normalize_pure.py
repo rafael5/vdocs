@@ -45,7 +45,7 @@ def test_recover_headings_then_toc_gives_structureless_doc_a_toc():
         '<span id="_Toc1" class="anchor"></span>Introduction\n\nbody\n\n'
         '<span id="_Toc2" class="anchor"></span>Installation\n\nsteps\n'
     )
-    out = nz.normalize_body(body, frozenset())
+    out, _ = nz.normalize_body(body, frozenset())
     assert "## Contents" in out
     assert "- [Introduction](#introduction)" in out
     assert "- [Installation](#installation)" in out
@@ -111,7 +111,7 @@ def test_normalize_body_applies_all_steps_in_order():
     body = (
         "# Guide\n\n<!-- -->\n\n## Overview\n\nThis page intentionally left blank.\n\nReal text.\n"
     )
-    out = nz.normalize_body(body, frozenset({"This page intentionally left blank."}))
+    out, _ = nz.normalize_body(body, frozenset({"This page intentionally left blank."}))
     assert "<!-- -->" not in out
     assert "intentionally left blank" not in out
     assert "## Contents" in out and "- [Overview](#overview)" in out

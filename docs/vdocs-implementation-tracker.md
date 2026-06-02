@@ -56,7 +56,7 @@ end-to-end on a real 469-doc VA corpus** (seeded offline from v1's `raw/`), not 
 | 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc/Docling; CAS images) | §8, §1, ADR-010 | ✅ | `test_convert_pure`, `test_convert_stage` + real 469-doc run | **DOCX-only** (§1). Pandoc GFM + `--extract-media`; images→asset CAS, refs rewritten (markdown + HTML `<img>` by basename). **Per-doc converter routing** via `registries/converter-routing` → Docling (out-of-process CLI; typer conflict forbids in-proc), **routes `CPRS/cprsguium`** — verified end-to-end: bare markers 3,058→0, list items 332→3,230, +559 image refs. EMF/WMF→PNG + the few residual `<!-- image -->` deferred |
 | 3 | **discover** | 🥈 DOC | `text@converted` → `reports/patterns` (candidate boilerplate/templates/glossary/structure/converter-routing + disposition) | §8, §9.6 | ✅ | `test_discover_pure`, `test_discover_stage` + real run | recurring-block miner (template RETAIN / phrase DELETE / boilerplate REFERENCE) + acronym glossary (PROMOTE) + **convert-quality probe** (`mine_converter_routing`: flags structureless Pandoc output → Docling ROUTE candidates; real corpus = 45 flagged, 25 CPRS); evidence + grade; **mutates no content** |
 | 3 | **enrich** | 🥈 DOC | `text@converted`,`catalog.enriched` → `text@enriched` (identity FM baked) + `index.db:doc_meta_staged` | §8 | ✅ | `test_enrich_doc_pure`, `test_enrich_stage` | joins each bundle to its inventory record (by `<app>/<slug>`, DOCX-preferred), bakes identity FM via the kernel codec; **computed fields (word_count) staged to index.db, never in the body** (§6.3) |
-| 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7, §6.6 | ◐ | `test_normalize_pure`, `test_revision_pure`, `test_normalize_stage` + real 469-doc run | **F-steps**: **heading recovery** from `_Toc` bookmarks (real `or_30_243rn` 0→56 headings); **revision-history → `history.yaml` sidecar** (§6.6; HTML + GFM-pipe dialects; 22 real sidecars, table stripped from body); strip Pandoc artifacts; subtract `registries/phrases`; regenerate `## Contents` TOC (GitHub-slug anchors); stamp `source_sha256`. **Deferred**: tables→csv, boilerplate REFERENCE, template STRIP+STAMP, refs.yaml + back-links + bookmark rewrite, heading-level inference |
+| 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7, §6.6 | ◐ | `test_normalize_pure`, `test_anchors_pure`, `test_revision_pure`, `test_normalize_stage`, `test_normalize_props` + real 469-doc run | **F-steps**: **heading recovery** from `_Toc` bookmarks (real `or_30_243rn` 0→56 headings); **revision-history → `history.yaml` sidecar** (§6.6; HTML + GFM-pipe dialects; 22 real sidecars, table stripped from body); **anchor substrate → `refs.yaml` sidecar** (§6.7/§5.5: capture Word bookmarks, rewrite `](#_Toc…)`/`](#_Ref…)` cross-refs to GitHub slugs with `UNRESOLVED` fidelity signal, `(stable_id ↔ slug ↔ bookmark)` map + `toc_depth:[2,3]`, round-trip "↑ Back to Contents" back-links — `anchors_pure`); strip Pandoc artifacts; subtract `registries/phrases`; regenerate `## Contents` TOC (GitHub-slug anchors, H2–H3 depth); stamp `source_sha256`. **Deferred** (next slices, in order): tables→csv, boilerplate REFERENCE, template STRIP+STAMP, heading-level inference |
 | **4 — Gold derive (machine)** | | | version groups + the queryable index + knowledge graph + manifests | §17.4 | ☐ 0/4 | | |
 | 4 | **consolidate** | 🥇 DOC | `text@normalized`,`assets` → `consolidated` (one anchor per version group; ordered lineage) | §8, §6.6 | ☐ | | `is_latest`; prior bodies as travel-with sidecars |
 | 4 | **index** | 🥇 DOC | `text@normalized`,`consolidated` → `index.db` (docs, sections + **FTS5 over is_latest**, entities, quality, **stable IDs**) | §8 | ☐ | | the lexical/structured search surface |
@@ -81,9 +81,11 @@ end-to-end on a real 469-doc VA corpus** (seeded offline from v1's `raw/`), not 
 
 **Current focus:** **Phase 1 ✅, inventory medallion ✅, the whole document-silver pipeline runs on real
 docs** — `convert`/`discover`/`enrich`/`normalize` (v1) all green and verified on a real 469-doc corpus;
-pipeline is now **DOCX-only** (§1). `make check` green (251 tests, 100% cov, ruff + mypy clean). **Next:**
-finish the deferred `normalize` F-steps (tables→csv, revision-history→history.yaml, boilerplate/templates,
-refs.yaml + back-links) **or** start **Phase 4** (`consolidate`→`index`→`relate`→`manifest`). The
+pipeline is now **DOCX-only** (§1). `make check` green (316 tests, 100% cov, ruff + mypy clean). The
+**anchor substrate is shipped** — `refs.yaml` + bookmark→slug rewrite + round-trip back-links close the
+load-bearing Phase-4 prerequisite (§6.7/§5.5). **Next:** finish the remaining deferred `normalize` F-steps
+(tables→csv, boilerplate REFERENCE, template STRIP+STAMP, heading-level inference, in that order) **or**
+start **Phase 4** (`consolidate`→`index`→`relate`→`manifest`). The
 load-bearing ordering rule is to **build `discover` → `registries/` before `normalize`** so no pattern is
 ever hard-coded (§9.6, tenet #13): `convert` → `discover` → `enrich` → `normalize`.
 
@@ -161,6 +163,24 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **`normalize` F-step: anchor substrate → `refs.yaml` sidecar (§6.7/§5.5).** Closed the
+  load-bearing deferred F-step the whole Phase-4 retrieval layer hangs off
+  (`index`/`relate`/`embed`/`serve-mcp`). New pure module `stages/normalize/anchors_pure.py` (mirrors the
+  `revision_pure` split): `Heading` now carries `bookmark` + `stable_id`; `parse_headings`/`recover_headings`
+  **capture** the `_Toc…`/`_Ref…` Word bookmark (inline on the `##` line or on the line immediately above)
+  instead of dropping it; `rewrite_link_targets` rewrites every `](#_Toc…)`/`](#_Ref…)` cross-ref to its
+  GitHub slug (unmapped → `UNRESOLVED`, left untouched, never crashes) then drops the redundant anchor spans;
+  `build_anchor_map` emits one row per heading `(stable_section_id="<doc_id>/<slug>", slug, bookmark, level,
+  title, toc_level)` + `toc_depth` + outbound map; `insert_back_links` adds idempotent round-trip
+  "↑ Back to Contents" links under each TOC-targeted heading. `normalize_body` now returns
+  `(body, anchor_map)` with a fixed F-step order (parse-once → rewrite → regen-TOC → back-links); the stage
+  writes `refs.yaml` conditionally (like `history.yaml`) with a `refs_sidecars` count. TOC depth is the
+  H2–H3 fallback (Decision 2; template seam marked in `anchors_pure`/`stage.py` for when
+  `registries/templates` lands); `stable_id` is `<doc_id>/<slug>` (Decision 1; `index` will own ID
+  persistence). `TEXT_NORMALIZED` is a `TREE_TEXT` bundle contract so `refs.yaml` needs no new contract —
+  noted as a recognised sidecar in the module docstrings. No design changes (the design already specified
+  all of it). 316 tests, 100% cov (12 new: 9 `test_anchors_pure` incl. fence-safety, 2
+  `test_normalize_stage`, 1 `test_normalize_props` "no anchor points nowhere", §13).
 - **2026-06-02** — **CSV serialiser promoted to `kernel/csv` (§9.2/§11) + §8 `normalize.requires`
   tightened.** Two follow-ups from the doc-vs-code deviation audit. (A3) The flat-table CSV writer
   was copy-pasted three ways — `_to_csv` in `crawl`/`catalog`/`serve-inventory` stages, each rolling
