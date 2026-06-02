@@ -137,6 +137,14 @@ DOC_META_STAGED = ArtifactContract(
     db="index.db",
     table="doc_meta_staged",
 )
+# `normalize`: gold-quality normalized bodies (artifacts stripped, phrases subtracted, TOC regen).
+TEXT_NORMALIZED = ArtifactContract(
+    key="silver/text@normalized",
+    kind=Kind.TREE_TEXT,
+    storage_class=StorageClass.TEXT_VERSIONED,
+    produced_by="normalize",
+    relpath="silver/text/03-normalized",
+)
 
 
 def foundational_registry() -> ArtifactRegistry:
@@ -161,6 +169,7 @@ def default_registry() -> ArtifactRegistry:
         PATTERNS,
         TEXT_ENRICHED,
         DOC_META_STAGED,
+        TEXT_NORMALIZED,
     ):
         reg.register(contract)
     return reg

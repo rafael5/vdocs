@@ -1,0 +1,15 @@
+# registries/phrases — curated dead phrases (§9.6, DELETE disposition).
+#
+# Short recurring strings with zero meaning in a GitHub corpus: paper-era residue and
+# conversion artifacts. `normalize` deletes whole blocks matching these (case-insensitive) —
+# no reference, no canonical copy kept (distinct from `registries/boilerplate`).
+#
+# Promoted from `discover` candidates (reports/patterns, registry=phrases) by human review.
+# Keep this list conservative: only text that is unambiguously meaningless.
+
+phrases:
+  - "<!-- -->"                              # Pandoc empty-comment artifact (≈79/CPRS body)
+  - "This page intentionally left blank."
+  - "This page intentionally left blank"
+  - "Continued on next page"
+  - "End of document"

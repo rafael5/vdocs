@@ -143,6 +143,11 @@ class Settings(BaseSettings):
         """document-silver 02: bundles with identity frontmatter baked in (from ``enrich``)."""
         return self.silver_text / "02-enriched"
 
+    @property
+    def silver_normalized(self) -> Path:
+        """document-silver 03: gold-quality normalized bodies (from ``normalize``)."""
+        return self.silver_text / "03-normalized"
+
     # --- gold (curated, derived, computable) ---
     @property
     def gold(self) -> Path:

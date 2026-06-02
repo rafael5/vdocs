@@ -19,6 +19,7 @@ from vdocs.stages.crawl.stage import CrawlStage
 from vdocs.stages.discover.stage import DiscoverStage
 from vdocs.stages.enrich.stage import EnrichStage
 from vdocs.stages.fetch.stage import FetchStage
+from vdocs.stages.normalize.stage import NormalizeStage
 from vdocs.stages.serve_inventory.stage import ServeInventoryStage
 
 app = typer.Typer(
@@ -36,6 +37,7 @@ def build_stages() -> list[Stage]:
         ConvertStage(),
         DiscoverStage(),
         EnrichStage(),
+        NormalizeStage(),
     ]
 
 
@@ -109,11 +111,18 @@ def enrich(force: bool = typer.Option(False, "--force", "-f")) -> None:
 
 
 @app.command()
+def normalize(force: bool = typer.Option(False, "--force", "-f")) -> None:
+    """Normalize enriched bodies (strip artifacts, subtract phrases, regen TOC)."""
+    _drive(only="normalize", force=force)
+
+
+@app.command()
 def inventory(
     status: bool = typer.Option(False, "--status", help="show per-document fetch status"),
 ) -> None:
     """Inspect the gold inventory. ``--status`` prints the inventory ⋈ acquisitions join
-    (genuine docs annotated with fetch status — fetched / pending / failed / not_acquired)."""
+    (genuine docs annotated with fetch status — fetched / pending / failed / not_acquired /
+    out_of_scope [PDF-only, §1])."""
     from vdocs.models.catalog import EnrichedInventory
     from vdocs.stages.serve_inventory import serve_pure as sp
 

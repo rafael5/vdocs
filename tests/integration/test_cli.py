@@ -77,6 +77,7 @@ def test_help_lists_stage_subcommands():
         "convert",
         "discover",
         "enrich",
+        "normalize",
         "inventory",
         "run",
     ):
@@ -131,6 +132,7 @@ def _faked_stages():
     from vdocs.stages.discover.stage import DiscoverStage
     from vdocs.stages.enrich.stage import EnrichStage
     from vdocs.stages.fetch.stage import FetchStage
+    from vdocs.stages.normalize.stage import NormalizeStage
     from vdocs.stages.serve_inventory.stage import ServeInventoryStage
 
     def page(u: str) -> Page:
@@ -141,9 +143,10 @@ def _faked_stages():
         CatalogStage(),
         ServeInventoryStage(),
         FetchStage(fetch_bytes=_BYTES.get),
-        ConvertStage(convert=lambda data, ext: ConvertedDoc(markdown="# Converted\n")),
+        ConvertStage(convert=lambda d, e: ConvertedDoc(markdown="# Converted\n\n## Setup\n\nx\n")),
         DiscoverStage(),
         EnrichStage(),
+        NormalizeStage(),
     ]
 
 
@@ -176,7 +179,7 @@ def test_crawl_catalog_fetch_commands_in_sequence(tmp_path, monkeypatch):
     # convert turns the fetched doc into a text@converted bundle
     assert runner.invoke(app, ["convert"], env=env).exit_code == 0
     bodies = list(cfg.silver_converted.rglob("body.md"))
-    assert len(bodies) == 1 and bodies[0].read_text() == "# Converted\n"
+    assert len(bodies) == 1 and bodies[0].read_text().startswith("# Converted")
     assert bodies[0].parent.name == "dg_5_3_1_dibr"  # <app>/<slug>/body.md
 
     # discover mines the converted corpus into the candidate-patterns report
@@ -191,6 +194,12 @@ def test_crawl_catalog_fetch_commands_in_sequence(tmp_path, monkeypatch):
 
     meta, _ = frontmatter.parse(enriched[0].read_text())
     assert meta["app_code"] == "DG" and meta["title"].startswith("DG*5.3*1")
+
+    # normalize regenerates the TOC + stamps source_sha256
+    assert runner.invoke(app, ["normalize"], env=env).exit_code == 0
+    (normalized,) = list(cfg.silver_normalized.rglob("body.md"))
+    meta, body = frontmatter.parse(normalized.read_text())
+    assert "source_sha256" in meta and "## Contents" in body and "- [Setup](#setup)" in body
 
 
 def test_inventory_status_without_gold_inventory_errors(tmp_path):

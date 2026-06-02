@@ -24,14 +24,15 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 
 ## Overall status
 
-**Pipeline stages (§8): 5 ✅ · 2 ◐ · 12 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
-counted separately below). Last updated **2026-06-01**.
+**Pipeline stages (§8): 6 ✅ · 2 ◐ · 11 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
+counted separately below). Last updated **2026-06-01**. **The full document-silver pipeline runs
+end-to-end on a real 469-doc VA corpus** (seeded offline from v1's `raw/`), not just fixtures.
 
 | Phase | Title | Status | Progress |
 |---|---|---|---|
 | 1 | Spine (kernel · config · models · contracts · orchestrator) | ✅ | 4/4 |
-| 2 | Inventory medallion + doc-bronze | ◐ | 3/4 ✅ · `fetch` ◐ (selection flags) |
-| 3 | Silver — document text (convert · discover · enrich · normalize) | ◐ | `convert` ◐ · `discover` ✅ · `enrich` ✅ · `normalize` ☐ |
+| 2 | Inventory medallion + doc-bronze | ◐ | 3/4 ✅ · `fetch` ◐ (selection flags; now DOCX-only §1) |
+| 3 | Silver — document text (convert · discover · enrich · normalize) | ◐ | `convert` ✅ · `discover` ✅ · `enrich` ✅ · `normalize` ◐ (v1) |
 | 4 | Gold derive (consolidate · index · relate · manifest) | ☐ | 0/4 |
 | 5 | Gold deliver (fidelity · publish · validate · push · analyze) | ☐ | 0/5 |
 | 6 | Machine interface (embed · serve-mcp) | ☐ | 0/2 |
@@ -52,10 +53,10 @@ counted separately below). Last updated **2026-06-01**.
 | 2 | **serve-inventory** | 🥇 INV | `catalog.enriched` → gold `inventory.{json,csv,db}`; **HARD GATE = the fetch gate** | §8, §7.3; spec §7 | ✅ | `test_serve_pure`, `test_serve_inventory` | gate green on the full corpus; `vdocs inventory --status` |
 | 2 | **fetch** | 🥉 DOC | gate `ok` + selection + `acquisitions` → `documents/bronze:raw` (CAS) + `index.json` + `acquisitions` | §8, §9.5 | ◐ | `test_fetch_pure`, `test_bronze_dag` | works (CAS, DOCX-pref, index, acquisitions, gate-wired); **explicit selection flags pending** (fetches all `noise==''`) |
 | **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ◐ 2.5/4 | | discover→registry seam built **before** normalize so no pattern is hard-coded |
-| 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc + Docling; CAS images) | §8 | ◐ | `test_convert_pure`, `test_convert_stage` | DOCX→md via Pandoc (GFM + `--extract-media`) works; bundles `<app>/<slug>/body.md`, images→asset CAS, refs rewritten; **PDF backend (Docling) deferred**; `assets` made an optional produce |
+| 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc; CAS images) | §8, §1 | ✅ | `test_convert_pure`, `test_convert_stage` + real 469-doc run | **DOCX-only** (§1; PDF out of scope, not a gap). Pandoc GFM + `--extract-media`; bundles `<app>/<slug>/body.md`, images→asset CAS, refs rewritten (markdown **and** HTML `<img>`, by basename); `assets` optional. EMF/WMF→PNG render deferred |
 | 3 | **discover** | 🥈 DOC | `text@converted` → `reports/patterns` (candidate boilerplate/templates/glossary/structure + disposition) | §8, §9.6 | ✅ | `test_discover_pure`, `test_discover_stage` | recurring-block miner (boilerplate REFERENCE / dead-phrase DELETE by block identity) + acronym glossary (PROMOTE); evidence + auto/review grade; **mutates no content**. Template/structural miners deferred |
 | 3 | **enrich** | 🥈 DOC | `text@converted`,`catalog.enriched` → `text@enriched` (identity FM baked) + `index.db:doc_meta_staged` | §8 | ✅ | `test_enrich_doc_pure`, `test_enrich_stage` | joins each bundle to its inventory record (by `<app>/<slug>`, DOCX-preferred), bakes identity FM via the kernel codec; **computed fields (word_count) staged to index.db, never in the body** (§6.3) |
-| 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7 | ☐ | | F1–F10; subtracts curated patterns; single-sources boilerplate/glossary; strips version apparatus |
+| 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7 | ◐ | `test_normalize_pure`, `test_normalize_stage` + real 469-doc run | **v1 F-steps**: strip Pandoc artifacts, subtract curated `registries/phrases`, regenerate `## Contents` TOC from the heading tree (GitHub-slug anchors), stamp `source_sha256`. Verified real (dead `<!-- -->` 79→0, nested TOC on real DIBR). **Deferred**: tables→csv, revision-history→history.yaml, boilerplate REFERENCE, template STRIP+STAMP, refs.yaml + back-links + bookmark rewrite, old-gen heading recovery |
 | **4 — Gold derive (machine)** | | | version groups + the queryable index + knowledge graph + manifests | §17.4 | ☐ 0/4 | | |
 | 4 | **consolidate** | 🥇 DOC | `text@normalized`,`assets` → `consolidated` (one anchor per version group; ordered lineage) | §8, §6.6 | ☐ | | `is_latest`; prior bodies as travel-with sidecars |
 | 4 | **index** | 🥇 DOC | `text@normalized`,`consolidated` → `index.db` (docs, sections + **FTS5 over is_latest**, entities, quality, **stable IDs**) | §8 | ☐ | | the lexical/structured search surface |
@@ -78,10 +79,11 @@ counted separately below). Last updated **2026-06-01**.
 | 7 | `push --replay-history` | — | build git commit history from `history.yaml` sidecars + retained prior bodies | §6.6 | ⬚ | | deferred git-native payoff |
 | 7 | `refresh` | — | scheduled crawl-diff + incremental re-processing; refresh fidelity/currency verdicts | §7.6 | ☐ | | drift: NEW/SUPERSEDED/CHANGED propagate only |
 
-**Current focus:** **Phase 1 ✅, inventory medallion ✅, Phase 3 nearly done** — `convert`, `discover`, and
-`enrich` (identity FM baked + doc metadata staged to `index.db`) are in. `make check` green (230 tests,
-100% cov, ruff + mypy clean). **Next: `normalize`** — the last document-silver stage (F1–F10 + sidecars;
-subtract the *curated* registries; TOC regen), which closes Phase 3. The
+**Current focus:** **Phase 1 ✅, inventory medallion ✅, the whole document-silver pipeline runs on real
+docs** — `convert`/`discover`/`enrich`/`normalize` (v1) all green and verified on a real 469-doc corpus;
+pipeline is now **DOCX-only** (§1). `make check` green (251 tests, 100% cov, ruff + mypy clean). **Next:**
+finish the deferred `normalize` F-steps (tables→csv, revision-history→history.yaml, boilerplate/templates,
+refs.yaml + back-links) **or** start **Phase 4** (`consolidate`→`index`→`relate`→`manifest`). The
 load-bearing ordering rule is to **build `discover` → `registries/` before `normalize`** so no pattern is
 ever hard-coded (§9.6, tenet #13): `convert` → `discover` → `enrich` → `normalize`.
 
@@ -138,6 +140,14 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-01** — **Phase 3 `normalize` v1 shipped (◐) + DOCX-only decided (§1).** `normalize` applies
+  the first F-steps per-document & deterministically: strip Pandoc artifacts → subtract the curated
+  `registries/phrases` (the discover→curate→normalize loop closed with a real starter registry) →
+  regenerate `## Contents` from the real heading tree with GitHub-slug anchors → stamp `source_sha256`.
+  Verified on the real 469-doc corpus (dead `<!-- -->` 79→0; correct nested TOC on a real DIBR). Separately
+  the pipeline became **DOCX-only** (§1): PDF is out of scope and flagged `out_of_scope`, not silently
+  dropped. 251 tests, 100% cov. Deferred normalize F-steps tracked in its row. `scripts/seed_from_v1.py`
+  makes the real corpus reproducible offline.
 - **2026-06-01** — **Real-corpus run through the document-silver stages (pivot from fixtures).** Seeded
   469 real VA DOCX offline from v1's `raw/` (3 docs/app across 138 apps + **all 90 CPRS docs**) into bronze,
   then ran the real `convert` → `discover` → `enrich`. Outcome: 469 converted bundles + **5,143 CAS images**
