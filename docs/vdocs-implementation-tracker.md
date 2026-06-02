@@ -54,7 +54,7 @@ end-to-end on a real 469-doc VA corpus** (seeded offline from v1's `raw/`), not 
 | 2 | **fetch** | 🥉 DOC | gate `ok` + selection + `acquisitions` → `documents/bronze:raw` (CAS) + `index.json` + `acquisitions` | §8, §9.5 | ◐ | `test_fetch_pure`, `test_bronze_dag` | works (CAS, DOCX-pref, index, acquisitions, gate-wired); **explicit selection flags pending** (fetches all `noise==''`) |
 | **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ◐ 2.5/4 | | discover→registry seam built **before** normalize so no pattern is hard-coded |
 | 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc; CAS images) | §8, §1 | ✅ | `test_convert_pure`, `test_convert_stage` + real 469-doc run | **DOCX-only** (§1; PDF out of scope, not a gap). Pandoc GFM + `--extract-media`; bundles `<app>/<slug>/body.md`, images→asset CAS, refs rewritten (markdown **and** HTML `<img>`, by basename); `assets` optional. EMF/WMF→PNG render deferred |
-| 3 | **discover** | 🥈 DOC | `text@converted` → `reports/patterns` (candidate boilerplate/templates/glossary/structure + disposition) | §8, §9.6 | ✅ | `test_discover_pure`, `test_discover_stage` | recurring-block miner (boilerplate REFERENCE / dead-phrase DELETE by block identity) + acronym glossary (PROMOTE); evidence + auto/review grade; **mutates no content**. Template/structural miners deferred |
+| 3 | **discover** | 🥈 DOC | `text@converted` → `reports/patterns` (candidate boilerplate/templates/glossary/structure/converter-routing + disposition) | §8, §9.6 | ✅ | `test_discover_pure`, `test_discover_stage` + real run | recurring-block miner (template RETAIN / phrase DELETE / boilerplate REFERENCE) + acronym glossary (PROMOTE) + **convert-quality probe** (`mine_converter_routing`: flags structureless Pandoc output → Docling ROUTE candidates; real corpus = 45 flagged, 25 CPRS); evidence + grade; **mutates no content** |
 | 3 | **enrich** | 🥈 DOC | `text@converted`,`catalog.enriched` → `text@enriched` (identity FM baked) + `index.db:doc_meta_staged` | §8 | ✅ | `test_enrich_doc_pure`, `test_enrich_stage` | joins each bundle to its inventory record (by `<app>/<slug>`, DOCX-preferred), bakes identity FM via the kernel codec; **computed fields (word_count) staged to index.db, never in the body** (§6.3) |
 | 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7 | ◐ | `test_normalize_pure`, `test_normalize_stage` + real 469-doc run | **v1 F-steps**: strip Pandoc artifacts, subtract curated `registries/phrases`, regenerate `## Contents` TOC from the heading tree (GitHub-slug anchors), stamp `source_sha256`. Verified real (dead `<!-- -->` 79→0, nested TOC on real DIBR). **Deferred**: tables→csv, revision-history→history.yaml, boilerplate REFERENCE, template STRIP+STAMP, refs.yaml + back-links + bookmark rewrite, old-gen heading recovery |
 | **4 — Gold derive (machine)** | | | version groups + the queryable index + knowledge graph + manifests | §17.4 | ☐ 0/4 | | |
@@ -140,6 +140,13 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-01** — **Convert-quality probe added to `discover` (ADR-010 evidence).** New
+  `mine_converter_routing` flags substantial documents Pandoc converted with **no recovered heading
+  structure** (a bare-marker explosion) as Docling ROUTE candidates → `reports/patterns.converter_routing`,
+  feeding the `registries/converter-routing` curation. On the real 469-doc corpus it flags **45 docs, 25 of
+  them CPRS** (worst: a 23,932-word CPRS RN with 0 headings) — confirming the real CPRS conversion problems
+  and giving an evidence base for wiring Docling. (Docling itself: not installed, not wired — convert is
+  Pandoc-only today; routing + Docling backend deferred behind this evidence.) 253 tests, 100% cov.
 - **2026-06-01** — **Phase 3 `normalize` v1 shipped (◐) + DOCX-only decided (§1).** `normalize` applies
   the first F-steps per-document & deterministically: strip Pandoc artifacts → subtract the curated
   `registries/phrases` (the discover→curate→normalize loop closed with a real starter registry) →

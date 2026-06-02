@@ -63,6 +63,29 @@ def test_candidates_sorted_by_doc_count_desc():
     assert [c.doc_count for c in cands] == sorted([c.doc_count for c in cands], reverse=True)
 
 
+def test_count_headings():
+    body = "# A\n\ntext\n\n## B\n\n### C\n\nnot # a heading inline\n"
+    assert nz_count(body) == 3
+
+
+def nz_count(body):
+    return dp.count_headings(body)
+
+
+def test_mine_converter_routing_flags_structureless_long_docs():
+    long_no_heads = "word " * 500  # 500 words, no headings → Pandoc lost the structure
+    docs = {
+        "CPRS/or_30_243rn": long_no_heads,
+        "CPRS/cprsguium": "# Title\n\n## Section\n\n" + ("word " * 500),  # has headings → fine
+        "ADT/short": "word word word",  # short → not flagged even with no headings
+    }
+    cands = dp.mine_converter_routing(docs, min_words=400)
+    assert [c.doc_id for c in cands] == ["CPRS/or_30_243rn"]
+    c = cands[0]
+    assert c.suggested_converter == "docling" and c.headings == 0 and c.words >= 400
+    assert "structure lost" in c.reason
+
+
 def test_mine_glossary_acronyms_filters_stopwords():
     docs = {
         "a/1": "The CPRS and TIU systems; NOTE: see YES/NO and TO use it.",
