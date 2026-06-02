@@ -42,6 +42,7 @@ __all__ = [
     "github_slug",
     "parse_headings",
     "recover_headings",
+    "infer_heading_levels",
     "strip_artifacts",
     "subtract_phrases",
     "strip_existing_toc",
@@ -52,6 +53,7 @@ __all__ = [
 
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
 _HEADING_LINE_RE = re.compile(r"^#{1,6} ", re.MULTILINE)
+_FENCE_RE = re.compile(r"^\s*(```|~~~)")
 _HTML_COMMENT_RE = re.compile(r"^<!--.*-->$")
 _MULTI_BLANK = re.compile(r"\n{3,}")
 _TOC_ENTRY_RE = re.compile(r"^\s*- \[.*\]\(#.*\)\s*$")
@@ -81,6 +83,40 @@ def recover_headings(body: str) -> str:
         return f"{m.group(1)}\n## {text}" if text else m.group(0)
 
     return _RECOVER_RE.sub(repl, body)
+
+
+def infer_heading_levels(body: str) -> str:
+    """F-levels (§6.7): rewrite heading ``#`` prefixes so the heading tree has **no skipped
+    levels**, giving the regenerated TOC a sane nesting.
+
+    Some docs jump levels (H1 → H4) or are inconsistently leveled. Each heading is reassigned to
+    its depth in a gap-free hierarchy, anchored at the document's *shallowest* heading level — so an
+    H2-rooted doc stays H2-rooted (H1 is the document title, never fabricated). Fence-aware (code
+    blocks untouched) and idempotent (an already-gap-free tree is returned unchanged). Slugs depend
+    on heading *text*, not level, so the anchor map / recovery paths are unaffected."""
+    lines = body.split("\n")
+    in_fence = False
+    found: list[tuple[int, int]] = []  # (line index, original level)
+    for i, line in enumerate(lines):
+        if _FENCE_RE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if (m := _HEADING_RE.match(line)) is not None:
+            found.append((i, len(m.group(1))))
+    if not found:
+        return body
+    base = min(level for _, level in found)
+    stack: list[int] = []  # original levels of the current heading's strict ancestors
+    for i, level in found:
+        while stack and stack[-1] >= level:
+            stack.pop()
+        new_level = base + len(stack)
+        stack.append(level)
+        text = _HEADING_RE.match(lines[i]).group(2)  # type: ignore[union-attr]
+        lines[i] = "#" * new_level + " " + text
+    return "\n".join(lines)
 
 
 def strip_artifacts(body: str) -> str:
@@ -159,13 +195,15 @@ def normalize_body(
     """Apply the F-steps in order and return ``(body, anchor_map)`` (§6.7).
 
     Order matters for idempotency: recover headings → strip artifacts → subtract curated phrases →
-    parse the heading tree **once** (capturing bookmarks) → rewrite ``_Toc``/``_Ref`` cross-refs to
-    GitHub slugs (using that tree) → regenerate the TOC (same slugs, so TOC + map stay consistent)
-    → insert round-trip back-links. The anchor map travels to the ``refs.yaml`` sidecar.
+    **infer consistent heading levels** (gap-free tree) → parse the heading tree **once** (capturing
+    bookmarks) → rewrite ``_Toc``/``_Ref`` cross-refs to GitHub slugs (using that tree) → regenerate
+    the TOC (same slugs, so TOC + map stay consistent) → insert round-trip back-links. The anchor
+    map travels to the ``refs.yaml`` sidecar.
 
     ``toc_depth`` is the H2–H3 fallback today; the template F-step will resolve it per
     ``(doc_type, era)`` and pass it in (the template seam lives in ``anchors_pure``)."""
     body = subtract_phrases(strip_artifacts(recover_headings(body)), phrases)
+    body = infer_heading_levels(body)
     headings = parse_headings(body, doc_id)
     bookmark_to_slug = {h.bookmark: h.slug for h in headings if h.bookmark}
     body, outbound = rewrite_link_targets(body, bookmark_to_slug)

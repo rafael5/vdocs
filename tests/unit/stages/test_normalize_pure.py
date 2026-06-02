@@ -116,3 +116,37 @@ def test_normalize_body_applies_all_steps_in_order():
     assert "intentionally left blank" not in out
     assert "## Contents" in out and "- [Overview](#overview)" in out
     assert "Real text." in out
+
+
+def test_infer_heading_levels_compacts_skipped_levels():
+    # H1 → H4 skips two levels; the gap is compacted so the tree nests one level at a time
+    body = "# Title\n\ntext\n\n#### Deep\n\nmore\n"
+    out = nz.infer_heading_levels(body)
+    assert "## Deep" in out and "#### Deep" not in out  # H4 pulled up to H2
+
+
+def test_infer_heading_levels_builds_consistent_tree():
+    body = "# A\n\n### B\n\n#### C\n\n### D\n"
+    out = nz.infer_heading_levels(body)
+    levels = [len(ln.split(" ")[0]) for ln in out.splitlines() if ln.startswith("#")]
+    assert levels == [1, 2, 3, 2]  # B,D → H2 (children of A); C → H3 (child of B)
+
+
+def test_infer_heading_levels_preserves_h2_rooted_doc():
+    # a doc whose shallowest heading is H2 (no H1 title) keeps that baseline — never fabricate H1
+    body = "## A\n\n### B\n\n## C\n"
+    out = nz.infer_heading_levels(body)
+    assert out == body  # already gap-free at base H2 → unchanged
+
+
+def test_infer_heading_levels_is_idempotent():
+    body = "# A\n\n#### B\n\n## C\n\n##### D\n"
+    once = nz.infer_heading_levels(body)
+    assert nz.infer_heading_levels(once) == once
+
+
+def test_infer_heading_levels_ignores_code_fences():
+    body = "# A\n\n```\n#### not a heading\n```\n\n### Real\n"
+    out = nz.infer_heading_levels(body)
+    assert "#### not a heading" in out  # fenced content untouched
+    assert "## Real" in out  # the real H3 compacted to H2
