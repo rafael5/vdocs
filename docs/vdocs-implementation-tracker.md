@@ -46,37 +46,69 @@ end-to-end on a real 469-doc VA corpus; `make check` green (**385 tests, 100% co
 Change Log** below and in `vdocs-design.md` §8. Status: ✅ done · ◐ partial · ☐ todo · ⬚ deferred.
 Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC = document medallion.*
 
-| Ph | Stage | Layer | St | Ref | Goal (requires → produces) |
-|:--:|---|:--:|:--:|---|---|
-| 1 | kernel | — | ✅ | §9.2 | cross-cutting primitives (text·cas·db·http·discovery·…) |
-| 1 | config | — | ✅ | §5.3 | `Settings` off `DATA_DIR`; all lake paths derived |
-| 1 | models/contracts | — | ✅ | §7.1 | Pydantic types; `ArtifactContract`; the registry |
-| 1 | orchestrator | — | ✅ | §7.1 | `Stage` base + DAG engine + `state.db:stage_runs` |
-| 2 | crawl | 🥉 INV | ✅ | §8 | vdl → catalog.raw (polite 3-level walk) |
-| 2 | catalog | 🥈 INV | ✅ | §8 | catalog.raw → catalog.enriched (5-pass + classify) |
-| 2 | serve-inventory | 🥇 INV | ✅ | §7.3 | → gold inventory; **HARD GATE = the fetch gate** |
-| 2 | fetch | 🥉 DOC | ✅ | §5.6 | gate + selection → bronze raw (CAS) + index.json |
-| 3 | convert | 🥈 DOC | ✅ | §1 | raw → text@converted + assets (Pandoc/Docling) |
-| 3 | discover | 🥈 DOC | ✅ | §9.6 | converted → reports/patterns → curate `registries/` |
-| 3 | enrich | 🥈 DOC | ✅ | §8 | converted → text@enriched (identity FM baked) |
-| 3 | normalize | 🥈 DOC | ✅ | §6.7 | enriched → text@normalized (+history/tables/refs; TOC) |
-| 4 | consolidate | 🥇 DOC | ☐ | §6.6 | normalized → consolidated (1 anchor/group; lineage) |
-| 4 | index | 🥇 DOC | ☐ | §8 | → index.db (sections+FTS5, entities, stable IDs) |
-| 4 | relate | 🥇 DOC | ☐ | §8 | index.db → relations (knowledge graph) |
-| 4 | manifest | 🥇 DOC | ☐ | §14 | → corpus-manifest.json + discovery.json |
-| 5 | fidelity | 🥇 DOC | ☐ | FF | → reports/fidelity (per-doc S→T verdict) |
-| 5 | publish | 🥇 DOC | ☐ | §8 | → publish (markdown-only tree + INDEX) |
-| 5 | validate | 🥇 DOC | ☐ | §7.3 | → **HARD GATE** (schema·lineage·anchors·IDs·fidelity) |
-| 5 | push | 🚀 DOC | ☐ | §6.6 | publish → git (anchor files + lineage sidecars) |
-| 5 | analyze | ⬩ DOC | ☐ | §8 | → reports/{survey,headings,lexicon} (off path) |
-| 6 | embed | 🥇 DOC | ☐ | §14.6 | doc_sections (is_latest) → vectors.db (per-chunk ANN) |
-| 6 | serve-mcp | 🥇 DOC | ☐ | §14 | → MCP server (semantic+lexical+structured+graph, RRF) |
-| 7 | property tests | — | ◐ | §10 | Hypothesis property tests for pure transforms |
-| 7 | --verify | — | ◐ | §7.4 | full-content-hash fingerprint mode |
-| 7 | gc | — | ☐ | §17.7 | sweep superseded silver trees |
-| 7 | docs/stages gen | — | ☐ | §17.7 | per-stage reference generated from contracts |
-| 7 | push --replay-history | — | ⬚ | §6.6 | git commits from history.yaml + prior bodies |
-| 7 | refresh | — | ☐ | §7.6 | crawl-diff + incremental reprocess |
+**Phase 1 — Spine** ✅ 4/4
+
+| Stage | Layer | St | Ref | Goal |
+|---|:--:|:--:|---|---|
+| kernel | — | ✅ | §9.2 | primitives: text·cas·db·http·discovery |
+| config | — | ✅ | §5.3 | `Settings` off `DATA_DIR`; paths derived |
+| models/contracts | — | ✅ | §7.1 | types; `ArtifactContract`; registry |
+| orchestrator | — | ✅ | §7.1 | `Stage` + DAG + `stage_runs` |
+
+**Phase 2 — Inventory medallion + doc-bronze** ✅ 4/4
+
+| Stage | Layer | St | Ref | Goal |
+|---|:--:|:--:|---|---|
+| crawl | 🥉 INV | ✅ | §8 | vdl → catalog.raw |
+| catalog | 🥈 INV | ✅ | §8 | catalog.raw → enriched (5-pass) |
+| serve-inventory | 🥇 INV | ✅ | §7.3 | → gold inv; **HARD GATE** |
+| fetch | 🥉 DOC | ✅ | §5.6 | gate+sel → bronze raw (CAS) |
+
+**Phase 3 — Silver document text** ✅ 4/4
+
+| Stage | Layer | St | Ref | Goal |
+|---|:--:|:--:|---|---|
+| convert | 🥈 DOC | ✅ | §1 | raw → converted + assets |
+| discover | 🥈 DOC | ✅ | §9.6 | converted → patterns → registries |
+| enrich | 🥈 DOC | ✅ | §8 | converted → enriched (FM) |
+| normalize | 🥈 DOC | ✅ | §6.7 | enriched → normalized (+TOC/refs) |
+
+**Phase 4 — Gold derive** ☐ 0/4
+
+| Stage | Layer | St | Ref | Goal |
+|---|:--:|:--:|---|---|
+| consolidate | 🥇 DOC | ☐ | §6.6 | normalized → consolidated (lineage) |
+| index | 🥇 DOC | ☐ | §8 | → index.db (FTS5, IDs) |
+| relate | 🥇 DOC | ☐ | §8 | index.db → relations (graph) |
+| manifest | 🥇 DOC | ☐ | §14 | → corpus-manifest + discovery |
+
+**Phase 5 — Gold deliver** ☐ 0/5
+
+| Stage | Layer | St | Ref | Goal |
+|---|:--:|:--:|---|---|
+| fidelity | 🥇 DOC | ☐ | FF | → reports/fidelity (S→T) |
+| publish | 🥇 DOC | ☐ | §8 | → publish (md tree + INDEX) |
+| validate | 🥇 DOC | ☐ | §7.3 | → **HARD GATE** (schema·IDs) |
+| push | 🚀 DOC | ☐ | §6.6 | publish → git (+ lineage) |
+| analyze | ⬩ DOC | ☐ | §8 | → reports (off path) |
+
+**Phase 6 — Machine interface** ☐ 0/2
+
+| Stage | Layer | St | Ref | Goal |
+|---|:--:|:--:|---|---|
+| embed | 🥇 DOC | ☐ | §14.6 | doc_sections → vectors.db (ANN) |
+| serve-mcp | 🥇 DOC | ☐ | §14 | → MCP (sem+lex+struct+graph) |
+
+**Phase 7 — Harden** ◐ 2◐·1⬚·3☐
+
+| Stage | Layer | St | Ref | Goal |
+|---|:--:|:--:|---|---|
+| property tests | — | ◐ | §10 | Hypothesis tests, pure transforms |
+| --verify | — | ◐ | §7.4 | full-content-hash fingerprint |
+| gc | — | ☐ | §17.7 | sweep superseded silver |
+| docs/stages gen | — | ☐ | §17.7 | per-stage ref from contracts |
+| push --replay-history | — | ⬚ | §6.6 | commits from history.yaml |
+| refresh | — | ☐ | §7.6 | crawl-diff + reprocess |
 
 *Ref `FF` = [`fidelity-framework.md`](fidelity-framework.md).*
 
