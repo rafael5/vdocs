@@ -6,7 +6,9 @@ WAL mode, foreign keys, and the row factory are configured in exactly one place.
 
 from __future__ import annotations
 
+import os
 import sqlite3
+from collections.abc import Callable
 from pathlib import Path
 
 
@@ -30,3 +32,30 @@ def apply_schema(conn: sqlite3.Connection, ddl: str) -> None:
     """Apply a DDL script (idempotent when the DDL uses ``IF NOT EXISTS``)."""
     conn.executescript(ddl)
     conn.commit()
+
+
+def build_atomic(path: Path, build: Callable[[sqlite3.Connection], None]) -> None:
+    """Build a fresh SQLite store atomically (temp + rename, §7.4).
+
+    Opens a connection to a sibling ``.<name>.tmp``, runs ``build(conn)`` (which issues the
+    DDL/inserts), commits, closes, then ``os.replace``s the temp onto ``path`` — so a crash or a
+    raising ``build`` never leaves a half-written DB at the real path that preflight would mistake
+    for complete. A leftover temp from a prior crash is discarded first. The single shared
+    atomic-DB-build primitive (§9.2) for every stage that *rebuilds* a derived store
+    (``serve-inventory`` now; ``index``/``relate``/``embed`` next)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp")
+    if tmp.exists():
+        tmp.unlink()
+    conn = connect(tmp)
+    try:
+        build(conn)
+        conn.commit()
+    except BaseException:
+        conn.close()
+        if tmp.exists():
+            tmp.unlink()
+        raise
+    else:
+        conn.close()
+    os.replace(tmp, path)

@@ -27,7 +27,7 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 **Pipeline stages (§8): 8 ✅ · 0 ◐ · 11 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
 counted separately below). Last updated **2026-06-02**. **Phases 1–3 complete and merged to `master`**
 (PRs #3/#4/#5) — inventory medallion + gated bronze + the full document-silver pipeline, run
-end-to-end on a real 469-doc VA corpus; `make check` green (**385 tests, 100% cov**, ruff+mypy clean).
+end-to-end on a real 469-doc VA corpus; `make check` green (**411 tests, 100% cov**, ruff+mypy clean).
 **Next: Phase 4 `consolidate`.**
 
 | Phase | Title | Status | Progress |
@@ -118,12 +118,15 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
 - `normalize` — template-governed **TOC depth** is still the **H2–H3 fallback** (§6.7) until
   `registries/templates` depth is consumed (seam marked in `anchors_pure`/`stage.py`).
 - Phase 7 — extend **property tests** to `enrich` + remaining `normalize` transforms; exercise `--verify` e2e.
+- `publish` — resolve `normalize`'s gold-root-relative boilerplate refs (`_shared/boilerplate/<id>.md`,
+  `SHARED_BOILERPLATE_DIR`) to each bundle's published depth when materialising the human tree (PUBLISH
+  SEAM marked in `normalize_pure.subtract_boilerplate`, §5.3/§9.7).
 - Two **dependabot PRs** (#1 actions/checkout, #2 setup-uv) remain open and independent.
 
 **Current focus → Phase 4 `consolidate`.** Phases 1–3 are ✅ and **merged to `master`** (origin tip
 `224ab51`): the inventory medallion + gated bronze, and the full document-silver pipeline
 (`convert`→`discover`→`enrich`→`normalize`), all green on a real 469-doc corpus, **DOCX-only** (§1);
-`make check` 385 tests, 100% cov. `normalize` shipped every F-step incl. the **legacy-TOC strip**
+`make check` 411 tests, 100% cov. `normalize` shipped every F-step incl. the **legacy-TOC strip**
 (`registries/structures` CANONICALIZE `toc`). **Next:** `consolidate` (§6.6) — version-group grouping +
 anchor document + append-only `history.yaml` lineage — then `index`→`relate`→`manifest`. Kickoff prompt:
 [`docs/prompts/next-session-phase-4-kickoff.md`](prompts/next-session-phase-4-kickoff.md).
@@ -215,6 +218,24 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **Pre-Phase-4 compliance-review remediation (8 low-severity findings, TDD-first).** A
+  full code-vs-design audit of Phases 1–3 confirmed the spine substantially faithful (contract_ver gating
+  real, pure/IO split clean, one-kernel-each holds, hard gate blocks, no-blind-download); eight
+  low-severity items were closed. **Kernel promotions (§9.2/§11):** (1) `kernel/db.build_atomic(path,
+  build_fn)` — the temp-build + `os.replace` atomic-DB-build primitive, repointed `serve-inventory` off
+  its hand-rolled rename (the next DB-builders `index`/`relate`/`embed` reuse it); (2) `kernel/registry.
+  load_mapping(path, *, missing_ok)` — the repeated `exists?→read→safe_load or {}` registry-YAML loader,
+  repointed `catalog`/`convert`/`normalize` (~10 sites); (3) `kernel/text.github_slug_base` — the
+  GitHub-slug rule promoted once to the kernel, `anchors_pure.github_slug` now layers `-1/-2` dedup on
+  it. **Hardening:** (4) `Stage._input_fps` now raises if `extra_input_fps` keys collide with a `requires`
+  key (was docstring-only); (5) `fetch` accrues `acquisitions.attempts` across retries and preserves
+  `first_attempt_at` (was unconditional `attempts=1`) — the §7.6 retry/CHANGED_IN_PLACE prerequisite.
+  **Docs/hygiene:** (6) `subtract_boilerplate`'s `_shared/boilerplate/<id>.md` ref documented as an
+  explicit **publish seam** (gold-root-relative; `publish` resolves depth — not silently bundle-relative);
+  (7) `vdl-crawl-spec.md` mojibake caveat corrected (kernel now *is* the ftfy call, §9.2 unification);
+  (8) stale `catalog_pure` docstring + orphaned bytecode cleaned. **411 tests** (+14: 4 `test_registry`,
+  4 `test_db.build_atomic`, 4 `test_text.github_slug_base`, 1 collision, 1 fetch-accrual), 100% cov,
+  ruff+mypy clean. No design-doc change needed — code now matches §9.2/§7.4/§5.5.
 - **2026-06-02** — **`normalize` legacy-TOC strip (closes the duplicate-TOC deviation) + Phase 3 merged +
   tracker compacted.** Wired the previously-orphaned `registries/structures` `toc` convention into
   `normalize` as a registry-driven `strip_legacy_toc` F-step (keyed on a curated `match` variant list):

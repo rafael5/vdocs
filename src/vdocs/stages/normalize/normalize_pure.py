@@ -148,6 +148,12 @@ def subtract_phrases(body: str, phrases: frozenset[str]) -> str:
     return "\n\n".join(kept)
 
 
+# Gold-root-relative path to the single-sourced boilerplate copies (§9.7: gold/_shared/boilerplate).
+# Kept gold-root-relative on purpose — `publish` resolves it to the bundle's published depth (see
+# subtract_boilerplate's PUBLISH SEAM note).
+SHARED_BOILERPLATE_DIR = "_shared/boilerplate"
+
+
 @dataclass(frozen=True)
 class Boilerplate:
     """A curated boilerplate block: its canonical id, a short link label, and the match key.
@@ -164,7 +170,14 @@ def subtract_boilerplate(body: str, registry: Sequence[Boilerplate]) -> str:
     """F-boilerplate (§9.6 REFERENCE): replace each body block matching a curated boilerplate
     block with a link to the canonical shared copy — kept once, de-duplicated (distinct from
     ``subtract_phrases``, which DELETEs). Matching is whitespace/case-insensitive (``block_key``);
-    idempotent (the reference link it leaves is not a registered block)."""
+    idempotent (the reference link it leaves is not a registered block).
+
+    PUBLISH SEAM (§5.3/§9.7): the emitted target ``_shared/boilerplate/<id>.md`` names the
+    **gold-root** canonical home ``gold/_shared/boilerplate/<id>.md``; it is written in
+    gold-root-relative form here because the silver bundle's eventual published depth is not known
+    until ``publish`` lays out the human tree. ``publish`` owns rewriting these to the correct
+    relative depth when it materialises bundles (the same way it materialises images) — this is a
+    tracked publish-phase responsibility, not a silently bundle-relative link."""
     if not registry:
         return body
     by_key = {b.key: b for b in registry}
@@ -175,7 +188,7 @@ def subtract_boilerplate(body: str, registry: Sequence[Boilerplate]) -> str:
             out.append(block)
         else:
             label = bp.label.replace("[", "").replace("]", "")
-            out.append(f"_[{label} — shared boilerplate](_shared/boilerplate/{bp.id}.md)_")
+            out.append(f"_[{label} — shared boilerplate]({SHARED_BOILERPLATE_DIR}/{bp.id}.md)_")
     return "\n\n".join(out)
 
 

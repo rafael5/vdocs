@@ -194,9 +194,10 @@ For each raw row:
    regex sees clean text. v1 `fix_mojibake` is exactly **`ftfy.fix_text(text, normalization="NFC")`**
    (empty→`""`). The NFC + ftfy pass also normalizes/strips Unicode whitespace such as ` `
    (non-breaking space), which was breaking `\bPOM\b` on ~31 JLV titles. **Fidelity note:** vdocs'
-   `kernel/text.repair_mojibake` is a *custom* repair and is **not byte-identical to ftfy** — to
-   reproduce the identical CSV, `catalog` must use ftfy (or a verified-equivalent) for this field pass,
-   and apply NFC + nbsp stripping. (`doc_filename`/URLs are never touched — literal va.gov identifiers.)
+   `kernel/text.repair_mojibake` is now `ftfy.fix_text(text, normalization="NFC")` (the two mojibake
+   fixers were unified onto ftfy — §9.2), so `catalog` delegates to it directly and reproduces the
+   identical CSV; the field pass adds nbsp stripping. (`doc_filename`/URLs are never touched — literal
+   va.gov identifiers.)
 3. **App abbrev extraction:** `app_name_abbrev` = trailing-parens code via `\s*\(([A-Z0-9/+\-]{1,10})\)\s*$`;
    strip it from `app_name`; then `app_name_full = app_name`.
 4. **Typo corrections** (`apply_typo_corrections`) on `doc_title`, `doc_subject`, `app_name_full`;
@@ -546,12 +547,11 @@ canonical labels, the manual/peer layers, and `system_type`/`cots_dependent`. **
 `registries/typo-corrections`, `registries/manual-labels` (overrides/noise/slugs),
 `registries/noise-domains` (VBA/benefits hosts), `registries/system-types` (SYSTEM_TYPE + COTS). `catalog`
 `requires` them.
-- **Mojibake fidelity — DECIDED: adopt ftfy for the inventory text pass.** The `doc_title`/`doc_subject`/
-  `app_name(_full)` repair uses **`ftfy.fix_text(text, normalization="NFC")` + nbsp-strip** (§4.1) — add
-  `ftfy` as a `catalog` dependency. vdocs' custom `kernel/text.repair_mojibake` is **not** used for this
-  pass (it is not byte-identical to ftfy and would silently diverge those columns). `kernel/text` remains
-  the repair for the rest of the pipeline; a future change may property-test it to ftfy-equivalence and
-  unify, but the inventory pass uses ftfy as the reference implementation.
+- **Mojibake fidelity — DECIDED: adopt ftfy for the inventory text pass, now unified in the kernel.** The
+  `doc_title`/`doc_subject`/`app_name(_full)` repair uses **`ftfy.fix_text(text, normalization="NFC")` +
+  nbsp-strip** (§4.1) — `ftfy` is a dependency. The two mojibake fixers were unified onto ftfy (§9.2):
+  `kernel/text.repair_mojibake` *is* now that exact ftfy call, so `catalog` delegates to it (no separate
+  custom path remains to diverge). The inventory pass adds nbsp-stripping on top.
 
 ### 9.4 Decisions (resolved 2026-06-01)
 - **`group_key` granularity — DECIDED: keep both keys.** Provide v1's `group_key = app:pkg:patch_ver`

@@ -3,7 +3,7 @@
 The registries are *data, not code* (tenet #13): version-controlled YAML in the repo's
 ``registries/`` tree, ported verbatim from the v1 vista-docs corpus. This module is the
 thin I/O boundary that reads them into typed structures; the ``catalog`` enrichment
-(``catalog_pure``) consumes the loaded :class:`Registries` and stays pure. Parsers that
+(``enrich_pure``) consumes the loaded :class:`Registries` and stays pure. Parsers that
 take YAML text (``parse_*``) are themselves pure and unit-tested directly.
 """
 
@@ -13,6 +13,8 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import yaml
+
+from vdocs.kernel import registry as kregistry
 
 
 @dataclass(frozen=True)
@@ -151,7 +153,8 @@ def parse_doc_types(
 
 
 def _read(d: Path, name: str) -> dict:
-    return yaml.safe_load((d / f"{name}.yaml").read_text(encoding="utf-8")) or {}
+    # A required inventory vocabulary — absent is a loud failure (missing_ok=False), §9.2.
+    return kregistry.load_mapping(d / f"{name}.yaml")
 
 
 def load_registries(d: Path) -> Registries:

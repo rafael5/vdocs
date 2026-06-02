@@ -133,6 +133,31 @@ def test_fetch_reruns_when_selection_changes(bronze_ctx):
     assert sr is not None and sr.status == "ok" and sr.counts["fetched"] == 1
 
 
+def test_fetch_accrues_attempts_across_retries(bronze_ctx):
+    ctx = bronze_ctx
+    # bring only the inventory track up (no successful fetch yet)
+    Orchestrator([CrawlStage(page_fetcher=fake_page), CatalogStage(), ServeInventoryStage()]).run(
+        ctx, force=True
+    )
+
+    # the DOCX is unavailable; force two retry runs of fetch alone
+    failing = lambda u: None  # noqa: E731
+    Orchestrator([FetchStage(fetch_bytes=failing, selection=Selection(all_=True))]).run(
+        ctx, force=True
+    )
+    first = ctx.state.get_acquisition("ADT:dg_5_3_1057_dibr")
+    assert first.status == "failed" and first.attempts == 1
+
+    Orchestrator([FetchStage(fetch_bytes=failing, selection=Selection(all_=True))]).run(
+        ctx, force=True
+    )
+    second = ctx.state.get_acquisition("ADT:dg_5_3_1057_dibr")
+    # attempts accrue; first_attempt_at is preserved, last_attempt_at advances (§5.5)
+    assert second.attempts == 2
+    assert second.first_attempt_at == first.first_attempt_at
+    assert second.last_attempt_at > first.last_attempt_at
+
+
 def test_fetch_does_not_fall_back_to_pdf(bronze_ctx):
     ctx = bronze_ctx
     # only the PDF is downloadable upstream — but PDF is out of scope (§1), so fetch targets

@@ -11,8 +11,6 @@ until the gate is green.
 
 from __future__ import annotations
 
-import os
-
 from vdocs.contracts.registry import CATALOG_ENRICHED, GOLD_INVENTORY, GOLD_INVENTORY_DB
 from vdocs.kernel import cas, db
 from vdocs.kernel import csv as kcsv
@@ -72,15 +70,12 @@ class ServeInventoryStage(Stage):
 
 
 def _build_db(path, records: list[EnrichedRecord]) -> None:  # type: ignore[no-untyped-def]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.tmp")
-    if tmp.exists():
-        tmp.unlink()
+    """Build the queryable gold ``inventory.db`` atomically via the shared kernel helper (§9.2)."""
     col_defs = ", ".join(
         f"{c} INTEGER" if c == "cots_dependent" else f"{c} TEXT" for c in _CSV_COLUMNS
     )
-    conn = db.connect(tmp)
-    try:
+
+    def build(conn) -> None:  # type: ignore[no-untyped-def]
         conn.execute(f"CREATE TABLE inventory ({col_defs})")
         placeholders = ", ".join("?" for _ in _CSV_COLUMNS)
         conn.executemany(
@@ -89,10 +84,8 @@ def _build_db(path, records: list[EnrichedRecord]) -> None:  # type: ignore[no-u
         )
         for col in _INDEXED:
             conn.execute(f"CREATE INDEX idx_inventory_{col} ON inventory ({col})")
-        conn.commit()
-    finally:
-        conn.close()
-    os.replace(tmp, path)
+
+    db.build_atomic(path, build)
 
 
 def _cell(value: object) -> object:

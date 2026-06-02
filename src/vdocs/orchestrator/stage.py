@@ -157,7 +157,14 @@ class Stage(ABC):
                 up = ctx.state.get(c.produced_by, ctx.scope)
                 if up is not None and up.status == "ok":
                     fps[f"{c.key}#contract_ver"] = str(up.contract_ver)
-        fps.update(self.extra_input_fps(ctx))
+        extra = self.extra_input_fps(ctx)
+        clash = extra.keys() & fps.keys()
+        if clash:
+            raise ValueError(
+                f"{self.name}.extra_input_fps keys collide with input fingerprint keys: "
+                f"{sorted(clash)}"
+            )
+        fps.update(extra)
         return fps
 
     def _write(

@@ -58,6 +58,11 @@ class FetchStage(Stage):
         for doc in targets:
             did = doc_id(doc)
             url = doc.doc_url  # the DOCX URL — selection guarantees a DOCX target (§1)
+            # Accrue attempts across re-runs and preserve the original first_attempt_at (§5.5):
+            # a CHANGED_IN_PLACE/retry re-fetch increments the count, it doesn't reset it.
+            prior = ctx.state.get_acquisition(did)
+            attempts = (prior.attempts if prior else 0) + 1
+            first_at = prior.first_attempt_at if (prior and prior.first_attempt_at) else now
             data = self._get(url)
             if data is None:
                 failed += 1
@@ -66,8 +71,8 @@ class FetchStage(Stage):
                         doc_id=did,
                         source_url=url,
                         status="failed",
-                        attempts=1,
-                        first_attempt_at=now,
+                        attempts=attempts,
+                        first_attempt_at=first_at,
                         last_attempt_at=now,
                         error="docx unavailable",
                         tool_ver=ctx.cfg.tool_ver,
@@ -90,8 +95,8 @@ class FetchStage(Stage):
                     status="fetched",
                     sha256=sha,
                     bytes=len(data),
-                    attempts=1,
-                    first_attempt_at=now,
+                    attempts=attempts,
+                    first_attempt_at=first_at,
                     last_attempt_at=now,
                     fetched_at=now,
                     tool_ver=ctx.cfg.tool_ver,

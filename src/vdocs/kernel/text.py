@@ -21,6 +21,8 @@ _WS_RE = re.compile(r"[ \t]+")
 _PATH_UNSAFE = re.compile(r"[^A-Za-z0-9._-]+")
 # Block-equality key: collapse *all* whitespace (incl. newlines — a block may span lines).
 _BLOCK_WS_RE = re.compile(r"\s+")
+# GitHub heading-anchor slug: drop punctuation, keep word chars/hyphens, spaces→hyphens (§6.7).
+_GH_SLUG_DROP = re.compile(r"[^\w\- ]+")
 # Publication-era signal: the first "Month YYYY" printed on a title page (§9.8). The decade bucket
 # of this date is the era axis for `(doc_type, era)` template induction/matching — the only
 # trustworthy era signal (DOCX metadata is a bulk-re-export artifact; the VDL file_date is ~empty).
@@ -37,6 +39,16 @@ def safe_component(name: str) -> str:
     The single bundle-path slug sanitiser shared across the document-silver stages (§9.2): a
     primitive used by ``convert``/``enrich``/``normalize`` lives in the kernel, not a stage."""
     return _PATH_UNSAFE.sub("_", name).strip("_") or "_"
+
+
+def github_slug_base(text: str) -> str:
+    """The GitHub heading-anchor slug *base* (lowercase, punctuation dropped, spaces→hyphens),
+    **without** duplicate disambiguation (§6.7).
+
+    The single home for the GitHub-slug rule shared by the published-markdown anchors, the TOC,
+    and (soon) ``index``'s canonical section IDs (§5.5/§9.2). ``anchors_pure.github_slug`` layers
+    GitHub's ``-1``/``-2`` document-order dedup on top of this base."""
+    return _GH_SLUG_DROP.sub("", text.strip().lower()).replace(" ", "-")
 
 
 def block_key(block: str) -> str:

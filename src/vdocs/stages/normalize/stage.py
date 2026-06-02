@@ -27,6 +27,7 @@ import yaml
 
 from vdocs.contracts.registry import RAW_INDEX, REGISTRIES, TEXT_ENRICHED, TEXT_NORMALIZED
 from vdocs.kernel import cas, frontmatter
+from vdocs.kernel import registry as kregistry
 from vdocs.kernel.text import safe_component
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -129,17 +130,13 @@ class NormalizeStage(Stage):
 
 def _load_phrases(path) -> frozenset[str]:  # type: ignore[no-untyped-def]
     """The curated dead phrases (empty if the registry file is absent — a no-op subtraction)."""
-    if not path.exists():
-        return frozenset()
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    data = kregistry.load_mapping(path, missing_ok=True)
     return frozenset(data.get("phrases") or [])
 
 
 def _load_boilerplate(path, cls):  # type: ignore[no-untyped-def]
     """The curated boilerplate registry as ``Boilerplate`` entries (empty if absent — a no-op)."""
-    if not path.exists():
-        return ()
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    data = kregistry.load_mapping(path, missing_ok=True)
     return tuple(
         cls(id=e["id"], label=e["label"], key=e["key"]) for e in (data.get("boilerplate") or [])
     )
@@ -150,9 +147,7 @@ def _load_templates(path, cls):  # type: ignore[no-untyped-def]
 
     Each template's scaffold-section titles are normalised (lowercased, whitespace-collapsed) for
     matching against body headings."""
-    if not path.exists():
-        return ()
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    data = kregistry.load_mapping(path, missing_ok=True)
     out = []
     for t in data.get("templates") or []:
         titles = frozenset(
@@ -174,9 +169,7 @@ def _load_structure_toc_titles(path) -> frozenset[str]:  # type: ignore[no-untyp
     the legacy-TOC variants ``normalize`` strips before deriving ``## Contents`` (§6.7/§9.6).
 
     Empty if the registry is absent or carries no approved ``toc`` convention (a no-op strip)."""
-    if not path.exists():
-        return frozenset()
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    data = kregistry.load_mapping(path, missing_ok=True)
     titles: set[str] = set()
     for conv in data.get("conventions") or []:
         if conv.get("convention") == "toc" and conv.get("disposition") == "CANONICALIZE":

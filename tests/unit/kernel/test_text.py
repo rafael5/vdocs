@@ -3,6 +3,30 @@
 from vdocs.kernel import text
 
 
+def test_github_slug_base_lowercases_and_hyphenates():
+    assert text.github_slug_base("Getting Started") == "getting-started"
+
+
+def test_github_slug_base_drops_punctuation_keeps_hyphens_and_word_chars():
+    # GitHub anchor rule: drop punctuation, keep word chars/hyphens, spaces→hyphens.
+    got = text.github_slug_base("FileMan & the Data_Dictionary (v22.2)")
+    assert got == "fileman--the-data_dictionary-v222"
+
+
+def test_github_slug_base_is_dedup_free():
+    # The base is identity-only; the -1/-2 disambiguation lives in anchors_pure (layered on top).
+    assert text.github_slug_base("Options") == text.github_slug_base("Options")
+
+
+def test_github_slug_base_anchors_pure_layers_dedup_on_it():
+    # anchors_pure.github_slug must produce the base for the first occurrence, then -1, -2 …
+    from vdocs.stages.normalize import anchors_pure
+
+    seen: dict[str, int] = {}
+    assert anchors_pure.github_slug("Options", seen) == text.github_slug_base("Options")
+    assert anchors_pure.github_slug("Options", seen) == "options-1"
+
+
 def test_repair_mojibake_smart_quotes():
     # utf-8 smart quotes mis-decoded through cp1252 (the classic mojibake); ftfy recovers them,
     # then normalises the curly quotes to straight ASCII (uncurl_quotes, its default) — the

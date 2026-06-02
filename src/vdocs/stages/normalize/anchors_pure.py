@@ -22,6 +22,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from vdocs.kernel.text import github_slug_base
+
 # Depth (decided, §6.7): template-governed `toc_level` per section is the goal, but
 # `registries/templates` isn't built yet — ship the H2–H3 fallback (H1 is the doc title, never a
 # TOC entry). TEMPLATE SEAM: when the template F-step lands, resolve depth per (doc_type, era)
@@ -31,7 +33,6 @@ DEFAULT_TOC_DEPTH = (2, 3)
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
 _FENCE_RE = re.compile(r"^\s*(```|~~~)")
 _TAG_RE = re.compile(r"<[^>]+>")
-_SLUG_DROP = re.compile(r"[^\w\- ]+")  # GitHub slug: drop punctuation, keep word chars/space/hyphen
 
 # A Word bookmark id is `_Toc…`/`_Ref…`. Four shapes we read/match it in:
 _BOOKMARK_SPAN_RE = re.compile(r'<span id="(_(?:Toc|Ref)\w+)"[^>]*>\s*</span>')  # inline on heading
@@ -78,9 +79,9 @@ class AnchorMap:
 
 
 def github_slug(text: str, seen: dict[str, int]) -> str:
-    """A GitHub-compatible heading anchor slug (lowercase, punctuation dropped, spaces→hyphens),
-    with GitHub's ``-1``/``-2`` duplicate disambiguation in document order (§6.7)."""
-    base = _SLUG_DROP.sub("", text.strip().lower()).replace(" ", "-")
+    """A GitHub-compatible heading anchor slug — the shared ``kernel/text.github_slug_base`` rule
+    plus GitHub's ``-1``/``-2`` duplicate disambiguation in document order (§6.7)."""
+    base = github_slug_base(text)
     n = seen.get(base, 0)
     seen[base] = n + 1
     return base if n == 0 else f"{base}-{n}"

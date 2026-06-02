@@ -54,6 +54,26 @@ def test_optional_missing_input_warns_and_proceeds(ctx):
     assert pf.decision is Decision.PROCEED  # missing optional → WARN, not FAIL
 
 
+def test_extra_input_fps_colliding_with_requires_key_raises(ctx):
+    """A stage's extra_input_fps must not clobber a requires-contract fingerprint key (§7.3)."""
+    cas.atomic_write(OUT.locate(ctx.cfg).path, b"x")
+
+    class S(Stage):
+        name = "s"
+        requires = [OUT]  # key "solo"
+        produces = []
+        idempotency = Idempotency.SKIP_IF_UNCHANGED
+
+        def run(self, ctx, force):
+            return RunResult()
+
+        def extra_input_fps(self, ctx):
+            return {"solo": "hijack"}  # collides with the requires key
+
+    with pytest.raises(ValueError, match="solo"):
+        S()._input_fps(ctx)
+
+
 def test_upstream_present_on_disk_but_no_ok_record_fails(ctx):
     # The dependency file exists, but its producer never wrote an ok stage_run.
     cas.atomic_write(DEP.locate(ctx.cfg).path, b"orphan")

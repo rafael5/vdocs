@@ -13,10 +13,9 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 
-import yaml
-
 from vdocs.contracts.registry import ASSETS, RAW_INDEX, RAW_TREE, TEXT_CONVERTED
 from vdocs.kernel import cas
+from vdocs.kernel import registry as kregistry
 from vdocs.kernel.cas import Cas
 from vdocs.kernel.text import safe_component
 from vdocs.models.stage import Idempotency, RunResult
@@ -77,9 +76,7 @@ class ConvertStage(Stage):
 
 def _load_converter_routing(path) -> frozenset[str]:  # type: ignore[no-untyped-def]
     """Bundle identities (``<app>/<slug>``) curated to convert with Docling (empty if absent)."""
-    if not path.exists():
-        return frozenset()
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    data = kregistry.load_mapping(path, missing_ok=True)
     return frozenset(data.get("docling") or [])
 
 
