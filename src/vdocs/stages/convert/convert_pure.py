@@ -13,7 +13,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 # markdown image: ![alt](target "optional title")
-_IMG_RE = re.compile(r"(!\[[^\]]*\]\()([^)\s]+)([^)]*\))")
+_MD_IMG_RE = re.compile(r"(!\[[^\]]*\]\()([^)\s]+)([^)]*\))")
+# HTML image (Pandoc emits these for sized/captioned images): <img ... src="target" ... />
+_HTML_IMG_RE = re.compile(r'(<img\b[^>]*?\bsrc=")([^"]+)(")', re.IGNORECASE)
 # app codes may carry slashes/plus (AR/WS, DRM+) — sanitise before any filesystem path (§8)
 _PATH_UNSAFE = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -50,16 +52,23 @@ def asset_filename(sha256: str, ext: str) -> str:
     return f"{sha256}.{ext}" if ext else sha256
 
 
-def rewrite_image_refs(markdown: str, ref_to_asset: dict[str, str]) -> str:
-    """Repoint every inline image whose target is in ``ref_to_asset`` to its asset filename.
+def image_basename(ref: str) -> str:
+    """The bare filename of an image ref (handles ``/`` and ``\\`` paths, markdown or HTML).
 
-    Images extracted to the CAS are referenced by ``<sha256>.<ext>`` from ``body.md`` rather
-    than copied into the bundle (§5.2). Unknown targets (external URLs, already-asset refs)
-    are left untouched."""
+    Pandoc references extracted images by their *full* (often absolute, temp-dir) path — and as
+    HTML ``<img>`` for sized/captioned ones — so matching on the basename is the robust join:
+    within one document Pandoc names media uniquely (``image1.png``, ``image2.png``)."""
+    return ref.replace("\\", "/").rsplit("/", 1)[-1]
+
+
+def rewrite_image_refs(markdown: str, basename_to_asset: dict[str, str]) -> str:
+    """Repoint every inline image (markdown ``![]()`` **and** HTML ``<img src>``) whose basename
+    is in ``basename_to_asset`` to its ``<sha256>.<ext>`` asset filename (§5.2). Images live in
+    the shared CAS, referenced — never copied into the bundle. Unknown targets (external URLs,
+    already-asset refs) are left untouched."""
 
     def repl(m: re.Match[str]) -> str:
-        target = m.group(2)
-        asset = ref_to_asset.get(target)
+        asset = basename_to_asset.get(image_basename(m.group(2)))
         return f"{m.group(1)}{asset}{m.group(3)}" if asset is not None else m.group(0)
 
-    return _IMG_RE.sub(repl, markdown)
+    return _HTML_IMG_RE.sub(repl, _MD_IMG_RE.sub(repl, markdown))

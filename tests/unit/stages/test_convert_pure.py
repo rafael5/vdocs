@@ -27,17 +27,25 @@ def test_asset_filename():
     assert cp.asset_filename("abc123", "") == "abc123"
 
 
-def test_rewrite_image_refs_repoints_known_targets_only():
+def test_image_basename_handles_paths_and_slashes():
+    assert cp.image_basename("/tmp/tmpXXX/media-root/media/image1.png") == "image1.png"
+    assert cp.image_basename("media/image2.jpg") == "image2.jpg"
+    assert cp.image_basename("logo.png") == "logo.png"
+
+
+def test_rewrite_image_refs_markdown_and_html_by_basename():
+    # Pandoc emits HTML <img> (absolute temp path) for sized images, markdown for plain ones —
+    # both are matched by basename and repointed to the asset filename.
     md = (
         "# Title\n\n"
         "![logo](media/image1.png)\n"
-        "![diagram](media/image2.jpg 'a title')\n"
-        "![external](https://example/x.png)\n"
+        '<img src="/tmp/tmpQ/media-root/media/image2.gif" style="width:2in" alt="VA logo" />\n'
+        "![external](https://example/other.png)\n"
     )
-    out = cp.rewrite_image_refs(md, {"media/image1.png": "aaa.png", "media/image2.jpg": "bbb.jpg"})
+    out = cp.rewrite_image_refs(md, {"image1.png": "aaa.png", "image2.gif": "bbb.gif"})
     assert "![logo](aaa.png)" in out
-    assert "![diagram](bbb.jpg 'a title')" in out
-    assert "![external](https://example/x.png)" in out  # unknown target untouched
+    assert '<img src="bbb.gif" style="width:2in" alt="VA logo" />' in out  # the real-data bug
+    assert "![external](https://example/other.png)" in out  # unknown basename untouched
 
 
 def test_rewrite_image_refs_noop_when_no_map():

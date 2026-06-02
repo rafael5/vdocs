@@ -23,9 +23,13 @@ _IMG_SHA = hashlib.sha256(_IMG).hexdigest()
 
 
 def fake_convert(data: bytes, ext: str) -> ConvertedDoc:
+    # mimic Pandoc: an HTML <img> with an absolute temp path (the real-corpus shape)
     return ConvertedDoc(
-        markdown="# DG Installation\n\nIntro.\n\n![logo](media/image1.png)\n",
-        images=(ConvertedImage(ref="media/image1.png", data=_IMG, ext="png"),),
+        markdown=(
+            "# DG Installation\n\nIntro.\n\n"
+            '<img src="/tmp/tmpZ/media-root/media/image1.png" alt="logo" />\n'
+        ),
+        images=(ConvertedImage(ref="/tmp/tmpZ/media-root/media/image1.png", data=_IMG, ext="png"),),
     )
 
 
@@ -75,9 +79,9 @@ def test_convert_writes_bundle_and_extracts_assets(ctx):
     assert body.exists()
     text = body.read_text()
     assert text.startswith("# DG Installation")
-    # the image ref was rewritten to the content-addressed asset filename
-    assert f"![logo]({_IMG_SHA}.png)" in text
-    assert "media/image1.png" not in text
+    # the HTML <img> ref was rewritten to the content-addressed asset filename
+    assert f'<img src="{_IMG_SHA}.png" alt="logo" />' in text
+    assert "/tmp/tmpZ" not in text  # the dead temp path is gone
 
     # the image bytes live in the shared asset CAS, write-once
     assert Cas(ctx.cfg.assets).get(_IMG_SHA, ext="png") == _IMG

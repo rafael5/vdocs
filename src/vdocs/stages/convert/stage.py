@@ -46,13 +46,15 @@ class ConvertStage(Stage):
             ext = entry["ext"]
             doc = convert(raw.get(sha, ext=ext), ext)
 
-            ref_to_asset: dict[str, str] = {}
+            # key by basename — Pandoc references media by full/absolute path and as HTML <img>,
+            # so the basename is the robust join (unique per document)
+            basename_to_asset: dict[str, str] = {}
             for img in doc.images:
                 img_sha = assets.put(img.data, ext=img.ext)
-                ref_to_asset[img.ref] = cp.asset_filename(img_sha, img.ext)
+                basename_to_asset[cp.image_basename(img.ref)] = cp.asset_filename(img_sha, img.ext)
                 n_assets += 1
 
-            body = cp.rewrite_image_refs(doc.markdown, ref_to_asset)
+            body = cp.rewrite_image_refs(doc.markdown, basename_to_asset)
             bundle = cp.bundle_dir(ctx.cfg.silver_converted, entry["app_code"], entry["doc_slug"])
             cas.atomic_write(bundle / "body.md", body.encode("utf-8"))
             n_docs += 1

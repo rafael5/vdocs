@@ -97,6 +97,15 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 *Append implementation lessons as they accrue (newest first). Inventory-track lessons live in
 [`vdl-crawl-tracker.md`](vdl-crawl-tracker.md); cross-phase / architectural lessons go here.*
 
+- **2026-06-01 — Real documents found a bug synthetic fixtures hid (the case for processing real
+  docs).** Running `convert` on 469 real VA DOCX (seeded offline from v1's `raw/`, all 90 CPRS included)
+  exposed that **Pandoc emits images as HTML `<img src="…">` with absolute temp paths**, not markdown
+  `![]()` — so `rewrite_image_refs` missed them and **91% of bodies (428/469) carried dead `/tmp/…`
+  image refs** even though the bytes were correctly in the CAS. Real VA docs are also far more
+  image-heavy (5k+ assets) and use EMF/WMF/GIF. Fix: rewrite both syntaxes, match by **basename**
+  (robust to Pandoc's path form). Lesson: keep the unit fixtures, but **drive a real corpus through
+  each document-medallion stage** — the mess is the requirement, and you can't fixture what you haven't
+  seen. (EMF/WMF→PNG rendering + per-doc convert resilience noted for later.)
 - **2026-06-01 — Optional outputs don't gate.** A doc with no images yields an *empty* asset CAS, which
   `TREE_ASSET_CAS.validate()` rejects as empty. Rather than special-case it, the generic postflight/skip
   now ignore `optional` produces (and only fingerprint produced artifacts that actually validate). `convert`
