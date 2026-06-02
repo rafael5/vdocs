@@ -138,6 +138,18 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-01** — **Real-corpus run through the document-silver stages (pivot from fixtures).** Seeded
+  469 real VA DOCX offline from v1's `raw/` (3 docs/app across 138 apps + **all 90 CPRS docs**) into bronze,
+  then ran the real `convert` → `discover` → `enrich`. Outcome: 469 converted bundles + **5,143 CAS images**
+  (png/jpeg/wmf/emf/gif/tiff); discover proposed 1,105 template / 3,698 phrase / 3,048 boilerplate block
+  candidates + a glossary; enrich baked identity FM onto all 469 (4.89M words staged). **Findings driving
+  `normalize`:** (a) headings are inconsistent — some docs have `#`/`##`, many render title/section text as
+  plain lines → TOC must be regenerated from whatever heading tree exists; (b) complex tables come through
+  as raw HTML `<table>` (revision-history, data-dictionary) → extract to `tables/*.csv` + move revision
+  history to `history.yaml`; (c) Pandoc artifacts (`<!-- -->`, `**  \n**`) and title-page furniture
+  (Department of Veterans Affairs / OIT) are the real `registries/phrases` + `boilerplate` targets; (d)
+  images are HTML `<img>` with sized attrs (now CAS-referenced). Two real bugs/heuristic-faults were found
+  and fixed *because* of real data (convert image-ref rewriting; discover heading/glossary dispositions).
 - **2026-06-01** — **Phase 3 `enrich` shipped (✅).** New `enrich` stage joins each `text@converted`
   bundle to its inventory record (by the `<app>/<slug>` bundle path, DOCX-preferred, noise excluded) and
   bakes the **identity frontmatter** (title/doc_type/app_code/section/pkg_ns/version/patch_id/source_url)
