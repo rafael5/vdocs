@@ -52,7 +52,12 @@ class FetchStage(Stage):
         targets = fp.select_fetch_targets(inventory.records, self.selection)
 
         store = Cas(ctx.cfg.bronze_raw)
+        # Merge into the existing index so a selective re-fetch never drops previously-fetched docs
+        # (R1): this run's entries are unioned over the prior index (new keys added, re-fetched
+        # keys refreshed), never an overwrite that would strand docs `convert` then skips.
         index: dict[str, dict[str, str]] = {}
+        if ctx.cfg.raw_index.exists():
+            index = json.loads(ctx.cfg.raw_index.read_text(encoding="utf-8"))
         fetched = failed = 0
         now = ctx.clock()
         for doc in targets:

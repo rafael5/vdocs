@@ -158,6 +158,34 @@ def test_fetch_accrues_attempts_across_retries(bronze_ctx):
     assert second.last_attempt_at > first.last_attempt_at
 
 
+def test_fetch_merges_into_existing_raw_index(bronze_ctx):
+    ctx = bronze_ctx
+    # bring the inventory track up so fetch can run
+    Orchestrator([CrawlStage(page_fetcher=fake_page), CatalogStage(), ServeInventoryStage()]).run(
+        ctx, force=True
+    )
+    # a prior run fetched a DIFFERENT document — its index entry must survive this run (R1):
+    # a selective re-fetch must merge, never overwrite away previously-fetched docs.
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    prior = {
+        "deadbeef": {
+            "app_code": "LR",
+            "doc_slug": "lr_um",
+            "title": "Lab UM",
+            "source_url": "https://vdl.test/lr.docx",
+            "ext": "docx",
+        }
+    }
+    ctx.cfg.raw_index.write_text(json.dumps(prior))
+
+    Orchestrator([FetchStage(fetch_bytes=fake_bytes, selection=Selection(all_=True))]).run(
+        ctx, force=True
+    )
+    index = json.loads(ctx.cfg.raw_index.read_text())
+    assert index["deadbeef"]["app_code"] == "LR"  # prior entry preserved
+    assert any(e["app_code"] == "ADT" for e in index.values())  # this run's doc merged in
+
+
 def test_fetch_does_not_fall_back_to_pdf(bronze_ctx):
     ctx = bronze_ctx
     # only the PDF is downloadable upstream — but PDF is out of scope (§1), so fetch targets
