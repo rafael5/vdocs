@@ -20,8 +20,7 @@ from collections import Counter, defaultdict
 from pathlib import PurePosixPath
 from urllib.parse import urlparse
 
-import ftfy
-
+from vdocs.kernel.text import repair_mojibake
 from vdocs.stages.catalog.registries import (
     AppSpecificMap,
     DocTypePattern,
@@ -73,10 +72,10 @@ _VBA_SUBJ_RE = re.compile(r"^[\d–\-]+\s*[–\-—]\s*")
 
 # --- text fixers (§4.1, §9.3) ----------------------------------------------
 def fix_mojibake(text: str) -> str:
-    """Repair encoding artifacts via ftfy + NFC (also strips nbsp). Idempotent."""
+    """Repair encoding artifacts via the shared kernel fixer (§9.2). Idempotent."""
     if not text:
         return ""
-    return ftfy.fix_text(text, normalization="NFC")
+    return repair_mojibake(text)
 
 
 def apply_typo_corrections(

@@ -4,19 +4,34 @@ from vdocs.kernel import text
 
 
 def test_repair_mojibake_smart_quotes():
-    # cp1252 smart quotes mis-decoded as latin-1/utf-8 (the classic mojibake)
-    broken = "the â€œquotedâ€ word"
-    assert text.repair_mojibake(broken) == "the “quoted” word"
+    # utf-8 smart quotes mis-decoded through cp1252 (the classic mojibake); ftfy recovers them,
+    # then normalises the curly quotes to straight ASCII (uncurl_quotes, its default) — the
+    # canonical corpus behavior the catalog already relies on (§9.2).
+    assert text.repair_mojibake("the â€œquotedâ€\x9d word") == 'the "quoted" word'
 
 
-def test_repair_mojibake_em_dash_and_apostrophe():
-    broken = "itâ€™s a testâ€”really"
-    assert text.repair_mojibake(broken) == "it’s a test—really"
+def test_repair_mojibake_apostrophe_and_em_dash():
+    assert text.repair_mojibake("donâ€™t") == "don't"
+    assert text.repair_mojibake("itâ€™s a testâ€”really") == "it's a test—really"
+
+
+def test_repair_mojibake_latin1_accents():
+    assert text.repair_mojibake("cafÃ©") == "café"
+    assert text.repair_mojibake("naÃ¯ve") == "naïve"
 
 
 def test_repair_mojibake_leaves_clean_text_untouched():
-    clean = "A normal sentence with “curly” quotes and an em—dash."
+    clean = "A normal sentence with an em—dash and no mojibake."
     assert text.repair_mojibake(clean) == clean
+
+
+def test_repair_mojibake_is_the_shared_catalog_fixer():
+    # §9.2: exactly ONE mojibake fixer. catalog.fix_mojibake delegates to the kernel, so the
+    # two must agree byte-for-byte across mojibake, clean text, and the empty string.
+    from vdocs.stages.catalog import enrich_pure as ep
+
+    for s in ["cafÃ©", "donâ€™t", "the â€œquotedâ€\x9d word", "plain text", ""]:
+        assert text.repair_mojibake(s) == ep.fix_mojibake(s)
 
 
 def test_scrub_control_chars_removes_c0_but_keeps_whitespace():
@@ -42,10 +57,10 @@ def test_safe_component_sanitises_slashes_and_plus():
 
 def test_clean_composes_all_three():
     broken = "<p>itâ€™s\x00 fine</p>"
-    assert text.clean(broken) == "it’s fine"
+    assert text.clean(broken) == "it's fine"
 
 
 def test_clean_is_idempotent():
-    broken = "<p>the â€œwordâ€\x07</p>"
+    broken = "<p>the â€œwordâ€\x9d\x07</p>"
     once = text.clean(broken)
     assert text.clean(once) == once

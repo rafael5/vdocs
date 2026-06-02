@@ -99,6 +99,15 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 *Append implementation lessons as they accrue (newest first). Inventory-track lessons live in
 [`vdl-crawl-tracker.md`](vdl-crawl-tracker.md); cross-phase / architectural lessons go here.*
 
+- **2026-06-02 — Unifying onto a library means inheriting its opinions.** Collapsing the two mojibake
+  fixers onto `ftfy` (§9.2) was the right call — but `ftfy.fix_text`'s default `uncurl_quotes` *straightens*
+  smart quotes (`"` → `'`, `"…"` → `"…"`), which the old custom kernel round-trip preserved. The catalog
+  already ran ftfy, so the corpus inventory was unaffected and the pinned fixture reproduced byte-for-byte;
+  the only thing that changed was the kernel's own (consumer-less) `clean()` and its tests, which were
+  rewritten to assert ftfy's behavior. Lesson: when you replace a hand-rolled transform with a library,
+  diff the *behavior* not just the call site — and confirm the canonical choice is the one already validated
+  against real data (it was). If body-text normalization ever consumes `kernel/text.clean`, revisit whether
+  uncurled quotes are wanted there and pass `uncurl_quotes=False` if not.
 - **2026-06-01 — Measure the RIGHT signal — and check the prior art (correcting the entry below).**
   My first Docling probe measured **heading count** and concluded "Docling doesn't help" — wrong on both
   ends: it flagged 45 zero-heading docs Docling can't help *and missed `cprsguium`*, the one doc it does.
@@ -152,6 +161,13 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **One mojibake fixer in the kernel (§9.2).** Pre-Phase-4 compliance fix A2. Two
+  codepaths existed: a dead custom cp1252 round-trip in `kernel/text.repair_mojibake` (imported by nobody)
+  and `catalog/enrich_pure.fix_mojibake` rolling its own `ftfy.fix_text`. Collapsed to one: the kernel
+  function now wraps `ftfy.fix_text(text, normalization="NFC")` (already a dep, already what runs on the
+  real corpus) and catalog delegates to it (dropping its direct `ftfy` import). Catalog behavior is
+  byte-identical — the pinned 8,834-row inventory fixture's §7 distributions still reproduce exactly.
+  Kernel tests updated to ftfy's canonical behavior (see Lessons). 279 tests, 100% cov.
 - **2026-06-02** — **Reconciled `acquisitions` / `inventory_status` doc-vs-code (§8, §5.5).** Pre-Phase-4
   compliance fix B1, resolved in the **doc-amend** direction (the code was already right). §8 listed
   `state.db:acquisitions` in `serve-inventory.requires`, but the stage requires only `catalog.enriched`
