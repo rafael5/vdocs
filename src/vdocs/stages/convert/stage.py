@@ -13,14 +13,18 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 
+import structlog
+
 from vdocs.contracts.registry import ASSETS, RAW_INDEX, RAW_TREE, TEXT_CONVERTED
 from vdocs.kernel import cas
 from vdocs.kernel import registry as kregistry
 from vdocs.kernel.cas import Cas
 from vdocs.kernel.text import safe_component
-from vdocs.models.stage import Idempotency, RunResult
+from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
 from vdocs.stages.convert.convert_pure import ConvertedDoc
+
+log = structlog.get_logger(__name__)
 
 Converter = Callable[[bytes, str], ConvertedDoc]
 
@@ -35,6 +39,8 @@ class ConvertStage(Stage):
     def __init__(self, convert: Converter | None = None, docling: Converter | None = None) -> None:
         self._pandoc = convert  # default Pandoc when None
         self._docling = docling  # default Docling when None
+        self._errors = 0  # per-document failures isolated this run (R6 — see doc_error_gate)
+        self._total = 0
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.stages.convert import convert_pure as cp
@@ -48,30 +54,59 @@ class ConvertStage(Stage):
         raw = Cas(ctx.cfg.bronze_raw)
         assets = Cas(ctx.cfg.assets)
 
-        n_docs = n_assets = n_docling = 0
+        n_docs = n_assets = n_docling = n_errors = 0
         for sha, entry in index.items():
-            ext = entry["ext"]
-            # route by bundle identity (safe app / safe slug) — Docling for the curated
-            # bare-marker-explosion allowlist (ADR-010, §9.6), Pandoc otherwise
-            key = f"{safe_component(entry['app_code'])}/{safe_component(entry['doc_slug'])}"
-            use_docling = key in routing
-            doc = (docling if use_docling else pandoc)(raw.get(sha, ext=ext), ext)
-            n_docling += use_docling
+            # Per-document error isolation (R6): a single bad doc is logged + counted + skipped so
+            # one failure never abandons the batch; the postflight gate fails the stage only if the
+            # error *rate* is systemic (doc_error_gate).
+            try:
+                ext = entry["ext"]
+                # route by bundle identity (safe app / safe slug) — Docling for the curated
+                # bare-marker-explosion allowlist (ADR-010, §9.6), Pandoc otherwise
+                key = f"{safe_component(entry['app_code'])}/{safe_component(entry['doc_slug'])}"
+                use_docling = key in routing
+                doc = (docling if use_docling else pandoc)(raw.get(sha, ext=ext), ext)
+                n_docling += use_docling
 
-            # key by basename — converters reference media by full/absolute path and as HTML <img>,
-            # so the basename is the robust join (unique per document)
-            basename_to_asset: dict[str, str] = {}
-            for img in doc.images:
-                img_sha = assets.put(img.data, ext=img.ext)
-                basename_to_asset[cp.image_basename(img.ref)] = cp.asset_filename(img_sha, img.ext)
-                n_assets += 1
+                # key by basename — converters reference media by full/absolute path and as HTML
+                # <img>, so the basename is the robust join (unique per document)
+                basename_to_asset: dict[str, str] = {}
+                for img in doc.images:
+                    img_sha = assets.put(img.data, ext=img.ext)
+                    basename_to_asset[cp.image_basename(img.ref)] = cp.asset_filename(
+                        img_sha, img.ext
+                    )
+                    n_assets += 1
 
-            body = cp.rewrite_image_refs(doc.markdown, basename_to_asset)
-            bundle = cp.bundle_dir(ctx.cfg.silver_converted, entry["app_code"], entry["doc_slug"])
-            cas.atomic_write(bundle / "body.md", body.encode("utf-8"))
-            n_docs += 1
+                body = cp.rewrite_image_refs(doc.markdown, basename_to_asset)
+                bundle = cp.bundle_dir(
+                    ctx.cfg.silver_converted, entry["app_code"], entry["doc_slug"]
+                )
+                cas.atomic_write(bundle / "body.md", body.encode("utf-8"))
+                n_docs += 1
+            except Exception as exc:
+                n_errors += 1
+                log.warning(
+                    "convert-doc-failed",
+                    sha=sha,
+                    app=entry.get("app_code"),
+                    slug=entry.get("doc_slug"),
+                    error=str(exc),
+                )
 
-        return RunResult(counts={"documents": n_docs, "assets": n_assets, "docling": n_docling})
+        self._errors, self._total = n_errors, len(index)
+        return RunResult(
+            counts={
+                "documents": n_docs,
+                "assets": n_assets,
+                "docling": n_docling,
+                "errors": n_errors,
+            }
+        )
+
+    def deep_gate(self, ctx: StageContext) -> PostflightResult:
+        """Fail only if the per-document error rate is systemic (R6); one bad doc is isolated."""
+        return self.doc_error_gate(self._errors, self._total)
 
 
 def _load_converter_routing(path) -> frozenset[str]:  # type: ignore[no-untyped-def]

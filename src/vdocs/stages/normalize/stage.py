@@ -24,14 +24,17 @@ from __future__ import annotations
 
 import json
 
+import structlog
 import yaml
 
 from vdocs.contracts.registry import RAW_INDEX, REGISTRIES, TEXT_ENRICHED, TEXT_NORMALIZED
 from vdocs.kernel import cas, frontmatter
 from vdocs.kernel import registry as kregistry
 from vdocs.kernel.text import safe_component
-from vdocs.models.stage import Idempotency, RunResult
+from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
+
+log = structlog.get_logger(__name__)
 
 
 class NormalizeStage(Stage):
@@ -40,6 +43,10 @@ class NormalizeStage(Stage):
     requires = [TEXT_ENRICHED, RAW_INDEX, REGISTRIES]
     produces = [TEXT_NORMALIZED]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
+
+    def __init__(self) -> None:
+        self._errors = 0  # per-document failures isolated this run (R6 — see doc_error_gate)
+        self._total = 0
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.kernel.text import decade_bucket
@@ -63,59 +70,68 @@ class NormalizeStage(Stage):
 
         enriched_root = ctx.cfg.silver_enriched
         normalized_root = ctx.cfg.silver_normalized
-        n_docs = n_revision = n_tables = n_refs = n_boiler = n_template = 0
-        for body_path in sorted(enriched_root.rglob("body.md")):
+        n_docs = n_revision = n_tables = n_refs = n_boiler = n_template = n_errors = 0
+        body_files = sorted(enriched_root.rglob("body.md"))
+        for body_path in body_files:
             rel = body_path.parent.relative_to(enriched_root)  # <app>/<slug>
-            meta, body = frontmatter.parse(body_path.read_text(encoding="utf-8"))
-            sha = sha_by_path.get((rel.parts[0], rel.parts[1]))
-            if sha:
-                meta["source_sha256"] = sha
-            # strip the version apparatus → revisions.yaml (§6.4); then lift qualifying tables
-            # → tables/*.csv (§6.4/§6.5) — *after* revision extraction so it never grabs the
-            # revision table; then run the body F-steps.
-            # TEMPLATE SEAM: toc_depth defaults to the H2–H3 fallback; the template F-step will
-            # resolve it per (doc_type, era) and pass it to normalize_body (§6.7).
-            body, revisions = rev.extract_revision_history(body)
-            body, tables = tbl.extract_tables(body)
-            # STRIP the matched (doc_type, era) template scaffold + stamp template_id (§9.8). era is
-            # the title-page-date decade bucket (kernel.decade_bucket); doc_type is the baked
-            # identity FM. template_id is identity provenance → frontmatter, like source_sha256.
-            era = decade_bucket(body, max_lines=40)
-            body, template_id = tmpl.apply_template(
-                body, str(meta.get("doc_type", "")), era, templates
-            )
-            if template_id:
-                meta["template_id"] = template_id
-                n_template += 1
-            body, anchor_map = nz.normalize_body(
-                body, phrases, doc_id=str(rel), boilerplate=boilerplate, toc_titles=toc_titles
-            )
-            n_boiler += body.count("](_shared/boilerplate/")  # REFERENCE links inserted
-            out = frontmatter.emit(meta, body)
-            cas.atomic_write(normalized_root / rel / "body.md", out.encode("utf-8"))
-            if revisions:
-                cas.atomic_write(
-                    normalized_root / rel / "revisions.yaml",
-                    yaml.safe_dump(
-                        rev.revision_sidecar(revisions), sort_keys=False, allow_unicode=True
-                    ).encode("utf-8"),
+            # Per-document error isolation (R6): a single bad doc is logged + counted + skipped so
+            # one failure never abandons the batch; doc_error_gate fails the stage only if the
+            # error *rate* is systemic.
+            try:
+                meta, body = frontmatter.parse(body_path.read_text(encoding="utf-8"))
+                sha = sha_by_path.get((rel.parts[0], rel.parts[1]))
+                if sha:
+                    meta["source_sha256"] = sha
+                # strip the version apparatus → revisions.yaml (§6.4); then lift qualifying tables
+                # → tables/*.csv (§6.4/§6.5) — *after* revision extraction so it never grabs the
+                # revision table; then run the body F-steps.
+                # TEMPLATE SEAM: toc_depth defaults to the H2–H3 fallback; the template F-step will
+                # resolve it per (doc_type, era) and pass it to normalize_body (§6.7).
+                body, revisions = rev.extract_revision_history(body)
+                body, tables = tbl.extract_tables(body)
+                # STRIP the matched (doc_type, era) template scaffold + stamp template_id (§9.8).
+                # era is the title-page-date decade bucket (kernel.decade_bucket); doc_type is the
+                # baked identity FM. template_id is provenance → frontmatter, like source_sha256.
+                era = decade_bucket(body, max_lines=40)
+                body, template_id = tmpl.apply_template(
+                    body, str(meta.get("doc_type", "")), era, templates
                 )
-                n_revision += 1
-            for tab in tables:  # one CSV per lifted table, inside the bundle's tables/ dir
-                cas.atomic_write(
-                    normalized_root / rel / "tables" / tab.name, tab.csv_text.encode("utf-8")
+                if template_id:
+                    meta["template_id"] = template_id
+                    n_template += 1
+                body, anchor_map = nz.normalize_body(
+                    body, phrases, doc_id=str(rel), boilerplate=boilerplate, toc_titles=toc_titles
                 )
-            n_tables += len(tables)
-            if anchor_map.rows:  # conditional, like revisions.yaml — no anchors → no sidecar
-                cas.atomic_write(
-                    normalized_root / rel / "refs.yaml",
-                    yaml.safe_dump(
-                        anchors.anchor_sidecar(anchor_map), sort_keys=False, allow_unicode=True
-                    ).encode("utf-8"),
-                )
-                n_refs += 1
-            n_docs += 1
+                n_boiler += body.count("](_shared/boilerplate/")  # REFERENCE links inserted
+                out = frontmatter.emit(meta, body)
+                cas.atomic_write(normalized_root / rel / "body.md", out.encode("utf-8"))
+                if revisions:
+                    cas.atomic_write(
+                        normalized_root / rel / "revisions.yaml",
+                        yaml.safe_dump(
+                            rev.revision_sidecar(revisions), sort_keys=False, allow_unicode=True
+                        ).encode("utf-8"),
+                    )
+                    n_revision += 1
+                for tab in tables:  # one CSV per lifted table, inside the bundle's tables/ dir
+                    cas.atomic_write(
+                        normalized_root / rel / "tables" / tab.name, tab.csv_text.encode("utf-8")
+                    )
+                n_tables += len(tables)
+                if anchor_map.rows:  # conditional, like revisions.yaml — no anchors → no sidecar
+                    cas.atomic_write(
+                        normalized_root / rel / "refs.yaml",
+                        yaml.safe_dump(
+                            anchors.anchor_sidecar(anchor_map), sort_keys=False, allow_unicode=True
+                        ).encode("utf-8"),
+                    )
+                    n_refs += 1
+                n_docs += 1
+            except Exception as exc:
+                n_errors += 1
+                log.warning("normalize-doc-failed", doc=str(rel), error=str(exc))
 
+        self._errors, self._total = n_errors, len(body_files)
         return RunResult(
             counts={
                 "documents": n_docs,
@@ -125,8 +141,13 @@ class NormalizeStage(Stage):
                 "boilerplate_refs": n_boiler,
                 "templates_stamped": n_template,
                 "phrases": len(phrases),
+                "errors": n_errors,
             }
         )
+
+    def deep_gate(self, ctx: StageContext) -> PostflightResult:
+        """Fail only if the per-document error rate is systemic (R6); one bad doc is isolated."""
+        return self.doc_error_gate(self._errors, self._total)
 
 
 def _load_phrases(path) -> frozenset[str]:  # type: ignore[no-untyped-def]

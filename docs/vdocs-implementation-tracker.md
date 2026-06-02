@@ -233,6 +233,13 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):
+  - **C-rel-7 — per-document error isolation in `convert` + `normalize` (R6).** One bad document
+    aborted the whole batch after partial writes. Each per-doc iteration is now wrapped: a failure
+    is logged (structlog WARN with the doc id), counted, and skipped — the batch continues. The
+    `errors` count is surfaced in `RunResult.counts`, and a new shared `Stage.doc_error_gate`
+    (named limit `DOC_ERROR_RATE_LIMIT = 0.5`) fails the stage in postflight only when the failure
+    *rate* is systemic (not a silent swallow, §9.5). Tests: a single failure is isolated (rest
+    processed, `errors=1`); an all-fail batch fails the stage.
   - **C-rel-6 — `fetch` merges `raw/index.json` (R1).** `fetch` overwrote the index with only the
     current selection, so a selective re-fetch dropped previously-fetched docs and `convert` then
     skipped them. It now reads the existing index and unions this run's entries over it (new keys

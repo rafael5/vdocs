@@ -11,10 +11,13 @@ from __future__ import annotations
 import hashlib
 import json
 
+import pytest
+
 from vdocs.contracts.registry import RAW_INDEX, TEXT_ENRICHED
 from vdocs.kernel import cas, frontmatter
 from vdocs.models.stage import StageRun
 from vdocs.orchestrator.engine import Orchestrator
+from vdocs.orchestrator.stage import PostflightError
 from vdocs.stages.normalize.stage import NormalizeStage
 
 _SHA = hashlib.sha256(b"the source docx bytes").hexdigest()
@@ -406,3 +409,63 @@ def test_normalize_without_matching_sha_omits_source_sha256(ctx):
         (ctx.cfg.silver_normalized / "ADT" / "ig_doc" / "body.md").read_text()
     )
     assert "source_sha256" not in meta and meta["title"] == "Install Guide"
+
+
+def _seed_many(ctx, slugs):
+    """Seed N enriched bundles + a raw/index.json covering them, and bless enrich + fetch."""
+    index = {}
+    for slug in slugs:
+        body = frontmatter.emit({"title": slug, "app_code": "ADT"}, f"# {slug}\n\nbody text\n")
+        cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / slug / "body.md", body.encode())
+        index[hashlib.sha256(slug.encode()).hexdigest()] = {
+            "app_code": "ADT", "doc_slug": slug, "ext": "docx",
+        }  # fmt: skip
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(json.dumps(index))
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage,
+                scope="",
+                status="ok",
+                started_at="t",
+                finished_at="t",
+                inputs_fp={},
+                outputs_fp={art.key: art.fingerprint(ctx.cfg)},
+                counts={},
+                contract_ver=1,
+                tool_ver=ctx.cfg.tool_ver,
+            )  # fmt: skip
+        )
+
+
+def test_normalize_isolates_a_single_doc_failure(ctx, monkeypatch):
+    # R6: a single doc that raises is isolated (logged + counted); the rest still normalize
+    _seed_many(ctx, ["aaa", "bad", "ccc"])
+    from vdocs.stages.normalize import normalize_pure as nz
+
+    real = nz.normalize_body
+
+    def flaky(body, phrases, doc_id="", *args, **kwargs):
+        if doc_id == "ADT/bad":
+            raise ValueError("boom")
+        return real(body, phrases, doc_id, *args, **kwargs)
+
+    monkeypatch.setattr(nz, "normalize_body", flaky)
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.status == "ok"
+    assert result.counts["errors"] == 1 and result.counts["documents"] == 2
+    assert (ctx.cfg.silver_normalized / "ADT" / "aaa" / "body.md").exists()
+    assert not (ctx.cfg.silver_normalized / "ADT" / "bad" / "body.md").exists()
+
+
+def test_normalize_fails_the_stage_when_error_rate_is_systemic(ctx, monkeypatch):
+    _seed_many(ctx, ["aaa", "bbb"])
+    from vdocs.stages.normalize import normalize_pure as nz
+
+    def boom(*args, **kwargs):
+        raise ValueError("boom")
+
+    monkeypatch.setattr(nz, "normalize_body", boom)  # every doc fails → systemic → stage fails
+    with pytest.raises(PostflightError):
+        Orchestrator([NormalizeStage()]).run(ctx)

@@ -33,6 +33,12 @@ def _utc_now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+# A per-document stage isolates a single bad doc (WARN + count + continue) but **fails** when the
+# failure *rate* exceeds this limit — a systemic problem, not one bad document (§9.5, R6). Explicit,
+# not a silent swallow: the count is always surfaced in ``RunResult.counts['errors']``.
+DOC_ERROR_RATE_LIMIT = 0.5
+
+
 @dataclass
 class StageContext:
     """Everything a stage needs at runtime — resolved config + state, no globals (§9.1)."""
@@ -65,6 +71,19 @@ class Stage(ABC):
 
     def deep_gate(self, ctx: StageContext) -> PostflightResult:
         """Stage-specific output gate; default passes. ``validate`` overrides this (§7.3)."""
+        return PostflightResult(ok=True)
+
+    def doc_error_gate(self, errors: int, total: int) -> PostflightResult:
+        """The shared per-document error-isolation gate (§9.5, R6): individual doc failures are
+        isolated during ``run`` (logged + counted + skipped); the stage fails only when the failure
+        *rate* exceeds :data:`DOC_ERROR_RATE_LIMIT` — a systemic problem, not one bad document.
+
+        Used by every per-document stage (``convert``, ``normalize``) so the rule lives once."""
+        if total and errors > total * DOC_ERROR_RATE_LIMIT:
+            return PostflightResult(
+                ok=False,
+                reason=f"{errors}/{total} documents failed (> {DOC_ERROR_RATE_LIMIT:.0%})",
+            )
         return PostflightResult(ok=True)
 
     def extra_input_fps(self, ctx: StageContext) -> dict[str, str]:

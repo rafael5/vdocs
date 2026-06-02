@@ -11,10 +11,13 @@ from __future__ import annotations
 import hashlib
 import json
 
+import pytest
+
 from vdocs.contracts.registry import RAW_INDEX, RAW_TREE
 from vdocs.kernel.cas import Cas
 from vdocs.models.stage import StageRun
 from vdocs.orchestrator.engine import Orchestrator
+from vdocs.orchestrator.stage import PostflightError
 from vdocs.stages.convert.convert_pure import ConvertedDoc, ConvertedImage
 from vdocs.stages.convert.stage import ConvertStage
 
@@ -72,7 +75,8 @@ def test_convert_writes_bundle_and_extracts_assets(ctx):
     (result,) = Orchestrator([ConvertStage(convert=fake_convert)]).run(ctx)
 
     assert result.status == "ok"
-    assert result.counts == {"documents": 1, "assets": 1, "docling": 0}  # not routed → Pandoc
+    # not routed → Pandoc; no per-doc errors
+    assert result.counts == {"documents": 1, "assets": 1, "docling": 0, "errors": 0}
 
     # the bundle landed at the converted path with the app/slug layout
     body = ctx.cfg.silver_converted / "ADT" / "dg_5_3_1057_dibr" / "body.md"
@@ -98,6 +102,68 @@ def test_convert_skips_on_clean_rerun(ctx):
     orch = Orchestrator([ConvertStage(convert=fake_convert)])
     orch.run(ctx)
     assert orch.run(ctx) == [None]  # SKIP_IF_UNCHANGED → skipped second time
+
+
+def _seed_many(ctx, slugs):
+    """Place one fetched DOCX per slug in the raw CAS + index, and record fetch ok."""
+    raw = Cas(ctx.cfg.bronze_raw)
+    index = {}
+    for slug in slugs:
+        sha = raw.put(f"docx-{slug}".encode(), ext="docx")
+        index[sha] = {
+            "app_code": "ADT",
+            "doc_slug": slug,
+            "title": slug,
+            "source_url": f"https://va.gov/d/{slug}.docx",
+            "ext": "docx",
+        }
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(json.dumps(index))
+    ctx.state.record(
+        StageRun(
+            stage="fetch",
+            scope="",
+            status="ok",
+            started_at="t",
+            finished_at="t",
+            inputs_fp={},
+            outputs_fp={
+                RAW_TREE.key: RAW_TREE.fingerprint(ctx.cfg),
+                RAW_INDEX.key: RAW_INDEX.fingerprint(ctx.cfg),
+            },
+            counts={},
+            contract_ver=1,
+            tool_ver=ctx.cfg.tool_ver,
+        )  # fmt: skip
+    )
+
+
+def test_convert_isolates_a_single_doc_failure(ctx):
+    # R6: one bad doc is isolated (logged + counted), the rest of the batch still converts
+    _seed_many(ctx, ["aaa", "bad", "ccc"])
+
+    def conv(data: bytes, ext: str) -> ConvertedDoc:
+        if b"bad" in data:
+            raise ValueError("boom")
+        return ConvertedDoc(markdown="# ok\n")
+
+    (result,) = Orchestrator([ConvertStage(convert=conv)]).run(ctx)
+    assert result.status == "ok"
+    assert result.counts["errors"] == 1 and result.counts["documents"] == 2
+    assert (ctx.cfg.silver_converted / "ADT" / "aaa" / "body.md").exists()
+    assert (ctx.cfg.silver_converted / "ADT" / "ccc" / "body.md").exists()
+    assert not (ctx.cfg.silver_converted / "ADT" / "bad" / "body.md").exists()
+
+
+def test_convert_fails_the_stage_when_error_rate_is_systemic(ctx):
+    # every doc fails (100% > the 50% limit) → postflight fails the stage, not a silent pass
+    _seed_many(ctx, ["aaa", "bbb"])
+
+    def conv(data: bytes, ext: str) -> ConvertedDoc:
+        raise ValueError("boom")
+
+    with pytest.raises(PostflightError):
+        Orchestrator([ConvertStage(convert=conv)]).run(ctx)
 
 
 def test_convert_routes_allowlisted_doc_to_docling(ctx, tmp_path):
