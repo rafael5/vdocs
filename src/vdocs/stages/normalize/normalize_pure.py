@@ -61,8 +61,12 @@ __all__ = [
     "normalize_body",
 ]
 
-_HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
-_HEADING_LINE_RE = re.compile(r"^#{1,6} ", re.MULTILINE)
+# `#+` (not `#{1,6}`) on purpose: upstream (Pandoc/convert) emits >6 `#` from deep DOCX outline
+# levels (e.g. `########### Table of Contents`). Recognizing them lets `strip_legacy_toc` catch an
+# oversized legacy-TOC heading and `infer_heading_levels` collapse the rest into a gap-free ≤6 tree
+# — leaving an invalid >6 ATX heading (GitHub renders it as literal text) would be the bug.
+_HEADING_RE = re.compile(r"^(#+)\s+(.*?)\s*$")
+_HEADING_LINE_RE = re.compile(r"^#+ ", re.MULTILINE)
 _FENCE_RE = re.compile(r"^\s*(```|~~~)")
 _HTML_COMMENT_RE = re.compile(r"^<!--.*-->$")
 _MULTI_BLANK = re.compile(r"\n{3,}")
@@ -196,11 +200,14 @@ def strip_legacy_toc(body: str, titles: frozenset[str], max_level: int = 3) -> s
     """F-toc-dedup (§6.7; ``registries/structures`` CANONICALIZE ``toc``, §9.6): remove the source's
     legacy in-body table of contents so the derived ``## Contents`` (F-toc) never duplicates it.
 
-    A legacy contents section is a heading at level ≤ ``max_level`` whose text matches one of the
-    curated ``titles`` (case-insensitive — e.g. ``Table of Contents`` / ``Contents``); the heading
-    and every following line up to the next markdown heading (its page-numbered entries) are
-    dropped. Registry-driven (``titles`` come from ``registries/structures``); empty ``titles`` →
-    no-op. Idempotent: a prior run's generated ``## Contents`` matches too, so it is rebuilt."""
+    A legacy contents section is a heading whose text matches one of the curated ``titles``
+    (case-insensitive — e.g. ``Table of Contents`` / ``Contents``) and whose level is either
+    ≤ ``max_level`` (a normal H1–H3 TOC heading) **or** > 6 (an invalid-GFM oversized heading the
+    upstream mangled — its hash count is an artifact, so the text match is trusted; the real corpus
+    emits ``########### Table of Contents``). The heading and every following line up to the next
+    markdown heading (its page-numbered entries) are dropped. Registry-driven (``titles`` come from
+    ``registries/structures``); empty ``titles`` → no-op. Idempotent: a prior run's generated
+    ``## Contents`` matches too, so it is rebuilt."""
     if not titles:
         return body
     wanted = {t.strip().lower() for t in titles}
@@ -209,7 +216,8 @@ def strip_legacy_toc(body: str, titles: frozenset[str], max_level: int = 3) -> s
     i = 0
     while i < len(lines):
         m = _HEADING_RE.match(lines[i])
-        if m and len(m.group(1)) <= max_level and m.group(2).strip().lower() in wanted:
+        level = len(m.group(1)) if m else 0
+        if m and (level <= max_level or level > 6) and m.group(2).strip().lower() in wanted:
             i += 1
             while i < len(lines) and not _HEADING_RE.match(lines[i]):
                 i += 1

@@ -30,7 +30,10 @@ from vdocs.kernel.text import github_slug_base
 # from the template schema and pass it in instead of this constant.
 DEFAULT_TOC_DEPTH = (2, 3)
 
-_HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
+# `#+` (not `#{1,6}`): upstream emits >6 `#` from deep DOCX outline levels; capture them so they
+# get slugs/anchors. By the time `parse_headings` runs in `normalize_body`, `infer_heading_levels`
+# has already collapsed the tree to ≤6 (see normalize_pure for the rationale).
+_HEADING_RE = re.compile(r"^(#+)\s+(.*?)\s*$")
 _FENCE_RE = re.compile(r"^\s*(```|~~~)")
 _TAG_RE = re.compile(r"<[^>]+>")
 

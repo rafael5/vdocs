@@ -152,6 +152,16 @@ def test_infer_heading_levels_ignores_code_fences():
     assert "## Real" in out  # the real H3 compacted to H2
 
 
+def test_infer_heading_levels_handles_oversized_hash_headings():
+    # upstream (Pandoc/convert) can emit >6 `#` from deep DOCX outline levels; infer must
+    # recognize them and collapse into a gap-free ≤6 tree, not leave invalid >6 GFM behind
+    body = "## A\n\n######### B\n\n############# C\n"
+    out = nz.infer_heading_levels(body)
+    levels = [len(ln.split(" ")[0]) for ln in out.splitlines() if ln.startswith("#")]
+    assert levels == [2, 3, 4]  # B → child of A (H3); C → child of B (H4)
+    assert "#######" not in out  # every oversized prefix collapsed
+
+
 def test_infer_heading_levels_leaves_generated_contents_heading():
     # the generated `## Contents` TOC marker must be skipped, else re-leveling it breaks
     # normalize_body self-idempotency (it is regenerated each run, not a content section)
@@ -228,6 +238,35 @@ def test_strip_legacy_toc_matches_case_insensitively_at_h1_to_h3():
     out = nz.strip_legacy_toc(body, _TOC_TITLES)
     assert "CONTENTS" not in out and "A 1" not in out
     assert "## Body" in out and "x" in out
+
+
+def test_strip_legacy_toc_strips_oversized_hash_toc_heading():
+    # real corpus (CPRS cprsguium): the legacy TOC heading arrives as `########### Table of
+    # Contents` (upstream emitted >6 `#`); strip must still recognize it and drop its
+    # tab-separated page-number entries before the derived `## Contents` is generated
+    body = (
+        "# Manual\n\n########### Table of Contents\n\n"
+        "Introduction\t1\nInstallation\t4\n\n"
+        "## Introduction\n\nreal text\n"
+    )
+    out = nz.strip_legacy_toc(body, _TOC_TITLES)
+    assert "Table of Contents" not in out
+    assert "Introduction\t1" not in out  # the tab/page-number entries went with it
+    assert "## Introduction" in out and "real text" in out
+
+
+def test_normalize_body_strips_oversized_legacy_toc():
+    # end-to-end on the real cprsguium shape: an >6-hash TOC heading + tab/page-number entries
+    body = (
+        "# CPRS User Manual\n\n########### Table of Contents\n\n"
+        "Introduction\t1\nSelecting a Patient\t6\n\n"
+        "## Introduction\n\nintro text\n\n## Selecting a Patient\n\nbody\n"
+    )
+    out, _ = nz.normalize_body(body, frozenset(), toc_titles=_TOC_TITLES)
+    assert "Table of Contents" not in out
+    assert "\t1" not in out and "\t6" not in out  # legacy page-numbered entries gone
+    assert out.count("## Contents") == 1
+    assert "- [Introduction](#introduction)" in out
 
 
 def test_strip_legacy_toc_noop_without_titles_or_match():
