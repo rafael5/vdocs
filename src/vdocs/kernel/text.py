@@ -19,6 +19,16 @@ _WS_RE = re.compile(r"[ \t]+")
 # Bundle-path slug: app codes may carry slashes/plus (AR/WS, DRM+) — collapse any run of
 # path-unsafe characters before they reach a filesystem path (§5.2, §8).
 _PATH_UNSAFE = re.compile(r"[^A-Za-z0-9._-]+")
+# Block-equality key: collapse *all* whitespace (incl. newlines — a block may span lines).
+_BLOCK_WS_RE = re.compile(r"\s+")
+# Publication-era signal: the first "Month YYYY" printed on a title page (§9.8). The decade bucket
+# of this date is the era axis for `(doc_type, era)` template induction/matching — the only
+# trustworthy era signal (DOCX metadata is a bulk-re-export artifact; the VDL file_date is ~empty).
+_MONTH = (
+    r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
+    r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+)
+_MONTH_YEAR_RE = re.compile(rf"\b{_MONTH}\.?,?\s+(\d{{4}})\b", re.IGNORECASE)
 
 
 def safe_component(name: str) -> str:
@@ -27,6 +37,26 @@ def safe_component(name: str) -> str:
     The single bundle-path slug sanitiser shared across the document-silver stages (§9.2): a
     primitive used by ``convert``/``enrich``/``normalize`` lives in the kernel, not a stage."""
     return _PATH_UNSAFE.sub("_", name).strip("_") or "_"
+
+
+def block_key(block: str) -> str:
+    """Whitespace-collapsed, lowercased identity of a text block — the shared block-equality key.
+
+    Used by ``discover`` (recurring-block mining) and ``normalize`` (boilerplate subtraction) to
+    decide when two blocks are "the same" modulo spacing/case (§9.2 — one primitive, two stages)."""
+    return _BLOCK_WS_RE.sub(" ", block.strip().lower())
+
+
+def decade_bucket(text: str, *, max_lines: int | None = None) -> str:
+    """Decade bucket (``"1990s"`` …) of the first ``Month YYYY`` in ``text``, or ``"unknown"``.
+
+    Optionally scan only the first ``max_lines`` (the title-page window). The shared era helper
+    used by ``discover`` (template induction) and ``normalize`` (template matching) — §9.2."""
+    head = "\n".join(text.splitlines()[:max_lines]) if max_lines is not None else text
+    m = _MONTH_YEAR_RE.search(head)
+    if m is None:
+        return "unknown"
+    return f"{(int(m.group(1)) // 10) * 10}s"
 
 
 def repair_mojibake(s: str) -> str:

@@ -146,3 +146,36 @@ def test_typo_corrections_missing_field_raises():
 def test_registries_dir_env_override(tmp_path, monkeypatch):
     monkeypatch.setenv("REGISTRIES_DIR", str(tmp_path))
     assert Settings().registries == tmp_path
+
+
+def test_subdir_layout_matches_design_section_11():
+    """§11/§9.7: the curated tree is subdirectories, not flat files. The six pattern
+    registries are present-but-may-be-empty dirs; inventory vocabularies live under
+    ``inventory/`` (the §9.7-amended home for the catalog-track config)."""
+    root = Settings().registries
+    for pattern_dir in (
+        "boilerplate",
+        "templates",
+        "phrases",
+        "glossary",
+        "structures",
+        "converter-routing",
+    ):
+        assert (root / pattern_dir).is_dir(), f"missing pattern-registry dir {pattern_dir!r}"
+    assert (root / "inventory").is_dir()
+    # the inventory-track configs moved under inventory/ (not at the registries root)
+    for name in ("package-master", "doc-types", "section-codes"):
+        assert (root / "inventory" / f"{name}.yaml").is_file()
+        assert not (root / f"{name}.yaml").exists(), f"{name}.yaml must move under inventory/"
+    # the curated pattern registries keep their own named file inside their subdir
+    assert (root / "phrases" / "phrases.yaml").is_file()
+    assert (root / "converter-routing" / "converter-routing.yaml").is_file()
+
+
+def test_load_registries_reads_subdir_layout():
+    """The loader resolves the inventory vocabularies from the reshaped tree with the
+    same load-bearing values (the reshape is a move, not a content change)."""
+    reg = _load()
+    assert reg.section_code["Clinical"] == "CLI"
+    assert len(reg.doc_type_patterns) == 57
+    assert reg.packages  # package-master resolved from inventory/

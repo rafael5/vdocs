@@ -103,8 +103,10 @@ def test_convert_skips_on_clean_rerun(ctx):
 def test_convert_routes_allowlisted_doc_to_docling(ctx, tmp_path):
     # point registries at a temp dir that routes this doc to Docling (ADR-010, §9.6)
     routing = tmp_path / "registries"
-    routing.mkdir()
-    (routing / "converter-routing.yaml").write_text("docling:\n  - ADT/dg_5_3_1057_dibr\n")
+    (routing / "converter-routing").mkdir(parents=True)
+    (routing / "converter-routing" / "converter-routing.yaml").write_text(
+        "docling:\n  - ADT/dg_5_3_1057_dibr\n"
+    )
     ctx.cfg = ctx.cfg.model_copy(update={"registries_dir": routing})
     _seed_fetched(ctx)
 

@@ -54,6 +54,13 @@ def test_load_phrases_empty_when_registry_absent(tmp_path):
     assert _load_phrases(tmp_path / "nope.yaml") == frozenset()  # no curated registry → no-op
 
 
+def test_load_boilerplate_empty_when_registry_absent(tmp_path):
+    from vdocs.stages.normalize.normalize_pure import Boilerplate
+    from vdocs.stages.normalize.stage import _load_boilerplate
+
+    assert _load_boilerplate(tmp_path / "nope.yaml", Boilerplate) == ()  # absent → no-op
+
+
 def test_registry_edit_changes_normalize_inputs_fp(tmp_path):
     # §8: a registry change is a contract-version bump for normalize — it must invalidate the
     # input fingerprint so SKIP_IF_UNCHANGED re-runs the affected scopes (§7.3), not skip them.
@@ -63,8 +70,8 @@ def test_registry_edit_changes_normalize_inputs_fp(tmp_path):
     from vdocs.orchestrator.state import StateStore
 
     regs = tmp_path / "registries"
-    regs.mkdir()
-    (regs / "phrases.yaml").write_text("phrases:\n  - End of document\n")
+    (regs / "phrases").mkdir(parents=True)
+    (regs / "phrases" / "phrases.yaml").write_text("phrases:\n  - End of document\n")
     cfg = Settings(data_dir=tmp_path / "lake", registries_dir=regs)
     cfg.lake.mkdir(parents=True)
     store = StateStore.open(cfg.state_db)
@@ -74,7 +81,9 @@ def test_registry_edit_changes_normalize_inputs_fp(tmp_path):
         assert REGISTRIES in stage.requires
         before = stage._input_fps(ctx)
         assert REGISTRIES.key in before
-        (regs / "phrases.yaml").write_text("phrases:\n  - End of document\n  - Continued\n")
+        (regs / "phrases" / "phrases.yaml").write_text(
+            "phrases:\n  - End of document\n  - Continued\n"
+        )
         after = stage._input_fps(ctx)
         assert after[REGISTRIES.key] != before[REGISTRIES.key]
     finally:
@@ -139,6 +148,193 @@ def test_normalize_writes_history_sidecar_and_strips_table(ctx):
         "change": "Updated install",
         "refs": [],
     }
+
+
+def test_normalize_lifts_large_table_to_csv_sidecar(ctx):
+    # a long data table is lifted to tables/table-01.csv and replaced by a reference (§6.4/§6.5)
+    rows = "".join(f"<tr><td>F{i}</td><td>T{i}</td><td>D{i}</td></tr>" for i in range(12))
+    table = "<table><tr><th>Field</th><th>Type</th><th>Desc</th></tr>" + rows + "</table>"
+    enriched = frontmatter.emit(
+        {"title": "Data Dict", "app_code": "ADT", "tool_ver": "0.1.0"},
+        f"# Data Dict\n\n## Fields\n\n{table}\n\nAfter table.\n",
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "dd_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(
+        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "dd_doc", "ext": "docx"}})
+    )
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["tables_sidecars"] == 1
+
+    bundle = ctx.cfg.silver_normalized / "ADT" / "dd_doc"
+    _, body = frontmatter.parse((bundle / "body.md").read_text())
+    assert "<table" not in body  # the table left the body
+    assert "(tables/table-01.csv)" in body  # replaced by a reference link
+    csv_text = (bundle / "tables" / "table-01.csv").read_text()
+    assert csv_text.splitlines()[0] == "Field,Type,Desc"
+    assert "F0,T0,D0" in csv_text
+
+
+def test_normalize_references_curated_boilerplate(ctx, tmp_path):
+    # point registries at a temp dir with one curated boilerplate block (§9.6 REFERENCE)
+    regs = tmp_path / "registries"
+    (regs / "boilerplate").mkdir(parents=True)
+    block = "This document describes the DIBR plan for all VA Enterprise products."
+    from vdocs.kernel.text import block_key
+
+    (regs / "boilerplate" / "boilerplate.yaml").write_text(
+        "boilerplate:\n"
+        "  - id: bp-test01\n"
+        "    label: DIBR plan intro\n"
+        f"    key: {block_key(block)!r}\n"
+        f"    text: {block!r}\n"
+    )
+    ctx.cfg = ctx.cfg.model_copy(update={"registries_dir": regs})
+
+    enriched = frontmatter.emit(
+        {"title": "DIBR Guide", "app_code": "ADT", "tool_ver": "0.1.0"},
+        f"# DIBR Guide\n\n## Intro\n\n{block}\n\nUnique body content.\n",
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "bp_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(
+        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "bp_doc", "ext": "docx"}})
+    )
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["boilerplate_refs"] == 1
+
+    _, body = frontmatter.parse(
+        (ctx.cfg.silver_normalized / "ADT" / "bp_doc" / "body.md").read_text()
+    )
+    assert block not in body  # the boilerplate text is gone from the body
+    assert "(_shared/boilerplate/bp-test01.md)" in body  # replaced by a reference, not deleted
+    assert "Unique body content." in body  # the rest is untouched
+
+
+def test_normalize_stamps_template_id_and_strips_scaffold(ctx, tmp_path):
+    # point registries at a temp dir with a (DIBR, 2020s) template (§9.8 STRIP + STAMP)
+    regs = tmp_path / "registries"
+    (regs / "templates").mkdir(parents=True)
+    (regs / "templates" / "templates.yaml").write_text(
+        "templates:\n"
+        "  - template_id: DIBR:2020s:deadbeef\n"
+        "    doc_type: DIBR\n"
+        "    era: 2020s\n"
+        "    sections:\n"
+        "      - {title: Purpose}\n"
+        "      - {title: Rollback}\n"
+    )
+    ctx.cfg = ctx.cfg.model_copy(update={"registries_dir": regs})
+
+    enriched = frontmatter.emit(
+        {"title": "DG Deploy", "doc_type": "DIBR", "app_code": "ADT", "tool_ver": "0.1.0"},
+        # title-page date → 2020s era; one filled scaffold section + one empty scaffold section
+        "# DG Deploy\n\nSeptember 2021\n\n## Purpose\n\nReal purpose text.\n\n## Rollback\n\n",
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "dg_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(
+        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "dg_doc", "ext": "docx"}})
+    )
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["templates_stamped"] == 1
+
+    meta, body = frontmatter.parse(
+        (ctx.cfg.silver_normalized / "ADT" / "dg_doc" / "body.md").read_text()
+    )
+    assert meta["template_id"] == "DIBR:2020s:deadbeef"  # stamped into identity FM (§6.3)
+    assert "Real purpose text." in body  # filled scaffold section retained
+    assert "## Rollback" not in body  # the empty scaffold section was stripped
+
+
+def test_normalize_writes_refs_yaml_sidecar(ctx):
+    import yaml
+
+    # a bundle with an in-body _Toc cross-ref + a real heading carrying that bookmark (§6.7)
+    enriched = frontmatter.emit(
+        {"title": "Ref Manual", "app_code": "ADT", "tool_ver": "0.1.0"},
+        "# Ref Manual\n\nSee [the setup](#_Toc555) below.\n\n"
+        '## <span id="_Toc555" class="anchor"></span>Setup\n\nsteps\n',
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "rm_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(
+        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "rm_doc", "ext": "docx"}})
+    )
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["refs_sidecars"] == 1
+
+    bundle = ctx.cfg.silver_normalized / "ADT" / "rm_doc"
+    _, body = frontmatter.parse((bundle / "body.md").read_text())
+    # the dead _Toc cross-ref became a live GitHub slug link + back-link inserted
+    assert "[the setup](#setup)" in body and "#_Toc555" not in body
+    assert "[↑ Back to Contents](#contents)" in body
+
+    refs = yaml.safe_load((bundle / "refs.yaml").read_text())
+    assert refs["doc_id"] == "ADT/rm_doc" and refs["toc_depth"] == [2, 3]
+    by_slug = {a["slug"]: a for a in refs["anchors"]}
+    assert by_slug["setup"]["stable_id"] == "ADT/rm_doc/setup"
+    assert by_slug["setup"]["bookmark"] == "_Toc555" and by_slug["setup"]["toc_level"] is True
+    assert refs["outbound"]["_Toc555"] == "setup"
+
+
+def test_no_refs_yaml_when_no_headings(ctx):
+    # a heading-less bundle has no anchors → no refs.yaml, and the count reflects it
+    enriched = frontmatter.emit(
+        {"title": "Flat", "app_code": "ADT", "tool_ver": "0.1.0"},
+        "Just a paragraph with no headings at all.\n",
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "flat_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text("{}")
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["refs_sidecars"] == 0
+    assert not (ctx.cfg.silver_normalized / "ADT" / "flat_doc" / "refs.yaml").exists()
 
 
 def test_normalize_is_idempotent(ctx):

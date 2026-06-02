@@ -1,0 +1,57 @@
+# registries/boilerplate — meaningful-but-duplicated blocks → REFERENCE (§9.6/§9.7).
+#
+# Curated from `discover`'s near-dup boilerplate candidates over the real 469-doc corpus
+# (P1.b). `normalize` subtracts any body block whose whitespace-collapsed `key` matches an
+# entry here and replaces it with a reference link to the canonical copy (destined for
+# gold/_shared/boilerplate/<id>.md) — REFERENCE, not DELETE: the content is kept once,
+# de-duplicated. `text` is the canonical copy; `key` is the match identity (kernel block_key).
+
+boilerplate:
+- id: bp-9ea93a696b
+  label: This document describes the Deployment, Installation, Back-out, and
+  key: this document describes the deployment, installation, back-out, and rollback plan for new products
+    going into the va enterprise. the plan includes information about system support, issue tracking,
+    escalation processes, and roles and responsibilities involved in all those activities. its purpose
+    is to provide clients, stakeholders, and support personnel with a smooth transition to the new product
+    or software, and should be structured appropriately, to reflect particulars of these procedures at
+    a single or at multiple locations.
+  evidence_docs: 70
+  status: approved
+  text: This document describes the Deployment, Installation, Back-out, and Rollback Plan for new products
+    going into the VA Enterprise. The plan includes information about system support, issue tracking,
+    escalation processes, and roles and responsibilities involved in all those activities. Its purpose
+    is to provide clients, stakeholders, and support personnel with a smooth transition to the new product
+    or software, and should be structured appropriately, to reflect particulars of these procedures at
+    a single or at multiple locations.
+- id: bp-5bf802fb1b
+  label: 2. When prompted 'Want KIDS to INHIBIT LOGONs
+  key: 2. when prompted 'want kids to inhibit logons during the install? no//', answer no.
+  evidence_docs: 65
+  status: approved
+  text: 2.  When prompted 'Want KIDS to INHIBIT LOGONs during the install? NO//', answer NO.
+- id: bp-5b3a8cc898
+  label: 3. When prompted 'Want to DISABLE Scheduled Options,
+  key: 3. when prompted 'want to disable scheduled options, menu options, and protocols? no//', answer
+    no.
+  evidence_docs: 63
+  status: approved
+  text: 3.  When prompted 'Want to DISABLE Scheduled Options, Menu Options, and Protocols? NO//', answer
+    NO.
+- id: bp-0a7c257db5
+  label: Want to DISABLE Scheduled Options, Menu Options, and
+  key: want to disable scheduled options, menu options, and protocols? no//
+  evidence_docs: 60
+  status: approved
+  text: Want to DISABLE Scheduled Options, Menu Options, and Protocols? NO//
+- id: bp-f67f7b2092
+  label: The purpose of this plan is to provide
+  key: the purpose of this plan is to provide a single, common document that describes how, when, where,
+    and to whom capri will be deployed and installed, as well as how it is to be backed out and rolled
+    back, if necessary. the plan also identifies resources, communications plan, and rollout schedule.
+    specific instructions for installation, back-out, and rollback are included in this document.
+  evidence_docs: 54
+  status: approved
+  text: The purpose of this plan is to provide a single, common document that describes how, when, where,
+    and to whom CAPRI will be deployed and installed, as well as how it is to be backed out and rolled
+    back, if necessary. The plan also identifies resources, communications plan, and rollout schedule.
+    Specific instructions for installation, back-out, and rollback are included in this document.

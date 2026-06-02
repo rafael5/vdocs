@@ -76,8 +76,8 @@ def test_registries_contract_resolves_to_repo_dir_and_fingerprints_edits(tmp_pat
     from vdocs.models.artifact import Kind, Root
 
     regs = tmp_path / "registries"
-    regs.mkdir()
-    (regs / "phrases.yaml").write_text("phrases: []\n")
+    (regs / "phrases").mkdir(parents=True)
+    (regs / "phrases" / "phrases.yaml").write_text("phrases: []\n")
     cfg = Settings(data_dir=tmp_path / "lake", registries_dir=regs)
 
     assert REGISTRIES.root is Root.REGISTRIES
@@ -87,5 +87,6 @@ def test_registries_contract_resolves_to_repo_dir_and_fingerprints_edits(tmp_pat
     assert REGISTRIES.validate(cfg).ok
 
     fp1 = REGISTRIES.fingerprint(cfg)
-    (regs / "phrases.yaml").write_text("phrases:\n  - End of document\n")
-    assert REGISTRIES.fingerprint(cfg) != fp1  # an edit changes the signature
+    # a curation edit to a pattern registry (in its §11 subdir) changes the tree signature
+    (regs / "phrases" / "phrases.yaml").write_text("phrases:\n  - End of document\n")
+    assert REGISTRIES.fingerprint(cfg) != fp1

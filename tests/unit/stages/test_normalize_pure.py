@@ -45,7 +45,7 @@ def test_recover_headings_then_toc_gives_structureless_doc_a_toc():
         '<span id="_Toc1" class="anchor"></span>Introduction\n\nbody\n\n'
         '<span id="_Toc2" class="anchor"></span>Installation\n\nsteps\n'
     )
-    out = nz.normalize_body(body, frozenset())
+    out, _ = nz.normalize_body(body, frozenset())
     assert "## Contents" in out
     assert "- [Introduction](#introduction)" in out
     assert "- [Installation](#installation)" in out
@@ -111,8 +111,113 @@ def test_normalize_body_applies_all_steps_in_order():
     body = (
         "# Guide\n\n<!-- -->\n\n## Overview\n\nThis page intentionally left blank.\n\nReal text.\n"
     )
-    out = nz.normalize_body(body, frozenset({"This page intentionally left blank."}))
+    out, _ = nz.normalize_body(body, frozenset({"This page intentionally left blank."}))
     assert "<!-- -->" not in out
     assert "intentionally left blank" not in out
     assert "## Contents" in out and "- [Overview](#overview)" in out
     assert "Real text." in out
+
+
+def test_infer_heading_levels_compacts_skipped_levels():
+    # H1 → H4 skips two levels; the gap is compacted so the tree nests one level at a time
+    body = "# Title\n\ntext\n\n#### Deep\n\nmore\n"
+    out = nz.infer_heading_levels(body)
+    assert "## Deep" in out and "#### Deep" not in out  # H4 pulled up to H2
+
+
+def test_infer_heading_levels_builds_consistent_tree():
+    body = "# A\n\n### B\n\n#### C\n\n### D\n"
+    out = nz.infer_heading_levels(body)
+    levels = [len(ln.split(" ")[0]) for ln in out.splitlines() if ln.startswith("#")]
+    assert levels == [1, 2, 3, 2]  # B,D → H2 (children of A); C → H3 (child of B)
+
+
+def test_infer_heading_levels_preserves_h2_rooted_doc():
+    # a doc whose shallowest heading is H2 (no H1 title) keeps that baseline — never fabricate H1
+    body = "## A\n\n### B\n\n## C\n"
+    out = nz.infer_heading_levels(body)
+    assert out == body  # already gap-free at base H2 → unchanged
+
+
+def test_infer_heading_levels_is_idempotent():
+    body = "# A\n\n#### B\n\n## C\n\n##### D\n"
+    once = nz.infer_heading_levels(body)
+    assert nz.infer_heading_levels(once) == once
+
+
+def test_infer_heading_levels_ignores_code_fences():
+    body = "# A\n\n```\n#### not a heading\n```\n\n### Real\n"
+    out = nz.infer_heading_levels(body)
+    assert "#### not a heading" in out  # fenced content untouched
+    assert "## Real" in out  # the real H3 compacted to H2
+
+
+def test_infer_heading_levels_leaves_generated_contents_heading():
+    # the generated `## Contents` TOC marker must be skipped, else re-leveling it breaks
+    # normalize_body self-idempotency (it is regenerated each run, not a content section)
+    body = "## Contents\n\n- [Setup](#setup)\n\n## Setup\n\n### Detail\n"
+    out = nz.infer_heading_levels(body)
+    assert "## Contents" in out  # untouched (not promoted to # Contents)
+
+
+def test_normalize_body_is_self_idempotent_with_generated_toc():
+    body = "# Guide\n\n## Setup\n\n#### Deep detail\n\nbody text.\n"
+    once, _ = nz.normalize_body(body, frozenset())
+    assert "## Contents" in once  # a TOC was generated
+    twice, _ = nz.normalize_body(once, frozenset())
+    assert twice == once  # second pass is a fixed point
+
+
+_BP = (
+    nz.Boilerplate(
+        id="bp-1234",
+        label="This document describes the DIBR plan",
+        key=nz.block_key("This document describes the DIBR plan for VA Enterprise products."),
+    ),
+)
+
+
+def test_subtract_boilerplate_replaces_block_with_reference():
+    body = (
+        "# Guide\n\nIntro paragraph.\n\n"
+        "This document describes the DIBR plan for VA Enterprise products.\n\n"
+        "Unique content here.\n"
+    )
+    out = nz.subtract_boilerplate(body, _BP)
+    assert "This document describes the DIBR plan for VA Enterprise" not in out  # text removed
+    assert "(_shared/boilerplate/bp-1234.md)" in out  # replaced by a REFERENCE link
+    assert "Intro paragraph." in out and "Unique content here." in out  # others untouched
+
+
+def test_subtract_boilerplate_matches_modulo_whitespace_and_case():
+    body = "Intro.\n\nthis  document   describes the DIBR PLAN for va enterprise products.\n"
+    out = nz.subtract_boilerplate(body, _BP)
+    assert "(_shared/boilerplate/bp-1234.md)" in out  # block_key match ignores spacing/case
+
+
+def test_subtract_boilerplate_noop_when_no_registry_or_no_match():
+    body = "# Guide\n\nNothing boilerplate here.\n"
+    assert nz.subtract_boilerplate(body, ()) == body  # empty registry → untouched
+    assert nz.subtract_boilerplate(body, _BP) == body  # no matching block → untouched
+
+
+def test_subtract_boilerplate_is_idempotent():
+    body = "Intro.\n\nThis document describes the DIBR plan for VA Enterprise products.\n"
+    once = nz.subtract_boilerplate(body, _BP)
+    assert nz.subtract_boilerplate(once, _BP) == once  # the reference is not a registered block
+
+
+def test_curated_boilerplate_registry_is_well_formed():
+    # the P1.b starter set curated from the real corpus: each `key` must equal block_key(text)
+    import yaml
+
+    from vdocs.config import Settings
+
+    path = Settings().registries / "boilerplate" / "boilerplate.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    entries = data["boilerplate"]
+    assert entries, "curated boilerplate starter set is empty"
+    for e in entries:
+        assert e["status"] == "approved"
+        assert e["key"] == nz.block_key(e["text"])  # the match key matches its canonical text
+        assert e["id"].startswith("bp-")

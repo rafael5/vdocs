@@ -64,3 +64,23 @@ def test_clean_is_idempotent():
     broken = "<p>the â€œwordâ€\x9d\x07</p>"
     once = text.clean(broken)
     assert text.clean(once) == once
+
+
+def test_block_key_collapses_whitespace_and_lowercases():
+    assert text.block_key("  Hello   World  ") == "hello world"
+    # newlines collapse too (a block may span lines)
+    assert text.block_key("Line one\n  Line two") == "line one line two"
+    # spacing/case-only differences map to the same key
+    assert text.block_key("The  NOTICE.") == text.block_key("the notice.")
+
+
+def test_decade_bucket_finds_first_month_year():
+    assert text.decade_bucket("Cover\n\nJanuary 1998\n") == "1990s"
+    assert text.decade_bucket("September 2020") == "2020s"
+    assert text.decade_bucket("no date here") == "unknown"
+
+
+def test_decade_bucket_respects_line_window():
+    body = "title\n" + "x\n" * 50 + "June 1995\n"  # date past the window
+    assert text.decade_bucket(body, max_lines=40) == "unknown"
+    assert text.decade_bucket(body) == "1990s"  # no window → found
