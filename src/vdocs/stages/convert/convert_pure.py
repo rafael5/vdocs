@@ -61,6 +61,15 @@ def image_basename(ref: str) -> str:
     return ref.replace("\\", "/").rsplit("/", 1)[-1]
 
 
+def image_targets(markdown: str) -> list[str]:
+    """Every inline image target (markdown ``![]()`` then HTML ``<img src>``), verbatim and in
+    order. The dual of :func:`rewrite_image_refs`'s matching — used to discover which assets a
+    converted body references (e.g. to materialise/symlink them for preview)."""
+    return [m.group(2) for m in _MD_IMG_RE.finditer(markdown)] + [
+        m.group(2) for m in _HTML_IMG_RE.finditer(markdown)
+    ]
+
+
 def rewrite_image_refs(markdown: str, basename_to_asset: dict[str, str]) -> str:
     """Repoint every inline image (markdown ``![]()`` **and** HTML ``<img src>``) whose basename
     is in ``basename_to_asset`` to its ``<sha256>.<ext>`` asset filename (§5.2). Images live in
