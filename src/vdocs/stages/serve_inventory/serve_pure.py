@@ -10,17 +10,14 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 
+from vdocs.kernel.ids import doc_id
 from vdocs.models.catalog import EnrichedRecord
 from vdocs.models.stage import Acquisition
 
+__all__ = ["VALID_NOISE", "GateResult", "doc_id", "evaluate_gate", "inventory_status"]
+
 # The inventory is the gatekeeper: nothing outside these noise classes is a valid value.
 VALID_NOISE = frozenset({"", "vba_form", "va_ref", "test_document"})
-
-
-def doc_id(record: EnrichedRecord) -> str:
-    """The inventory's stable join key — ``app_code:doc_slug`` (§5.5). PDF/DOCX of one
-    logical document share it (they share ``doc_slug``)."""
-    return f"{record.app_name_abbrev}:{record.doc_slug}"
 
 
 @dataclass(frozen=True)

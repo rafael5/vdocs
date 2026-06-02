@@ -11,6 +11,7 @@ import hashlib
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
+from vdocs.kernel.ids import doc_id
 from vdocs.models.catalog import EnrichedRecord
 
 
@@ -18,11 +19,6 @@ def url_ext(url: str) -> str:
     """The lowercased file extension of a URL (without the dot), or '' if none."""
     name = urlparse(url).path.rsplit("/", 1)[-1]
     return name.rsplit(".", 1)[-1].lower() if "." in name else ""
-
-
-def _doc_id(rec: EnrichedRecord) -> str:
-    """The inventory stable id — ``app_code:doc_slug`` (§5.5)."""
-    return f"{rec.app_name_abbrev}:{rec.doc_slug}"
 
 
 @dataclass(frozen=True)
@@ -73,7 +69,7 @@ class Selection:
             return False
         if self.groups and not (rec.group_key in self.groups or rec.anchor_key in self.groups):
             return False
-        if self.ids and _doc_id(rec) not in self.ids:
+        if self.ids and doc_id(rec) not in self.ids:
             return False
         return True
 

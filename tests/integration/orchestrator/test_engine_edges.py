@@ -142,6 +142,68 @@ def test_postflight_deep_gate_failure_blocks(ctx):
     assert ctx.state.get("gated").status == "failed"
 
 
+def test_contract_ver_bump_reruns_same_stage(ctx):
+    # §7.3 step 2: bumping a stage's contract_ver (its produces[] shape changed) must
+    # force a re-run even when inputs are unchanged — SKIP_IF_UNCHANGED must not skip it.
+    runs = []
+
+    class S(Stage):
+        name = "s"
+        requires = [VDL]
+        produces = [OUT]
+        idempotency = Idempotency.SKIP_IF_UNCHANGED
+
+        def run(self, ctx, force):
+            runs.append(1)
+            cas.atomic_write(OUT.locate(ctx.cfg).path, b"x")
+            return RunResult()
+
+    s = S()
+    Orchestrator([s]).run(ctx)  # first run
+    Orchestrator([s]).run(ctx)  # inputs unchanged + same contract_ver → skip
+    assert len(runs) == 1
+    s.contract_ver = 2  # produces[] shape bumped
+    Orchestrator([s]).run(ctx)  # must re-run despite unchanged inputs
+    assert len(runs) == 2
+
+
+def test_upstream_contract_ver_bump_invalidates_consumer(ctx):
+    # §7.3 step 2: a producer's contract_ver bump must invalidate the consumer even when
+    # the producer's cheap fingerprint is unchanged (the shape-blind-fingerprint hole).
+    produced = _file("up_out", producer="prod")
+    consumer_out = _file("cons_out", producer="cons")
+    prod_runs, cons_runs = [], []
+
+    class Prod(Stage):
+        name = "prod"
+        requires = [VDL]
+        produces = [produced]
+
+        def run(self, ctx, force):
+            prod_runs.append(1)
+            cas.atomic_write(produced.locate(ctx.cfg).path, b"same")  # identical bytes each run
+            return RunResult()
+
+    class Cons(Stage):
+        name = "cons"
+        requires = [produced]
+        produces = [consumer_out]
+
+        def run(self, ctx, force):
+            cons_runs.append(1)
+            cas.atomic_write(consumer_out.locate(ctx.cfg).path, b"c")
+            return RunResult()
+
+    prod, cons = Prod(), Cons()
+    Orchestrator([prod, cons]).run(ctx)  # both run
+    Orchestrator([prod, cons]).run(ctx)  # unchanged → both skip
+    assert len(prod_runs) == 1 and len(cons_runs) == 1
+    prod.contract_ver = 2  # producer output SHAPE changed; bytes (cheap fp) identical
+    Orchestrator([prod, cons]).run(ctx)
+    assert len(prod_runs) == 2  # producer self-invalidated
+    assert len(cons_runs) == 2  # consumer re-ran on the upstream contract_ver change
+
+
 def test_orchestrator_run_raises_stage_failed_with_remediation(ctx):
     # A consumer whose required input is simply absent → run() surfaces StageFailed.
     class Consumer(Stage):

@@ -99,14 +99,14 @@ RAW_TREE = ArtifactContract(
     kind=Kind.TREE_ASSET_CAS,
     storage_class=StorageClass.ASSET_WRITE_ONCE,
     produced_by="fetch",
-    relpath="bronze/raw",
+    relpath="documents/bronze/raw",
 )
 RAW_INDEX = ArtifactContract(
     key="bronze/raw/index.json",
     kind=Kind.FILE,
     storage_class=StorageClass.STATE,
     produced_by="fetch",
-    relpath="bronze/raw/index.json",
+    relpath="documents/bronze/raw/index.json",
 )
 
 
@@ -118,14 +118,14 @@ TEXT_CONVERTED = ArtifactContract(
     kind=Kind.TREE_TEXT,
     storage_class=StorageClass.TEXT_VERSIONED,
     produced_by="convert",
-    relpath="silver/text/01-converted",
+    relpath="documents/silver/text/01-converted",
 )
 ASSETS = ArtifactContract(
     key="assets",
     kind=Kind.TREE_ASSET_CAS,
     storage_class=StorageClass.ASSET_WRITE_ONCE,
     produced_by="convert",
-    relpath="assets",
+    relpath="documents/assets",
     optional=True,  # a corpus slice with no images yields an empty asset store — still valid
 )
 # `discover` candidate patterns (pre-curation, §9.6): proposes registries/ updates, mutates nothing.
@@ -142,7 +142,7 @@ TEXT_ENRICHED = ArtifactContract(
     kind=Kind.TREE_TEXT,
     storage_class=StorageClass.TEXT_VERSIONED,
     produced_by="enrich",
-    relpath="silver/text/02-enriched",
+    relpath="documents/silver/text/02-enriched",
 )
 DOC_META_STAGED = ArtifactContract(
     key="index.db:doc_meta_staged",
@@ -158,7 +158,7 @@ TEXT_NORMALIZED = ArtifactContract(
     kind=Kind.TREE_TEXT,
     storage_class=StorageClass.TEXT_VERSIONED,
     produced_by="normalize",
-    relpath="silver/text/03-normalized",
+    relpath="documents/silver/text/03-normalized",
 )
 
 

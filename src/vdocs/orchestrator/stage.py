@@ -116,7 +116,10 @@ class Stage(ABC):
             # Optional outputs may legitimately be absent (e.g. a doc with no images → empty
             # asset CAS); they don't gate the skip decision.
             produces_ok = all(p.validate(cfg).ok for p in self.produces if not p.optional)
-            if prior.inputs_fp == self._input_fps(ctx) and produces_ok:
+            # A produces[] shape change is signalled by a contract_ver bump; it must re-run
+            # even when inputs are unchanged (§7.3 step 2; design.md:786).
+            same_contract = prior.contract_ver == self.contract_ver
+            if same_contract and prior.inputs_fp == self._input_fps(ctx) and produces_ok:
                 return PreflightResult.skip("inputs unchanged")
         return PreflightResult.proceed()
 
@@ -142,11 +145,18 @@ class Stage(ABC):
 
     # --- helpers ---
     def _input_fps(self, ctx: StageContext) -> dict[str, str]:
-        fps = {
-            c.key: c.fingerprint(ctx.cfg, verify=ctx.verify)
-            for c in self.requires
-            if c.validate(ctx.cfg).ok
-        }
+        fps: dict[str, str] = {}
+        for c in self.requires:
+            if not c.validate(ctx.cfg).ok:
+                continue
+            fps[c.key] = c.fingerprint(ctx.cfg, verify=ctx.verify)
+            # Fold each internal upstream's contract_ver into this stage's input identity:
+            # a produces[] shape bump that the cheap fingerprint can't see (e.g. a new SQLite
+            # column) still changes inputs_fp here, so the consumer re-runs (§7.3 step 2).
+            if c.produced_by is not None:
+                up = ctx.state.get(c.produced_by, ctx.scope)
+                if up is not None and up.status == "ok":
+                    fps[f"{c.key}#contract_ver"] = str(up.contract_ver)
         fps.update(self.extra_input_fps(ctx))
         return fps
 

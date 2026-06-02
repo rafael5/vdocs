@@ -12,7 +12,10 @@ from __future__ import annotations
 
 import re
 
+from vdocs.kernel.ids import doc_id
 from vdocs.models.catalog import EnrichedRecord
+
+__all__ = ["doc_id", "identity_frontmatter", "staged_row", "word_count"]
 
 _WORD_RE = re.compile(r"\S+")
 
@@ -28,11 +31,6 @@ _FM_FIELDS: tuple[tuple[str, str], ...] = (
     ("patch_id", "patch_id"),
     ("source_url", "doc_url"),
 )
-
-
-def doc_id(record: EnrichedRecord) -> str:
-    """The inventory's stable id — ``app_code:doc_slug`` (shared by PDF/DOCX of one doc)."""
-    return f"{record.app_name_abbrev}:{record.doc_slug}"
 
 
 def word_count(body: str) -> int:

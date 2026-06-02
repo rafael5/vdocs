@@ -13,6 +13,7 @@ from collections.abc import Callable
 from vdocs.contracts.registry import GOLD_INVENTORY, RAW_INDEX, RAW_TREE
 from vdocs.kernel import http
 from vdocs.kernel.cas import Cas, atomic_write
+from vdocs.kernel.ids import doc_id
 from vdocs.models.catalog import EnrichedInventory
 from vdocs.models.stage import Acquisition, Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -55,14 +56,14 @@ class FetchStage(Stage):
         fetched = failed = 0
         now = ctx.clock()
         for doc in targets:
-            doc_id = f"{doc.app_name_abbrev}:{doc.doc_slug}"
+            did = doc_id(doc)
             url = doc.doc_url  # the DOCX URL — selection guarantees a DOCX target (§1)
             data = self._get(url)
             if data is None:
                 failed += 1
                 ctx.state.record_acquisition(
                     Acquisition(
-                        doc_id=doc_id,
+                        doc_id=did,
                         source_url=url,
                         status="failed",
                         attempts=1,
@@ -84,7 +85,7 @@ class FetchStage(Stage):
             )
             ctx.state.record_acquisition(
                 Acquisition(
-                    doc_id=doc_id,
+                    doc_id=did,
                     source_url=url,
                     status="fetched",
                     sha256=sha,

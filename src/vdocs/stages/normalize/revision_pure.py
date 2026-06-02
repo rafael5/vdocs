@@ -14,9 +14,18 @@ import html as _html
 import re
 from dataclasses import dataclass, field
 
-_TABLE_RE = re.compile(r"<table\b.*?</table>", re.DOTALL | re.IGNORECASE)
-_ROW_RE = re.compile(r"<tr\b[^>]*>(.*?)</tr>", re.DOTALL | re.IGNORECASE)
-_CELL_RE = re.compile(r"<t[dh]\b[^>]*>(.*?)</t[dh]>", re.DOTALL | re.IGNORECASE)
+from vdocs.kernel.table import (
+    CELL_RE,
+    PIPE_LINE_RE,
+    PIPE_SEP_RE,
+    ROW_RE,
+    TABLE_RE,
+    flatten_html,
+    md_link_targets,
+    pipe_cells,
+    strip_md_links,
+)
+
 _HREF_RE = re.compile(r'href="(#[^"]+)"')
 _TAG_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"\s+")
@@ -41,10 +50,6 @@ class RevisionRecord:
 
 
 # --- cell flattening + date normalisation ----------------------------------
-def _flatten(cell_html: str) -> str:
-    return _WS_RE.sub(" ", _html.unescape(_TAG_RE.sub("", cell_html))).strip()
-
-
 def _flatten_change(cell_html: str) -> str:
     s = _BLOCK_END_RE.sub(" \n", cell_html)
     s = _html.unescape(_TAG_RE.sub("", s))
@@ -70,38 +75,15 @@ def _refs(cell_html: str) -> list[str]:
 
 
 def _header_text(table_html: str) -> str:
-    rows = _ROW_RE.findall(table_html)
-    return " ".join(_flatten(c).lower() for c in _CELL_RE.findall(rows[0])) if rows else ""
+    rows = ROW_RE.findall(table_html)
+    return " ".join(flatten_html(c).lower() for c in CELL_RE.findall(rows[0])) if rows else ""
 
 
 def _is_revision_header(header: str) -> bool:
     return "date" in header and "change" in header and ("version" in header or "patch" in header)
 
 
-# --- GFM pipe-table dialect (Docling-origin docs) --------------------------
-_PIPE_LINE_RE = re.compile(r"^[ \t]*\|.*\|[ \t]*$")
-_PIPE_SEP_RE = re.compile(r"^[ \t]*\|[ \t:|-]+\|[ \t]*$")
-_PIPE_SPLIT_RE = re.compile(r"(?<!\\)\|")
-_MD_LINK_RE = re.compile(r"\[([^\]]*)\]\((#[^)]*)\)")
-
-
-def _pipe_cells(line: str) -> list[str]:
-    parts = _PIPE_SPLIT_RE.split(line.strip())
-    if parts and parts[0].strip() == "":
-        parts = parts[1:]
-    if parts and parts[-1].strip() == "":
-        parts = parts[:-1]
-    return [p.replace("\\|", "|").strip() for p in parts]
-
-
-def _md_link_text(s: str) -> str:
-    return _MD_LINK_RE.sub(r"\1", s)
-
-
-def _md_link_refs(s: str) -> list[str]:
-    return [m.group(2) for m in _MD_LINK_RE.finditer(s)]
-
-
+# --- GFM pipe-table dialect (Docling-origin docs) — cell/regex mechanics in kernel.table --
 def _find_pipe_table(body: str) -> tuple[int, int, str] | None:
     lines = body.split("\n")
     offsets, pos = [], 0
@@ -109,12 +91,12 @@ def _find_pipe_table(body: str) -> tuple[int, int, str] | None:
         offsets.append(pos)
         pos += len(ln) + 1
     for i in range(len(lines) - 1):
-        if not (_PIPE_LINE_RE.match(lines[i]) and _PIPE_SEP_RE.match(lines[i + 1])):
+        if not (PIPE_LINE_RE.match(lines[i]) and PIPE_SEP_RE.match(lines[i + 1])):
             continue
-        if not _is_revision_header(" ".join(_pipe_cells(lines[i])).lower()):
+        if not _is_revision_header(" ".join(pipe_cells(lines[i])).lower()):
             continue
         j = i + 2
-        while j < len(lines) and _PIPE_LINE_RE.match(lines[j]):
+        while j < len(lines) and PIPE_LINE_RE.match(lines[j]):
             j += 1
         return offsets[i], offsets[j - 1] + len(lines[j - 1]), "\n".join(lines[i:j])
     return None
@@ -122,7 +104,7 @@ def _find_pipe_table(body: str) -> tuple[int, int, str] | None:
 
 def find_revision_table(body: str) -> tuple[int, int, str] | None:
     """``(start, end, table)`` of the revision table (HTML preferred, then GFM pipe), or None."""
-    for m in _TABLE_RE.finditer(body):
+    for m in TABLE_RE.finditer(body):
         if _is_revision_header(_header_text(m.group(0))):
             return m.start(), m.end(), m.group(0)
     return _find_pipe_table(body)
@@ -137,10 +119,10 @@ def _col(header: list[str], *names: str) -> int | None:
 
 
 def _parse_html_table(table_html: str) -> list[RevisionRecord]:
-    rows = _ROW_RE.findall(table_html)
+    rows = ROW_RE.findall(table_html)
     if not rows:
         return []
-    header = [_flatten(c).lower() for c in _CELL_RE.findall(rows[0])]
+    header = [flatten_html(c).lower() for c in CELL_RE.findall(rows[0])]
     di, vi, pi, ci = (
         _col(header, "date"),
         _col(header, "version", "patch"),
@@ -149,7 +131,7 @@ def _parse_html_table(table_html: str) -> list[RevisionRecord]:
     )
     records: list[RevisionRecord] = []
     for row in rows[1:]:
-        cells = _CELL_RE.findall(row)
+        cells = CELL_RE.findall(row)
         if not cells:
             continue
 
@@ -158,9 +140,9 @@ def _parse_html_table(table_html: str) -> list[RevisionRecord]:
 
         records.append(
             RevisionRecord(
-                date=_norm_date(_flatten(cell(di))),
-                version=_flatten(cell(vi)),
-                pages=[int(n) for n in _INT_RE.findall(_flatten(cell(pi)))],
+                date=_norm_date(flatten_html(cell(di))),
+                version=flatten_html(cell(vi)),
+                pages=[int(n) for n in _INT_RE.findall(flatten_html(cell(pi)))],
                 change=_flatten_change(cell(ci)),
                 refs=_refs(cell(pi)) + _refs(cell(ci)),
             )
@@ -169,10 +151,10 @@ def _parse_html_table(table_html: str) -> list[RevisionRecord]:
 
 
 def _parse_pipe_table(table: str) -> list[RevisionRecord]:
-    lines = [ln for ln in table.split("\n") if _PIPE_LINE_RE.match(ln)]
+    lines = [ln for ln in table.split("\n") if PIPE_LINE_RE.match(ln)]
     if len(lines) < 2:
         return []
-    header = [h.lower() for h in _pipe_cells(lines[0])]
+    header = [h.lower() for h in pipe_cells(lines[0])]
     di, vi, pi, ci = (
         _col(header, "date"),
         _col(header, "version", "patch"),
@@ -181,9 +163,9 @@ def _parse_pipe_table(table: str) -> list[RevisionRecord]:
     )
     records: list[RevisionRecord] = []
     for row in lines[2:]:
-        if _PIPE_SEP_RE.match(row):
+        if PIPE_SEP_RE.match(row):
             continue
-        cells = _pipe_cells(row)
+        cells = pipe_cells(row)
 
         def cell(idx: int | None, _cells: list[str] = cells) -> str:
             return _cells[idx] if idx is not None and idx < len(_cells) else ""
@@ -193,9 +175,9 @@ def _parse_pipe_table(table: str) -> list[RevisionRecord]:
             RevisionRecord(
                 date=_norm_date(cell(di)),
                 version=cell(vi),
-                pages=[int(n) for n in _INT_RE.findall(_md_link_text(page_raw))],
-                change=_WS_RE.sub(" ", _md_link_text(change_raw)).strip(),
-                refs=_md_link_refs(page_raw) + _md_link_refs(change_raw),
+                pages=[int(n) for n in _INT_RE.findall(strip_md_links(page_raw))],
+                change=_WS_RE.sub(" ", strip_md_links(change_raw)).strip(),
+                refs=md_link_targets(page_raw) + md_link_targets(change_raw),
             )
         )
     return records

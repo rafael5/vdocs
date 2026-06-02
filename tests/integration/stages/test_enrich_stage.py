@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import sqlite3
 
+import pytest
+
 from vdocs.contracts.registry import CATALOG_ENRICHED, TEXT_CONVERTED
-from vdocs.kernel import cas, frontmatter
+from vdocs.kernel import cas, db, frontmatter
 from vdocs.models.catalog import EnrichedInventory, EnrichedRecord
 from vdocs.models.stage import StageRun
 from vdocs.orchestrator.engine import Orchestrator
-from vdocs.stages.enrich.stage import EnrichStage
+from vdocs.stages.enrich import enrich_pure as ep
+from vdocs.stages.enrich.stage import EnrichStage, _write_staged
 
 
 def _record(**kw):
@@ -100,6 +103,26 @@ def test_enrich_bakes_frontmatter_and_stages_meta(ctx):
         assert row["bundle_path"] == "ADT/dg_5_3_1057_dibr"
     finally:
         conn.close()
+
+
+def test_write_staged_failed_rebuild_preserves_prior_table(tmp_path):
+    # §7.4 atomicity: doc_meta_staged is rebuilt via a temp-table swap, so a rebuild that
+    # blows up mid-flight must leave the previously-staged table fully intact (never dropped
+    # or left partial).
+    db_path = tmp_path / "index.db"
+    good = [ep.staged_row(_record(), body="hello world", bundle_path="ADT/x")]
+    _write_staged(db_path, good)
+
+    bad = [{"doc_id": "broken"}]  # missing the other STAGED_COLUMNS → the rebuild raises
+    with pytest.raises(KeyError):
+        _write_staged(db_path, bad)
+
+    conn = db.connect(db_path, read_only=True)
+    try:
+        rows = conn.execute("SELECT doc_id FROM doc_meta_staged").fetchall()
+    finally:
+        conn.close()
+    assert [r["doc_id"] for r in rows] == [ep.doc_id(_record())]
 
 
 def test_enrich_warns_and_skips_bundle_with_no_inventory_record(ctx):
