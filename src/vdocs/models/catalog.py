@@ -1,45 +1,19 @@
-"""Bronze catalog boundary types (§5.3, §8).
+"""Inventory-medallion boundary types (§5.3, §8).
 
-The crawl hierarchy is Section → Application → Document (the real VDL shape). ``catalog``
-then derives an :class:`EnrichedDocument` per file — patch identity, doc-type, version-group
-key, drift status. All are Pydantic boundary types: they serialize to ``catalog/raw.json``
-and ``catalog/enriched.json`` and validate on read.
+The crawl hierarchy is Section → Application → Document (the real VDL shape) — the inv-bronze
+``catalog.raw`` artifact. ``catalog`` then enriches each document link into an
+:class:`EnrichedRecord` (the full §5 column set — patch identity, doc-type/labels, noise
+classification, companion pairing, group/anchor keys, system classification) — the inv-silver
+``catalog.enriched`` artifact. All are Pydantic boundary types: they serialize to JSON and
+validate on read. Drift is **not** here — it is a temporal property decided at ``fetch`` and
+recorded in ``state.db:acquisitions`` (§7.6, §9.5), not baked into this deterministic artifact.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterator
-from enum import StrEnum
 
-from pydantic import BaseModel, Field
-
-
-class DocType(StrEnum):
-    """Coarse VDL doc-type buckets (the classifier target; values are the VA codes)."""
-
-    RELEASE_NOTE = "RN"
-    INSTALLATION_GUIDE = "IG"
-    USER_MANUAL = "UM"
-    TECHNICAL_MANUAL = "TM"
-    QUICK_REF = "QRG"
-    SUPPLEMENT = "SUP"
-    CHANGE_PAGE = "CP"
-    SECURITY_GUIDE = "SEC"
-    HL7 = "HL7"
-    SETUP = "SETUP"
-    DEVELOPER = "DEV"
-    IMPLEMENTATION = "IMPL"
-    UNKNOWN = "UNK"
-
-
-class DriftStatus(StrEnum):
-    """How a document changed relative to the prior catalog (§7.6 drift detection)."""
-
-    NEW = "new"
-    SUPERSEDED = "superseded"  # a newer patch/version of an existing group
-    CHANGED_IN_PLACE = "changed_in_place"  # same identity, different bytes
-    UNCHANGED = "unchanged"
-    WITHDRAWN = "withdrawn"  # gone upstream — flagged, never deleted (bronze immutable)
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CatalogDocument(BaseModel):
@@ -85,51 +59,63 @@ class Catalog(BaseModel):
                     yield section, app, doc
 
 
-class PatchIdentity(BaseModel):
-    """The VA patch coordinate parsed from a title/filename, e.g. ``DG*5.3*1057``."""
+class EnrichedRecord(BaseModel):
+    """One fully-enriched inventory row — the §5 column set (v1's 34 + system_type/
+    cots_dependent + the vdocs-native ``anchor_key``). Built from an ``enrich_rows`` dict
+    (extra intermediate keys are ignored). The on-disk column order is :data:`ENRICHED_COLUMNS`.
+    """
 
-    model_config = {"frozen": True}
+    model_config = ConfigDict(extra="ignore")
 
-    pkg_ns: str = ""  # "DG"
-    patch_ver: str = ""  # "5.3"
-    patch_num: str = ""  # "1057"
-    patch_id: str = ""  # "DG*5.3*1057"
-
-
-class EnrichedDocument(BaseModel):
-    """A catalog document with derived identity/classification (the ``catalog.enriched`` unit)."""
-
-    # --- carried from crawl ---
-    title: str
-    url: str
-    filename: str
-    file_ext: str
-    doc_type_label: str = ""
-    file_date: str = ""
-    # --- section / application context ---
-    section_code: str = ""
+    # section / application context
     section_name: str = ""
-    app_code: str = ""
-    app_name: str = ""
+    section_code: str = ""
+    app_name_full: str = ""
+    app_name_abbrev: str = ""
+    canonical_pkg: str = ""
+    doc_subject_raw: str = ""
+    doc_search_aliases: str = ""
     app_status: str = "active"
-    app_url: str = ""
-    # --- derived patch identity ---
+    # system classification (Stage C)
+    system_type: str = ""
+    cots_dependent: bool = False
+    # patch identity
+    decommission_date: str = ""
     pkg_ns: str = ""
     patch_ver: str = ""
+    patch_ver_major: str = ""
+    patch_ver_minor: str = ""
     patch_num: str = ""
     patch_id: str = ""
-    # --- derived classification / grouping ---
-    doc_type: DocType = DocType.UNKNOWN
+    patch_id_full: str = ""
+    multi_ns: str = "0"  # "0"/"1"
+    group_key: str = ""  # app:pkg:patch_ver (v1)
+    anchor_key: str = ""  # app:pkg:doc_code (version-free, vdocs §9.4)
+    # document identity / classification
+    doc_code: str = ""
     doc_label: str = ""
+    doc_subtitle: str = ""
+    doc_layer: str = "plain"  # anchor | patch | plain
+    doc_labelling: str = "code"  # code | manual
+    doc_title: str = ""
+    doc_filename: str = ""
     doc_slug: str = ""
-    group_key: str = ""  # version-free document identity (§6.6)
-    search_aliases: list[str] = Field(default_factory=list)
-    # --- drift (§7.6) ---
-    drift_status: DriftStatus = DriftStatus.NEW
+    doc_format: str = ""  # pdf | docx | doc
+    doc_subject: str = ""
+    noise_type: str = ""  # "" | vba_form | va_ref | test_document
+    # urls
+    app_url: str = ""
+    doc_url: str = ""
+    companion_url: str = ""
+    github_md_url: str = ""
+    github_md_raw_url: str = ""
 
 
-class EnrichedCatalog(BaseModel):
-    """The ``catalog.enriched`` artifact: current documents + WITHDRAWN priors (§7.6)."""
+# The fixed on-disk column order (§5; the CSV convenience view uses this).
+ENRICHED_COLUMNS = list(EnrichedRecord.model_fields.keys())
 
-    documents: list[EnrichedDocument] = Field(default_factory=list)
-    withdrawn: list[EnrichedDocument] = Field(default_factory=list)
+
+class EnrichedInventory(BaseModel):
+    """The ``catalog.enriched`` artifact: every document link as one enriched record (1:1)."""
+
+    records: list[EnrichedRecord] = Field(default_factory=list)

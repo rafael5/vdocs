@@ -10,7 +10,7 @@ import json
 import pytest
 
 from vdocs.kernel.http import Page
-from vdocs.models.catalog import DriftStatus, EnrichedCatalog
+from vdocs.models.catalog import EnrichedInventory
 from vdocs.orchestrator.engine import Orchestrator
 from vdocs.stages.catalog.stage import CatalogStage
 from vdocs.stages.crawl.stage import CrawlStage
@@ -79,12 +79,14 @@ def test_bronze_dag_runs_end_to_end(bronze_ctx):
     crawl_run = ctx.state.get("crawl")
     assert crawl_run.counts == {"sections": 2, "applications": 1, "documents": 2, "skipped": 0}
 
-    # catalog enriched both docs as NEW with the version-free group key
-    ecat = EnrichedCatalog.model_validate_json(ctx.cfg.catalog_enriched.read_text())
-    assert len(ecat.documents) == 2
-    assert {d.patch_id for d in ecat.documents} == {"DG*5.3*1057"}
-    assert {d.group_key for d in ecat.documents} == {"ADT:DG:IG"}
-    assert all(d.drift_status is DriftStatus.NEW for d in ecat.documents)
+    # catalog enriched both docs (DOCX + PDF) with full identity + the dual keys
+    inv = EnrichedInventory.model_validate_json(ctx.cfg.catalog_enriched.read_text())
+    assert len(inv.records) == 2
+    assert {r.patch_id for r in inv.records} == {"DG*5.3*1057"}
+    assert {r.doc_code for r in inv.records} == {"DIBR"}
+    assert {r.group_key for r in inv.records} == {"ADT:DG:5.3"}  # v1 version key
+    assert {r.anchor_key for r in inv.records} == {"ADT:DG:DIBR"}  # version-free (vdocs §9.4)
+    assert all(r.noise_type == "" for r in inv.records)
 
     # fetch stored one logical doc (DOCX preferred) into the CAS + wrote the index
     fetch_run = ctx.state.get("fetch")

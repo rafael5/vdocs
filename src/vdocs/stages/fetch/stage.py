@@ -13,7 +13,7 @@ from collections.abc import Callable
 from vdocs.contracts.registry import CATALOG_ENRICHED, RAW_INDEX, RAW_TREE
 from vdocs.kernel import http
 from vdocs.kernel.cas import Cas, atomic_write
-from vdocs.models.catalog import DriftStatus, EnrichedCatalog
+from vdocs.models.catalog import EnrichedInventory
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
 
@@ -33,11 +33,10 @@ class FetchStage(Stage):
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.stages.fetch import fetch_pure as fp
 
-        catalog = EnrichedCatalog.model_validate_json(
+        inventory = EnrichedInventory.model_validate_json(
             ctx.cfg.catalog_enriched.read_text(encoding="utf-8")
         )
-        live = [d for d in catalog.documents if d.drift_status is not DriftStatus.WITHDRAWN]
-        targets = fp.select_fetch_targets(live)
+        targets = fp.select_fetch_targets(inventory.records)
 
         store = Cas(ctx.cfg.bronze_raw)
         index: dict[str, dict[str, str]] = {}
@@ -45,7 +44,7 @@ class FetchStage(Stage):
         for doc in targets:
             data: bytes | None = None
             used_url = ""
-            for url in fp.candidate_urls(doc.url):
+            for url in fp.candidate_urls(doc.doc_url):
                 data = self._get(url)
                 if data is not None:
                     used_url = url
@@ -53,10 +52,10 @@ class FetchStage(Stage):
             if data is None:
                 failed += 1
                 continue
-            ext = fp.url_ext(used_url) or doc.file_ext.lstrip(".")
+            ext = fp.url_ext(used_url) or doc.doc_format
             sha = store.put(data, ext=ext)
             index[sha] = fp.index_entry(
-                app_code=doc.app_code, title=doc.title, source_url=used_url, ext=ext
+                app_code=doc.app_name_abbrev, title=doc.doc_title, source_url=used_url, ext=ext
             )
             fetched += 1
 

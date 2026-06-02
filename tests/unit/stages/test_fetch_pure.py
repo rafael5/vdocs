@@ -1,6 +1,6 @@
 """Unit tests for fetch pure logic — URL strategy + target selection + index (§8 fetch, §16)."""
 
-from vdocs.models.catalog import DocType, EnrichedDocument
+from vdocs.models.catalog import EnrichedRecord
 from vdocs.stages.fetch import fetch_pure as fp
 
 
@@ -26,28 +26,35 @@ def test_url_ext():
     assert fp.url_ext("https://va.gov/a/b") == ""
 
 
-def _ed(slug, ext):
-    return EnrichedDocument(
-        title="T",
-        url=f"https://va.gov/d/{slug}{ext}",
-        filename=f"{slug}{ext}",
-        file_ext=ext,
-        app_code="ADT",
+def _rec(slug, fmt, noise=""):
+    return EnrichedRecord(
+        doc_title="T",
+        doc_url=f"https://va.gov/d/{slug}.{fmt}",
+        doc_filename=f"{slug}.{fmt}",
+        doc_format=fmt,
+        app_name_abbrev="ADT",
         doc_slug=slug,
-        doc_type=DocType.INSTALLATION_GUIDE,
+        doc_code="DIBR",
+        noise_type=noise,
     )
 
 
 def test_select_fetch_targets_prefers_docx_per_logical_doc():
-    docs = [_ed("dg_5_3_1057_dibr", ".pdf"), _ed("dg_5_3_1057_dibr", ".docx")]
+    docs = [_rec("dg_5_3_1057_dibr", "pdf"), _rec("dg_5_3_1057_dibr", "docx")]
     targets = fp.select_fetch_targets(docs)
     assert len(targets) == 1
-    assert targets[0].file_ext == ".docx"
+    assert targets[0].doc_format == "docx"
 
 
 def test_select_fetch_targets_keeps_pdf_only_doc():
-    docs = [_ed("only_pdf", ".pdf")]
-    assert [t.file_ext for t in fp.select_fetch_targets(docs)] == [".pdf"]
+    docs = [_rec("only_pdf", "pdf")]
+    assert [t.doc_format for t in fp.select_fetch_targets(docs)] == ["pdf"]
+
+
+def test_select_fetch_targets_excludes_noise():
+    # chrome/forms (noise_type set) are never fetched — only green inventory rows (§9.5)
+    docs = [_rec("vba_form_x", "pdf", noise="vba_form"), _rec("real_doc", "docx")]
+    assert [t.doc_slug for t in fp.select_fetch_targets(docs)] == ["real_doc"]
 
 
 def test_index_entry_shape():

@@ -29,7 +29,7 @@ status, §5.5) is scaffolded here only as far as the `inventory_status` join nee
 | B1 | Inv-bronze | `crawl_pure` parsers (verify vs spec) | index/section/application parsers; relative-href resolution; status/app-code parse | spec §3.2–3.4 | ✅ | `test_crawl_pure` (9 tests; + final-URL-base regression) | verified vs spec; final-URL base confirmed against A1's `Page.url` |
 | B2 | Inv-bronze | `CrawlStage` driver | 3-level polite walk → `inventory/bronze/catalog.raw.{json,csv}`; skip non-200 (WARN); dedup | spec §3.5; design §8 | ✅ | `test_crawl_stage` (3) + `test_bronze_dag` + `test_cli` | reworked to `PoliteClient.get_page`; resolves each level vs page **final URL**; non-200 section/app skipped (WARN, `skipped` count) and retained empty; writes inventory-bronze path |
 | B3 | Inv-bronze | live-VDL verification | real bounded crawl; section/app/doc counts sane | spec §2, §7 | ☐ | recorded counts vs live site | politeness mandatory (real `.gov`) |
-| **C** | Inv-silver (`catalog`) | | the full multi-pass enrichment → conformed inventory | | ◐ | C1–C9 ✅ (pure engine); C10 driver todo | |
+| **C** | Inv-silver (`catalog`) | | the full multi-pass enrichment → conformed inventory | | ✅ | C1–C10 ✅; §7 distributions reproduced **exactly** | |
 | C1 | Inv-silver | patch identity (pure) | `PATCH_A/B/FULL`, `MULTI_NS_RE`, `FNAME_VER/PATCH`; pkg_ns/ver/num/patch_id/patch_id_full/multi_ns | spec §4.1, §6.2 | ✅ | `test_enrich_pure` (PATCH_A, multi-NS, PATCH_B + filename patch) | in `enrich_pure.parse_row`; regexes verbatim from v1 §6.2 |
 | C2 | Inv-silver | doc-type classification (pure) | `DOC_TYPE_PATTERNS` (title, ordered) → `_SLUG_SUFFIX_MAP`/`_APP_SPECIFIC` (filename); title-first | spec §4.1, §6.3–6.4 | ✅ | ordering traps (`_tg`=TRG, DIBR<IG, UM<UG) | `compile_doc_types`/`classify_doc_type`/`classify_by_filename`; reads `registries/doc-types` |
 | C3 | Inv-silver | text fixers | **ftfy** mojibake + NFC + nbsp-strip; typo corrections + `doc_search_aliases` | spec §4.1, §9.3 | ✅ | `test_fix_mojibake_and_typo` | `ftfy` dep added; `fix_mojibake`/`apply_typo_corrections`; NOT `kernel/text` |
@@ -39,7 +39,7 @@ status, §5.5) is scaffolded here only as far as the `inventory_status` join nee
 | C7 | Inv-silver | pass 4 (manual overrides) | `MANUAL_OVERRIDES` / `MANUAL_NOISE` from `registries/manual-labels` | spec §4.4 | ✅ | manual-override + manual-noise-tag tests | |
 | C8 | Inv-silver | pass 5 (canonical labels) | canonical `doc_label` + `doc_subtitle`; `doc_labelling` | spec §4.5 | ✅ | e2e (canonical label) | `apply_canonical_label`; reads `registries/doc-labels` |
 | C9 | Inv-silver | Stage C (system classification) | `system_type` (196-app map) + `cots_dependent` | spec §4.6, §10.7 | ✅ | e2e + unclassified-fallback test | `classify_system`; reads `registries/system-types` |
-| C10 | Inv-silver | `CatalogStage` driver | raw → passes 1–5 + C → `inventory/silver/catalog.enriched.{json,csv}` + schema JSON | spec §4, §5; design §8 | ☐ | integration test vs **pinned raw-inventory fixture**, asserting §7 distributions | **NEXT**: wire `enrich_pure.enrich_rows` into the stage; new 36-col model; reconcile fetch (drift → acquisitions); supersedes the thin Phase-2 catalog |
+| C10 | Inv-silver | `CatalogStage` driver | raw → passes 1–5 + C → `inventory/silver/catalog.enriched.{json,csv}` + schema JSON | spec §4, §5; design §8 | ✅ | `test_catalog_inventory`: §7 gate vs pinned 8,834-row fixture (**exact**) + driver wiring | `enrich_rows` wired; `EnrichedRecord`/`EnrichedInventory` (37 cols incl. `anchor_key`); old thin `catalog_pure`+drift removed; `fetch` reconciled (selects `noise_type==''`, drift → acquisitions later) |
 | **D** | Inv-gold (`serve-inventory`) | | curated/queryable gold inventory + the fetch gate | | ☐ | | |
 | D1 | Inv-gold | `serve-inventory` stage | promote silver → `inventory/gold` (`inventory.db` + `inventory.json`); the selection surface | design §8 (serve-inventory row), §4 | ☐ | integration test | |
 | D2 | Inv-gold | HARD GATE (postflight) | complete vs crawl · enriched · noise-classified · §7 acceptance → blesses gold `ok` = **fetch gate** | design §8, §7.3; spec §7 | ☐ | gate-pass + gate-fail tests | consumer-preflight makes fetch wait automatically |
@@ -49,13 +49,13 @@ status, §5.5) is scaffolded here only as far as the `inventory_status` join nee
 | E1 | Publish | no-information-loss check vs v1 | enriched ⊇ v1 signals; §7 distributions at/above floor | spec §7 | ☐ | comparison report vs v1 reference CSV | |
 | E2 | Publish | browsable inventory site | publish gold inventory (table / GitHub Pages, à la v1 `vistadocs.github.io`) | ADR-022; spec §9.5 | ⬚ | — | deferred until inventory is wanted as a standalone product |
 
-**Current focus:** crawler (A1/A2/B1/B2) ✅, foundations+registries (A3) ✅, and the **pure
-enrichment engine** (C1–C9, `enrich_pure.py`) ✅ — `make check` green (203 tests, 99.5% cov, ruff +
-mypy clean). **Next: C10** — wire `enrich_rows` into `CatalogStage`, add the 36-column enriched-record
-model, reconcile `fetch` (move drift to `acquisitions`), and validate §7 distributions against a
-**pinned raw-inventory fixture** (capture `~/data/vista-docs/inventory/vdl_inventory.csv`). Then
-Phase D (serve-inventory + the fetch gate). **B3** (live bounded VDL crawl) stays a manual,
-politeness-gated smoke check.
+**Current focus:** the **entire inventory bronze→silver track is ✅** — crawler (A1/A2/B1/B2),
+foundations+registries (A3), and the full enrichment (C1–C10). `make check` green (189 tests, 100%
+cov, ruff + mypy clean), and the enriched corpus **reproduces every §7 reference distribution exactly**
+(8,834 rows; noise/layer/format/labelling/section/patch_id/companion/doc-code-leaders all to the row).
+**Next: Phase D** — `serve-inventory` (promote silver → gold `inventory.{db,json}`) + the **hard-gate
+fetch gate** (D2), then `acquisitions` + `inventory_status` (D3) and the CLI (D4). **B3** (live bounded
+VDL crawl) stays a manual, politeness-gated smoke check.
 
 **Dependency order:** A1→A2→A3 ⇒ B1→B2→B3 ⇒ C1–C9 (pure, parallelizable) → C10 (driver) ⇒ D1→D2 (gate) → D3→D4 ⇒ E. The gate (D2) is the milestone that unblocks the document medallion's `fetch`.
 
@@ -94,6 +94,15 @@ politeness-gated smoke check.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-01** — **Catalog enrichment wired + §7 gate green (C10 → ✅; Phase C complete).** `CatalogStage`
+  now flattens `catalog.raw` → raw rows → `enrich_rows` (loading `registries/`) → the inv-silver
+  `catalog.enriched.{json,csv}` + schema. New `EnrichedRecord`/`EnrichedInventory` (37 cols incl.
+  `anchor_key`) replace the thin drift-focused `EnrichedDocument`; the old `catalog_pure.py` + its
+  drift logic are removed (drift is a `fetch`/`acquisitions` concern, §7.6). `fetch` reconciled to
+  select `noise_type==''` rows off the new model. **Fidelity proven against the full 8,834-row v1
+  corpus** (pinned, gzipped under `tests/fixtures/`): every §7 distribution matches *exactly* — noise
+  7491/1192/149/2, layer 3466/3584/1784, format 5097/3730/7, labelling 8526/308, section CLI=5790…,
+  patch_id 6902, companion 7422, doc-code leaders RN=1598…VDD=145, 0 unclassified. 189 tests, 100% cov.
 - **2026-06-01** — **Pure enrichment engine implemented (C1–C9 → ✅).** `stages/catalog/enrich_pure.py`
   is a faithful, pure port of v1's `enrich_inventory.py` + `classify_vista_type.py`: patch identity
   (PATCH_A/B/FULL, multi-NS, filename ver/patch), title+filename doc-type classification, ftfy text

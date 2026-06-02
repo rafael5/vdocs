@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from urllib.parse import urlparse
 
-from vdocs.models.catalog import EnrichedDocument
+from vdocs.models.catalog import EnrichedRecord
 
 _EXT_RE = re.compile(r"\.(docx|pdf)$", re.I)
 
@@ -36,13 +36,19 @@ def url_ext(url: str) -> str:
     return name.rsplit(".", 1)[-1].lower() if "." in name else ""
 
 
-def select_fetch_targets(docs: list[EnrichedDocument]) -> list[EnrichedDocument]:
-    """One fetch target per logical document (same ``doc_slug``), preferring the DOCX format."""
-    best: dict[str, EnrichedDocument] = {}
-    for doc in docs:
-        current = best.get(doc.doc_slug)
-        if current is None or (doc.file_ext == ".docx" and current.file_ext != ".docx"):
-            best[doc.doc_slug] = doc
+def select_fetch_targets(records: list[EnrichedRecord]) -> list[EnrichedRecord]:
+    """One fetch target per logical document (same ``doc_slug``), preferring the DOCX format.
+
+    Only genuine documents are candidates — chrome/forms (``noise_type`` set) are excluded
+    here so nothing outside a green inventory row is ever fetched (§9.5).
+    """
+    best: dict[str, EnrichedRecord] = {}
+    for rec in records:
+        if rec.noise_type:
+            continue
+        current = best.get(rec.doc_slug)
+        if current is None or (rec.doc_format == "docx" and current.doc_format != "docx"):
+            best[rec.doc_slug] = rec
     return list(best.values())
 
 

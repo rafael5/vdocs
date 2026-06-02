@@ -61,7 +61,7 @@ def crawl() -> None:
 
 @app.command()
 def catalog(force: bool = typer.Option(False, "--force", "-f")) -> None:
-    """Enrich catalog.raw with patch identity, doc-type, version groups, and drift."""
+    """Enrich catalog.raw into the conformed inventory (identity, doc-type, noise, groups)."""
     _drive(only="catalog", force=force)
 
 

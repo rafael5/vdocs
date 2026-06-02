@@ -79,7 +79,7 @@ def test_catalog_command_enriches(tmp_path):
     result = runner.invoke(app, ["catalog"], env={"DATA_DIR": str(tmp_path)})
     assert result.exit_code == 0, result.stdout
     enriched = json.loads(cfg.catalog_enriched.read_text())
-    assert enriched["documents"][0]["patch_id"] == "DG*5.3*1057"
+    assert enriched["records"][0]["patch_id"] == "DG*5.3*1057"
 
 
 def test_run_only_catalog(tmp_path):

@@ -149,6 +149,11 @@ def test_make_doc_slug():
     assert ep.make_doc_slug("DG_5.3_1057_DIBR.docx") == "dg_5_3_1057_dibr"
 
 
+def test_split_url_ext():
+    assert ep._split_url_ext("https://va.gov/a/b.DOCX") == ("https://va.gov/a/b", ".docx")
+    assert ep._split_url_ext("https://va.gov/a/page") == ("https://va.gov/a/page", "")
+
+
 # --- end-to-end pipeline ----------------------------------------------------
 def test_enrich_rows_end_to_end(reg):
     docx = _raw(
