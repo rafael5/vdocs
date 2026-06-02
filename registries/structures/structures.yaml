@@ -52,6 +52,11 @@ conventions:
     convention: toc
     disposition: CANONICALIZE
     canonical_form: "## Contents"      # the §6.7 regenerated-TOC heading
+    # heading texts (case-insensitive, H1–H3) that mark a legacy in-body TOC section; `normalize`
+    # strips the matched heading + its entries before deriving the canonical `## Contents` (§6.7).
+    match:
+      - table of contents
+      - contents
     status: approved
     evidence_docs: 55
   - key: revision-table

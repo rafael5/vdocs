@@ -54,6 +54,9 @@ class NormalizeStage(Stage):
         templates = _load_templates(
             ctx.cfg.registries / "templates" / "templates.yaml", tmpl.Template
         )
+        toc_titles = _load_structure_toc_titles(
+            ctx.cfg.registries / "structures" / "structures.yaml"
+        )
         sha_by_path = _sha_by_bundle_path(ctx.cfg.raw_index)
 
         enriched_root = ctx.cfg.silver_enriched
@@ -83,7 +86,7 @@ class NormalizeStage(Stage):
                 meta["template_id"] = template_id
                 n_template += 1
             body, anchor_map = nz.normalize_body(
-                body, phrases, doc_id=str(rel), boilerplate=boilerplate
+                body, phrases, doc_id=str(rel), boilerplate=boilerplate, toc_titles=toc_titles
             )
             n_boiler += body.count("](_shared/boilerplate/")  # REFERENCE links inserted
             out = frontmatter.emit(meta, body)
@@ -164,6 +167,21 @@ def _load_templates(path, cls):  # type: ignore[no-untyped-def]
             )
         )
     return tuple(out)
+
+
+def _load_structure_toc_titles(path) -> frozenset[str]:  # type: ignore[no-untyped-def]
+    """Curated ``registries/structures`` heading texts for the ``toc`` CANONICALIZE convention —
+    the legacy-TOC variants ``normalize`` strips before deriving ``## Contents`` (§6.7/§9.6).
+
+    Empty if the registry is absent or carries no approved ``toc`` convention (a no-op strip)."""
+    if not path.exists():
+        return frozenset()
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    titles: set[str] = set()
+    for conv in data.get("conventions") or []:
+        if conv.get("convention") == "toc" and conv.get("disposition") == "CANONICALIZE":
+            titles.update(str(m).strip().lower() for m in (conv.get("match") or []))
+    return frozenset(titles)
 
 
 def _sha_by_bundle_path(raw_index):  # type: ignore[no-untyped-def]

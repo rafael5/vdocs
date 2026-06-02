@@ -732,6 +732,18 @@ explicit anchor tags. The `(stable_section_id ↔ github_slug ↔ original_bookm
 the `refs.yaml` sidecar — the one place anchors live, shared by the TOC, cross-references, the
 published markdown, and the MCP resource URIs (§5.5).
 
+**Strip the legacy TOC before regenerating (no duplicate).** Because the derived `## Contents` is the
+authoritative navigation, the source's own in-body table of contents must **leave the body** — else the
+normalized document carries two TOCs (the stale text one with page numbers + the derived one). This is
+the `toc` convention of `registries/structures` (CANONICALIZE, §9.6): `normalize` recognises a legacy
+contents section by its heading (the curated variants — `Table of Contents`, `Contents`, … at H1–H3) and
+removes that heading plus the entries beneath it up to the next real heading, *before* deriving the
+fresh `## Contents`. Registry-driven (the recognised variants are curated data, not a hard-coded list —
+tenet #13) and idempotent (a prior run's generated `## Contents` is itself stripped and rebuilt
+identically). The structured **revision-history** apparatus leaves the body the same way but to a sidecar,
+not by deletion (`history.yaml`, §6.6); the `callout` convention of the same registry (admonition
+styling → GFM alerts) is the remaining CANONICALIZE consumer.
+
 **Round-trip navigation.** The TOC is emitted under a stable `## Contents` heading at the top of the
 body; every heading the TOC targets gets a **"↑ Back to Contents"** link (to the TOC anchor) inserted
 by `normalize` — navigation is bidirectional, TOC→section and section→TOC. Deterministic given the
@@ -906,7 +918,7 @@ plane), **DOC** = the document medallion (data plane) (§4). The inventory track
 | 🥈 DOC | **convert** | `raw`, `raw/index.json` | `text@converted`, `assets` (CAS) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **discover** | `text@converted` (corpus-global) + `catalog.enriched` (for `doc_code` only — the authoritative doc_type for `(doc_type, era)` template induction; classification stays a `catalog` decision, not re-derived) | `reports/patterns` (candidate boilerplate / `(doc_type, era)` templates [`doc_type`←catalog `doc_code`, `era`←title-page publication date bucketed by decade] / dead phrases / glossary terms / structural patterns + evidence + proposed disposition) → proposes `registries/` updates (§9.6) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **enrich** | `text@converted`, `catalog.enriched` | `text@enriched` (identity FM baked), `index.db:doc_meta_staged` | SKIP_IF_UNCHANGED |
-| 🥈 DOC | **normalize** | `text@enriched`, `raw/index.json` (for source_sha256 — metadata only, not the binary tree), `registries` (curated patterns) | `text@normalized` — `history.yaml` + `tables/*.csv` + `refs.yaml` sidecars; dead phrases deleted; boilerplate referenced (REFERENCE to `gold/_shared`); heading levels inferred; per-`(doc_type, era)` template scaffold stripped + `template_id` stamped (§9.8); **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** (§6.7). (Glossary **PROMOTE** to the single `gold/glossary.md` is a gold-phase output — §9.7 lists `normalize` as a consumer of `registries/glossary`, but the shared artifact is materialised downstream, not in this silver body transform.) | SKIP_IF_UNCHANGED |
+| 🥈 DOC | **normalize** | `text@enriched`, `raw/index.json` (for source_sha256 — metadata only, not the binary tree), `registries` (curated patterns) | `text@normalized` — `history.yaml` + `tables/*.csv` + `refs.yaml` sidecars; dead phrases deleted; boilerplate referenced (REFERENCE to `gold/_shared`); heading levels inferred; per-`(doc_type, era)` template scaffold stripped + `template_id` stamped (§9.8); legacy in-body TOC stripped via `registries/structures` (CANONICALIZE `toc`) then **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** (§6.7). (Glossary **PROMOTE** to the single `gold/glossary.md` is a gold-phase output — §9.7 lists `normalize` as a consumer of `registries/glossary`, but the shared artifact is materialised downstream, not in this silver body transform.) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **consolidate** | `text@normalized`, `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage + retained prior bodies captured as travel-with sidecars; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **index** | `text@normalized`, `consolidated` (grouping) | `index.db` (documents, doc_sections [all, with `is_latest`] **+ FTS5 over `is_latest` only — the search surface**, entities, quality, views; **stable IDs**) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **relate** | `index.db` (documents, entities, sections) | `index.db:relations` (doc↔entity, doc↔doc xref, entity↔entity — the knowledge graph) | SKIP_IF_UNCHANGED |

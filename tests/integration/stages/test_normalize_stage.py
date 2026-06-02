@@ -274,6 +274,41 @@ def test_normalize_stamps_template_id_and_strips_scaffold(ctx, tmp_path):
     assert "## Rollback" not in body  # the empty scaffold section was stripped
 
 
+def test_normalize_strips_legacy_toc_no_duplicate(ctx):
+    # an enriched body carrying the source's own text TOC → exactly one derived `## Contents`,
+    # driven by the curated registries/structures `toc` convention (§6.7/§9.6 CANONICALIZE)
+    enriched = frontmatter.emit(
+        {"title": "Legacy Manual", "app_code": "ADT", "tool_ver": "0.1.0"},
+        "# Legacy Manual\n\n## Table of Contents\n\n"
+        "Overview .......... 1\nSetup .......... 4\n\n"
+        "## Overview\n\nintro\n\n## Setup\n\nsteps\n",
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "lm_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(
+        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "lm_doc", "ext": "docx"}})
+    )
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.status == "ok"
+
+    _, body = frontmatter.parse(
+        (ctx.cfg.silver_normalized / "ADT" / "lm_doc" / "body.md").read_text()
+    )
+    assert "Table of Contents" not in body  # the legacy heading left the body
+    assert ".........." not in body  # …and so did its page-numbered entries
+    assert body.count("## Contents") == 1  # one derived TOC, not two
+    assert "- [Overview](#overview)" in body and "- [Setup](#setup)" in body
+
+
 def test_normalize_writes_refs_yaml_sidecar(ctx):
     import yaml
 
