@@ -163,6 +163,17 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **P0.2/P0.3 compliance remediation: honest dead-code + §8 over-claim
+  reconciled.** Two doc/comment-only audit fixes. (P0.2) `kernel/discovery.py` (shingling / MinHash
+  / Jaccard) is imported by no production code today — only its own unit test. Added a module
+  docstring note that it is the substrate for the P2 `discover` near-dup boilerplate miner (the
+  import lands in P2.1) so it is not latent, untracked dead code in the interim. **Do not delete.**
+  (P0.3) The §8 `normalize` produces cell read as if `tables/*.csv`, boilerplate-referenced,
+  template-stripped + `template_id`-stamped, and glossary-single-sourced were done; they are the
+  deferred F-steps the `normalize ◐` row records. Split the cell into **done** (history/refs
+  sidecars, phrase deletion, TOC regen) vs **⏳ forward-looking** (the four deferred clauses, each
+  flipped to plain in the same commit as its P1 step) so §8 never over-claims relative to code. No
+  test changes (doc + comment only); 318 tests, 100% cov.
 - **2026-06-02** — **P0.1 compliance remediation: `registries/` reshaped to the §11 subdirectory
   layout.** The audit found the curated tree was flat files at `registries/` root, where §11/§9.7
   specify per-registry **subdirectories**. Moved (`git mv`, byte-identical) `phrases.yaml →

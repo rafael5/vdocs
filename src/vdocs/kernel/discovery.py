@@ -4,6 +4,10 @@ Shingling + MinHash + Jaccard estimation live here *once* (tenet #4) so the Phas
 boilerplate / template / glossary miners all build on the same maths rather than
 re-implementing it. Pure functions; deterministic (no RNG — permutation coefficients
 are derived from the permutation index, so signatures are reproducible across runs).
+
+NOTE (P0.2 audit): these primitives are the substrate for the P2 `discover` near-duplicate
+boilerplate miner; until that wiring lands they are exercised only by their own unit tests.
+Tracked in the implementation tracker — do not delete (the import lands in P2.1).
 """
 
 from __future__ import annotations
