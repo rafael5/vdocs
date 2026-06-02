@@ -11,12 +11,11 @@ until the gate is green.
 
 from __future__ import annotations
 
-import csv
-import io
 import os
 
 from vdocs.contracts.registry import CATALOG_ENRICHED, GOLD_INVENTORY, GOLD_INVENTORY_DB
 from vdocs.kernel import cas, db
+from vdocs.kernel import csv as kcsv
 from vdocs.models.catalog import ENRICHED_COLUMNS, EnrichedInventory, EnrichedRecord
 from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -46,7 +45,10 @@ class ServeInventoryStage(Stage):
             ctx.cfg.gold_inventory_json, inventory.model_dump_json(indent=2).encode("utf-8")
         )
         # published flat CSV table (human-browsable / spreadsheet-friendly)
-        cas.atomic_write(ctx.cfg.gold_inventory_csv, _to_csv(records).encode("utf-8"))
+        rows = ({"doc_id": sp.doc_id(r), **r.model_dump()} for r in records)
+        cas.atomic_write(
+            ctx.cfg.gold_inventory_csv, kcsv.to_csv(_CSV_COLUMNS, rows).encode("utf-8")
+        )
         # queryable SQLite, built atomically (temp + rename, §7.4)
         _build_db(ctx.cfg.gold_inventory_db, records)
 
@@ -67,15 +69,6 @@ class ServeInventoryStage(Stage):
                 "inventory-unclassified-apps", count=verdict.unclassified
             )
         return PostflightResult(ok=verdict.ok, reason=verdict.reason)
-
-
-def _to_csv(records: list[EnrichedRecord]) -> str:
-    buf = io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=_CSV_COLUMNS, extrasaction="ignore")
-    writer.writeheader()
-    for r in records:
-        writer.writerow({"doc_id": sp.doc_id(r), **r.model_dump()})
-    return buf.getvalue()
 
 
 def _build_db(path, records: list[EnrichedRecord]) -> None:  # type: ignore[no-untyped-def]

@@ -9,12 +9,11 @@ registries (drift is decided later, at ``fetch``/``acquisitions``, §7.6).
 
 from __future__ import annotations
 
-import csv
-import io
 import json
 
 from vdocs.contracts.registry import CATALOG_ENRICHED, CATALOG_RAW
 from vdocs.kernel import cas
+from vdocs.kernel import csv as kcsv
 from vdocs.models.catalog import ENRICHED_COLUMNS, Catalog, EnrichedInventory, EnrichedRecord
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -43,7 +42,8 @@ class CatalogStage(Stage):
             ctx.cfg.catalog_enriched, inventory.model_dump_json(indent=2).encode("utf-8")
         )
         cas.atomic_write(
-            ctx.cfg.catalog_enriched.with_suffix(".csv"), _to_csv(records).encode("utf-8")
+            ctx.cfg.catalog_enriched.with_suffix(".csv"),
+            kcsv.to_csv(ENRICHED_COLUMNS, (r.model_dump() for r in records)).encode("utf-8"),
         )
         cas.atomic_write(
             ctx.cfg.catalog_enriched.with_suffix(".schema.json"),
@@ -76,15 +76,6 @@ def _raw_row(section, app, doc) -> dict:  # type: ignore[no-untyped-def]
         "doc_url": doc.url,
         "app_url": app.url,
     }
-
-
-def _to_csv(records: list[EnrichedRecord]) -> str:
-    buf = io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=ENRICHED_COLUMNS, extrasaction="ignore")
-    writer.writeheader()
-    for r in records:
-        writer.writerow(r.model_dump())
-    return buf.getvalue()
 
 
 def _schema(records: list[EnrichedRecord]) -> dict:

@@ -12,13 +12,11 @@ run only when explicitly requested.
 
 from __future__ import annotations
 
-import csv
-import io
-
 import structlog
 
 from vdocs.contracts.registry import CATALOG_RAW, VDL
 from vdocs.kernel import cas
+from vdocs.kernel import csv as kcsv
 from vdocs.kernel.http import PageFetcher, PoliteClient
 from vdocs.models.catalog import Catalog
 from vdocs.models.stage import Idempotency, RunResult
@@ -98,22 +96,19 @@ class CrawlStage(Stage):
 
 
 def _to_csv(catalog: Catalog) -> str:
-    buf = io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=_CSV_COLUMNS)
-    writer.writeheader()
-    for section, app, doc in catalog.walk():
-        writer.writerow(
-            {
-                "section_name": section.name,
-                "app_code": app.app_code,
-                "app_name": app.name,
-                "app_status": app.status,
-                "title": doc.title,
-                "url": doc.url,
-                "filename": doc.filename,
-                "file_ext": doc.file_ext,
-                "doc_type_label": doc.doc_type_label,
-                "file_date": doc.file_date,
-            }
-        )
-    return buf.getvalue()
+    rows = (
+        {
+            "section_name": section.name,
+            "app_code": app.app_code,
+            "app_name": app.name,
+            "app_status": app.status,
+            "title": doc.title,
+            "url": doc.url,
+            "filename": doc.filename,
+            "file_ext": doc.file_ext,
+            "doc_type_label": doc.doc_type_label,
+            "file_date": doc.file_date,
+        }
+        for section, app, doc in catalog.walk()
+    )
+    return kcsv.to_csv(_CSV_COLUMNS, rows)
