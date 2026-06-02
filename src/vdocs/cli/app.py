@@ -16,6 +16,7 @@ from vdocs.orchestrator.state import StateStore
 from vdocs.stages.catalog.stage import CatalogStage
 from vdocs.stages.convert.stage import ConvertStage
 from vdocs.stages.crawl.stage import CrawlStage
+from vdocs.stages.discover.stage import DiscoverStage
 from vdocs.stages.fetch.stage import FetchStage
 from vdocs.stages.serve_inventory.stage import ServeInventoryStage
 
@@ -26,7 +27,14 @@ app = typer.Typer(
 
 def build_stages() -> list[Stage]:
     """All implemented stages, wired with their real (network) I/O defaults."""
-    return [CrawlStage(), CatalogStage(), ServeInventoryStage(), FetchStage(), ConvertStage()]
+    return [
+        CrawlStage(),
+        CatalogStage(),
+        ServeInventoryStage(),
+        FetchStage(),
+        ConvertStage(),
+        DiscoverStage(),
+    ]
 
 
 def _drive(
@@ -84,6 +92,12 @@ def fetch(force: bool = typer.Option(False, "--force", "-f")) -> None:
 def convert(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Convert fetched documents to markdown bundles (text@converted) + extract images."""
     _drive(only="convert", force=force)
+
+
+@app.command()
+def discover(force: bool = typer.Option(False, "--force", "-f")) -> None:
+    """Mine candidate patterns (boilerplate / dead phrases / glossary) into reports/patterns."""
+    _drive(only="discover", force=force)
 
 
 @app.command()

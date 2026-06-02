@@ -113,6 +113,14 @@ ASSETS = ArtifactContract(
     relpath="assets",
     optional=True,  # a corpus slice with no images yields an empty asset store — still valid
 )
+# `discover` candidate patterns (pre-curation, §9.6): proposes registries/ updates, mutates nothing.
+PATTERNS = ArtifactContract(
+    key="reports/patterns",
+    kind=Kind.FILE,
+    storage_class=StorageClass.STATE,
+    produced_by="discover",
+    relpath="reports/patterns/patterns.json",
+)
 
 
 def foundational_registry() -> ArtifactRegistry:
@@ -134,6 +142,7 @@ def default_registry() -> ArtifactRegistry:
         RAW_INDEX,
         TEXT_CONVERTED,
         ASSETS,
+        PATTERNS,
     ):
         reg.register(contract)
     return reg

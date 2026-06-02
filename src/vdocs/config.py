@@ -183,3 +183,8 @@ class Settings(BaseSettings):
     @property
     def reports(self) -> Path:
         return self.lake / "reports"
+
+    @property
+    def patterns_report(self) -> Path:
+        """``discover`` output: candidate patterns (pre-curation); proposes registries (§9.6)."""
+        return self.reports / "patterns" / "patterns.json"

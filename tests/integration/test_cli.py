@@ -69,7 +69,16 @@ def _seed_catalog_raw(tmp_path):
 def test_help_lists_stage_subcommands():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for cmd in ("crawl", "catalog", "serve-inventory", "fetch", "convert", "inventory", "run"):
+    for cmd in (
+        "crawl",
+        "catalog",
+        "serve-inventory",
+        "fetch",
+        "convert",
+        "discover",
+        "inventory",
+        "run",
+    ):
         assert cmd in result.stdout
 
 
@@ -118,6 +127,7 @@ def _faked_stages():
     from vdocs.stages.convert.convert_pure import ConvertedDoc
     from vdocs.stages.convert.stage import ConvertStage
     from vdocs.stages.crawl.stage import CrawlStage
+    from vdocs.stages.discover.stage import DiscoverStage
     from vdocs.stages.fetch.stage import FetchStage
     from vdocs.stages.serve_inventory.stage import ServeInventoryStage
 
@@ -130,6 +140,7 @@ def _faked_stages():
         ServeInventoryStage(),
         FetchStage(fetch_bytes=_BYTES.get),
         ConvertStage(convert=lambda data, ext: ConvertedDoc(markdown="# Converted\n")),
+        DiscoverStage(),
     ]
 
 
@@ -164,6 +175,10 @@ def test_crawl_catalog_fetch_commands_in_sequence(tmp_path, monkeypatch):
     bodies = list(cfg.silver_converted.rglob("body.md"))
     assert len(bodies) == 1 and bodies[0].read_text() == "# Converted\n"
     assert bodies[0].parent.name == "dg_5_3_1_dibr"  # <app>/<slug>/body.md
+
+    # discover mines the converted corpus into the candidate-patterns report
+    assert runner.invoke(app, ["discover"], env=env).exit_code == 0
+    assert cfg.patterns_report.exists()
 
 
 def test_inventory_status_without_gold_inventory_errors(tmp_path):
