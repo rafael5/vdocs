@@ -3,13 +3,13 @@
 # Keyed by the bundle identity <app>/<slug> (= safe(app_code)/safe(doc_slug)). The disposition is
 # ROUTE — consumed by `convert`, which uses Docling for listed docs and Pandoc for the rest.
 #
-# CURATION FINDING (2026-06-01): `discover`'s convert-quality probe flagged 45 docs (25 CPRS) where
-# Pandoc recovered NO heading structure (a "bare-marker explosion"). We *verified* Docling on a
-# representative sample (the worst CPRS RN at 23.9k words, a CPRS IG, AR/WS, ACR) — Docling produced
-# **0 headings too**. For DOCX, Docling reads Word styles structurally (its layout-ML is for PDF), so
-# when the source has no heading styles neither converter can recover a heading tree that isn't there.
-# → Routing these docs to Docling does not help; the real remedy is HEADING RECOVERY from the doc's own
-#   TOC text + section numbering + template schema (§6.7 old-generation heuristic, a `normalize` step) —
-#   deferred. So the allowlist is intentionally EMPTY: the mechanism stands; no doc currently benefits.
+# Trigger (v1's signal, `discover`'s converter-routing probe): a heavy Word `[[…]](#_Toc…)`
+# cross-reference explosion that Pandoc shreds into thousands of bare list markers. Docling
+# reconstructs the lists cleanly. Verified on cprsguium: bare markers 3,058 → 0, proper list
+# items 332 → 3,230 (xref wraps 5,092 → 0). This is concentrated in ~one doc, not corpus-wide —
+# cprsguium alone is ~65% of every bare marker in the corpus — so keep the allowlist tiny.
+#
+# (v1's allowlist was {cprsguium, constm}; constm = GMRC/constm is not in the current sample.)
 
-docling: []
+docling:
+  - CPRS/cprsguium

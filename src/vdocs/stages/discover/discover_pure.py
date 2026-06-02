@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 _WS = re.compile(r"\s+")
 _BLOCK_SPLIT = re.compile(r"\n\s*\n")
 _HEADING = re.compile(r"^#{1,6}\s")
-_HEADING_LINE = re.compile(r"^#{1,6} ", re.MULTILINE)
+_BARE_MARKER_RE = re.compile(r"^[ \t]*(?:\d+\.|[-*])[ \t]*$", re.MULTILINE)
 _ACRONYM = re.compile(r"\b[A-Z][A-Z0-9]{1,7}\b")
 _SAMPLE = 5  # how many example doc_ids to carry as evidence
 
@@ -48,15 +48,17 @@ class PatternCandidate(BaseModel):
 
 class RoutingCandidate(BaseModel):
     """A convert-quality verdict proposing a different converter for one document (§9.6,
-    ADR-010 ``registries/converter-routing``). Pandoc occasionally yields a *bare-marker
-    explosion* — a long body with no recovered heading structure — which Docling handles
-    better; this flags such docs as ROUTE candidates with the evidence."""
+    ADR-010 ``registries/converter-routing``). Some VA DOCX wrap their lists in Word
+    ``[[…]](#_Toc…)`` cross-reference fields; Pandoc detaches each marker from its content,
+    **exploding lists into thousands of bare markers** (a marker alone on a line). Docling
+    reconstructs the lists cleanly (verified on ``cprsguium``: 3,058 bare markers → 0; proper
+    list items 332 → 3,230). This flags such docs as Docling ROUTE candidates with the evidence."""
 
     doc_id: str  # the bundle path <app>/<slug>
     suggested_converter: str  # docling
     reason: str
-    words: int
-    headings: int
+    xref_wraps: int  # Word `[[…]]` cross-ref wraps in the Pandoc output (the strong trigger)
+    bare_markers: int  # list markers alone on a line — the explosion Docling fixes
 
 
 class PatternReport(BaseModel):
@@ -158,28 +160,39 @@ def mine_glossary(docs: dict[str, str], *, min_docs: int = 3) -> list[PatternCan
     return out
 
 
-def count_headings(body: str) -> int:
-    """Number of ATX markdown headings (``# ``…``###### ``) in a body — the recovered structure."""
-    return len(_HEADING_LINE.findall(body))
+def count_bare_markers(body: str) -> int:
+    """List markers alone on a line (``- ``/``* ``/``N.`` with no content) — Pandoc's explosion
+    of Word ``[[…]]`` cross-reference fields, which Docling reconstructs into real list items."""
+    return len(_BARE_MARKER_RE.findall(body))
 
 
-def mine_converter_routing(docs: dict[str, str], *, min_words: int = 400) -> list[RoutingCandidate]:
-    """Flag substantial documents that Pandoc converted with **no heading structure** (a
-    bare-marker explosion) as candidates to re-convert with Docling (§9.6, ADR-010). Evidence:
-    word count + heading count. Sorted worst-first (most words, structure lost)."""
+def count_xref_wraps(body: str) -> int:
+    """Word ``[[…]]`` cross-reference field wraps surviving in the Pandoc markdown."""
+    return body.count("[[")
+
+
+def mine_converter_routing(
+    docs: dict[str, str], *, min_xref_wraps: int = 50
+) -> list[RoutingCandidate]:
+    """Flag documents whose Pandoc output carries a heavy Word ``[[…]]`` cross-reference
+    explosion (≥ ``min_xref_wraps``) — the list-shredding pathology Docling fixes cleanly
+    (§9.6, ADR-010). Evidence: cross-ref wraps + the bare-marker count. Sorted worst-first.
+
+    This is v1's signal, not heading count: ``cprsguium`` has 573 headings *and* 3,058 bare
+    markers — measuring headings misses exactly the doc Docling helps."""
     out: list[RoutingCandidate] = []
     for doc_id, body in docs.items():
-        words = len(body.split())
-        headings = count_headings(body)
-        if words >= min_words and headings == 0:
+        xref = count_xref_wraps(body)
+        if xref >= min_xref_wraps:
+            bare = count_bare_markers(body)
             out.append(
                 RoutingCandidate(
                     doc_id=doc_id,
                     suggested_converter="docling",
-                    reason=f"no headings recovered in a {words}-word document (structure lost)",
-                    words=words,
-                    headings=headings,
+                    reason=f"{xref} Word cross-ref wraps explode lists into {bare} bare markers",
+                    xref_wraps=xref,
+                    bare_markers=bare,
                 )
             )
-    out.sort(key=lambda c: -c.words)
+    out.sort(key=lambda c: -c.xref_wraps)
     return out

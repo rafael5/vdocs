@@ -63,27 +63,27 @@ def test_candidates_sorted_by_doc_count_desc():
     assert [c.doc_count for c in cands] == sorted([c.doc_count for c in cands], reverse=True)
 
 
-def test_count_headings():
-    body = "# A\n\ntext\n\n## B\n\n### C\n\nnot # a heading inline\n"
-    assert nz_count(body) == 3
+def test_count_bare_markers_and_xref_wraps():
+    body = "1.\n\n-\n\n* \n\n1. real item\n\n- real item\n\nSee [[ref]](#_Toc1) and [[x]](#_Toc2)\n"
+    assert dp.count_bare_markers(body) == 3  # the three empty markers, not the real items
+    assert dp.count_xref_wraps(body) == 2  # two [[ cross-ref wraps
 
 
-def nz_count(body):
-    return dp.count_headings(body)
-
-
-def test_mine_converter_routing_flags_structureless_long_docs():
-    long_no_heads = "word " * 500  # 500 words, no headings → Pandoc lost the structure
+def test_mine_converter_routing_flags_xref_explosion_not_missing_headings():
+    # the v1 signal: a doc with a heavy [[…]] cross-ref explosion (cprsguium has 573 headings
+    # AND 3,058 bare markers — measuring headings would MISS it)
+    exploded = "# Heading\n\n" + ("-\n\n[[x]](#_Toc1)\n\n" * 60)  # 60 xref wraps + 60 bare markers
     docs = {
-        "CPRS/or_30_243rn": long_no_heads,
-        "CPRS/cprsguium": "# Title\n\n## Section\n\n" + ("word " * 500),  # has headings → fine
-        "ADT/short": "word word word",  # short → not flagged even with no headings
+        "CPRS/cprsguium": exploded,
+        "CPRS/clean": "# Title\n\n1. real item\n\n2. another real item\n",  # no [[ → fine
+        "ADT/structureless": "word " * 500,  # no headings but also no [[ → NOT a Docling case
     }
-    cands = dp.mine_converter_routing(docs, min_words=400)
-    assert [c.doc_id for c in cands] == ["CPRS/or_30_243rn"]
+    cands = dp.mine_converter_routing(docs, min_xref_wraps=50)
+    assert [c.doc_id for c in cands] == ["CPRS/cprsguium"]
     c = cands[0]
-    assert c.suggested_converter == "docling" and c.headings == 0 and c.words >= 400
-    assert "structure lost" in c.reason
+    assert c.suggested_converter == "docling"
+    assert c.xref_wraps == 60 and c.bare_markers == 60
+    assert "cross-ref wraps explode" in c.reason
 
 
 def test_mine_glossary_acronyms_filters_stopwords():
