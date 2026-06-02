@@ -1,0 +1,62 @@
+# registries/structures — recurring structural conventions → CANONICALIZE to standard GFM (§9.7).
+#
+# Curated from `discover`'s `mine_structures` candidates over the real 469-doc corpus (P2.2a).
+# Each convention is rendered many ways across the corpus (the "Note" callout appears as
+# `**Note:`, `NOTE:`, `**Note** :`, …); `normalize` will rewrite every matched `variant` to the
+# single `canonical_form`. Disposition is fixed CANONICALIZE. `status: approved` = promoted past
+# the §9.6 curation gate; `discover` re-proposes drift as `candidate`.
+#
+# `match` is the case-insensitive token (callouts) or heading text (toc/revision-table) the
+# normalize CANONICALIZE step keys on; `evidence_docs` records the corpus support at curation time.
+
+conventions:
+  # --- callouts / admonitions → GitHub alert syntax (or a bold blockquote for non-alert labels) ---
+  - key: callout:note
+    convention: callout
+    disposition: CANONICALIZE
+    label: note
+    canonical_form: "> [!NOTE]"
+    status: approved
+    evidence_docs: 236
+  - key: callout:example
+    convention: callout
+    disposition: CANONICALIZE
+    label: example
+    canonical_form: "> **Example:**"   # not a GitHub alert label → bold blockquote
+    status: approved
+    evidence_docs: 65
+  - key: callout:warning
+    convention: callout
+    disposition: CANONICALIZE
+    label: warning
+    canonical_form: "> [!WARNING]"
+    status: approved
+    evidence_docs: 44
+  - key: callout:important
+    convention: callout
+    disposition: CANONICALIZE
+    label: important
+    canonical_form: "> [!IMPORTANT]"
+    status: approved
+    evidence_docs: 20
+  - key: callout:caution
+    convention: callout
+    disposition: CANONICALIZE
+    label: caution
+    canonical_form: "> [!CAUTION]"
+    status: approved
+    evidence_docs: 3
+
+  # --- heading-shape conventions ---
+  - key: toc:contents
+    convention: toc
+    disposition: CANONICALIZE
+    canonical_form: "## Contents"      # the §6.7 regenerated-TOC heading
+    status: approved
+    evidence_docs: 55
+  - key: revision-table
+    convention: revision-table
+    disposition: CANONICALIZE
+    canonical_form: "## Revision History"
+    status: approved
+    evidence_docs: 56

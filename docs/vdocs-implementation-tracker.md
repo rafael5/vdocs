@@ -163,6 +163,23 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **P2.2a: `discover` structural-convention miner → `registries/structures`
+  (CANONICALIZE).** First half of the P2.2 split (the prompt sanctioned splitting it). New pure
+  `mine_structures` detects three convention families across the corpus and proposes one
+  `StructureCandidate` per convention (disposition CANONICALIZE), each carrying the distinct source
+  `variants` as canonicalization evidence: **callout/admonition** styling (the same label rendered
+  a dozen ways — `**Note:`, `NOTE:`, `**Note** :` — mapped to GitHub alert syntax `> [!NOTE]`, or a
+  bold blockquote for non-alert labels like Example), the **contents** heading shape, and the
+  **revision-history** heading shape. New `structures` field on `PatternReport`; the stage wires it
+  in with a `structures` count. **Curated** the high-confidence starter set into
+  `registries/structures/structures.yaml` from the real-corpus mining (note 236 docs, example 65,
+  revision-table 56, toc 55, warning 44, important 20, caution 3 — 7 conventions, 6 auto-graded);
+  a validity test pins the curated canonical forms to the miner's logic. No new stage input
+  (structures are mined from bodies alone); `discover` still mutates no content. The
+  `(doc_type, era)` template miner (P2.2b) is split out — it needs a doc_type+era join that
+  `discover` does not have today (catalog.enriched carries `doc_code` but **no publication date**),
+  a §8 input seam raised before coding. 329 tests, 100% cov (4 new structures tests + integration
+  callout assertion).
 - **2026-06-02** — **P2.1: `discover` near-duplicate boilerplate via `kernel/discovery` (retires
   the P0.2 dead-code finding).** `mine_recurring_blocks`'s boilerplate path used exact
   whitespace-collapsed equality (`block_key`), so boilerplate that drifts by a word across docs

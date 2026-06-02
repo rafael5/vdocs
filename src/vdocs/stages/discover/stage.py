@@ -19,7 +19,9 @@ from vdocs.orchestrator.stage import Stage, StageContext
 
 class DiscoverStage(Stage):
     name = "discover"
-    description = "mine candidate boilerplate / dead-phrase / glossary patterns (proposals only)"
+    description = (
+        "mine candidate boilerplate / dead-phrase / glossary / structure patterns (proposals only)"
+    )
     requires = [TEXT_CONVERTED]
     produces = [PATTERNS]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
@@ -37,6 +39,7 @@ class DiscoverStage(Stage):
             blocks=dp.mine_recurring_blocks(docs),
             glossary=dp.mine_glossary(docs),
             converter_routing=dp.mine_converter_routing(docs),
+            structures=dp.mine_structures(docs),
         )
         cas.atomic_write(ctx.cfg.patterns_report, report.model_dump_json(indent=2).encode("utf-8"))
 
@@ -44,6 +47,7 @@ class DiscoverStage(Stage):
             "documents": len(docs),
             "glossary": len(report.glossary),
             "converter_routing": len(report.converter_routing),
+            "structures": len(report.structures),
         }
         for c in report.blocks:  # per-registry: templates / phrases / boilerplate
             counts[c.registry] = counts.get(c.registry, 0) + 1

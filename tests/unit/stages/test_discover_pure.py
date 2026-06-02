@@ -129,6 +129,67 @@ def test_distinct_boilerplate_blocks_do_not_over_cluster():
     assert len(boiler) == 2  # stayed apart
 
 
+def test_mine_structures_callout_variants_canonicalize_to_one_convention():
+    # the real-corpus trap: the same "Note" callout is styled a dozen ways (**Note:, NOTE:,
+    # **Note** :, Note:) — one convention, many stylings → CANONICALIZE to one GFM form
+    docs = {
+        "a/0": "Intro.\n\n**Note:** save first.\n",
+        "a/1": "Intro.\n\nNOTE: save first.\n",
+        "a/2": "Intro.\n\n**Note** : save first.\n",
+        "a/3": "Intro.\n\nNote: nothing here.\n",
+    }
+    cands = dp.mine_structures(docs, min_docs=3)
+    note = [c for c in cands if c.key == "callout:note"]
+    assert len(note) == 1
+    c = note[0]
+    assert c.convention == "callout"
+    assert c.disposition == "CANONICALIZE"
+    assert c.canonical_form == "> [!NOTE]"  # GitHub alert syntax
+    assert c.doc_count == 4
+    assert len(c.variants) >= 3  # several distinct source stylings observed
+
+
+def test_mine_structures_detects_toc_and_revision_table_shapes():
+    body = "# Title\n\n## Table of Contents\n\n- [A](#a)\n\n## Revision History\n\n| v | d |\n"
+    docs = {f"d/{i}": body for i in range(3)}
+    cands = dp.mine_structures(docs, min_docs=3)
+    keys = {c.key for c in cands}
+    assert "toc:contents" in keys
+    assert "revision-table" in keys
+    toc = next(c for c in cands if c.key == "toc:contents")
+    assert toc.convention == "toc" and toc.disposition == "CANONICALIZE"
+
+
+def test_mine_structures_below_threshold_is_not_a_candidate():
+    # callout AND heading conventions both in only 2 docs (< min_docs=3) → no candidates
+    docs = {
+        "a/0": "**Note:** once.\n\n## Contents\n\n## Revision History\n",
+        "a/1": "**Note:** twice.\n\n## Contents\n\n## Revision History\n",
+    }
+    assert dp.mine_structures(docs, min_docs=3) == []
+
+
+def test_curated_structures_registry_is_well_formed():
+    # the P2.2a starter set curated from the real corpus must stay consistent with the miner's
+    # canonical-form logic (so a curation edit that drifts from the code is caught here)
+    import yaml
+
+    from vdocs.config import Settings
+
+    path = Settings().registries / "structures" / "structures.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    conventions = data["conventions"]
+    assert conventions, "curated structures starter set is empty"
+    keys = {c["key"] for c in conventions}
+    assert {"callout:note", "toc:contents", "revision-table"} <= keys
+    for c in conventions:
+        assert c["disposition"] == "CANONICALIZE"
+        assert c["status"] == "approved"
+        if c["convention"] == "callout":
+            # the curated canonical_form must match what the miner would emit for that label
+            assert c["canonical_form"] == dp._callout_canonical_form(c["label"])
+
+
 def test_mine_glossary_acronyms_filters_stopwords():
     docs = {
         "a/1": "The CPRS and TIU systems; NOTE: see YES/NO and TO use it.",

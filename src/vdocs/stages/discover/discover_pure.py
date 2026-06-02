@@ -23,6 +23,23 @@ _HEADING = re.compile(r"^#{1,6}\s")
 _BARE_MARKER_RE = re.compile(r"^[ \t]*(?:\d+\.|[-*])[ \t]*$", re.MULTILINE)
 _ACRONYM = re.compile(r"\b[A-Z][A-Z0-9]{1,7}\b")
 _SAMPLE = 5  # how many example doc_ids to carry as evidence
+_MAX_VARIANTS = 8  # styling variants carried as canonicalization evidence
+
+# --- structural-convention detection (registries/structures, §9.7 CANONICALIZE) ---
+# A callout/admonition line: an optional bold wrapper around a known label, then a colon — the
+# real corpus styles "Note" a dozen ways (**Note:, NOTE:, **Note** :, Note:); all canonicalize
+# to one GFM alert. Labels that map to a GitHub alert use `> [!LABEL]`; the rest a bold blockquote.
+_CALLOUT_RE = re.compile(
+    r"^[ \t]*\**[ \t]*(note|caution|warning|important|tip|example|reminder)\b\**[ \t]*\**[ \t]*:",
+    re.IGNORECASE | re.MULTILINE,
+)
+_GFM_ALERTS = frozenset({"note", "tip", "important", "warning", "caution"})
+_TOC_RE = re.compile(
+    r"^#{1,3}[ \t]+(?:table of contents|contents)[ \t]*$", re.IGNORECASE | re.MULTILINE
+)
+_REVTABLE_RE = re.compile(
+    r"^#{1,3}[ \t]+(?:revision history|revisions)[ \t]*$", re.IGNORECASE | re.MULTILINE
+)
 
 # common all-caps English/header words that are not glossary terms (real-corpus noise: the
 # acronym shape over-matches NO/YES/TO/… and form-field labels). Curation can still add real ones.
@@ -63,14 +80,34 @@ class RoutingCandidate(BaseModel):
     bare_markers: int  # list markers alone on a line — the explosion Docling fixes
 
 
+class StructureCandidate(BaseModel):
+    """A recurring **structural convention** → ``registries/structures`` (CANONICALIZE, §9.7).
+
+    The same structural intent is rendered many ways across the corpus — the "Note" callout
+    appears as ``**Note:``, ``NOTE:``, ``**Note** :`` …; the contents heading as
+    ``# Table of Contents`` / ``# Contents`` at varying levels. Each is one *convention* with many
+    source ``variants`` that `normalize` should rewrite to one ``canonical_form`` (standard GFM)."""
+
+    convention: str  # callout | toc | revision-table
+    disposition: str = "CANONICALIZE"  # §9.7 structures disposition (fixed)
+    key: str  # convention id, e.g. "callout:note", "toc:contents", "revision-table"
+    canonical_form: str  # the standard GFM form to rewrite to (the curation target)
+    variants: list[str] = Field(default_factory=list)  # distinct source stylings observed
+    doc_count: int  # documents exhibiting the convention
+    sample_doc_ids: list[str] = Field(default_factory=list)
+    grade: str  # auto | review (the curation-gate hint)
+
+
 class PatternReport(BaseModel):
     """The ``reports/patterns`` artifact: candidate patterns, pre-curation. ``blocks`` holds the
     recurring-block candidates (each tagged ``registry`` = templates | phrases | boilerplate);
-    ``converter_routing`` holds per-document convert-quality routing candidates."""
+    ``converter_routing`` holds per-document convert-quality routing candidates; ``structures``
+    holds recurring structural-convention candidates."""
 
     blocks: list[PatternCandidate] = Field(default_factory=list)
     glossary: list[PatternCandidate] = Field(default_factory=list)
     converter_routing: list[RoutingCandidate] = Field(default_factory=list)
+    structures: list[StructureCandidate] = Field(default_factory=list)
 
 
 def split_blocks(markdown: str) -> list[str]:
@@ -212,6 +249,89 @@ def mine_glossary(docs: dict[str, str], *, min_docs: int = 3) -> list[PatternCan
     ]
     out.sort(key=lambda c: (-c.doc_count, c.key))
     return out
+
+
+def _callout_canonical_form(label: str) -> str:
+    """The standard GFM target for a callout label: a GitHub alert if supported, else a
+    bold blockquote (so non-alert labels like Example/Reminder still canonicalize uniformly)."""
+    if label in _GFM_ALERTS:
+        return f"> [!{label.upper()}]"
+    return f"> **{label.capitalize()}:**"
+
+
+def mine_structures(
+    docs: dict[str, str], *, min_docs: int = 3, auto_docs: int = 10
+) -> list[StructureCandidate]:
+    """Recurring structural conventions across the corpus → ``structures`` candidates (§9.7).
+
+    Three convention families, all CANONICALIZE-to-GFM: **callout/admonition** styling (the same
+    label rendered many ways — the strong signal), the **contents** heading shape, and the
+    **revision-history** heading shape. Each carries the distinct source ``variants`` as the
+    canonicalization evidence. Frequent (≥ ``auto_docs``) → ``auto``, else ``review``; mutates
+    nothing (proposals only)."""
+    callout_docs: dict[str, set[str]] = defaultdict(set)
+    callout_variants: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    convention_docs: dict[str, set[str]] = defaultdict(set)
+    convention_variants: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+
+    for doc_id, md in docs.items():
+        for m in _CALLOUT_RE.finditer(md):
+            label = m.group(1).lower()
+            callout_docs[label].add(doc_id)
+            callout_variants[label][_WS.sub(" ", m.group(0).strip())] += 1
+        for conv, rx in (("toc:contents", _TOC_RE), ("revision-table", _REVTABLE_RE)):
+            hits = rx.findall(md)
+            if hits:
+                convention_docs[conv].add(doc_id)
+                for h in hits:
+                    convention_variants[conv][_WS.sub(" ", h.strip())] += 1
+
+    out: list[StructureCandidate] = []
+    for label, ds in callout_docs.items():
+        if len(ds) < min_docs:
+            continue
+        out.append(
+            _structure_candidate(
+                "callout",
+                f"callout:{label}",
+                _callout_canonical_form(label),
+                callout_variants[label],
+                ds,
+                auto_docs,
+            )
+        )
+    canonical = {"toc:contents": "## Contents", "revision-table": "## Revision History"}
+    for conv, ds in convention_docs.items():
+        if len(ds) < min_docs:
+            continue
+        kind = "toc" if conv.startswith("toc") else "revision-table"
+        out.append(
+            _structure_candidate(
+                kind, conv, canonical[conv], convention_variants[conv], ds, auto_docs
+            )
+        )
+    out.sort(key=lambda c: (-c.doc_count, c.key))
+    return out
+
+
+def _structure_candidate(
+    convention: str,
+    key: str,
+    canonical_form: str,
+    variant_counts: dict[str, int],
+    docs: set[str],
+    auto_docs: int,
+) -> StructureCandidate:
+    variants = sorted(variant_counts, key=lambda v: (-variant_counts[v], v))[:_MAX_VARIANTS]
+    return StructureCandidate(
+        convention=convention,
+        key=key,
+        canonical_form=canonical_form,
+        variants=variants,
+        doc_count=len(docs),
+        sample_doc_ids=sorted(docs)[:_SAMPLE],
+        grade="auto" if len(docs) >= auto_docs else "review",
+    )
 
 
 def count_bare_markers(body: str) -> int:

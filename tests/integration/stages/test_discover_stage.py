@@ -24,7 +24,8 @@ def _seed_converted(ctx, n=4):
     root = ctx.cfg.silver_converted
     for i in range(n):
         body = root / "CPRS" / f"doc_{i}" / "body.md"
-        cas.atomic_write(body, f"# Doc {i}\n\n{_BOILER}\n\nUnique content for doc {i}.\n".encode())
+        text = f"# Doc {i}\n\n{_BOILER}\n\n**Note:** read it.\n\nUnique content for doc {i}.\n"
+        cas.atomic_write(body, text.encode())
     ctx.state.record(
         StageRun(
             stage="convert",
@@ -55,6 +56,9 @@ def test_discover_emits_candidate_patterns(ctx):
     assert boiler and boiler[0].disposition == "REFERENCE" and boiler[0].doc_count == 4
     # CPRS appears in all 4 docs → a glossary candidate
     assert "CPRS" in {c.key for c in report.glossary}
+    # the recurring **Note:** callout → a structures (CANONICALIZE) candidate
+    note = [c for c in report.structures if c.key == "callout:note"]
+    assert note and note[0].canonical_form == "> [!NOTE]" and note[0].doc_count == 4
 
     # discover mutates NO corpus content (proposals only, §9.6)
     assert {p: p.read_bytes() for p in ctx.cfg.silver_converted.rglob("body.md")} == bodies_before
