@@ -42,7 +42,9 @@ class ConvertStage(Stage):
 
         pandoc = self._pandoc or _pandoc_convert
         docling = self._docling or _docling_convert
-        routing = _load_converter_routing(ctx.cfg.registries / "converter-routing.yaml")
+        routing = _load_converter_routing(
+            ctx.cfg.registries / "converter-routing" / "converter-routing.yaml"
+        )
         index: dict[str, dict[str, str]] = json.loads(ctx.cfg.raw_index.read_text(encoding="utf-8"))
         raw = Cas(ctx.cfg.bronze_raw)
         assets = Cas(ctx.cfg.assets)

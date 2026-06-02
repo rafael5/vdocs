@@ -40,7 +40,7 @@ class NormalizeStage(Stage):
         from vdocs.stages.normalize import normalize_pure as nz
         from vdocs.stages.normalize import revision_pure as rev
 
-        phrases = _load_phrases(ctx.cfg.registries / "phrases.yaml")
+        phrases = _load_phrases(ctx.cfg.registries / "phrases" / "phrases.yaml")
         sha_by_path = _sha_by_bundle_path(ctx.cfg.raw_index)
 
         enriched_root = ctx.cfg.silver_enriched

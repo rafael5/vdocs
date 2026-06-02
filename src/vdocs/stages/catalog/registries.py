@@ -155,15 +155,21 @@ def _read(d: Path, name: str) -> dict:
 
 
 def load_registries(d: Path) -> Registries:
-    """Read every registry YAML from directory ``d`` into a :class:`Registries`."""
-    doc_types_text = (d / "doc-types.yaml").read_text(encoding="utf-8")
+    """Read every inventory-track vocabulary into a :class:`Registries`.
+
+    ``d`` is the ``registries/`` root; the catalog-track config lives under its
+    ``inventory/`` subdirectory (§9.7/§11 — the curated tree is subdirectories, with
+    the pattern registries — phrases/templates/… — in their own sibling subdirs).
+    """
+    inv = d / "inventory"
+    doc_types_text = (inv / "doc-types.yaml").read_text(encoding="utf-8")
     patterns, suffix_map, app_specific = parse_doc_types(doc_types_text)
-    manual = _read(d, "manual-labels")
-    noise = _read(d, "noise-domains")
-    systypes = _read(d, "system-types")
+    manual = _read(inv, "manual-labels")
+    noise = _read(inv, "noise-domains")
+    systypes = _read(inv, "system-types")
     return Registries(
-        section_code=dict(_read(d, "section-codes").get("section_code", {})),
-        abbrev_fallback=dict(_read(d, "abbrev-fallback").get("abbrev_fallback", {})),
+        section_code=dict(_read(inv, "section-codes").get("section_code", {})),
+        abbrev_fallback=dict(_read(inv, "abbrev-fallback").get("abbrev_fallback", {})),
         doc_type_patterns=patterns,
         slug_suffix_map=suffix_map,
         app_specific_suffix=app_specific,
@@ -175,9 +181,9 @@ def load_registries(d: Path) -> Registries:
         vba_form_hosts=frozenset(noise.get("vba_form_hosts") or []),
         system_type=dict(systypes.get("system_type", {})),
         cots_dependency=dict(systypes.get("cots_dependency", {})),
-        doc_labels=parse_doc_labels((d / "doc-labels.yaml").read_text(encoding="utf-8")),
+        doc_labels=parse_doc_labels((inv / "doc-labels.yaml").read_text(encoding="utf-8")),
         typo_corrections=parse_typo_corrections(
-            (d / "typo-corrections.yaml").read_text(encoding="utf-8")
+            (inv / "typo-corrections.yaml").read_text(encoding="utf-8")
         ),
-        packages=parse_package_master((d / "package-master.yaml").read_text(encoding="utf-8")),
+        packages=parse_package_master((inv / "package-master.yaml").read_text(encoding="utf-8")),
     )

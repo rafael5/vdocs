@@ -1202,6 +1202,16 @@ STRIP (templates) / CANONICALIZE (conventions); *text with no value at all* → 
 processing decision, not an edit* → ROUTE (converter). A registry is added to this index — never a
 hard-coded rule added to a stage (tenet #13).
 
+Each registry above is a **subdirectory** of `registries/` (the §11 layout): `registries/<name>/`,
+holding its curated YAML (e.g. `registries/phrases/phrases.yaml`). The six rows above are the §9.6
+*pattern* registries. One more curated family is **not** a pattern registry but is still
+version-controlled config consumed by the inventory track — the catalog-track vocabularies
+(`package-master`, `doc-types`, `manual-labels`, `system-types`, `section-codes`, `doc-labels`,
+`noise-domains`, `abbrev-fallback`, `typo-corrections`). These live under **`registries/inventory/`**
+(discovered by the inventory crawl/curation, consumed by `catalog` enrichment per
+[`vdl-crawl-spec.md`](vdl-crawl-spec.md)); they share the `registries/` tree (and its
+fingerprint) but carry no §9.6 disposition.
+
 One subtlety the disposition table understates: **templates are STRIP-from-body but their
 *structural schema* is RETAINED and reused** — they are an asset, not just noise. That dual role and
 the template-compliance QC it enables are §9.8.
@@ -1349,6 +1359,7 @@ registries/        # CURATED, version-controlled pattern catalog (full index: §
   glossary/        #   acronyms/terms → PROMOTE + dedupe to gold/glossary.md
   structures/      #   callout/TOC/revision-table conventions → CANONICALIZE to standard GFM
   converter-routing/  # Docling-vs-Pandoc allowlist (ADR-010) → ROUTE (consumed by convert)
+  inventory/       #   catalog-track vocabularies (package-master, doc-types, …) → consumed by `catalog` (§9.7); not a §9.6 pattern registry
 tests/
   unit/            # pure logic, no I/O (mirrors src 1:1)
   property/        # Hypothesis tests for transforms

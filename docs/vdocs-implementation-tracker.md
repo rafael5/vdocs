@@ -163,6 +163,20 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **P0.1 compliance remediation: `registries/` reshaped to the §11 subdirectory
+  layout.** The audit found the curated tree was flat files at `registries/` root, where §11/§9.7
+  specify per-registry **subdirectories**. Moved (`git mv`, byte-identical) `phrases.yaml →
+  phrases/`, `converter-routing.yaml → converter-routing/`, and the nine inventory-track configs
+  (`package-master`, `doc-types`, `manual-labels`, `system-types`, `section-codes`, `doc-labels`,
+  `noise-domains`, `abbrev-fallback`, `typo-corrections`) → **`registries/inventory/`**. Created the
+  four present-but-empty pattern dirs (`boilerplate/`, `templates/`, `glossary/`, `structures/`)
+  with README stubs so they track and self-document (populated in P2/P1). Repointed every consumer:
+  `catalog/registries.load_registries` (reads `inventory/`), `normalize` phrases loader, `convert`
+  converter-routing loader; the `REGISTRIES` tree fingerprint still covers the whole reshaped tree
+  (recursive walk), so a curation edit still invalidates `normalize`. **Doc-first:** §9.7 + §11
+  amended to record `registries/inventory/` as the (non-§9.6-pattern) home for the catalog-track
+  vocabularies. 318 tests, 100% cov (2 new layout/loader tests; existing registry-loader +
+  normalize/convert integration tests stay green on the byte-identical move).
 - **2026-06-02** — **`normalize` F-step: anchor substrate → `refs.yaml` sidecar (§6.7/§5.5).** Closed the
   load-bearing deferred F-step the whole Phase-4 retrieval layer hangs off
   (`index`/`relate`/`embed`/`serve-mcp`). New pure module `stages/normalize/anchors_pure.py` (mirrors the

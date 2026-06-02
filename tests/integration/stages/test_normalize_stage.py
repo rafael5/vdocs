@@ -63,8 +63,8 @@ def test_registry_edit_changes_normalize_inputs_fp(tmp_path):
     from vdocs.orchestrator.state import StateStore
 
     regs = tmp_path / "registries"
-    regs.mkdir()
-    (regs / "phrases.yaml").write_text("phrases:\n  - End of document\n")
+    (regs / "phrases").mkdir(parents=True)
+    (regs / "phrases" / "phrases.yaml").write_text("phrases:\n  - End of document\n")
     cfg = Settings(data_dir=tmp_path / "lake", registries_dir=regs)
     cfg.lake.mkdir(parents=True)
     store = StateStore.open(cfg.state_db)
@@ -74,7 +74,9 @@ def test_registry_edit_changes_normalize_inputs_fp(tmp_path):
         assert REGISTRIES in stage.requires
         before = stage._input_fps(ctx)
         assert REGISTRIES.key in before
-        (regs / "phrases.yaml").write_text("phrases:\n  - End of document\n  - Continued\n")
+        (regs / "phrases" / "phrases.yaml").write_text(
+            "phrases:\n  - End of document\n  - Continued\n"
+        )
         after = stage._input_fps(ctx)
         assert after[REGISTRIES.key] != before[REGISTRIES.key]
     finally:
