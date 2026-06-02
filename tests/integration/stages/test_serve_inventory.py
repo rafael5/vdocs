@@ -83,6 +83,13 @@ def test_serve_inventory_builds_gold_and_passes_gate(ctx):
     inv = EnrichedInventory.model_validate_json(ctx.cfg.gold_inventory_json.read_text())
     assert len(inv.records) == 2
 
+    # published flat CSV table — leads with doc_id, one row per record
+    csv_lines = ctx.cfg.gold_inventory_csv.read_text().splitlines()
+    header = csv_lines[0].split(",")
+    assert header[0] == "doc_id" and "anchor_key" in header and "noise_type" in header
+    assert len(csv_lines) == 1 + 2  # header + 2 records
+    assert all("ADT:dg_5_3_1057_dibr" in line for line in csv_lines[1:])
+
     # queryable SQLite with the doc_id join key + selection indexes
     conn = sqlite3.connect(ctx.cfg.gold_inventory_db)
     conn.row_factory = sqlite3.Row

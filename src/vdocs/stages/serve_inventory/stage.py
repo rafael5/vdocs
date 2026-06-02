@@ -11,6 +11,8 @@ until the gate is green.
 
 from __future__ import annotations
 
+import csv
+import io
 import os
 
 from vdocs.contracts.registry import CATALOG_ENRICHED, GOLD_INVENTORY, GOLD_INVENTORY_DB
@@ -18,9 +20,12 @@ from vdocs.kernel import cas, db
 from vdocs.models.catalog import ENRICHED_COLUMNS, EnrichedInventory, EnrichedRecord
 from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
+from vdocs.stages.serve_inventory import serve_pure as sp
 
 # columns indexed for the common selection queries (by app/section/type/group/noise/id)
 _INDEXED = ("doc_id", "app_name_abbrev", "section_code", "doc_code", "group_key", "noise_type")
+# the published CSV table leads with the stable doc_id join key, then the §5 columns
+_CSV_COLUMNS = ["doc_id", *ENRICHED_COLUMNS]
 
 
 class ServeInventoryStage(Stage):
@@ -40,6 +45,8 @@ class ServeInventoryStage(Stage):
         cas.atomic_write(
             ctx.cfg.gold_inventory_json, inventory.model_dump_json(indent=2).encode("utf-8")
         )
+        # published flat CSV table (human-browsable / spreadsheet-friendly)
+        cas.atomic_write(ctx.cfg.gold_inventory_csv, _to_csv(records).encode("utf-8"))
         # queryable SQLite, built atomically (temp + rename, §7.4)
         _build_db(ctx.cfg.gold_inventory_db, records)
 
@@ -47,8 +54,6 @@ class ServeInventoryStage(Stage):
         return RunResult(counts=counts)
 
     def deep_gate(self, ctx: StageContext) -> PostflightResult:
-        from vdocs.stages.serve_inventory import serve_pure as sp
-
         inventory = EnrichedInventory.model_validate_json(
             ctx.cfg.gold_inventory_json.read_text(encoding="utf-8")
         )
@@ -64,21 +69,29 @@ class ServeInventoryStage(Stage):
         return PostflightResult(ok=verdict.ok, reason=verdict.reason)
 
 
-def _build_db(path, records: list[EnrichedRecord]) -> None:  # type: ignore[no-untyped-def]
-    from vdocs.stages.serve_inventory import serve_pure as sp
+def _to_csv(records: list[EnrichedRecord]) -> str:
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=_CSV_COLUMNS, extrasaction="ignore")
+    writer.writeheader()
+    for r in records:
+        writer.writerow({"doc_id": sp.doc_id(r), **r.model_dump()})
+    return buf.getvalue()
 
+
+def _build_db(path, records: list[EnrichedRecord]) -> None:  # type: ignore[no-untyped-def]
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.tmp")
     if tmp.exists():
         tmp.unlink()
-    cols = ["doc_id", *ENRICHED_COLUMNS]
-    col_defs = ", ".join(f"{c} INTEGER" if c == "cots_dependent" else f"{c} TEXT" for c in cols)
+    col_defs = ", ".join(
+        f"{c} INTEGER" if c == "cots_dependent" else f"{c} TEXT" for c in _CSV_COLUMNS
+    )
     conn = db.connect(tmp)
     try:
         conn.execute(f"CREATE TABLE inventory ({col_defs})")
-        placeholders = ", ".join("?" for _ in cols)
+        placeholders = ", ".join("?" for _ in _CSV_COLUMNS)
         conn.executemany(
-            f"INSERT INTO inventory ({', '.join(cols)}) VALUES ({placeholders})",
+            f"INSERT INTO inventory ({', '.join(_CSV_COLUMNS)}) VALUES ({placeholders})",
             [[sp.doc_id(r), *[_cell(getattr(r, c)) for c in ENRICHED_COLUMNS]] for r in records],
         )
         for col in _INDEXED:

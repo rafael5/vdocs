@@ -93,6 +93,11 @@ class Settings(BaseSettings):
         return self.inventory_gold / "inventory.db"
 
     @property
+    def gold_inventory_csv(self) -> Path:
+        """inv-gold: the GOLD INVENTORY published as a flat CSV table (doc_id + the §5 columns)."""
+        return self.inventory_gold / "inventory.csv"
+
+    @property
     def catalog_raw(self) -> Path:
         """inv-bronze: the raw scraped catalog (immutable crawl evidence)."""
         return self.inventory_bronze / "catalog.raw.json"
