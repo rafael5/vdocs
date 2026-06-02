@@ -741,7 +741,10 @@ published markdown, and the MCP resource URIs (§5.5).
 authoritative navigation, the source's own in-body table of contents must **leave the body** — else the
 normalized document carries two TOCs (the stale text one with page numbers + the derived one). This is
 the `toc` convention of `registries/structures` (CANONICALIZE, §9.6): `normalize` recognises a legacy
-contents section by its heading (the curated variants — `Table of Contents`, `Contents`, … at H1–H3) and
+contents section by its heading (the curated variants — `Table of Contents`, `Contents`, … at H1–H3,
+**and also at >6 `#`** — Pandoc emits invalid-GFM oversized ATX headings like
+`########### Table of Contents` from deep DOCX outline levels; the hash count is an upstream artifact,
+so the text match is trusted at those levels too) and
 removes that heading plus the entries beneath it up to the next real heading, *before* deriving the
 fresh `## Contents`. Registry-driven (the recognised variants are curated data, not a hard-coded list —
 tenet #13) and idempotent (a prior run's generated `## Contents` is itself stripped and rebuilt
@@ -917,7 +920,7 @@ plane), **DOC** = the document medallion (data plane) (§4). The inventory track
 | Layer | Stage | requires | produces | idempotency |
 |---|---|---|---|---|
 | 🥉 INV | **crawl** | `vdl` (external) | `inventory/bronze:catalog.raw` (raw scraped catalog — immutable evidence) | FORCE_ONLY (network) |
-| 🥈 INV | **catalog** | `catalog.raw` | `inventory/silver:catalog.enriched` — the **conformed enriched inventory**: full multi-pass enrichment + system classification per **[`vdl-crawl-spec.md`](vdl-crawl-spec.md)** (patch identity incl. multi-NS, doc-type/labels, `group_key` + version-free `anchor_key`, **noise classification**, companion pairing, drift) | SKIP_IF_UNCHANGED |
+| 🥈 INV | **catalog** | `catalog.raw` | `inventory/silver:catalog.enriched` — the **conformed enriched inventory**: full multi-pass enrichment + system classification per **[`vdl-crawl-spec.md`](vdl-crawl-spec.md)** (patch identity incl. multi-NS, doc-type/labels, `group_key` + version-free `anchor_key`, **noise classification**, companion pairing). **`catalog.enriched` is a pure function of one crawl** — drift detection (NEW/SUPERSEDED/CHANGED-IN-PLACE/UNCHANGED/WITHDRAWN) is *temporal* (it compares a fresh crawl against prior state) and therefore belongs to the §7.6 scheduled/incremental layer (Phase 7), **not** to this deterministic artifact. | SKIP_IF_UNCHANGED |
 | 🥇 INV | **serve-inventory** | `catalog.enriched` | `inventory/gold` — the **GOLD INVENTORY** (curated · browsable + machine-queryable selection surface; a pure function of `catalog.enriched`). **Postflight HARD GATE** — complete vs. the crawl, enriched, noise-classified, no information loss + sane distributions (crawl-spec §7); `ok` only if green. **This `ok` is the fetch gate.** | SKIP_IF_UNCHANGED |
 | 🥉 DOC | **fetch** | **gold inventory `ok` (the gate, green)** + an explicit **selection** (the selection surface, §5.6); reads `state.db:acquisitions` (prior status — *out-of-contract* mutable state, §5.5) | `documents/bronze:raw` (CAS docx), `raw/index.json` (derived CAS manifest); writes `state.db:acquisitions` (per-doc fetch status — the system of record, *out-of-contract* mutable state, §5.5) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **convert** | `raw`, `raw/index.json` | `text@converted`, `assets` (CAS) | SKIP_IF_UNCHANGED |

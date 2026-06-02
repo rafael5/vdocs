@@ -60,6 +60,15 @@ def evaluate_gate(records: list[EnrichedRecord], crawl_documents: int | None) ->
         if not r.doc_format:
             return GateResult(ok=False, reason=f"missing doc_format for {doc_id(r)}")
 
+    # Sane distributions (spec §7): the per-record loop above already guarantees no empty
+    # doc_format/section_code bucket; this adds the corpus-level floor — at least one *genuine*
+    # (non-noise) document must survive enrichment. An inventory where every record is classified
+    # as noise is a systemic enrichment failure, never a blessable gold inventory.
+    if not any(r.noise_type == "" for r in records):
+        return GateResult(
+            ok=False, reason="no genuine documents — every record classified as noise"
+        )
+
     # Soft signal: every app should map to a system_type; surface (don't block on) any gaps.
     unclassified = sum(1 for r in records if r.system_type == "unclassified")
     return GateResult(ok=True, unclassified=unclassified)

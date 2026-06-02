@@ -27,8 +27,10 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 **Pipeline stages (§8): 8 ✅ · 0 ◐ · 11 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
 counted separately below). Last updated **2026-06-02**. **Phases 1–3 complete and merged to `master`**
 (PRs #3/#4/#5) — inventory medallion + gated bronze + the full document-silver pipeline, run
-end-to-end on a real 469-doc VA corpus; `make check` green (**411 tests, 100% cov**, ruff+mypy clean).
-**Next: Phase 4 `consolidate`.**
+end-to-end on a real 469-doc VA corpus; `make check` green (**458 tests, branch cov 99.7% / gate ≥95%**,
+ruff+mypy clean) after the pre-Phase-4 hardening pass (reliability R1–R9 [R4 split out], redundancy
+D1–D5, the `revisions.yaml` rename, drift-doc reconciliation, a 7-invariant property suite + branch
+coverage). **Next: Phase 4 `consolidate`.**
 
 | Phase | Title | Status | Progress |
 |---|---|:--:|:--:|
@@ -136,9 +138,12 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
   is on the upgraded pins. (The stale `docs/phase-4-kickoff` branch that downgraded them was retired.)
 
 **Current focus → Phase 4 `consolidate`.** Phases 1–3 are ✅ and **merged to `master`** (origin tip
-`224ab51`): the inventory medallion + gated bronze, and the full document-silver pipeline
+`224ab51` at merge); the **pre-Phase-4 hardening pass** then landed on
+`fix/compliance-remediation-pre-phase4` (reliability R1–R9 [R4 split to a follow-up], redundancy
+D1–D5, `revisions.yaml` rename, drift reconciliation, property suite) — pending merge to `master`.
+The inventory medallion + gated bronze, and the full document-silver pipeline
 (`convert`→`discover`→`enrich`→`normalize`), all green on a real 469-doc corpus, **DOCX-only** (§1);
-`make check` 411 tests, 100% cov. `normalize` shipped every F-step incl. the **legacy-TOC strip**
+`make check` 458 tests, branch cov 99.7% (gate ≥95%). `normalize` shipped every F-step incl. the **legacy-TOC strip**
 (`registries/structures` CANONICALIZE `toc`). **Next:** `consolidate` (§6.6) — version-group grouping +
 anchor document + append-only `history.yaml` lineage — then `index`→`relate`→`manifest`. Kickoff prompt:
 [`docs/prompts/next-session-phase-4-kickoff.md`](prompts/next-session-phase-4-kickoff.md).
@@ -233,6 +238,17 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):
+  - **E — doc reconciliation + bounded gate distributions.** (C1/D-dec-1) Reworded §8's `catalog`
+    row so drift detection (NEW/SUPERSEDED/CHANGED/UNCHANGED/WITHDRAWN) is owned by the §7.6
+    scheduled/incremental layer (Phase 7), stating `catalog.enriched` is a **pure function of one
+    crawl**. (C3) Amended §6.7 to note `strip_legacy_toc` recognises >6-`#` (invalid-GFM) legacy-TOC
+    headings, and added the missing Change Log entry for `e1e3b44` (below). (C4/D-dec-5) Added a
+    bounded distribution assertion to `serve_pure.evaluate_gate` — the gold inventory now fails if
+    **no genuine document** survives (every record classified as noise = systemic enrichment bug),
+    making the §8 "sane distributions (crawl-spec §7)" clause enforced rather than aspirational;
+    with a unit test. (C5) Refreshed the test-count/coverage line and the stale origin-tip framing.
+    B3 (URL/text helper dedup) was **deliberately skipped** — optional in the plan, lowest-value,
+    and not worth destabilising the Phase-C work.
   - **D — property tests + branch coverage + Hypothesis profile (§12).** Added 7 Hypothesis
     `@given` property tests under `tests/property/`: `kernel.csv.to_csv` adversarial round-trip
     (commas/quotes/newlines — confirmed correct, no escaping bug); `normalize_body` idempotency over
@@ -320,6 +336,12 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
   - **A1 — dead code removed.** Deleted `convert_pure.image_targets` (no `src/` caller) + its two
     tests. Documented `kernel.discovery.exact_jaccard` as the reference oracle for the
     `estimate_jaccard` property test (Phase D) — it stops being dead once that test lands.
+- **2026-06-02** — **`normalize` strips legacy in-body TOC behind oversized (>6 `#`) headings
+  (`e1e3b44`).** Pandoc emits invalid-GFM oversized ATX headings (e.g. `########### Table of Contents`)
+  from deep DOCX outline levels; `strip_legacy_toc` now recognises a curated legacy-contents heading
+  at H1–H3 **or** at >6 `#` (the hash count is an upstream artifact, so the text match is trusted),
+  so the oversized legacy TOC is removed before the derived `## Contents` is generated — no duplicate,
+  no stray invalid heading. (Change Log entry added retroactively in the Phase-E reconciliation.)
 - **2026-06-02** — **Phase-4 kickoff prep: resolved 3 design seams + retired a stale branch (doc-only).**
   Wrote the Phase-4 kickoff prompt the tracker references
   ([`docs/prompts/next-session-phase-4-kickoff.md`](prompts/next-session-phase-4-kickoff.md)) and

@@ -64,6 +64,13 @@ def test_gate_passes_but_reports_unclassified_as_soft_signal():
     assert g.ok and g.unclassified == 1
 
 
+def test_gate_fails_when_no_genuine_documents():
+    # sane distributions (crawl-spec §7): every record classified as (valid) noise means the
+    # genuine inventory collapsed to empty — a systemic enrichment bug, not a blessable inventory
+    g = sp.evaluate_gate([_rec(noise_type="vba_form")], crawl_documents=1)
+    assert not g.ok and "genuine" in g.reason
+
+
 # --- inventory_status join -------------------------------------------------
 def test_inventory_status_collapses_formats_and_joins_acquisitions():
     docx = _rec(doc_format="docx", doc_code="DIBR", doc_title="T")
