@@ -69,3 +69,53 @@ def test_estimate_tracks_overlap():
     sig_near = d.minhash_signature(near, num_perm=128)
     sig_far = d.minhash_signature(far, num_perm=128)
     assert d.estimate_jaccard(sig_base, sig_near) > d.estimate_jaccard(sig_base, sig_far)
+
+
+# --- near-duplicate clustering (LSH banding + union-find) -------------------
+
+
+def _sig(text: str) -> tuple[int, ...]:
+    return d.minhash_signature(d.shingles(text, k=3), num_perm=128)
+
+
+def test_lsh_candidate_pairs_collide_for_near_duplicates():
+    sigs = [
+        _sig("the standard legal notice applies to all documents in this corpus today"),
+        _sig("the standard legal notice applies to most documents in this corpus today"),
+        _sig("completely unrelated text about clinical reminders and order checks here"),
+    ]
+    pairs = d.lsh_candidate_pairs(sigs, bands=16)
+    assert (0, 1) in pairs  # the near-identical pair collides in ≥1 band
+    assert (0, 2) not in pairs and (1, 2) not in pairs
+
+
+def test_lsh_candidate_pairs_band_divisibility_guard():
+    import pytest
+
+    with pytest.raises(ValueError):
+        d.lsh_candidate_pairs([(1, 2, 3)], bands=2)  # 3 not divisible by 2
+
+
+def test_cluster_near_duplicates_groups_near_dups_and_keeps_singletons():
+    sigs = [
+        _sig("the standard legal notice applies to all documents in this corpus today"),
+        _sig("the standard legal notice applies to most documents in this corpus today"),
+        _sig("completely unrelated text about clinical reminders and order checks here"),
+    ]
+    clusters = d.cluster_near_duplicates(sigs, threshold=0.5, bands=16)
+    assert [0, 1] in clusters  # the near-dups merge
+    assert [2] in clusters  # the outlier is its own singleton cluster
+    assert sorted(i for c in clusters for i in c) == [0, 1, 2]  # a partition
+
+
+def test_cluster_near_duplicates_empty_input():
+    assert d.cluster_near_duplicates([], threshold=0.8, bands=16) == []
+
+
+def test_cluster_near_duplicates_high_threshold_keeps_them_apart():
+    sigs = [
+        _sig("the standard legal notice applies to all documents in this corpus today"),
+        _sig("the standard legal notice applies to most documents in this corpus today"),
+    ]
+    clusters = d.cluster_near_duplicates(sigs, threshold=0.99, bands=16)
+    assert clusters == [[0], [1]]  # not identical enough at 0.99

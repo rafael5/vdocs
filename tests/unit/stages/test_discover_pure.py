@@ -86,6 +86,49 @@ def test_mine_converter_routing_flags_xref_explosion_not_missing_headings():
     assert "cross-ref wraps explode" in c.reason
 
 
+def test_near_identical_boilerplate_blocks_cluster_as_one_candidate():
+    # §9.6 step 1: boilerplate drifts by a word across docs, so exact-string equality under-counts.
+    # Two docs carry one spelling, two carry a near-identical spelling (one word differs). Neither
+    # spelling alone reaches min_docs=3, but as a near-dup cluster the union does → ONE candidate.
+    a = (
+        "How to Use This Manual: read each section in order and consult the index for "
+        "specific topics covered throughout this document."
+    )
+    b = a.replace("consult the index", "consult the appendix")  # one phrase differs
+    docs = {
+        "app/0": f"# 0\n\n{a}\n\nUnique para zero.\n",
+        "app/1": f"# 1\n\n{a}\n\nUnique para one.\n",
+        "app/2": f"# 2\n\n{b}\n\nUnique para two.\n",
+        "app/3": f"# 3\n\n{b}\n\nUnique para three.\n",
+    }
+    # exact-only would yield zero boilerplate candidates (each spelling in just 2 docs)
+    boiler = [
+        c
+        for c in dp.mine_recurring_blocks(docs, min_docs=3, near_dup_threshold=0.6)
+        if c.registry == "boilerplate"
+    ]
+    assert len(boiler) == 1
+    c = boiler[0]
+    assert c.disposition == "REFERENCE"
+    assert c.doc_count == 4  # the union of both near-identical spellings
+    assert c.sample_doc_ids[:2] == ["app/0", "app/1"]
+
+
+def test_distinct_boilerplate_blocks_do_not_over_cluster():
+    # two genuinely different long blocks must NOT merge — near-dup clustering is precise
+    one = "The clinical reminders subsystem evaluates cohort logic and resolution rules per case."
+    two = "Order checks fire during order entry to warn about drug interactions and allergies."
+    docs = {}
+    docs.update({f"a/{i}": one for i in range(3)})
+    docs.update({f"b/{i}": two for i in range(3)})
+    boiler = [
+        c
+        for c in dp.mine_recurring_blocks(docs, min_docs=3, near_dup_threshold=0.6)
+        if c.registry == "boilerplate"
+    ]
+    assert len(boiler) == 2  # stayed apart
+
+
 def test_mine_glossary_acronyms_filters_stopwords():
     docs = {
         "a/1": "The CPRS and TIU systems; NOTE: see YES/NO and TO use it.",

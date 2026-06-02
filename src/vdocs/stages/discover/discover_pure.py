@@ -15,6 +15,8 @@ from collections import defaultdict
 
 from pydantic import BaseModel, Field
 
+from vdocs.kernel import discovery as kd
+
 _WS = re.compile(r"\s+")
 _BLOCK_SPLIT = re.compile(r"\n\s*\n")
 _HEADING = re.compile(r"^#{1,6}\s")
@@ -87,6 +89,7 @@ def mine_recurring_blocks(
     min_docs: int = 3,
     auto_docs: int = 10,
     phrase_max_len: int = 60,
+    near_dup_threshold: float = 0.8,
 ) -> list[PatternCandidate]:
     """Blocks recurring across ≥ ``min_docs`` documents → candidates.
 
@@ -95,7 +98,14 @@ def mine_recurring_blocks(
       * a short single-line non-heading is paper-era furniture → ``phrases`` (DELETE);
       * a longer block is meaningful-but-duplicated → ``boilerplate`` (REFERENCE).
     Frequent ones (≥ ``auto_docs``) grade ``auto``, the rest ``review`` — except DELETE proposals
-    are always ``review`` (deleting content is never auto-approved on frequency alone)."""
+    are always ``review`` (deleting content is never auto-approved on frequency alone).
+
+    Exact whitespace-collapsed equality (``block_key``) is the cheap pre-bucket. On top of it the
+    **boilerplate** path runs MinHash/Jaccard near-duplicate clustering (``kernel/discovery``) so
+    blocks that drift by a word or two across docs cluster into one candidate whose ``doc_count``
+    is the union — boilerplate is rarely byte-identical corpus-wide (§9.6 step 1). Headings
+    (templates) and short phrases stay exact-keyed: merging distinct headings or furniture would
+    blur identities the curation gate needs sharp."""
     key_docs: dict[str, set[str]] = defaultdict(set)
     key_text: dict[str, str] = {}
     for doc_id, md in docs.items():
@@ -103,27 +113,71 @@ def mine_recurring_blocks(
             key_docs[k].add(doc_id)
             key_text.setdefault(k, original)
 
+    boiler_keys: list[str] = []
     candidates: list[PatternCandidate] = []
-    for k, ds in key_docs.items():
-        if len(ds) < min_docs:
+    for k in key_docs:
+        registry, disposition = _classify_block(key_text[k], phrase_max_len)
+        if registry == "boilerplate":
+            boiler_keys.append(k)  # deferred — clustered below across near-dup spellings
             continue
-        text = key_text[k]
-        registry, disposition = _classify_block(text, phrase_max_len)
-        frequent = len(ds) >= auto_docs
-        candidates.append(
-            PatternCandidate(
-                registry=registry,
-                disposition=disposition,
-                key=k,
-                text=text,
-                doc_count=len(ds),
-                sample_doc_ids=sorted(ds)[:_SAMPLE],
-                # never auto-approve a deletion on frequency alone (a heading recurs too)
-                grade="auto" if frequent and disposition != "DELETE" else "review",
+        if len(key_docs[k]) >= min_docs:
+            candidates.append(
+                _block_candidate(registry, disposition, k, key_text[k], key_docs[k], auto_docs)
             )
+
+    candidates.extend(
+        _cluster_boilerplate(
+            boiler_keys, key_docs, key_text, min_docs, auto_docs, near_dup_threshold
         )
+    )
     candidates.sort(key=lambda c: (-c.doc_count, c.key))
     return candidates
+
+
+def _block_candidate(
+    registry: str, disposition: str, key: str, text: str, docs: set[str], auto_docs: int
+) -> PatternCandidate:
+    frequent = len(docs) >= auto_docs
+    return PatternCandidate(
+        registry=registry,
+        disposition=disposition,
+        key=key,
+        text=text,
+        doc_count=len(docs),
+        sample_doc_ids=sorted(docs)[:_SAMPLE],
+        # never auto-approve a deletion on frequency alone (a heading recurs too)
+        grade="auto" if frequent and disposition != "DELETE" else "review",
+    )
+
+
+def _cluster_boilerplate(
+    keys: list[str],
+    key_docs: dict[str, set[str]],
+    key_text: dict[str, str],
+    min_docs: int,
+    auto_docs: int,
+    threshold: float,
+) -> list[PatternCandidate]:
+    """Near-dup cluster the boilerplate-shaped exact buckets, one candidate per cluster.
+
+    The cluster's identity is its dominant member (most docs, then lexical) and its ``doc_count``
+    is the union of every near-identical spelling's documents — so spellings that each fall below
+    ``min_docs`` can still qualify together."""
+    if not keys:
+        return []
+    keys = sorted(keys)  # deterministic signature order → deterministic cluster ids
+    signatures = [kd.minhash_signature(kd.shingles(key_text[k])) for k in keys]
+    out: list[PatternCandidate] = []
+    for cluster in kd.cluster_near_duplicates(signatures, threshold=threshold):
+        members = [keys[i] for i in cluster]
+        union: set[str] = set().union(*(key_docs[m] for m in members))
+        if len(union) < min_docs:
+            continue
+        rep = max(members, key=lambda m: (len(key_docs[m]), m))  # dominant spelling
+        out.append(
+            _block_candidate("boilerplate", "REFERENCE", rep, key_text[rep], union, auto_docs)
+        )
+    return out
 
 
 def _classify_block(text: str, phrase_max_len: int) -> tuple[str, str]:

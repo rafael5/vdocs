@@ -163,6 +163,20 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **P2.1: `discover` near-duplicate boilerplate via `kernel/discovery` (retires
+  the P0.2 dead-code finding).** `mine_recurring_blocks`'s boilerplate path used exact
+  whitespace-collapsed equality (`block_key`), so boilerplate that drifts by a word across docs
+  under-counted (§9.6 step 1). Added two near-dup primitives to `kernel/discovery` (test-first):
+  `lsh_candidate_pairs` (LSH banding → candidate pairs) and `cluster_near_duplicates` (union-find
+  over candidate pairs verified by `estimate_jaccard ≥ threshold`; returns a deterministic
+  partition incl. singletons). `discover` now keeps exact-match as the cheap pre-bucket, then
+  near-dup clusters **only** the boilerplate-shaped buckets (default Jaccard 0.8) — union of each
+  cluster's doc sets, dominant spelling as identity; headings/phrases stay exact-keyed so their
+  curation identities stay sharp. `kernel/discovery` is now imported by production code, so the
+  P0.2 note flips to "used by `discover`". **Real-corpus (469 docs):** boilerplate candidates
+  3051 (exact-only) → **3560** with near-dup (the +509 are sub-`min_docs` spellings that only
+  qualify once unioned); still proposals-only, no content mutated. 325 tests, 100% cov (8 new: 5
+  `test_discovery` clustering, 2 `test_discover_pure` near-dup, 1 over-cluster guard).
 - **2026-06-02** — **P0.2/P0.3 compliance remediation: honest dead-code + §8 over-claim
   reconciled.** Two doc/comment-only audit fixes. (P0.2) `kernel/discovery.py` (shingling / MinHash
   / Jaccard) is imported by no production code today — only its own unit test. Added a module
