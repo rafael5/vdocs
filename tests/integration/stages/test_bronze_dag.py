@@ -115,9 +115,10 @@ def test_bronze_dag_skips_on_clean_rerun(bronze_ctx):
     assert second == [None, None, None, None]
 
 
-def test_fetch_falls_back_to_pdf_when_docx_missing(bronze_ctx):
+def test_fetch_does_not_fall_back_to_pdf(bronze_ctx):
     ctx = bronze_ctx
-    # only the PDF is available upstream
+    # only the PDF is downloadable upstream — but PDF is out of scope (§1), so fetch targets
+    # the DOCX only and records a failure rather than grabbing the PDF.
     pdf_url = DOCX_URL.replace(".docx", ".pdf")
     Orchestrator(
         [
@@ -128,14 +129,15 @@ def test_fetch_falls_back_to_pdf_when_docx_missing(bronze_ctx):
         ]
     ).run(ctx, force=True)
 
-    index = json.loads(ctx.cfg.raw_index.read_text())
-    (entry,) = index.values()
-    assert entry["ext"] == "pdf"  # candidate_urls swapped .docx → .pdf
+    assert ctx.state.get("fetch").counts == {"targets": 1, "fetched": 0, "failed": 1}
+    assert json.loads(ctx.cfg.raw_index.read_text()) == {}  # the PDF was never stored
+    acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_dibr")
+    assert acq is not None and acq.status == "failed"
 
 
-def test_fetch_records_failure_when_no_format_available(bronze_ctx):
+def test_fetch_records_failure_when_docx_unavailable(bronze_ctx):
     ctx = bronze_ctx
-    # neither DOCX nor PDF is available upstream → the doc is counted failed, not stored
+    # the DOCX is not downloadable upstream → the doc is counted failed, not stored
     Orchestrator(
         [
             CrawlStage(page_fetcher=fake_page),
@@ -147,5 +149,5 @@ def test_fetch_records_failure_when_no_format_available(bronze_ctx):
 
     assert ctx.state.get("fetch").counts == {"targets": 1, "fetched": 0, "failed": 1}
     acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_dibr")
-    assert acq is not None and acq.status == "failed" and acq.error == "no format available"
+    assert acq is not None and acq.status == "failed" and acq.error == "docx unavailable"
     assert json.loads(ctx.cfg.raw_index.read_text()) == {}

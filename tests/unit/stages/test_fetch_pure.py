@@ -1,24 +1,11 @@
-"""Unit tests for fetch pure logic — URL strategy + target selection + index (§8 fetch, §16)."""
+"""Unit tests for fetch pure logic — target selection + index (§8 fetch, §16).
+
+The pipeline is **DOCX-only** (§1): PDF is out of scope, so there is no format fallback and
+PDF-only documents are never fetch targets.
+"""
 
 from vdocs.models.catalog import EnrichedRecord
 from vdocs.stages.fetch import fetch_pure as fp
-
-
-def test_swap_extension_docx_to_pdf_and_back():
-    assert fp.swap_extension("https://va.gov/x.docx") == "https://va.gov/x.pdf"
-    assert fp.swap_extension("https://va.gov/x.pdf") == "https://va.gov/x.docx"
-    assert fp.swap_extension("https://va.gov/x.txt") == "https://va.gov/x.txt"
-
-
-def test_candidate_urls_tries_own_then_other_format():
-    assert fp.candidate_urls("https://va.gov/x.docx") == [
-        "https://va.gov/x.docx",
-        "https://va.gov/x.pdf",
-    ]
-
-
-def test_candidate_urls_no_duplicate_when_no_swap():
-    assert fp.candidate_urls("https://va.gov/x.txt") == ["https://va.gov/x.txt"]
 
 
 def test_url_ext():
@@ -39,21 +26,23 @@ def _rec(slug, fmt, noise=""):
     )
 
 
-def test_select_fetch_targets_prefers_docx_per_logical_doc():
+def test_select_fetch_targets_picks_docx_per_logical_doc():
+    # a logical doc published as both DOCX and PDF → the DOCX record is the only target
     docs = [_rec("dg_5_3_1057_dibr", "pdf"), _rec("dg_5_3_1057_dibr", "docx")]
     targets = fp.select_fetch_targets(docs)
     assert len(targets) == 1
     assert targets[0].doc_format == "docx"
 
 
-def test_select_fetch_targets_keeps_pdf_only_doc():
+def test_select_fetch_targets_excludes_pdf_only_doc():
+    # PDF is out of scope (§1): a doc with no DOCX representation is never a target
     docs = [_rec("only_pdf", "pdf")]
-    assert [t.doc_format for t in fp.select_fetch_targets(docs)] == ["pdf"]
+    assert fp.select_fetch_targets(docs) == []
 
 
 def test_select_fetch_targets_excludes_noise():
     # chrome/forms (noise_type set) are never fetched — only green inventory rows (§9.5)
-    docs = [_rec("vba_form_x", "pdf", noise="vba_form"), _rec("real_doc", "docx")]
+    docs = [_rec("vba_form_x", "docx", noise="vba_form"), _rec("real_doc", "docx")]
     assert [t.doc_slug for t in fp.select_fetch_targets(docs)] == ["real_doc"]
 
 

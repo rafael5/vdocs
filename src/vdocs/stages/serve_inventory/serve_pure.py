@@ -70,7 +70,7 @@ def evaluate_gate(records: list[EnrichedRecord], crawl_documents: int | None) ->
 
 # --- inventory_status = enriched ⋈ acquisitions (the operator view, §5.5, §9.5) ---
 
-_STATUS_ORDER = ("fetched", "pending", "failed", "withdrawn", "not_acquired")
+_STATUS_ORDER = ("fetched", "pending", "failed", "withdrawn", "not_acquired", "out_of_scope")
 
 
 @dataclass(frozen=True)
@@ -91,27 +91,41 @@ def inventory_status(
     records: list[EnrichedRecord], acquisitions: dict[str, Acquisition]
 ) -> list[InventoryStatus]:
     """Join the genuine inventory rows (``noise_type==''``) with their acquisition status by
-    ``doc_id`` — one entry per logical document (PDF/DOCX collapse). Status is ``not_acquired``
-    when no acquisition exists yet. The inventory stays the gatekeeper; status is joined *to* it."""
-    seen: dict[str, InventoryStatus] = {}
+    ``doc_id`` — one entry per logical document (PDF/DOCX collapse). A logical document with no
+    in-scope (DOCX) representation is flagged ``out_of_scope`` (PDF-only, §1) — never fetchable,
+    so its acquisition status is moot. Otherwise the status is the acquisition's, or
+    ``not_acquired`` when none exists yet. The inventory stays the gatekeeper; status is joined
+    *to* it."""
+    groups: dict[str, list[EnrichedRecord]] = {}
     for r in records:
         if r.noise_type:
             continue
-        did = doc_id(r)
-        if did in seen:
-            continue
-        acq = acquisitions.get(did)
-        seen[did] = InventoryStatus(
-            doc_id=did,
-            app_name_abbrev=r.app_name_abbrev,
-            section_code=r.section_code,
-            doc_code=r.doc_code,
-            doc_title=r.doc_title,
-            status=acq.status if acq is not None else "not_acquired",
-            sha256=(acq.sha256 or "") if acq is not None else "",
-            fetched_at=(acq.fetched_at or "") if acq is not None else "",
+        groups.setdefault(doc_id(r), []).append(r)
+
+    out: list[InventoryStatus] = []
+    for did, recs in groups.items():
+        in_scope = [r for r in recs if not r.out_of_scope_reason]
+        rep = in_scope[0] if in_scope else recs[0]  # prefer an in-scope row for display fields
+        acq = acquisitions.get(did) if in_scope else None
+        if not in_scope:
+            status, sha, fetched_at = "out_of_scope", "", ""
+        else:
+            status = acq.status if acq is not None else "not_acquired"
+            sha = (acq.sha256 or "") if acq is not None else ""
+            fetched_at = (acq.fetched_at or "") if acq is not None else ""
+        out.append(
+            InventoryStatus(
+                doc_id=did,
+                app_name_abbrev=rep.app_name_abbrev,
+                section_code=rep.section_code,
+                doc_code=rep.doc_code,
+                doc_title=rep.doc_title,
+                status=status,
+                sha256=sha,
+                fetched_at=fetched_at,
+            )
         )
-    return list(seen.values())
+    return out
 
 
 def status_summary(statuses: list[InventoryStatus]) -> dict[str, int]:

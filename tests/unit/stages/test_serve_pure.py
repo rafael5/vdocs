@@ -99,3 +99,26 @@ def test_status_summary_counts():
     }
     summary = sp.status_summary(sp.inventory_status([docx, other, third], acqs))
     assert summary == {"total": 3, "fetched": 1, "not_acquired": 2}
+
+
+# --- out-of-scope (PDF-only) docs are flagged, not silently dropped (§1) ---
+def test_pdf_only_doc_is_flagged_out_of_scope():
+    # a logical doc with no DOCX representation is out of scope — never fetchable
+    pdf_only = _rec(doc_slug="pdf_only", doc_format="pdf")
+    (row,) = sp.inventory_status([pdf_only], {})
+    assert row.doc_id == "ADT:pdf_only" and row.status == "out_of_scope"
+
+
+def test_dual_format_doc_stays_in_scope():
+    # DOCX + PDF of one logical doc → in scope via the DOCX, just not fetched yet
+    docx = _rec(doc_format="docx")
+    pdf = _rec(doc_format="pdf")  # same doc_id (shared slug)
+    (row,) = sp.inventory_status([docx, pdf], {})
+    assert row.status == "not_acquired"
+
+
+def test_status_summary_counts_out_of_scope():
+    docx = _rec(doc_format="docx")
+    pdf_only = _rec(doc_slug="pdf_only", doc_format="pdf")
+    summary = sp.status_summary(sp.inventory_status([docx, pdf_only], {}))
+    assert summary == {"total": 2, "not_acquired": 1, "out_of_scope": 1}

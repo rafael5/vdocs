@@ -63,7 +63,11 @@ class ConvertStage(Stage):
 
 
 def _pandoc_convert(data: bytes, ext: str) -> ConvertedDoc:  # pragma: no cover - subprocess I/O
-    """Default converter: Pandoc for DOCX (GFM + media extraction). PDF is deferred (Docling)."""
+    """Default converter: Pandoc for DOCX (GFM + media extraction).
+
+    The pipeline is DOCX-only (§1); Docling is the alternative DOCX converter for the
+    bare-marker-explosion allowlist (ADR-010), routed in by the caller, not here.
+    """
     import subprocess
     import tempfile
     from pathlib import Path
@@ -71,7 +75,7 @@ def _pandoc_convert(data: bytes, ext: str) -> ConvertedDoc:  # pragma: no cover 
     from vdocs.stages.convert.convert_pure import ConvertedDoc, ConvertedImage
 
     if ext != "docx":
-        raise NotImplementedError(f"convert backend for .{ext} not wired yet (PDF → Docling, TODO)")
+        raise ValueError(f"convert: unexpected non-docx ext {ext!r} (pipeline is DOCX-only, §1)")
     with tempfile.TemporaryDirectory() as td:
         src = Path(td) / f"in.{ext}"
         src.write_bytes(data)

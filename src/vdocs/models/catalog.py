@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class CatalogDocument(BaseModel):
@@ -100,15 +100,25 @@ class EnrichedRecord(BaseModel):
     doc_title: str = ""
     doc_filename: str = ""
     doc_slug: str = ""
-    doc_format: str = ""  # pdf | docx | doc
+    doc_format: str = ""  # docx | pdf | doc — only docx is in scope (§1)
     doc_subject: str = ""
     noise_type: str = ""  # "" | vba_form | va_ref | test_document
+    out_of_scope_reason: str = ""  # "" = in scope (docx); else the disqualifying format — §1, §5.6
     # urls
     app_url: str = ""
     doc_url: str = ""
     companion_url: str = ""
     github_md_url: str = ""
     github_md_raw_url: str = ""
+
+    @model_validator(mode="after")
+    def _derive_out_of_scope(self) -> EnrichedRecord:
+        """DOCX-only pipeline (§1): any non-DOCX representation is out of scope. Derived from
+        ``doc_format`` (unless set explicitly) so every inventory row — however built or read —
+        carries the flag, and the gold inventory exposes it as a first-class column."""
+        if not self.out_of_scope_reason and self.doc_format and self.doc_format != "docx":
+            self.out_of_scope_reason = self.doc_format
+        return self
 
 
 # The fixed on-disk column order (§5; the CSV convenience view uses this).

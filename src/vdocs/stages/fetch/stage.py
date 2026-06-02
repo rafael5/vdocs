@@ -1,8 +1,8 @@
 """The `fetch` stage driver — download documents into the content-addressed raw store (§8).
 
-For each logical document (DOCX preferred) it tries the candidate URLs via an injected byte
-fetcher, stores the bytes write-once in the CAS, and records ``raw/index.json`` (sha256 →
-provenance). Idempotent: re-downloading identical bytes is a CAS no-op.
+For each selected logical document (its DOCX representation, §1 — the pipeline is DOCX-only) it
+downloads the bytes via an injected byte fetcher, stores them write-once in the CAS, and records
+``raw/index.json`` (sha256 → provenance). Idempotent: re-downloading identical bytes is a CAS no-op.
 """
 
 from __future__ import annotations
@@ -46,41 +46,36 @@ class FetchStage(Stage):
         now = ctx.clock()
         for doc in targets:
             doc_id = f"{doc.app_name_abbrev}:{doc.doc_slug}"
-            data: bytes | None = None
-            used_url = ""
-            for url in fp.candidate_urls(doc.doc_url):
-                data = self._get(url)
-                if data is not None:
-                    used_url = url
-                    break
+            url = doc.doc_url  # the DOCX URL — selection guarantees a DOCX target (§1)
+            data = self._get(url)
             if data is None:
                 failed += 1
                 ctx.state.record_acquisition(
                     Acquisition(
                         doc_id=doc_id,
-                        source_url=doc.doc_url,
+                        source_url=url,
                         status="failed",
                         attempts=1,
                         first_attempt_at=now,
                         last_attempt_at=now,
-                        error="no format available",
+                        error="docx unavailable",
                         tool_ver=ctx.cfg.tool_ver,
                     )
                 )
                 continue
-            ext = fp.url_ext(used_url) or doc.doc_format
+            ext = fp.url_ext(url) or doc.doc_format
             sha = store.put(data, ext=ext)
             index[sha] = fp.index_entry(
                 app_code=doc.app_name_abbrev,
                 doc_slug=doc.doc_slug,
                 title=doc.doc_title,
-                source_url=used_url,
+                source_url=url,
                 ext=ext,
             )
             ctx.state.record_acquisition(
                 Acquisition(
                     doc_id=doc_id,
-                    source_url=used_url,
+                    source_url=url,
                     status="fetched",
                     sha256=sha,
                     bytes=len(data),
