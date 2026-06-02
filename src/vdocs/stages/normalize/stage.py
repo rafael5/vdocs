@@ -11,6 +11,8 @@ idempotently (§7.4, §9.6).
 Recognised bundle sidecars written next to ``body.md`` (the ``TEXT_NORMALIZED`` contract is a
 ``TREE_TEXT`` over the whole bundle, so they need no separate contract):
   * ``history.yaml`` — the structured revision apparatus (§6.6).
+  * ``tables/*.csv`` — qualifying complex tables lifted out of the body, body left a reference
+    link (§6.4/§6.5).
   * ``refs.yaml`` — the ``(stable_section_id ↔ github_slug ↔ original_bookmark)`` anchor map +
     chosen ``toc_depth`` + outbound cross-ref map (§6.7, §5.5).
 """
@@ -39,23 +41,27 @@ class NormalizeStage(Stage):
         from vdocs.stages.normalize import anchors_pure as anchors
         from vdocs.stages.normalize import normalize_pure as nz
         from vdocs.stages.normalize import revision_pure as rev
+        from vdocs.stages.normalize import tables_pure as tbl
 
         phrases = _load_phrases(ctx.cfg.registries / "phrases" / "phrases.yaml")
         sha_by_path = _sha_by_bundle_path(ctx.cfg.raw_index)
 
         enriched_root = ctx.cfg.silver_enriched
         normalized_root = ctx.cfg.silver_normalized
-        n_docs = n_history = n_refs = 0
+        n_docs = n_history = n_tables = n_refs = 0
         for body_path in sorted(enriched_root.rglob("body.md")):
             rel = body_path.parent.relative_to(enriched_root)  # <app>/<slug>
             meta, body = frontmatter.parse(body_path.read_text(encoding="utf-8"))
             sha = sha_by_path.get((rel.parts[0], rel.parts[1]))
             if sha:
                 meta["source_sha256"] = sha
-            # strip the version apparatus → history.yaml sidecar (§6.6), then run the body F-steps.
+            # strip the version apparatus → history.yaml (§6.6); then lift qualifying complex tables
+            # → tables/*.csv (§6.4/§6.5) — *after* revision extraction so it never grabs the
+            # revision table; then run the body F-steps.
             # TEMPLATE SEAM: toc_depth defaults to the H2–H3 fallback; the template F-step will
             # resolve it per (doc_type, era) and pass it to normalize_body (§6.7).
             body, revisions = rev.extract_revision_history(body)
+            body, tables = tbl.extract_tables(body)
             body, anchor_map = nz.normalize_body(body, phrases, doc_id=str(rel))
             out = frontmatter.emit(meta, body)
             cas.atomic_write(normalized_root / rel / "body.md", out.encode("utf-8"))
@@ -67,6 +73,11 @@ class NormalizeStage(Stage):
                     ).encode("utf-8"),
                 )
                 n_history += 1
+            for tab in tables:  # one CSV per lifted table, inside the bundle's tables/ dir
+                cas.atomic_write(
+                    normalized_root / rel / "tables" / tab.name, tab.csv_text.encode("utf-8")
+                )
+            n_tables += len(tables)
             if anchor_map.rows:  # conditional, like history.yaml — no anchors → no sidecar
                 cas.atomic_write(
                     normalized_root / rel / "refs.yaml",
@@ -81,6 +92,7 @@ class NormalizeStage(Stage):
             counts={
                 "documents": n_docs,
                 "history_sidecars": n_history,
+                "tables_sidecars": n_tables,
                 "refs_sidecars": n_refs,
                 "phrases": len(phrases),
             }

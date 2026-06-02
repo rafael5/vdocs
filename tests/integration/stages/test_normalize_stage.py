@@ -143,6 +143,40 @@ def test_normalize_writes_history_sidecar_and_strips_table(ctx):
     }
 
 
+def test_normalize_lifts_large_table_to_csv_sidecar(ctx):
+    # a long data table is lifted to tables/table-01.csv and replaced by a reference (§6.4/§6.5)
+    rows = "".join(f"<tr><td>F{i}</td><td>T{i}</td><td>D{i}</td></tr>" for i in range(12))
+    table = "<table><tr><th>Field</th><th>Type</th><th>Desc</th></tr>" + rows + "</table>"
+    enriched = frontmatter.emit(
+        {"title": "Data Dict", "app_code": "ADT", "tool_ver": "0.1.0"},
+        f"# Data Dict\n\n## Fields\n\n{table}\n\nAfter table.\n",
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "dd_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(
+        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "dd_doc", "ext": "docx"}})
+    )
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["tables_sidecars"] == 1
+
+    bundle = ctx.cfg.silver_normalized / "ADT" / "dd_doc"
+    _, body = frontmatter.parse((bundle / "body.md").read_text())
+    assert "<table" not in body  # the table left the body
+    assert "(tables/table-01.csv)" in body  # replaced by a reference link
+    csv_text = (bundle / "tables" / "table-01.csv").read_text()
+    assert csv_text.splitlines()[0] == "Field,Type,Desc"
+    assert "F0,T0,D0" in csv_text
+
+
 def test_normalize_writes_refs_yaml_sidecar(ctx):
     import yaml
 

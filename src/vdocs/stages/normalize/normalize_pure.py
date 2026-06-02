@@ -11,9 +11,11 @@
                (§6.7: derive structure, never trust the extracted TOC).
   F-backlink — insert round-trip "↑ Back to Contents" links under each TOC-targeted heading.
 
-Deferred (noted in the tracker): tables→``tables/*.csv``, boilerplate REFERENCE + ``gold/_shared``,
-template STRIP+STAMP, and heading-level inference. ``source_sha256`` is added by the stage (it has
-the bronze sha); these functions stay pure over the body text + registries.
+Complex tables are lifted to ``tables/*.csv`` sidecars by the sibling ``tables_pure`` module (a
+stage-level pre-step, like ``revision_pure``), not by ``normalize_body``. Deferred (noted in the
+tracker): boilerplate REFERENCE + ``gold/_shared``, template STRIP+STAMP, and heading-level
+inference. ``source_sha256`` is added by the stage (it has the bronze sha); these functions stay
+pure over the body text + registries.
 
 Heading identity and the anchor substrate live in the sibling ``anchors_pure`` module (mirroring
 the ``revision_pure`` split); ``Heading``/``github_slug``/``parse_headings`` are re-exported here
