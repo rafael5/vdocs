@@ -207,6 +207,67 @@ def test_subtract_boilerplate_is_idempotent():
     assert nz.subtract_boilerplate(once, _BP) == once  # the reference is not a registered block
 
 
+_TOC_TITLES = frozenset({"table of contents", "contents"})
+
+
+def test_strip_legacy_toc_removes_heading_and_entries_until_next_heading():
+    # the source's own text TOC (heading + page-numbered entries) must leave the body (§6.7/§9.6)
+    body = (
+        "# Manual\n\n## Table of Contents\n\n"
+        "Introduction .......... 1\nInstallation .......... 4\n\n"
+        "## Introduction\n\nreal text\n"
+    )
+    out = nz.strip_legacy_toc(body, _TOC_TITLES)
+    assert "Table of Contents" not in out
+    assert ".........." not in out  # the legacy entries went with it
+    assert "## Introduction" in out and "real text" in out  # the real section stayed
+
+
+def test_strip_legacy_toc_matches_case_insensitively_at_h1_to_h3():
+    body = "# CONTENTS\n\nA 1\nB 2\n\n## Body\n\nx\n"
+    out = nz.strip_legacy_toc(body, _TOC_TITLES)
+    assert "CONTENTS" not in out and "A 1" not in out
+    assert "## Body" in out and "x" in out
+
+
+def test_strip_legacy_toc_noop_without_titles_or_match():
+    body = "# Manual\n\n## Overview\n\ntext\n"
+    assert nz.strip_legacy_toc(body, frozenset()) == body  # registry empty → no-op
+    assert nz.strip_legacy_toc(body, _TOC_TITLES) == body  # no contents heading → unchanged
+
+
+def test_strip_legacy_toc_leaves_unrelated_headings():
+    # a non-TOC heading that merely contains the word is not a contents section
+    body = "# Manual\n\n## Table of Contents Overview\n\nkept\n"
+    assert nz.strip_legacy_toc(body, _TOC_TITLES) == body  # exact text match only
+
+
+def test_normalize_body_strips_legacy_toc_then_derives_single_contents():
+    body = (
+        "# Install Guide\n\n## Table of Contents\n\n"
+        "Setup .......... 2\nDetails .......... 5\n\n"
+        "## Setup\n\nsteps\n\n### Details\n\nx\n"
+    )
+    out, _ = nz.normalize_body(body, frozenset(), toc_titles=_TOC_TITLES)
+    assert ".........." not in out  # legacy text TOC gone
+    assert out.count("## Contents") == 1  # exactly one derived TOC, no duplicate
+    assert "Table of Contents" not in out  # legacy heading not carried as a TOC entry either
+    assert "- [Setup](#setup)" in out and "  - [Details](#details)" in out
+
+
+def test_curated_structures_registry_toc_is_well_formed():
+    # the curated structures registry must carry the `match` variants normalize keys on (§9.6)
+    import yaml
+
+    from vdocs.config import Settings
+
+    path = Settings().registries / "structures" / "structures.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    toc = next(c for c in data["conventions"] if c["key"] == "toc:contents")
+    assert toc["disposition"] == "CANONICALIZE" and toc["status"] == "approved"
+    assert "contents" in {m.lower() for m in toc["match"]}  # the consumer's match list
+
+
 def test_curated_boilerplate_registry_is_well_formed():
     # the P1.b starter set curated from the real corpus: each `key` must equal block_key(text)
     import yaml

@@ -54,6 +54,7 @@ __all__ = [
     "Boilerplate",
     "subtract_boilerplate",
     "block_key",
+    "strip_legacy_toc",
     "strip_existing_toc",
     "build_toc",
     "regenerate_toc",
@@ -178,6 +179,33 @@ def subtract_boilerplate(body: str, registry: Sequence[Boilerplate]) -> str:
     return "\n\n".join(out)
 
 
+def strip_legacy_toc(body: str, titles: frozenset[str], max_level: int = 3) -> str:
+    """F-toc-dedup (§6.7; ``registries/structures`` CANONICALIZE ``toc``, §9.6): remove the source's
+    legacy in-body table of contents so the derived ``## Contents`` (F-toc) never duplicates it.
+
+    A legacy contents section is a heading at level ≤ ``max_level`` whose text matches one of the
+    curated ``titles`` (case-insensitive — e.g. ``Table of Contents`` / ``Contents``); the heading
+    and every following line up to the next markdown heading (its page-numbered entries) are
+    dropped. Registry-driven (``titles`` come from ``registries/structures``); empty ``titles`` →
+    no-op. Idempotent: a prior run's generated ``## Contents`` matches too, so it is rebuilt."""
+    if not titles:
+        return body
+    wanted = {t.strip().lower() for t in titles}
+    lines = body.split("\n")
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        m = _HEADING_RE.match(lines[i])
+        if m and len(m.group(1)) <= max_level and m.group(2).strip().lower() in wanted:
+            i += 1
+            while i < len(lines) and not _HEADING_RE.match(lines[i]):
+                i += 1
+            continue
+        out.append(lines[i])
+        i += 1
+    return "\n".join(out)
+
+
 def strip_existing_toc(body: str) -> str:
     """Remove a previously-generated ``## Contents`` block (its heading + list) for idempotency."""
     lines = body.split("\n")
@@ -235,11 +263,13 @@ def normalize_body(
     doc_id: str = "",
     toc_depth: tuple[int, int] = DEFAULT_TOC_DEPTH,
     boilerplate: Sequence[Boilerplate] = (),
+    toc_titles: frozenset[str] = frozenset(),
 ) -> tuple[str, AnchorMap]:
     """Apply the F-steps in order and return ``(body, anchor_map)`` (§6.7).
 
     Order matters for idempotency: recover headings → strip artifacts → subtract curated phrases →
-    **reference curated boilerplate** (REFERENCE, §9.6) →
+    **reference curated boilerplate** (REFERENCE, §9.6) → **strip the legacy in-body TOC** (curated
+    ``registries/structures`` ``toc``, §9.6) so the derived TOC below isn't a duplicate →
     **infer consistent heading levels** (gap-free tree) → parse the heading tree **once** (capturing
     bookmarks) → rewrite ``_Toc``/``_Ref`` cross-refs to GitHub slugs (using that tree) → regenerate
     the TOC (same slugs, so TOC + map stay consistent) → insert round-trip back-links. The anchor
@@ -249,6 +279,7 @@ def normalize_body(
     ``(doc_type, era)`` and pass it in (the template seam lives in ``anchors_pure``)."""
     body = subtract_phrases(strip_artifacts(recover_headings(body)), phrases)
     body = subtract_boilerplate(body, boilerplate)
+    body = strip_legacy_toc(body, toc_titles)
     body = infer_heading_levels(body)
     headings = parse_headings(body, doc_id)
     bookmark_to_slug = {h.bookmark: h.slug for h in headings if h.bookmark}
