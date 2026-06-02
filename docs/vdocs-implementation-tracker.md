@@ -233,6 +233,11 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):
+  - **C-rel-1 — content-skip in `kernel.cas.atomic_write` (R2 / D-dec-3).** A no-op re-write
+    (new bytes hash-match the existing file) now leaves the file untouched (mtime preserved),
+    so the cheap `size:mtime_ns` fingerprint stays stable and `SKIP_IF_UNCHANGED` actually skips
+    on no-op re-runs instead of being defeated by an unconditional rewrite. Guarded on
+    `path.is_file()` (a non-file at the path falls through to the tmp+rename failure path).
   - **B2 — `kernel.text.slugify`: one slug primitive (D3).** Added
     `slugify(text, *, sep="-", fallback="")` (the GitHub-anchor rule); `github_slug_base` is now a
     thin alias and `discover_pure._slug` calls it with `fallback="section"` — so a discovered

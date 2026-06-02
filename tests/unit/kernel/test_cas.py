@@ -36,6 +36,26 @@ def test_put_is_idempotent_write_once(tmp_path):
     assert path.stat().st_mtime_ns == mtime_before
 
 
+def test_atomic_write_skips_rewrite_when_content_unchanged(tmp_path):
+    # R2: a no-op re-write must not touch the file, so the cheap size:mtime_ns fingerprint stays
+    # stable and SKIP_IF_UNCHANGED actually skips on a re-run.
+    target = tmp_path / "out.md"
+    cas.atomic_write(target, b"same bytes")
+    mtime_before = target.stat().st_mtime_ns
+    cas.atomic_write(target, b"same bytes")  # identical → must not rewrite
+    assert target.stat().st_mtime_ns == mtime_before
+    assert target.read_bytes() == b"same bytes"
+
+
+def test_atomic_write_rewrites_when_content_changes(tmp_path):
+    target = tmp_path / "out.md"
+    cas.atomic_write(target, b"first")
+    mtime_before = target.stat().st_mtime_ns
+    cas.atomic_write(target, b"second")  # changed → must rewrite
+    assert target.read_bytes() == b"second"
+    assert target.stat().st_mtime_ns != mtime_before
+
+
 def test_get_round_trips(tmp_path):
     store = cas.Cas(tmp_path)
     digest = store.put(b"data", ext="dat")

@@ -14,7 +14,17 @@ from pathlib import Path
 
 
 def atomic_write(path: Path, data: bytes) -> None:
-    """Write ``data`` to ``path`` atomically (tmp file + rename within the same dir)."""
+    """Write ``data`` to ``path`` atomically (tmp file + rename within the same dir).
+
+    Content-skip (§7.4, R2): if ``path`` already holds byte-identical content, this is a **no-op**
+    — the file is left untouched (mtime preserved). That keeps the cheap ``size:mtime_ns``
+    fingerprint stable across no-op re-runs, so ``SKIP_IF_UNCHANGED`` actually skips instead of
+    being defeated by an unconditional rewrite that bumps mtime."""
+    if (
+        path.is_file()
+        and hashlib.sha256(path.read_bytes()).hexdigest() == hashlib.sha256(data).hexdigest()
+    ):
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.tmp")
     try:
