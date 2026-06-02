@@ -161,6 +161,12 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **`kernel/text.clean` made idempotent again after the ftfy switch.** Follow-up to the
+  mojibake unification: a Hypothesis seed found `clean(clean(x)) != clean(x)` for inputs like
+  `"Â\x0c\x80"` — an interstitial control byte hid adjacent mojibake from ftfy on the first pass and it
+  surfaced on the second. Fix: scrub control chars **before** the mojibake repair (was after), so byte
+  adjacency is stable. Brute-force over messy 3-char inputs: 12 non-idempotent cases → 0. Kernel-only
+  (no production consumer of `clean` yet); the catalog `fix_mojibake` path is unaffected.
 - **2026-06-02** — **One mojibake fixer in the kernel (§9.2).** Pre-Phase-4 compliance fix A2. Two
   codepaths existed: a dead custom cp1252 round-trip in `kernel/text.repair_mojibake` (imported by nobody)
   and `catalog/enrich_pure.fix_mojibake` rolling its own `ftfy.fix_text`. Collapsed to one: the kernel

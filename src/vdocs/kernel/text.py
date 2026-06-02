@@ -53,11 +53,14 @@ def strip_html(s: str) -> str:
 
 
 def clean(s: str) -> str:
-    """The full repair pipeline: mojibake → control scrub → HTML strip → NFC.
+    """The full repair pipeline: control scrub → mojibake → HTML strip → NFC.
 
-    Idempotent: ``clean(clean(x)) == clean(x)``.
+    Idempotent: ``clean(clean(x)) == clean(x)``. Control characters are scrubbed **before** the
+    mojibake repair: an interstitial control byte (e.g. a form feed between two mojibake bytes)
+    would otherwise hide adjacent mojibake from ftfy on the first pass and surface it on the
+    second, breaking idempotency. Scrubbing first makes adjacency stable.
     """
-    s = repair_mojibake(s)
     s = scrub_control_chars(s)
+    s = repair_mojibake(s)
     s = strip_html(s)
     return unicodedata.normalize("NFC", s)
