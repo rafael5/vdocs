@@ -10,7 +10,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
+import structlog
 import yaml
+
+log = structlog.get_logger(__name__)
 
 # Identity / human-curated keys, in canonical emit order (§6.3). Anything else is
 # appended alphabetically — but computed fields should never reach this codec.
@@ -36,12 +39,18 @@ def parse(text: str) -> tuple[dict[str, Any], str]:
     """Split ``text`` into (frontmatter mapping, body).
 
     Fail-safe: text without a well-formed, terminated frontmatter block returns
-    ``({}, text)`` unchanged — never raises on missing frontmatter.
+    ``({}, text)`` unchanged — never raises on missing frontmatter. **Malformed YAML** inside an
+    otherwise-delimited block is isolated the same way (R8): a WARN is logged and the document is
+    treated as having no frontmatter, so one bad doc never aborts ``normalize``/``enrich``.
     """
     match = _FM_RE.match(text)
     if match is None:
         return {}, text
-    loaded = yaml.safe_load(match.group(1))
+    try:
+        loaded = yaml.safe_load(match.group(1))
+    except yaml.YAMLError as exc:
+        log.warning("frontmatter-malformed-yaml", error=str(exc))
+        return {}, text
     if not isinstance(loaded, dict):
         return {}, text
     return loaded, match.group(2)

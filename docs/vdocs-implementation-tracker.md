@@ -233,6 +233,10 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):
+  - **C-rel-5 — guard malformed frontmatter (R8).** `kernel.frontmatter.parse` let a `yaml.YAMLError`
+    from a bad `---` block propagate and crash the run. It now catches `yaml.YAMLError`, logs a
+    structlog WARN, and treats the document as having no frontmatter (whole text intact as body) —
+    isolating one bad doc instead of aborting `normalize`/`enrich`.
   - **C-rel-4 — retry crawl/fetch on transport errors (R3).** `kernel.http._request` only retried
     429/5xx; an uncaught `httpx.TransportError` (connect/read timeout, protocol error) aborted the
     whole crawl/fetch. It now retries transport errors in the same exponential-backoff loop and,

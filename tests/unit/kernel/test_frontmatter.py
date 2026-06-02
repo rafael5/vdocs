@@ -53,6 +53,15 @@ def test_parse_non_mapping_frontmatter_is_treated_as_body():
     assert body == doc
 
 
+def test_parse_malformed_frontmatter_isolates_as_no_frontmatter():
+    # R8: a bad-YAML frontmatter block must not crash the run (isolate the one bad doc) — it is
+    # treated as having no frontmatter, the whole document left intact as the body
+    doc = '---\ntitle: "unterminated\n  bad: [unclosed\n---\n\nBody text.\n'
+    meta, body = fm.parse(doc)
+    assert meta == {}
+    assert body == doc  # nothing lost
+
+
 def test_emit_starts_and_ends_frontmatter_block():
     out = fm.emit({"title": "X"}, "b")
     assert out.startswith("---\n")
