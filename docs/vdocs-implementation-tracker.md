@@ -233,6 +233,12 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):
+  - **C-rel-2 — `build_atomic` WAL hardening (R7).** The atomic DB build opened the temp in WAL
+    and renamed only the main file, so a crash could orphan `.<name>.tmp-wal`/`.tmp-shm`.
+    `kernel.db.connect` gained a `journal_mode` flag; `build_atomic` now builds the temp in
+    `DELETE` mode (no WAL siblings can exist) and sweeps any `.tmp`/`.tmp-wal`/`.tmp-shm` orphans
+    on both the success and failure paths. Tests: DELETE-mode honored, no siblings after build,
+    a prior crash's orphaned siblings swept.
   - **C-rel-1 — content-skip in `kernel.cas.atomic_write` (R2 / D-dec-3).** A no-op re-write
     (new bytes hash-match the existing file) now leaves the file untouched (mtime preserved),
     so the cheap `size:mtime_ns` fingerprint stays stable and `SKIP_IF_UNCHANGED` actually skips

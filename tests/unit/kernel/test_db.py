@@ -59,6 +59,43 @@ def test_build_atomic_builds_via_temp_then_renames(tmp_path):
         conn.close()
 
 
+def test_connect_honors_journal_mode_override(tmp_path):
+    # R7: the atomic-build temp opens in DELETE mode so no -wal/-shm sibling can outlive the rename
+    conn = db.connect(tmp_path / "x.db", journal_mode="DELETE")
+    try:
+        (mode,) = conn.execute("PRAGMA journal_mode").fetchone()
+        assert mode.lower() == "delete"
+    finally:
+        conn.close()
+
+
+def test_build_atomic_leaves_no_wal_or_tmp_siblings(tmp_path):
+    # R7: after the build, ONLY the DB file remains — no -wal/-shm/.tmp* orphans beside it
+    path = tmp_path / "index.db"
+
+    def build(conn):
+        conn.execute("CREATE TABLE t (a TEXT)")
+        conn.execute("INSERT INTO t VALUES ('x')")
+
+    db.build_atomic(path, build)
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["index.db"]
+    conn = db.connect(path, read_only=True)
+    try:
+        assert conn.execute("SELECT a FROM t").fetchone()["a"] == "x"
+    finally:
+        conn.close()
+
+
+def test_build_atomic_sweeps_orphaned_wal_siblings_from_prior_crash(tmp_path):
+    # a crashed prior run can leave .index.db.tmp-wal / .tmp-shm next to the temp; the next build
+    # must sweep them (the fix unlinks them up front), not leave them to corrupt the new temp
+    path = tmp_path / "index.db"
+    path.with_name(".index.db.tmp-wal").write_bytes(b"stale-wal")
+    path.with_name(".index.db.tmp-shm").write_bytes(b"stale-shm")
+    db.build_atomic(path, lambda conn: conn.execute("CREATE TABLE t (a TEXT)"))
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["index.db"]
+
+
 def test_build_atomic_makes_parent_dirs(tmp_path):
     path = tmp_path / "nested" / "deeper" / "index.db"
     db.build_atomic(path, lambda conn: conn.execute("CREATE TABLE t (a TEXT)"))
