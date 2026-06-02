@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 
-from vdocs.contracts.registry import CATALOG_ENRICHED, RAW_INDEX, RAW_TREE
+from vdocs.contracts.registry import GOLD_INVENTORY, RAW_INDEX, RAW_TREE
 from vdocs.kernel import http
 from vdocs.kernel.cas import Cas, atomic_write
 from vdocs.models.catalog import EnrichedInventory
@@ -22,8 +22,10 @@ ByteFetcher = Callable[[str], bytes | None]
 
 class FetchStage(Stage):
     name = "fetch"
-    description = "download catalog documents into the content-addressed bronze raw store"
-    requires = [CATALOG_ENRICHED]
+    description = "download selected documents into the content-addressed bronze raw store"
+    # Requires the GOLD INVENTORY — serve-inventory's blessed `ok` is the fetch gate (§8):
+    # the generic preflight refuses to run until that gate is green.
+    requires = [GOLD_INVENTORY]
     produces = [RAW_TREE, RAW_INDEX]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
 
@@ -34,7 +36,7 @@ class FetchStage(Stage):
         from vdocs.stages.fetch import fetch_pure as fp
 
         inventory = EnrichedInventory.model_validate_json(
-            ctx.cfg.catalog_enriched.read_text(encoding="utf-8")
+            ctx.cfg.gold_inventory_json.read_text(encoding="utf-8")
         )
         targets = fp.select_fetch_targets(inventory.records)
 

@@ -83,6 +83,16 @@ class Settings(BaseSettings):
         return self.inventory / "gold"
 
     @property
+    def gold_inventory_json(self) -> Path:
+        """inv-gold: the GOLD INVENTORY as a browsable/portable JSON selection surface."""
+        return self.inventory_gold / "inventory.json"
+
+    @property
+    def gold_inventory_db(self) -> Path:
+        """inv-gold: the GOLD INVENTORY as a queryable SQLite store (table ``inventory``)."""
+        return self.inventory_gold / "inventory.db"
+
+    @property
     def catalog_raw(self) -> Path:
         """inv-bronze: the raw scraped catalog (immutable crawl evidence)."""
         return self.inventory_bronze / "catalog.raw.json"

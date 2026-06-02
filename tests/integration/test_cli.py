@@ -69,7 +69,7 @@ def _seed_catalog_raw(tmp_path):
 def test_help_lists_stage_subcommands():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for cmd in ("crawl", "catalog", "fetch", "run"):
+    for cmd in ("crawl", "catalog", "serve-inventory", "fetch", "run"):
         assert cmd in result.stdout
 
 
@@ -117,6 +117,7 @@ def _faked_stages():
     from vdocs.stages.catalog.stage import CatalogStage
     from vdocs.stages.crawl.stage import CrawlStage
     from vdocs.stages.fetch.stage import FetchStage
+    from vdocs.stages.serve_inventory.stage import ServeInventoryStage
 
     def page(u: str) -> Page:
         return Page(text=_PAGES.get(u, "<html></html>"), url=u, status_code=200)
@@ -124,6 +125,7 @@ def _faked_stages():
     return [
         CrawlStage(page_fetcher=page),
         CatalogStage(),
+        ServeInventoryStage(),
         FetchStage(fetch_bytes=_BYTES.get),
     ]
 
@@ -138,6 +140,9 @@ def test_crawl_catalog_fetch_commands_in_sequence(tmp_path, monkeypatch):
 
     assert runner.invoke(app, ["catalog"], env=env).exit_code == 0
     assert cfg.catalog_enriched.exists()
+
+    assert runner.invoke(app, ["serve-inventory"], env=env).exit_code == 0
+    assert cfg.gold_inventory_json.exists() and cfg.gold_inventory_db.exists()
 
     assert runner.invoke(app, ["fetch"], env=env).exit_code == 0
     assert json.loads(cfg.raw_index.read_text())

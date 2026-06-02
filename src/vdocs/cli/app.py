@@ -16,6 +16,7 @@ from vdocs.orchestrator.state import StateStore
 from vdocs.stages.catalog.stage import CatalogStage
 from vdocs.stages.crawl.stage import CrawlStage
 from vdocs.stages.fetch.stage import FetchStage
+from vdocs.stages.serve_inventory.stage import ServeInventoryStage
 
 app = typer.Typer(
     help="vdocs — VistA Document Library modernization pipeline", no_args_is_help=True
@@ -24,7 +25,7 @@ app = typer.Typer(
 
 def build_stages() -> list[Stage]:
     """All implemented stages, wired with their real (network) I/O defaults."""
-    return [CrawlStage(), CatalogStage(), FetchStage()]
+    return [CrawlStage(), CatalogStage(), ServeInventoryStage(), FetchStage()]
 
 
 def _drive(
@@ -63,6 +64,13 @@ def crawl() -> None:
 def catalog(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Enrich catalog.raw into the conformed inventory (identity, doc-type, noise, groups)."""
     _drive(only="catalog", force=force)
+
+
+@app.command(name="serve-inventory")
+def serve_inventory(force: bool = typer.Option(False, "--force", "-f")) -> None:
+    """Promote the enriched inventory to the gold selection surface; the postflight HARD GATE
+    blesses it (the fetch gate)."""
+    _drive(only="serve-inventory", force=force)
 
 
 @app.command()

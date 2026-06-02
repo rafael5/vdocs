@@ -40,22 +40,22 @@ status, §5.5) is scaffolded here only as far as the `inventory_status` join nee
 | C8 | Inv-silver | pass 5 (canonical labels) | canonical `doc_label` + `doc_subtitle`; `doc_labelling` | spec §4.5 | ✅ | e2e (canonical label) | `apply_canonical_label`; reads `registries/doc-labels` |
 | C9 | Inv-silver | Stage C (system classification) | `system_type` (196-app map) + `cots_dependent` | spec §4.6, §10.7 | ✅ | e2e + unclassified-fallback test | `classify_system`; reads `registries/system-types` |
 | C10 | Inv-silver | `CatalogStage` driver | raw → passes 1–5 + C → `inventory/silver/catalog.enriched.{json,csv}` + schema JSON | spec §4, §5; design §8 | ✅ | `test_catalog_inventory`: §7 gate vs pinned 8,834-row fixture (**exact**) + driver wiring | `enrich_rows` wired; `EnrichedRecord`/`EnrichedInventory` (37 cols incl. `anchor_key`); old thin `catalog_pure`+drift removed; `fetch` reconciled (selects `noise_type==''`, drift → acquisitions later) |
-| **D** | Inv-gold (`serve-inventory`) | | curated/queryable gold inventory + the fetch gate | | ☐ | | |
-| D1 | Inv-gold | `serve-inventory` stage | promote silver → `inventory/gold` (`inventory.db` + `inventory.json`); the selection surface | design §8 (serve-inventory row), §4 | ☐ | integration test | |
-| D2 | Inv-gold | HARD GATE (postflight) | complete vs crawl · enriched · noise-classified · §7 acceptance → blesses gold `ok` = **fetch gate** | design §8, §7.3; spec §7 | ☐ | gate-pass + gate-fail tests | consumer-preflight makes fetch wait automatically |
+| **D** | Inv-gold (`serve-inventory`) | | curated/queryable gold inventory + the fetch gate | | ◐ | D1+D2 ✅; D3+D4 todo | |
+| D1 | Inv-gold | `serve-inventory` stage | promote silver → `inventory/gold` (`inventory.db` + `inventory.json`); the selection surface | design §8 (serve-inventory row), §4 | ✅ | `test_serve_inventory` (gold json + indexed `inventory.db`) | `ServeInventoryStage`; `inventory.json` + queryable `inventory.db` (table `inventory`, `doc_id` + 6 selection indexes); built atomically (temp+rename) |
+| D2 | Inv-gold | HARD GATE (postflight) | complete vs crawl · enriched · noise-classified · §7 acceptance → blesses gold `ok` = **fetch gate** | design §8, §7.3; spec §7 | ✅ | `test_serve_pure` (9) + gate-pass/fail integration | `deep_gate`→ pure `evaluate_gate` (1:1 vs crawl, noise/system/section/format complete; unclassified = soft WARN); **`fetch` now `requires` GOLD_INVENTORY** so the `ok` literally gates fetch; verified green on the full 8,834-row corpus |
 | D3 | Inv-gold | `acquisitions` + `inventory_status` | `state.db:acquisitions` table; `inventory_status` view = enriched ⋈ acquisitions | design §5.5 | ☐ | StateStore tests | acquisitions written by `fetch` (downstream); table+view scaffolded here |
 | D4 | Inv-gold | CLI | `vdocs crawl` / `catalog` / `serve-inventory`; `vdocs inventory --status`; selection flags | design §8; spec §9.5 | ☐ | CLI integration tests | extends the Phase-2 Typer app |
 | **E** | Publish / validate (independent product) | | the inventory as its own deliverable (ADR-022) | | ⬚ | | |
 | E1 | Publish | no-information-loss check vs v1 | enriched ⊇ v1 signals; §7 distributions at/above floor | spec §7 | ☐ | comparison report vs v1 reference CSV | |
 | E2 | Publish | browsable inventory site | publish gold inventory (table / GitHub Pages, à la v1 `vistadocs.github.io`) | ADR-022; spec §9.5 | ⬚ | — | deferred until inventory is wanted as a standalone product |
 
-**Current focus:** the **entire inventory bronze→silver track is ✅** — crawler (A1/A2/B1/B2),
-foundations+registries (A3), and the full enrichment (C1–C10). `make check` green (189 tests, 100%
-cov, ruff + mypy clean), and the enriched corpus **reproduces every §7 reference distribution exactly**
-(8,834 rows; noise/layer/format/labelling/section/patch_id/companion/doc-code-leaders all to the row).
-**Next: Phase D** — `serve-inventory` (promote silver → gold `inventory.{db,json}`) + the **hard-gate
-fetch gate** (D2), then `acquisitions` + `inventory_status` (D3) and the CLI (D4). **B3** (live bounded
-VDL crawl) stays a manual, politeness-gated smoke check.
+**Current focus:** inventory **bronze→silver→gold + the fetch gate are ✅** — crawler (A1/A2/B1/B2),
+foundations+registries (A3), full enrichment (C1–C10), and the gold inventory + HARD GATE (D1/D2).
+`make check` green (203 tests, 100% cov, ruff + mypy clean); the §7 distributions reproduce exactly and
+the gate passes green on the full 8,834-row corpus. **The fetch gate is live** — `fetch` requires the
+gold inventory's blessed `ok`, so the document medallion can't run until the inventory is complete.
+**Next: D3** (`state.db:acquisitions` + `inventory_status` join) and **D4** (`vdocs inventory --status`
++ selection flags). **B3** (live bounded VDL crawl) stays a manual, politeness-gated smoke check.
 
 **Dependency order:** A1→A2→A3 ⇒ B1→B2→B3 ⇒ C1–C9 (pure, parallelizable) → C10 (driver) ⇒ D1→D2 (gate) → D3→D4 ⇒ E. The gate (D2) is the milestone that unblocks the document medallion's `fetch`.
 
@@ -94,6 +94,14 @@ VDL crawl) stays a manual, politeness-gated smoke check.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-01** — **Gold inventory + the fetch gate live (D1/D2 → ✅).** `ServeInventoryStage` promotes
+  `catalog.enriched` → `inventory/gold/inventory.{json,db}` (a portable JSON view + a queryable SQLite
+  `inventory` table with the stable `doc_id` join key and 6 selection indexes, built atomically). Its
+  postflight `deep_gate` delegates to the pure `evaluate_gate` — the HARD GATE: complete vs. the crawl
+  (1:1), every row noise-/system-/section-/format-classified; unclassified apps are a soft WARN, not a
+  block. **`fetch` now `requires` the GOLD_INVENTORY artifact**, so serve-inventory's blessed `ok` is
+  literally the fetch gate (the generic consumer-preflight refuses fetch until green). Verified green on
+  the full 8,834-row corpus (0 unclassified). 203 tests, 100% cov.
 - **2026-06-01** — **Catalog enrichment wired + §7 gate green (C10 → ✅; Phase C complete).** `CatalogStage`
   now flattens `catalog.raw` → raw rows → `enrich_rows` (loading `registries/`) → the inv-silver
   `catalog.enriched.{json,csv}` + schema. New `EnrichedRecord`/`EnrichedInventory` (37 cols incl.

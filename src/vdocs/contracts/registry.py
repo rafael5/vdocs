@@ -62,6 +62,23 @@ CATALOG_ENRICHED = ArtifactContract(
     produced_by="catalog",
     relpath="inventory/silver/catalog.enriched.json",
 )
+# inv-gold: the GOLD INVENTORY — the curated, queryable selection surface + the fetch gate.
+# A portable JSON view and a queryable SQLite table, both produced by serve-inventory.
+GOLD_INVENTORY = ArtifactContract(
+    key="inventory/gold.json",
+    kind=Kind.FILE,
+    storage_class=StorageClass.STATE,
+    produced_by="serve-inventory",
+    relpath="inventory/gold/inventory.json",
+)
+GOLD_INVENTORY_DB = ArtifactContract(
+    key="inventory/gold.db",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="serve-inventory",
+    db="inventory/gold/inventory.db",
+    table="inventory",
+)
 RAW_TREE = ArtifactContract(
     key="bronze/raw",
     kind=Kind.TREE_ASSET_CAS,
@@ -88,6 +105,13 @@ def foundational_registry() -> ArtifactRegistry:
 def default_registry() -> ArtifactRegistry:
     """The registry of every artifact declared so far (foundational + bronze)."""
     reg = foundational_registry()
-    for contract in (CATALOG_RAW, CATALOG_ENRICHED, RAW_TREE, RAW_INDEX):
+    for contract in (
+        CATALOG_RAW,
+        CATALOG_ENRICHED,
+        GOLD_INVENTORY,
+        GOLD_INVENTORY_DB,
+        RAW_TREE,
+        RAW_INDEX,
+    ):
         reg.register(contract)
     return reg

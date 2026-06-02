@@ -15,6 +15,7 @@ from vdocs.orchestrator.engine import Orchestrator
 from vdocs.stages.catalog.stage import CatalogStage
 from vdocs.stages.crawl.stage import CrawlStage
 from vdocs.stages.fetch.stage import FetchStage
+from vdocs.stages.serve_inventory.stage import ServeInventoryStage
 
 INDEX_HTML = """
 <a href="section.asp?secid=1">Clinical</a>
@@ -63,6 +64,7 @@ def _stages():
     return [
         CrawlStage(page_fetcher=fake_page),
         CatalogStage(),
+        ServeInventoryStage(),
         FetchStage(fetch_bytes=fake_bytes),
     ]
 
@@ -71,7 +73,7 @@ def test_bronze_dag_runs_end_to_end(bronze_ctx):
     ctx = bronze_ctx
     results = Orchestrator(_stages()).run(ctx, force=True)
 
-    assert [r.stage for r in results] == ["crawl", "catalog", "fetch"]
+    assert [r.stage for r in results] == ["crawl", "catalog", "serve-inventory", "fetch"]
     assert all(r.status == "ok" for r in results)
 
     # crawl wrote catalog.raw with the ADT doc pair
@@ -104,8 +106,8 @@ def test_bronze_dag_skips_on_clean_rerun(bronze_ctx):
     orch.run(ctx, force=True)
     second = orch.run(ctx)  # no force
 
-    # crawl is FORCE_ONLY → skipped; catalog & fetch SKIP_IF_UNCHANGED → skipped
-    assert second == [None, None, None]
+    # crawl is FORCE_ONLY → skipped; catalog/serve-inventory/fetch SKIP_IF_UNCHANGED → skipped
+    assert second == [None, None, None, None]
 
 
 def test_fetch_falls_back_to_pdf_when_docx_missing(bronze_ctx):
@@ -116,6 +118,7 @@ def test_fetch_falls_back_to_pdf_when_docx_missing(bronze_ctx):
         [
             CrawlStage(page_fetcher=fake_page),
             CatalogStage(),
+            ServeInventoryStage(),
             FetchStage(fetch_bytes={pdf_url: b"%PDF-1.5 fake"}.get),
         ]
     ).run(ctx, force=True)
@@ -129,7 +132,12 @@ def test_fetch_records_failure_when_no_format_available(bronze_ctx):
     ctx = bronze_ctx
     # neither DOCX nor PDF is available upstream → the doc is counted failed, not stored
     Orchestrator(
-        [CrawlStage(page_fetcher=fake_page), CatalogStage(), FetchStage(fetch_bytes=lambda u: None)]
+        [
+            CrawlStage(page_fetcher=fake_page),
+            CatalogStage(),
+            ServeInventoryStage(),
+            FetchStage(fetch_bytes=lambda u: None),
+        ]
     ).run(ctx, force=True)
 
     assert ctx.state.get("fetch").counts == {"targets": 1, "fetched": 0, "failed": 1}
