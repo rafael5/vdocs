@@ -84,19 +84,27 @@ def _write_staged(index_db, staged: list[dict[str, object]]) -> None:  # type: i
     from vdocs.stages.enrich import enrich_pure as ep
 
     index_db.parent.mkdir(parents=True, exist_ok=True)
+    cols = ", ".join(
+        f"{c} TEXT" if c != "word_count" else f"{c} INTEGER" for c in ep.STAGED_COLUMNS
+    )
+    placeholders = ", ".join("?" for _ in ep.STAGED_COLUMNS)
+    rows = [[row[c] for c in ep.STAGED_COLUMNS] for row in staged]
     conn = db.connect(index_db)
     try:
-        cols = ", ".join(
-            f"{c} TEXT" if c != "word_count" else f"{c} INTEGER" for c in ep.STAGED_COLUMNS
-        )
-        conn.execute("DROP TABLE IF EXISTS doc_meta_staged")
-        conn.execute(f"CREATE TABLE doc_meta_staged ({cols}, PRIMARY KEY (doc_id))")
-        placeholders = ", ".join("?" for _ in ep.STAGED_COLUMNS)
+        # Atomic rebuild (§7.4): build the replacement in a side table — the live
+        # doc_meta_staged is untouched until the swap — then drop-old + rename-new inside one
+        # transaction, so a crash never exposes a missing or half-written table.
+        conn.execute("DROP TABLE IF EXISTS doc_meta_staged__new")
+        conn.execute(f"CREATE TABLE doc_meta_staged__new ({cols}, PRIMARY KEY (doc_id))")
         conn.executemany(
-            f"INSERT OR REPLACE INTO doc_meta_staged ({', '.join(ep.STAGED_COLUMNS)}) "
+            f"INSERT OR REPLACE INTO doc_meta_staged__new ({', '.join(ep.STAGED_COLUMNS)}) "
             f"VALUES ({placeholders})",
-            [[row[c] for c in ep.STAGED_COLUMNS] for row in staged],
+            rows,
         )
+        conn.commit()
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("DROP TABLE IF EXISTS doc_meta_staged")
+        conn.execute("ALTER TABLE doc_meta_staged__new RENAME TO doc_meta_staged")
         conn.commit()
     finally:
         conn.close()

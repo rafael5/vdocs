@@ -18,15 +18,19 @@ def test_data_dir_env_override(monkeypatch):
 
 
 def test_derived_paths_descend_from_lake(tmp_path):
+    # The document medallion is its own `documents/` subtree (§4, §5.3) — symmetric with the
+    # inventory medallion's `inventory/` subtree.
+    docs = tmp_path / "documents"
     cfg = Settings(data_dir=tmp_path)
-    assert cfg.bronze == tmp_path / "bronze"
-    assert cfg.bronze_raw == tmp_path / "bronze" / "raw"
-    assert cfg.assets == tmp_path / "assets"
-    assert cfg.silver_text == tmp_path / "silver" / "text"
-    assert cfg.gold == tmp_path / "gold"
-    assert cfg.gold_shared == tmp_path / "gold" / "_shared"
-    assert cfg.publish == tmp_path / "gold" / "publish"
-    assert cfg.reports == tmp_path / "reports"
+    assert cfg.documents == docs
+    assert cfg.bronze == docs / "bronze"
+    assert cfg.bronze_raw == docs / "bronze" / "raw"
+    assert cfg.assets == docs / "assets"
+    assert cfg.silver_text == docs / "silver" / "text"
+    assert cfg.gold == docs / "gold"
+    assert cfg.gold_shared == docs / "gold" / "_shared"
+    assert cfg.publish == docs / "gold" / "publish"
+    assert cfg.reports == tmp_path / "reports"  # cross-cutting: at the lake root, not per-track
 
 
 def test_derived_db_paths(tmp_path):
@@ -49,13 +53,14 @@ def test_tool_ver_matches_package_version(tmp_path):
 
 
 def test_remaining_derived_paths(tmp_path):
+    docs = tmp_path / "documents"
     cfg = Settings(data_dir=tmp_path)
-    assert cfg.silver == tmp_path / "silver"
-    assert cfg.silver_converted == tmp_path / "silver" / "text" / "01-converted"
-    assert cfg.gold_consolidated == tmp_path / "gold" / "consolidated"
-    assert cfg.corpus_manifest == tmp_path / "gold" / "corpus-manifest.json"
-    assert cfg.discovery_json == tmp_path / "gold" / "discovery.json"
-    assert cfg.glossary == tmp_path / "gold" / "glossary.md"
+    assert cfg.silver == docs / "silver"
+    assert cfg.silver_converted == docs / "silver" / "text" / "01-converted"
+    assert cfg.gold_consolidated == docs / "gold" / "consolidated"
+    assert cfg.corpus_manifest == docs / "gold" / "corpus-manifest.json"
+    assert cfg.discovery_json == docs / "gold" / "discovery.json"
+    assert cfg.glossary == docs / "gold" / "glossary.md"
 
 
 def test_inventory_medallion_paths(tmp_path):

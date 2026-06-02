@@ -57,7 +57,7 @@ end-to-end on a real 469-doc VA corpus** (seeded offline from v1's `raw/`), not 
 | 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc/Docling; CAS images) | §8, §1, ADR-010 | ✅ | `test_convert_pure`, `test_convert_stage` + real 469-doc run | **DOCX-only** (§1). Pandoc GFM + `--extract-media`; images→asset CAS, refs rewritten (markdown + HTML `<img>` by basename). **Per-doc converter routing** via `registries/converter-routing` → Docling (out-of-process CLI; typer conflict forbids in-proc), **routes `CPRS/cprsguium`** — verified end-to-end: bare markers 3,058→0, list items 332→3,230, +559 image refs. EMF/WMF→PNG + the few residual `<!-- image -->` deferred |
 | 3 | **discover** | 🥈 DOC | `text@converted` + `catalog.enriched` (doc_code only) → `reports/patterns` (candidate boilerplate/templates/glossary/structure/converter-routing + disposition) | §8, §9.6, §9.8 | ✅ | `test_discover_pure`, `test_discover_stage` + real run | recurring-block miner (template RETAIN / phrase DELETE / boilerplate REFERENCE) **+ near-dup boilerplate clustering** (`kernel/discovery` MinHash/LSH; real 3051→3560) + acronym glossary (PROMOTE) + **structures** miner (callout/TOC/revision-table → CANONICALIZE; 7 curated) + **`(doc_type, era)` template induction** (structural-scaffold clustering; doc_type←catalog `doc_code`, era←title-page date; STRIP + stamp `template_id` + RETAIN schema, §9.8; 2 DIBR templates curated) + **convert-quality probe** (`mine_converter_routing` → Docling ROUTE); evidence + grade; **mutates no content** |
 | 3 | **enrich** | 🥈 DOC | `text@converted`,`catalog.enriched` → `text@enriched` (identity FM baked) + `index.db:doc_meta_staged` | §8 | ✅ | `test_enrich_doc_pure`, `test_enrich_stage` | joins each bundle to its inventory record (by `<app>/<slug>`, DOCX-preferred), bakes identity FM via the kernel codec; **computed fields (word_count) staged to index.db, never in the body** (§6.3) |
-| 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7, §6.6, §9.8 | ✅ | `test_normalize_pure`, `test_anchors_pure`, `test_revision_pure`, `test_tables_pure`, `test_template_pure`, `test_normalize_stage`, `test_normalize_props` + real 469-doc run | **F-steps (all shipped)**: **heading recovery** from `_Toc` bookmarks; **revision-history → `history.yaml` sidecar** (§6.6; HTML + GFM-pipe); **anchor substrate → `refs.yaml` sidecar** (§6.7/§5.5: bookmarks, `](#_Toc…)` rewrite w/ `UNRESOLVED` signal, `(stable_id ↔ slug ↔ bookmark)` map, round-trip back-links — `anchors_pure`); strip Pandoc artifacts; subtract `registries/phrases`; **boilerplate REFERENCE** (`subtract_boilerplate` + curated `registries/boilerplate`; shared `kernel/text.block_key`; real 61 docs/89 refs); **complex tables → `tables/*.csv`** (§6.4/§6.5; `tables_pure`, ≥10-row/≥8-col guardrail, `kernel/csv`; real 276 docs/1326 sidecars); **`(doc_type, era)` template STRIP + `template_id` stamp** (§9.8; `template_pure` + curated `registries/templates`; era=`kernel/text.decade_bucket`; real 120 stamped); **heading-level inference** (`infer_heading_levels`: gap-free tree, fence-safe; real 316 adjusted); regenerate `## Contents` TOC (GitHub-slug anchors, H2–H3 depth); stamp `source_sha256`. (Glossary PROMOTE is a gold-phase output, not a silver body transform — §8 note.) |
+| 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7, §6.6, §9.8 | ✅ | `test_normalize_pure`, `test_anchors_pure`, `test_revision_pure`, `test_tables_pure`, `test_template_pure`, `test_normalize_stage`, `test_normalize_props` + real 469-doc run | **F-steps (all shipped)**: **heading recovery** from `_Toc` bookmarks; **revision-history → `history.yaml` sidecar** (§6.6; HTML + GFM-pipe); **anchor substrate → `refs.yaml` sidecar** (§6.7/§5.5: bookmarks, `](#_Toc…)` rewrite w/ `UNRESOLVED` signal, `(stable_id ↔ slug ↔ bookmark)` map, round-trip back-links — `anchors_pure`); strip Pandoc artifacts; subtract `registries/phrases`; **boilerplate REFERENCE** (`subtract_boilerplate` + curated `registries/boilerplate`; shared `kernel/text.block_key`; real 61 docs/89 refs); **complex tables → `tables/*.csv`** (§6.4/§6.5; `tables_pure`, ≥10-row/≥8-col guardrail, `kernel/csv`; real 276 docs/1326 sidecars); **`(doc_type, era)` template STRIP + `template_id` stamp** (§9.8; `template_pure` + curated `registries/templates`; era=`kernel/text.decade_bucket`; real 120 stamped); **heading-level inference** (`infer_heading_levels`: gap-free tree, fence-safe; real 316 adjusted); **legacy in-body TOC stripped** via `registries/structures` CANONICALIZE `toc` (`strip_legacy_toc` keyed on curated `match` variants — closes the duplicate-TOC deviation where the source's text TOC survived next to the derived one); regenerate `## Contents` TOC (GitHub-slug anchors, H2–H3 depth); stamp `source_sha256`. (Glossary PROMOTE is a gold-phase output, not a silver body transform — §8 note.) **Remaining structures consumer:** `callout` CANONICALIZE (admonition→GFM alerts) + `revision-table` heading-shape (the revision *table* already leaves the body to `history.yaml`) — curated in `registries/structures`, not yet applied. |
 | **4 — Gold derive (machine)** | | | version groups + the queryable index + knowledge graph + manifests | §17.4 | ☐ 0/4 | | |
 | 4 | **consolidate** | 🥇 DOC | `text@normalized`,`assets` → `consolidated` (one anchor per version group; ordered lineage) | §8, §6.6 | ☐ | | `is_latest`; prior bodies as travel-with sidecars |
 | 4 | **index** | 🥇 DOC | `text@normalized`,`consolidated` → `index.db` (docs, sections + **FTS5 over is_latest**, entities, quality, **stable IDs**) | §8 | ☐ | | the lexical/structured search surface |
@@ -102,6 +102,19 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 *Append implementation lessons as they accrue (newest first). Inventory-track lessons live in
 [`vdl-crawl-tracker.md`](vdl-crawl-tracker.md); cross-phase / architectural lessons go here.*
 
+- **2026-06-02 — A curated registry with no consumer is a silent deviation.** `discover` mined the
+  structural conventions (P2.2a) and they were curated into `registries/structures` (7 entries:
+  callouts, `toc:contents`, `revision-table`), and the design names `normalize` as their consumer
+  (§9.6 CANONICALIZE) — but `normalize` never loaded the registry. The visible symptom was a
+  **duplicate table of contents**: `normalize` *adds* a derived `## Contents` but the source's legacy
+  text TOC (heading + page-numbered entries) was never *removed* — `strip_existing_toc` only matched
+  `normalize`'s own `## Contents` output (for idempotency), not legacy variants like
+  `# Table of Contents`, which then also leaked in as a TOC entry (`parse_headings` skips only the
+  exact text "Contents"). Fix: a registry-driven `strip_legacy_toc` F-step keyed on a curated `match`
+  variant list, run *before* TOC regeneration. Lesson: a registry is only "built" when a stage
+  *consumes* it — track producer **and** consumer; `discover`→curate→`normalize` is one seam, not two
+  independent ✅s. The other two structures conventions (callout, revision-table heading) remain
+  unconsumed and are now explicitly logged as follow-ups in row 60, not left implied-done.
 - **2026-06-02 — Unifying onto a library means inheriting its opinions.** Collapsing the two mojibake
   fixers onto `ftfy` (§9.2) was the right call — but `ftfy.fix_text`'s default `uncurl_quotes` *straightens*
   smart quotes (`"` → `'`, `"…"` → `"…"`), which the old custom kernel round-trip preserved. The catalog
@@ -164,6 +177,29 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **Design-compliance audit remediation (5 deviations fixed).** A full code-vs-design
+  sweep of Phases 1–3 found the spine substantially faithful; five deviations were fixed TDD-first
+  (397 tests, 100% cov, ruff+mypy clean). (1) **`contract_ver` now actually gates (§7.3 step 2).** It
+  was recorded in `stage_runs` but never read, so a `produces[]` shape bump did *not* invalidate
+  downstream (the stated purpose, design.md:786). Fixed in `orchestrator/stage.py`: a stage no longer
+  skips when its own `contract_ver` changed (self-invalidation), and each internal upstream's recorded
+  `contract_ver` is folded into the consumer's `inputs_fp` (so a bump propagates even when the cheap
+  fingerprint is shape-blind). (2) **Document medallion moved under `documents/` (§5.3/§4).** Config +
+  contract relpaths were at the lake root (only `inventory/` was namespaced), breaking the two-subtree
+  medallion symmetry; added `cfg.documents` and prefixed bronze/assets/silver/gold + the
+  `RAW_*`/`TEXT_*`/`ASSETS` relpaths (contract *keys* unchanged). CLAUDE.md lake diagram reconciled.
+  (3) **`doc_id` promoted to `kernel/ids` (§9.2).** The `app_code:doc_slug` join key was copy-pasted in
+  4 sites (enrich/serve/fetch ×2); now one model-free Protocol-typed primitive, re-exported so
+  `ep.doc_id`/`sp.doc_id` still resolve. (4) **`enrich` `doc_meta_staged` write made atomic (§7.4).**
+  Was `DROP`-then-rebuild in place; now builds a side table and swaps via drop-old + rename-new in one
+  transaction, so a failed rebuild never destroys the prior table (regression test pins it). (5)
+  **Shared HTML/GFM table-cell mechanics extracted to `kernel/table` (§9.2).** `_flatten`/`pipe_cells`/
+  table+pipe regexes were duplicated across `normalize/revision_pure` + `tables_pure`; now one kernel
+  module (base `pipe_cells` keeps md-links; `tables_pure` composes `strip_md_links`). **Known gaps left
+  as-is** (downstream halves of unbuilt stages, documented seams): template-governed TOC depth (still
+  H2–H3 fallback, §6.7), `structures` CANONICALIZE proposed but not applied in `normalize` (§9.6),
+  heading-recovery level inference (flat H2). No design-doc change needed — §5.3 already specified
+  `documents/`; the code now matches it.
 - **2026-06-02** — **P1.b: `normalize` F-step — boilerplate REFERENCE (§9.6).** Promoted block
   identity to a shared kernel primitive (`kernel/text.block_key`, used by both `discover` mining and
   this step — §9.2; `discover.block_key` now re-exports it). New `normalize_pure.subtract_boilerplate

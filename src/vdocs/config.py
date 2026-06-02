@@ -107,10 +107,15 @@ class Settings(BaseSettings):
         """inv-silver: the conformed/enriched per-record inventory."""
         return self.inventory_silver / "catalog.enriched.json"
 
-    # --- document medallion bronze (data plane; the fetched subset — §5.3) ---
+    # --- document medallion (data plane; the fetched subset — §4, §5.3) ---
+    # Its own `documents/` subtree, symmetric with the inventory medallion's `inventory/`.
+    @property
+    def documents(self) -> Path:
+        return self.lake / "documents"
+
     @property
     def bronze(self) -> Path:
-        return self.lake / "bronze"
+        return self.documents / "bronze"
 
     @property
     def bronze_raw(self) -> Path:
@@ -122,12 +127,12 @@ class Settings(BaseSettings):
 
     @property
     def assets(self) -> Path:
-        return self.lake / "assets"
+        return self.documents / "assets"
 
     # --- silver (conformed, versioned text) ---
     @property
     def silver(self) -> Path:
-        return self.lake / "silver"
+        return self.documents / "silver"
 
     @property
     def silver_text(self) -> Path:
@@ -151,7 +156,7 @@ class Settings(BaseSettings):
     # --- gold (curated, derived, computable) ---
     @property
     def gold(self) -> Path:
-        return self.lake / "gold"
+        return self.documents / "gold"
 
     @property
     def gold_consolidated(self) -> Path:

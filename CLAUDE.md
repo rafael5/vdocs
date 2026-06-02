@@ -66,12 +66,14 @@ Makefiles must use `.venv/bin/` prefixes (parent direnv hijacks bare tool names)
 ## Data lake (NOT in this repo)
 
 ```
-~/data/vdocs/                # $DATA_DIR
-  bronze/{catalog,raw}       # crawl·catalog·fetch (raw is content-addressed)
-  assets/<sha256>.<ext>      # convert (CAS image store)
-  silver/text/{01-converted,02-enriched,03-normalized}/...
-  gold/{consolidated,_shared,publish, corpus-manifest.json, discovery.json, glossary.md}
-  state.db · index.db · vectors.db
+~/data/vdocs/                          # $DATA_DIR — two medallion subtrees (§4, §5.3)
+  inventory/{bronze,silver,gold}/...   # INVENTORY medallion: crawl·catalog·serve-inventory
+  documents/                           # DOCUMENT medallion (data plane)
+    bronze/raw/<sha256>.docx           #   fetch (content-addressed) + raw/index.json
+    assets/<sha256>.<ext>              #   convert (CAS image store)
+    silver/text/{01-converted,02-enriched,03-normalized}/...
+    gold/{consolidated,_shared,publish, corpus-manifest.json, discovery.json, glossary.md}
+  state.db · index.db · vectors.db     # cross-cutting (at the lake root, not per-track)
   reports/{survey,headings,lexicon,patterns,fidelity}
 ```
 
