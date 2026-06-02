@@ -22,40 +22,55 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 
 ---
 
+## Overall status
+
+**Pipeline stages (§8): 3 ✅ · 1 ◐ · 15 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
+counted separately below). Last updated **2026-06-01**.
+
+| Phase | Title | Status | Progress |
+|---|---|---|---|
+| 1 | Spine (kernel · config · models · contracts · orchestrator) | ✅ | 4/4 |
+| 2 | Inventory medallion + doc-bronze | ◐ | 3/4 ✅ · `fetch` ◐ (selection flags) |
+| 3 | Silver — document text (convert · discover · enrich · normalize) | ☐ | 0/4 |
+| 4 | Gold derive (consolidate · index · relate · manifest) | ☐ | 0/4 |
+| 5 | Gold deliver (fidelity · publish · validate · push · analyze) | ☐ | 0/5 |
+| 6 | Machine interface (embed · serve-mcp) | ☐ | 0/2 |
+| 7 | Harden (property tests · `--verify` · gc · docs-gen · replay · refresh) | ◐ | 2 ◐ · 1 ⬚ · 3 ☐ |
+
 ## Phase / stage summary
 
 | Phase | Stage | Layer | Goal (requires → produces) | Design ref | Status | Evidence | Notes |
 |---|---|---|---|---|---|---|---|
-| **1 — Spine** | | | the Stage/Artifact abstraction + generic DAG runner, proven by a no-op DAG | §7, §17.1 | ✅ | | the contract-enforcing core everything else fills in |
+| **1 — Spine** | | | the Stage/Artifact abstraction + generic DAG runner, proven by a no-op DAG | §7, §17.1 | ✅ 4/4 | | the contract-enforcing core everything else fills in |
 | 1 | kernel | — | text · frontmatter · fingerprint · cas · lineage · db · discovery · **http** (one each, §9.2) | §9.2 | ✅ | `tests/unit/kernel/*` | `http` hardened this session (PoliteClient: UA/retry/429/redirect/final-URL/delay) |
 | 1 | config | — | `Settings` off `DATA_DIR`; all lake paths derived; no module-level path constants | §5.3, §9.1 | ✅ | `test_config` | inventory medallion + gold-inventory + registries paths added |
 | 1 | models / contracts | — | Pydantic boundary types; `ArtifactContract` (locate/validate/fingerprint); the registry | §7.1 | ✅ | `test_artifact`, `test_registry` | |
 | 1 | orchestrator | — | `Stage` base (generic preflight/postflight), DAG engine, `state.db:stage_runs` | §7.1–7.3 | ✅ | `test_noop_dag`, `test_engine_edges` | one execution path; no stage re-implements gating |
-| **2 — Inventory medallion + doc-bronze** | | | gold inventory of the whole site + the fetch gate, then a selected bronze | §4, §17.2 | ✅ | see [`vdl-crawl-tracker.md`](vdl-crawl-tracker.md) | the foundation the document plane stands on |
+| **2 — Inventory medallion + doc-bronze** | | | gold inventory of the whole site + the fetch gate, then a selected bronze | §4, §17.2 | ◐ 3/4 | see [`vdl-crawl-tracker.md`](vdl-crawl-tracker.md) | inventory medallion ✅; `fetch` ◐ (selection flags) |
 | 2 | **crawl** | 🥉 INV | `vdl` → `inventory/bronze:catalog.raw` (polite 3-level walk; final-URL base; skip non-200) | §8; spec §3 | ✅ | `test_crawl_pure`, `test_crawl_stage` | live bounded smoke (B3) still manual |
 | 2 | **catalog** | 🥈 INV | `catalog.raw` → `catalog.enriched` (5-pass enrichment + system classification, §5 cols) | §8; spec §4 | ✅ | `test_enrich_pure`, `test_catalog_inventory` | **§7 distributions reproduce exactly** vs the pinned 8,834-row fixture |
 | 2 | **serve-inventory** | 🥇 INV | `catalog.enriched` → gold `inventory.{json,csv,db}`; **HARD GATE = the fetch gate** | §8, §7.3; spec §7 | ✅ | `test_serve_pure`, `test_serve_inventory` | gate green on the full corpus; `vdocs inventory --status` |
 | 2 | **fetch** | 🥉 DOC | gate `ok` + selection + `acquisitions` → `documents/bronze:raw` (CAS) + `index.json` + `acquisitions` | §8, §9.5 | ◐ | `test_fetch_pure`, `test_bronze_dag` | works (CAS, DOCX-pref, index, acquisitions, gate-wired); **explicit selection flags pending** (fetches all `noise==''`) |
-| **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ☐ | | build discover→registry **before** normalize so no pattern is hard-coded |
+| **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ☐ 0/4 | | build discover→registry **before** normalize so no pattern is hard-coded |
 | 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc + Docling; CAS images) | §8 | ☐ | | DOCX/PDF → markdown; image extraction to CAS |
 | 3 | **discover** | 🥈 DOC | `text@converted` → `reports/patterns` (candidate boilerplate/templates/glossary/structure + disposition) | §8, §9.6 | ☐ | | inductive, corpus-global; **proposes** `registries/` updates via a curation gate; mutates no content |
 | 3 | **enrich** | 🥈 DOC | `text@converted`,`catalog.enriched` → `text@enriched` (identity FM baked) + `index.db:doc_meta_staged` | §8 | ☐ | | joins inventory identity onto each bundle |
 | 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7 | ☐ | | F1–F10; subtracts curated patterns; single-sources boilerplate/glossary; strips version apparatus |
-| **4 — Gold derive (machine)** | | | version groups + the queryable index + knowledge graph + manifests | §17.4 | ☐ | | |
+| **4 — Gold derive (machine)** | | | version groups + the queryable index + knowledge graph + manifests | §17.4 | ☐ 0/4 | | |
 | 4 | **consolidate** | 🥇 DOC | `text@normalized`,`assets` → `consolidated` (one anchor per version group; ordered lineage) | §8, §6.6 | ☐ | | `is_latest`; prior bodies as travel-with sidecars |
 | 4 | **index** | 🥇 DOC | `text@normalized`,`consolidated` → `index.db` (docs, sections + **FTS5 over is_latest**, entities, quality, **stable IDs**) | §8 | ☐ | | the lexical/structured search surface |
 | 4 | **relate** | 🥇 DOC | `index.db` → `index.db:relations` (doc↔entity, doc↔doc xref, entity↔entity) | §8 | ☐ | | the knowledge graph |
 | 4 | **manifest** | 🥇 DOC | `consolidated`,`index.db`,`vectors.db`,`state.db` → `corpus-manifest.json` + `discovery.json` | §8, §14 | ☐ | | lineage + machine-discovery descriptor |
-| **5 — Gold deliver (humans)** | | | per-doc fidelity verdict → published human tree → hard gate → push | §17.5 | ☐ | | |
+| **5 — Gold deliver (humans)** | | | per-doc fidelity verdict → published human tree → hard gate → push | §17.5 | ☐ 0/5 | | |
 | 5 | **fidelity** | 🥇 DOC | `text@normalized`,`raw`,`index.db`,`registries` → `reports/fidelity` (per-doc S→T verdict + corpus report) | §8; [`fidelity-framework.md`](fidelity-framework.md) | ☐ | | content/provenance/history axes + template compliance + TOC integrity |
 | 5 | **publish** | 🥇 DOC | manifest, `text@normalized`, `consolidated`, `assets`, `catalog.enriched`, `glossary` → `publish` (md-only tree + INDEX) | §8 | ☐ | | markdown-only; images materialized + gitignored |
 | 5 | **validate** | 🥇 DOC | `publish`,`text@normalized`,`index.db`,`vectors.db`,`reports/fidelity` → **HARD GATE** (schema·lineage·anchors·IDs·fidelity verdict) | §8, §7.3 | ☐ | | ALWAYS_RERUN; QUARANTINE blocks; REVIEW needs sign-off |
 | 5 | **push** | 🚀 DOC | `publish` (+ validate `ok`) → `git:vistadocs/vdl` (anchor files + lineage sidecars) | §8, §6.6 | ☐ | | FORCE_ONLY; commit-replay deferred behind `--replay-history` |
 | 5 | **analyze** | ⬩ DOC | `text@normalized` → `reports/{survey,headings,lexicon}` (off critical path) | §8 | ☐ | | diagnostic only |
-| **6 — Machine interface (§14)** | | | embeddings + the MCP server (hybrid search) — the headline machine output | §17.6, §14 | ☐ | | |
+| **6 — Machine interface (§14)** | | | embeddings + the MCP server (hybrid search) — the headline machine output | §17.6, §14 | ☐ 0/2 | | |
 | 6 | **embed** | 🥇 DOC | `index.db:doc_sections` (**is_latest only**) → `vectors.db` (per-chunk embeddings + ANN) | §8, §14.6 | ☐ | | prior-version chunks excluded |
 | 6 | **serve-mcp** | 🥇 DOC | `index.db`,`vectors.db`,`corpus-manifest`,`discovery.json` → MCP server (semantic+lexical+structured+graph, RRF) | §14 | ☐ | | MCP Python SDK; read-only stores |
-| **7 — Harden** | | | property tests · `--verify` · `gc` · generated stage docs · history-replay · `refresh` | §17.7 | ☐ | | filling robustness against a frozen spine |
+| **7 — Harden** | | | property tests · `--verify` · `gc` · generated stage docs · history-replay · `refresh` | §17.7 | ◐ 2◐ | | filling robustness against a frozen spine |
 | 7 | property tests | — | Hypothesis property tests for the pure transforms | §10 | ◐ | `tests/property/*` (text, frontmatter) | extend to enrich/normalize transforms as they land |
 | 7 | `--verify` mode | — | upgrade fingerprints to full content hashes for CI/paranoid runs | §7.4 | ◐ | wired in `ArtifactContract.fingerprint(verify=)` | exercise end-to-end |
 | 7 | `gc` | — | sweep superseded silver trees | §17.7 | ☐ | | |
@@ -63,9 +78,10 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 | 7 | `push --replay-history` | — | build git commit history from `history.yaml` sidecars + retained prior bodies | §6.6 | ⬚ | | deferred git-native payoff |
 | 7 | `refresh` | — | scheduled crawl-diff + incremental re-processing; refresh fidelity/currency verdicts | §7.6 | ☐ | | drift: NEW/SUPERSEDED/CHANGED propagate only |
 
-**Current focus:** **Phases 1–2 are ✅** (the spine + the whole inventory medallion + a gated, selected
-document-bronze). `make check` green (208 tests, 100% cov, ruff + mypy clean); the gold inventory is
-populated in the real lake and the fetch gate is green. **Next: Phase 3 — the document silver**, and the
+**Current focus:** **Phase 1 ✅ and the inventory medallion ✅** (Phase 2 is ◐ — only `fetch`'s explicit
+selection flags remain; the gate + a select-all-genuine bronze work). `make check` green (208 tests, 100%
+cov, ruff + mypy clean); the gold inventory is populated in the real lake and the fetch gate is green.
+**Next: Phase 3 — the document silver**, and the
 load-bearing ordering rule is to **build `discover` → `registries/` before `normalize`** so no pattern is
 ever hard-coded (§9.6, tenet #13): `convert` → `discover` → `enrich` → `normalize`.
 
@@ -105,6 +121,9 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-01** — Added an **Overall status** rollup (per-phase status + progress counts + a
+  pipeline-stage tally: 3 ✅ · 1 ◐ · 15 ☐) above the table, and per-phase progress on each header row.
+  Corrected Phase 2 to ◐ (the inventory medallion is ✅; `fetch`'s explicit selection flags remain).
 - **2026-06-01** — **Tracker created** (this document): whole-pipeline plan + status table for all 7
   phases / 18 stages + the MCP server + harden items, derived from `vdocs-design.md` §8/§17. Seeded with
   the Phase 1–2 work already shipped this session and the cross-phase lessons above. The inventory
