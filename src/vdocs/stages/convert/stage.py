@@ -55,7 +55,9 @@ class ConvertStage(Stage):
         assets = Cas(ctx.cfg.assets)
 
         n_docs = n_assets = n_docling = n_errors = 0
+        kept: set[str] = set()  # <app>/<slug> bundles in this run's input set (R5 pruning)
         for sha, entry in index.items():
+            kept.add(f"{safe_component(entry['app_code'])}/{safe_component(entry['doc_slug'])}")
             # Per-document error isolation (R6): a single bad doc is logged + counted + skipped so
             # one failure never abandons the batch; the postflight gate fails the stage only if the
             # error *rate* is systemic (doc_error_gate).
@@ -94,6 +96,7 @@ class ConvertStage(Stage):
                     error=str(exc),
                 )
 
+        n_pruned = cas.prune_bundles(ctx.cfg.silver_converted, kept)
         self._errors, self._total = n_errors, len(index)
         return RunResult(
             counts={
@@ -101,6 +104,7 @@ class ConvertStage(Stage):
                 "assets": n_assets,
                 "docling": n_docling,
                 "errors": n_errors,
+                "pruned": n_pruned,
             }
         )
 

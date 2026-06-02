@@ -233,6 +233,18 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):
+  - **C-rel-8 — stale-output pruning (R5); tree-atomicity (R4) SPLIT to a follow-up.** This was the
+    largest item and was split as the plan sanctioned — **R5 landed first**, R4 deferred. New shared
+    `kernel.cas.prune_bundles(root, kept)` removes any `<app>/<slug>` bundle under a silver-tree root
+    not in this run's **input** set (keyed to inputs, not successes, so a transient per-doc failure
+    never prunes a prior-good bundle — only a *vanished input* prunes); now-empty `<app>` parents go
+    too. Wired into `convert`/`enrich`/`normalize` (each surfaces a `pruned` count); `discover` is
+    corpus-global (single report files), so bundle-pruning is N/A. A withdrawn/renamed doc no longer
+    lingers as a ghost bundle read as live (§7.6). Tests: kernel prune unit + a convert end-to-end
+    prune (doc withdrawn from `raw/index.json` → ghost removed). **R4 (write to `OUT.tmp/` +
+    hardlink-unchanged + atomic-rename for whole-tree crash-atomicity, §7.4) is deferred to its own
+    follow-up** — it reshapes how all four silver stages write and warrants isolated review;
+    per-file writes remain atomic (`atomic_write`) in the meantime.
   - **C-rel-7 — per-document error isolation in `convert` + `normalize` (R6).** One bad document
     aborted the whole batch after partial writes. Each per-doc iteration is now wrapped: a failure
     is logged (structlog WARN with the doc id), counted, and skipped — the batch continues. The

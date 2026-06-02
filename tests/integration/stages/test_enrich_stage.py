@@ -80,7 +80,7 @@ def test_enrich_bakes_frontmatter_and_stages_meta(ctx):
     (result,) = Orchestrator([EnrichStage()]).run(ctx)
 
     assert result.status == "ok"
-    assert result.counts == {"documents": 1, "missing_record": 0}
+    assert result.counts == {"documents": 1, "missing_record": 0, "pruned": 0}
 
     enriched = ctx.cfg.silver_enriched / "ADT" / "dg_5_3_1057_dibr" / "body.md"
     meta, body = frontmatter.parse(enriched.read_text())
@@ -131,7 +131,7 @@ def test_enrich_warns_and_skips_bundle_with_no_inventory_record(ctx):
     cas.atomic_write(ctx.cfg.silver_converted / "ZZZ" / "orphan_doc" / "body.md", b"# Orphan\n")
     _seed(ctx, [_record()])  # one matching record for the seeded bundle
     (result,) = Orchestrator([EnrichStage()]).run(ctx)
-    assert result.counts == {"documents": 1, "missing_record": 1}
+    assert result.counts == {"documents": 1, "missing_record": 1, "pruned": 0}
     # the matched doc is enriched; the orphan is skipped (WARN), not written
     assert (ctx.cfg.silver_enriched / "ADT" / "dg_5_3_1057_dibr" / "body.md").exists()
     assert not (ctx.cfg.silver_enriched / "ZZZ" / "orphan_doc" / "body.md").exists()

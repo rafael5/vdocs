@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import shutil
 from pathlib import Path
 
 
@@ -36,6 +37,28 @@ def atomic_write(path: Path, data: bytes) -> None:
     finally:
         if tmp.exists():
             tmp.unlink()
+
+
+def prune_bundles(root: Path, kept: set[str]) -> int:
+    """Remove every ``<app>/<slug>`` bundle directory under ``root`` not in ``kept`` — stale-output
+    pruning (§7.6, R5). Returns the number of bundles removed.
+
+    ``kept`` holds the ``<app>/<slug>`` posix relpaths in **this run's input set** (not just the
+    ones that succeeded — a transient per-doc failure must not prune a prior-good bundle; only a
+    *vanished input* prunes). A withdrawn/renamed document therefore leaves no ghost bundle that a
+    downstream stage would read as live. Now-empty ``<app>`` parents are removed too. A missing
+    ``root`` (first run) is a no-op."""
+    if not root.exists():
+        return 0
+    pruned = 0
+    for bundle in sorted(p for p in root.glob("*/*") if p.is_dir()):
+        if bundle.relative_to(root).as_posix() not in kept:
+            shutil.rmtree(bundle)
+            pruned += 1
+    for app in sorted(p for p in root.glob("*") if p.is_dir()):
+        if not any(app.iterdir()):
+            app.rmdir()
+    return pruned
 
 
 class Cas:

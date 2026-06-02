@@ -75,8 +75,14 @@ def test_convert_writes_bundle_and_extracts_assets(ctx):
     (result,) = Orchestrator([ConvertStage(convert=fake_convert)]).run(ctx)
 
     assert result.status == "ok"
-    # not routed → Pandoc; no per-doc errors
-    assert result.counts == {"documents": 1, "assets": 1, "docling": 0, "errors": 0}
+    # not routed → Pandoc; no per-doc errors; nothing to prune
+    assert result.counts == {
+        "documents": 1,
+        "assets": 1,
+        "docling": 0,
+        "errors": 0,
+        "pruned": 0,
+    }
 
     # the bundle landed at the converted path with the app/slug layout
     body = ctx.cfg.silver_converted / "ADT" / "dg_5_3_1057_dibr" / "body.md"
@@ -164,6 +170,20 @@ def test_convert_fails_the_stage_when_error_rate_is_systemic(ctx):
 
     with pytest.raises(PostflightError):
         Orchestrator([ConvertStage(convert=conv)]).run(ctx)
+
+
+def test_convert_prunes_bundle_whose_input_vanished(ctx):
+    # R5: a doc withdrawn upstream (gone from raw/index.json) must leave no ghost bundle
+    plain = lambda data, ext: ConvertedDoc(markdown="# x\n")  # noqa: E731
+    _seed_many(ctx, ["keep", "gone"])
+    Orchestrator([ConvertStage(convert=plain)]).run(ctx)
+    assert (ctx.cfg.silver_converted / "ADT" / "gone" / "body.md").exists()
+
+    _seed_many(ctx, ["keep"])  # 'gone' withdrawn from the input set
+    (result,) = Orchestrator([ConvertStage(convert=plain)]).run(ctx, force=True)
+    assert (ctx.cfg.silver_converted / "ADT" / "keep" / "body.md").exists()
+    assert not (ctx.cfg.silver_converted / "ADT" / "gone").exists()  # ghost bundle pruned
+    assert result.counts["pruned"] == 1
 
 
 def test_convert_routes_allowlisted_doc_to_docling(ctx, tmp_path):

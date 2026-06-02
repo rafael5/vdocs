@@ -77,6 +77,28 @@ def test_atomic_write_cleans_up_tmp_on_failure(tmp_path):
     assert [p.name for p in tmp_path.iterdir()] == ["adir"]  # no stray .tmp left
 
 
+def test_prune_bundles_removes_only_unkept_and_empties_parents(tmp_path):
+    # R5: bundles not in the kept (input) set are removed; kept ones + their parents survive
+    for rel in ("ADT/keep", "ADT/gone", "LR/solo"):
+        cas.atomic_write(tmp_path / rel / "body.md", b"x")
+    pruned = cas.prune_bundles(tmp_path, {"ADT/keep", "LR/solo"})
+    assert pruned == 1
+    assert (tmp_path / "ADT" / "keep" / "body.md").exists()
+    assert (tmp_path / "LR" / "solo" / "body.md").exists()
+    assert not (tmp_path / "ADT" / "gone").exists()
+    assert (tmp_path / "ADT").exists()  # still has 'keep' → parent kept
+
+
+def test_prune_bundles_removes_emptied_app_parent(tmp_path):
+    cas.atomic_write(tmp_path / "ADT" / "only" / "body.md", b"x")
+    assert cas.prune_bundles(tmp_path, set()) == 1  # nothing kept → bundle gone
+    assert not (tmp_path / "ADT").exists()  # now-empty app parent removed
+
+
+def test_prune_bundles_noop_when_root_missing(tmp_path):
+    assert cas.prune_bundles(tmp_path / "nope", {"a/b"}) == 0
+
+
 def test_has_reports_membership(tmp_path):
     store = cas.Cas(tmp_path)
     digest = store.put(b"x", ext="dat")

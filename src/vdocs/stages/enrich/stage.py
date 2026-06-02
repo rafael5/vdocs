@@ -44,9 +44,11 @@ class EnrichStage(Stage):
         converted_root = ctx.cfg.silver_converted
         enriched_root = ctx.cfg.silver_enriched
         staged: list[dict[str, object]] = []
+        kept: set[str] = set()  # <app>/<slug> bundles in this run's input set (R5 pruning)
         n_docs = n_missing = 0
         for body_path in sorted(converted_root.rglob("body.md")):
             rel = body_path.parent.relative_to(converted_root)  # <app>/<slug>
+            kept.add(rel.as_posix())
             record = by_path.get((rel.parts[0], rel.parts[1]))
             if record is None:
                 log.warning("enrich-no-inventory-record", bundle=str(rel))
@@ -60,8 +62,11 @@ class EnrichStage(Stage):
             staged.append(ep.staged_row(record, body=body, bundle_path=str(rel)))
             n_docs += 1
 
+        n_pruned = cas.prune_bundles(enriched_root, kept)
         _write_staged(ctx.cfg.index_db, staged)
-        return RunResult(counts={"documents": n_docs, "missing_record": n_missing})
+        return RunResult(
+            counts={"documents": n_docs, "missing_record": n_missing, "pruned": n_pruned}
+        )
 
 
 def _index_by_bundle_path(

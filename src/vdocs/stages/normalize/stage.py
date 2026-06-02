@@ -72,6 +72,7 @@ class NormalizeStage(Stage):
         normalized_root = ctx.cfg.silver_normalized
         n_docs = n_revision = n_tables = n_refs = n_boiler = n_template = n_errors = 0
         body_files = sorted(enriched_root.rglob("body.md"))
+        kept = {p.parent.relative_to(enriched_root).as_posix() for p in body_files}
         for body_path in body_files:
             rel = body_path.parent.relative_to(enriched_root)  # <app>/<slug>
             # Per-document error isolation (R6): a single bad doc is logged + counted + skipped so
@@ -131,6 +132,7 @@ class NormalizeStage(Stage):
                 n_errors += 1
                 log.warning("normalize-doc-failed", doc=str(rel), error=str(exc))
 
+        n_pruned = cas.prune_bundles(normalized_root, kept)
         self._errors, self._total = n_errors, len(body_files)
         return RunResult(
             counts={
@@ -142,6 +144,7 @@ class NormalizeStage(Stage):
                 "templates_stamped": n_template,
                 "phrases": len(phrases),
                 "errors": n_errors,
+                "pruned": n_pruned,
             }
         )
 
