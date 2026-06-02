@@ -15,10 +15,10 @@
                block is replaced by a link to one canonical ``gold/_shared`` copy, §9.6).
   F-levels   — infer consistent heading levels (gap-free tree) so the regenerated TOC nests sanely.
 
-Complex tables are lifted to ``tables/*.csv`` sidecars by the sibling ``tables_pure`` module (a
-stage-level pre-step, like ``revision_pure``), not by ``normalize_body``. Deferred (noted in the
-tracker): template STRIP+STAMP. ``source_sha256`` is added by the stage (it has the bronze sha);
-these functions stay pure over the body text + registries.
+Complex tables (``tables_pure``) and the ``(doc_type, era)`` template STRIP+STAMP
+(``template_pure``) are stage-level pre-steps (like ``revision_pure``), not part of the body steps.
+``source_sha256`` and ``template_id`` are stamped into the frontmatter by the stage; these functions
+stay pure over the body text + registries.
 
 Heading identity and the anchor substrate live in the sibling ``anchors_pure`` module (mirroring
 the ``revision_pure`` split); ``Heading``/``github_slug``/``parse_headings`` are re-exported here

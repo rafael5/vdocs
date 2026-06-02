@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 
 from vdocs.kernel import discovery as kd
 from vdocs.kernel.text import block_key as block_key  # shared block identity (§9.2); re-exported
+from vdocs.kernel.text import decade_bucket
 
 _WS = re.compile(r"\s+")
 _BLOCK_SPLIT = re.compile(r"\n\s*\n")
@@ -44,15 +45,10 @@ _REVTABLE_RE = re.compile(
 )
 
 # --- (doc_type, era) template induction (§9.8 / ADR-018,019) ---
-# era comes from the date printed on the title page (the only trustworthy publication-era signal:
-# DOCX core metadata is a 2020-21 bulk-re-export artifact; the VDL file_date is ~empty). Parse the
-# first Month-Year in the title-page window and bucket by decade; missing date yields "unknown".
+# era comes from the title-page publication date, bucketed by decade (the shared kernel helper
+# `decade_bucket` — also used by `normalize` template matching). The title-page window is the front
+# matter; missing date yields "unknown".
 _TITLE_PAGE_LINES = 40  # the title-page window (front matter) scanned for a publication date
-_MONTH = (
-    r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
-    r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
-)
-_TITLE_DATE_RE = re.compile(rf"\b{_MONTH}\.?,?\s+(\d{{4}})\b", re.IGNORECASE)
 _HEADING_TITLE = re.compile(r"^(#{1,6})[ \t]+(.+?)[ \t]*$", re.MULTILINE)
 _SLUG_STRIP = re.compile(r"[^a-z0-9]+")
 
@@ -373,15 +369,12 @@ def _structure_candidate(
 
 
 def extract_era(body: str, *, head_lines: int = _TITLE_PAGE_LINES) -> str:
-    """Decade bucket of the title-page publication date, or ``"unknown"``.
+    """Decade bucket of the title-page publication date, or ``"unknown"`` (§9.8).
 
     Scans only the title-page window (front matter) for the first ``Month YYYY`` — the date the
-    author printed on the cover, which (unlike the DOCX re-export timestamp) tracks the real era."""
-    head = "\n".join(body.splitlines()[:head_lines])
-    m = _TITLE_DATE_RE.search(head)
-    if not m:
-        return "unknown"
-    return f"{(int(m.group(1)) // 10) * 10}s"
+    author printed on the cover, which (unlike the DOCX re-export timestamp) tracks the real era.
+    Delegates to the shared ``kernel/text.decade_bucket`` (§9.2 — also used by `normalize`)."""
+    return decade_bucket(body, max_lines=head_lines)
 
 
 def parse_scaffold(body: str) -> list[tuple[int, str]]:

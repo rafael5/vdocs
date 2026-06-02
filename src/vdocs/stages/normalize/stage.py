@@ -2,9 +2,10 @@
 
 Per-document, deterministic: for each enriched bundle it applies the pure F-steps (strip
 Pandoc artifacts → subtract the **curated** ``registries/phrases`` → reference the **curated**
-``registries/boilerplate`` → infer consistent heading levels → rewrite Word-bookmark cross-refs to
-GitHub slugs → regenerate the ``## Contents`` TOC from the heading tree → insert round-trip
-back-links), stamps ``source_sha256`` into the frontmatter (the bronze provenance it
+``registries/boilerplate`` → strip the matched ``(doc_type, era)`` template scaffold + stamp
+``template_id`` → infer consistent heading levels → rewrite Word-bookmark cross-refs to GitHub
+slugs → regenerate the ``## Contents`` TOC from the heading tree → insert round-trip back-links),
+stamps ``source_sha256`` into the frontmatter (the bronze provenance it
 alone holds), and writes the gold-quality body to ``silver/text/03-normalized``. Subtracts only
 the *curated* registry — so it stays a pure function of ``(document, registry)`` and re-runs
 idempotently (§7.4, §9.6).
@@ -39,20 +40,25 @@ class NormalizeStage(Stage):
     idempotency = Idempotency.SKIP_IF_UNCHANGED
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
+        from vdocs.kernel.text import decade_bucket
         from vdocs.stages.normalize import anchors_pure as anchors
         from vdocs.stages.normalize import normalize_pure as nz
         from vdocs.stages.normalize import revision_pure as rev
         from vdocs.stages.normalize import tables_pure as tbl
+        from vdocs.stages.normalize import template_pure as tmpl
 
         phrases = _load_phrases(ctx.cfg.registries / "phrases" / "phrases.yaml")
         boilerplate = _load_boilerplate(
             ctx.cfg.registries / "boilerplate" / "boilerplate.yaml", nz.Boilerplate
         )
+        templates = _load_templates(
+            ctx.cfg.registries / "templates" / "templates.yaml", tmpl.Template
+        )
         sha_by_path = _sha_by_bundle_path(ctx.cfg.raw_index)
 
         enriched_root = ctx.cfg.silver_enriched
         normalized_root = ctx.cfg.silver_normalized
-        n_docs = n_history = n_tables = n_refs = n_boiler = 0
+        n_docs = n_history = n_tables = n_refs = n_boiler = n_template = 0
         for body_path in sorted(enriched_root.rglob("body.md")):
             rel = body_path.parent.relative_to(enriched_root)  # <app>/<slug>
             meta, body = frontmatter.parse(body_path.read_text(encoding="utf-8"))
@@ -66,6 +72,16 @@ class NormalizeStage(Stage):
             # resolve it per (doc_type, era) and pass it to normalize_body (§6.7).
             body, revisions = rev.extract_revision_history(body)
             body, tables = tbl.extract_tables(body)
+            # STRIP the matched (doc_type, era) template scaffold + stamp template_id (§9.8). era is
+            # the title-page-date decade bucket (kernel.decade_bucket); doc_type is the baked
+            # identity FM. template_id is identity provenance → frontmatter, like source_sha256.
+            era = decade_bucket(body, max_lines=40)
+            body, template_id = tmpl.apply_template(
+                body, str(meta.get("doc_type", "")), era, templates
+            )
+            if template_id:
+                meta["template_id"] = template_id
+                n_template += 1
             body, anchor_map = nz.normalize_body(
                 body, phrases, doc_id=str(rel), boilerplate=boilerplate
             )
@@ -102,6 +118,7 @@ class NormalizeStage(Stage):
                 "tables_sidecars": n_tables,
                 "refs_sidecars": n_refs,
                 "boilerplate_refs": n_boiler,
+                "templates_stamped": n_template,
                 "phrases": len(phrases),
             }
         )
@@ -123,6 +140,30 @@ def _load_boilerplate(path, cls):  # type: ignore[no-untyped-def]
     return tuple(
         cls(id=e["id"], label=e["label"], key=e["key"]) for e in (data.get("boilerplate") or [])
     )
+
+
+def _load_templates(path, cls):  # type: ignore[no-untyped-def]
+    """The curated ``(doc_type, era)`` templates as ``Template`` entries (empty if absent).
+
+    Each template's scaffold-section titles are normalised (lowercased, whitespace-collapsed) for
+    matching against body headings."""
+    if not path.exists():
+        return ()
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    out = []
+    for t in data.get("templates") or []:
+        titles = frozenset(
+            " ".join(str(s["title"]).lower().split()) for s in (t.get("sections") or [])
+        )
+        out.append(
+            cls(
+                template_id=t["template_id"],
+                doc_type=t["doc_type"],
+                era=t["era"],
+                section_titles=titles,
+            )
+        )
+    return tuple(out)
 
 
 def _sha_by_bundle_path(raw_index):  # type: ignore[no-untyped-def]

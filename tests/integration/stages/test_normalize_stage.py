@@ -229,6 +229,51 @@ def test_normalize_references_curated_boilerplate(ctx, tmp_path):
     assert "Unique body content." in body  # the rest is untouched
 
 
+def test_normalize_stamps_template_id_and_strips_scaffold(ctx, tmp_path):
+    # point registries at a temp dir with a (DIBR, 2020s) template (§9.8 STRIP + STAMP)
+    regs = tmp_path / "registries"
+    (regs / "templates").mkdir(parents=True)
+    (regs / "templates" / "templates.yaml").write_text(
+        "templates:\n"
+        "  - template_id: DIBR:2020s:deadbeef\n"
+        "    doc_type: DIBR\n"
+        "    era: 2020s\n"
+        "    sections:\n"
+        "      - {title: Purpose}\n"
+        "      - {title: Rollback}\n"
+    )
+    ctx.cfg = ctx.cfg.model_copy(update={"registries_dir": regs})
+
+    enriched = frontmatter.emit(
+        {"title": "DG Deploy", "doc_type": "DIBR", "app_code": "ADT", "tool_ver": "0.1.0"},
+        # title-page date → 2020s era; one filled scaffold section + one empty scaffold section
+        "# DG Deploy\n\nSeptember 2021\n\n## Purpose\n\nReal purpose text.\n\n## Rollback\n\n",
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "dg_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(
+        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "dg_doc", "ext": "docx"}})
+    )
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["templates_stamped"] == 1
+
+    meta, body = frontmatter.parse(
+        (ctx.cfg.silver_normalized / "ADT" / "dg_doc" / "body.md").read_text()
+    )
+    assert meta["template_id"] == "DIBR:2020s:deadbeef"  # stamped into identity FM (§6.3)
+    assert "Real purpose text." in body  # filled scaffold section retained
+    assert "## Rollback" not in body  # the empty scaffold section was stripped
+
+
 def test_normalize_writes_refs_yaml_sidecar(ctx):
     import yaml
 

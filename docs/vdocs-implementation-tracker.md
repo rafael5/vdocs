@@ -24,15 +24,16 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 
 ## Overall status
 
-**Pipeline stages (§8): 7 ✅ · 1 ◐ · 11 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
+**Pipeline stages (§8): 8 ✅ · 0 ◐ · 11 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
 counted separately below). Last updated **2026-06-02**. **The full document-silver pipeline runs
 end-to-end on a real 469-doc VA corpus** (seeded offline from v1's `raw/`), not just fixtures.
+**Phase 3 silver is complete** — `normalize` finished all F-steps (compliance remediation P0–P2 + P1).
 
 | Phase | Title | Status | Progress |
 |---|---|---|---|
 | 1 | Spine (kernel · config · models · contracts · orchestrator) | ✅ | 4/4 |
 | 2 | Inventory medallion + doc-bronze | ✅ | 4/4 (`fetch` selection surface landed; DOCX-only §1) |
-| 3 | Silver — document text (convert · discover · enrich · normalize) | ◐ | `convert` ✅ · `discover` ✅ · `enrich` ✅ · `normalize` ◐ (anchors/`refs.yaml` shipped; 4 F-steps deferred) |
+| 3 | Silver — document text (convert · discover · enrich · normalize) | ✅ | `convert` ✅ · `discover` ✅ · `enrich` ✅ · `normalize` ✅ (all F-steps shipped) |
 | 4 | Gold derive (consolidate · index · relate · manifest) | ☐ | 0/4 |
 | 5 | Gold deliver (fidelity · publish · validate · push · analyze) | ☐ | 0/5 |
 | 6 | Machine interface (embed · serve-mcp) | ☐ | 0/2 |
@@ -52,11 +53,11 @@ end-to-end on a real 469-doc VA corpus** (seeded offline from v1's `raw/`), not 
 | 2 | **catalog** | 🥈 INV | `catalog.raw` → `catalog.enriched` (5-pass enrichment + system classification, §5 cols) | §8; spec §4 | ✅ | `test_enrich_pure`, `test_catalog_inventory` | **§7 distributions reproduce exactly** vs the pinned 8,834-row fixture |
 | 2 | **serve-inventory** | 🥇 INV | `catalog.enriched` → gold `inventory.{json,csv,db}`; **HARD GATE = the fetch gate** | §8, §7.3; spec §7 | ✅ | `test_serve_pure`, `test_serve_inventory` | gate green on the full corpus; `vdocs inventory --status` |
 | 2 | **fetch** | 🥉 DOC | gate `ok` + **selection** (§5.6) + `acquisitions` → `documents/bronze:raw` (CAS) + `index.json` + `acquisitions` | §8, §5.6, §9.5 | ✅ | `test_fetch_pure`, `test_fetch_stage`, `test_bronze_dag`, `test_cli` | CAS, DOCX-pref, index, acquisitions, gate-wired. **Selection surface**: AND-across/OR-within dimension filters (`--app/--section/--status/--doc-type/--group/--select/--all`), **no blind download** (default fetches nothing + prints count), `--dry-run`; **version completeness** via `anchor_key` group expansion; selection in `inputs_fp` (`extra_input_fps`) so it joins `SKIP_IF_UNCHANGED` |
-| **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ◐ 3.5/4 | | discover→registry seam built **before** normalize so no pattern is hard-coded |
+| **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ✅ 4/4 | | discover→registry seam built **before** normalize so no pattern is hard-coded |
 | 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc/Docling; CAS images) | §8, §1, ADR-010 | ✅ | `test_convert_pure`, `test_convert_stage` + real 469-doc run | **DOCX-only** (§1). Pandoc GFM + `--extract-media`; images→asset CAS, refs rewritten (markdown + HTML `<img>` by basename). **Per-doc converter routing** via `registries/converter-routing` → Docling (out-of-process CLI; typer conflict forbids in-proc), **routes `CPRS/cprsguium`** — verified end-to-end: bare markers 3,058→0, list items 332→3,230, +559 image refs. EMF/WMF→PNG + the few residual `<!-- image -->` deferred |
 | 3 | **discover** | 🥈 DOC | `text@converted` + `catalog.enriched` (doc_code only) → `reports/patterns` (candidate boilerplate/templates/glossary/structure/converter-routing + disposition) | §8, §9.6, §9.8 | ✅ | `test_discover_pure`, `test_discover_stage` + real run | recurring-block miner (template RETAIN / phrase DELETE / boilerplate REFERENCE) **+ near-dup boilerplate clustering** (`kernel/discovery` MinHash/LSH; real 3051→3560) + acronym glossary (PROMOTE) + **structures** miner (callout/TOC/revision-table → CANONICALIZE; 7 curated) + **`(doc_type, era)` template induction** (structural-scaffold clustering; doc_type←catalog `doc_code`, era←title-page date; STRIP + stamp `template_id` + RETAIN schema, §9.8; 2 DIBR templates curated) + **convert-quality probe** (`mine_converter_routing` → Docling ROUTE); evidence + grade; **mutates no content** |
 | 3 | **enrich** | 🥈 DOC | `text@converted`,`catalog.enriched` → `text@enriched` (identity FM baked) + `index.db:doc_meta_staged` | §8 | ✅ | `test_enrich_doc_pure`, `test_enrich_stage` | joins each bundle to its inventory record (by `<app>/<slug>`, DOCX-preferred), bakes identity FM via the kernel codec; **computed fields (word_count) staged to index.db, never in the body** (§6.3) |
-| 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7, §6.6 | ◐ | `test_normalize_pure`, `test_anchors_pure`, `test_revision_pure`, `test_normalize_stage`, `test_normalize_props` + real 469-doc run | **F-steps**: **heading recovery** from `_Toc` bookmarks (real `or_30_243rn` 0→56 headings); **revision-history → `history.yaml` sidecar** (§6.6; HTML + GFM-pipe dialects; 22 real sidecars, table stripped from body); **anchor substrate → `refs.yaml` sidecar** (§6.7/§5.5: capture Word bookmarks, rewrite `](#_Toc…)`/`](#_Ref…)` cross-refs to GitHub slugs with `UNRESOLVED` fidelity signal, `(stable_id ↔ slug ↔ bookmark)` map + `toc_depth:[2,3]`, round-trip "↑ Back to Contents" back-links — `anchors_pure`); strip Pandoc artifacts; subtract `registries/phrases`; regenerate `## Contents` TOC (GitHub-slug anchors, H2–H3 depth); stamp `source_sha256`; **complex tables → `tables/*.csv` sidecars** (§6.4/§6.5; `tables_pure`, HTML + GFM-pipe, ≥10-row/≥8-col guardrail, body left a reference, `kernel/csv` reuse; real 276 docs/1326 sidecars); **heading-level inference** (`infer_heading_levels`: gap-free heading tree, baseline-anchored, fence-safe; real 316 docs adjusted); **boilerplate REFERENCE** (`subtract_boilerplate` + curated `registries/boilerplate`; shared `kernel/text.block_key`; real 61 docs/89 refs). **Deferred** (next slice): template STRIP+STAMP |
+| 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7, §6.6, §9.8 | ✅ | `test_normalize_pure`, `test_anchors_pure`, `test_revision_pure`, `test_tables_pure`, `test_template_pure`, `test_normalize_stage`, `test_normalize_props` + real 469-doc run | **F-steps (all shipped)**: **heading recovery** from `_Toc` bookmarks; **revision-history → `history.yaml` sidecar** (§6.6; HTML + GFM-pipe); **anchor substrate → `refs.yaml` sidecar** (§6.7/§5.5: bookmarks, `](#_Toc…)` rewrite w/ `UNRESOLVED` signal, `(stable_id ↔ slug ↔ bookmark)` map, round-trip back-links — `anchors_pure`); strip Pandoc artifacts; subtract `registries/phrases`; **boilerplate REFERENCE** (`subtract_boilerplate` + curated `registries/boilerplate`; shared `kernel/text.block_key`; real 61 docs/89 refs); **complex tables → `tables/*.csv`** (§6.4/§6.5; `tables_pure`, ≥10-row/≥8-col guardrail, `kernel/csv`; real 276 docs/1326 sidecars); **`(doc_type, era)` template STRIP + `template_id` stamp** (§9.8; `template_pure` + curated `registries/templates`; era=`kernel/text.decade_bucket`; real 120 stamped); **heading-level inference** (`infer_heading_levels`: gap-free tree, fence-safe; real 316 adjusted); regenerate `## Contents` TOC (GitHub-slug anchors, H2–H3 depth); stamp `source_sha256`. (Glossary PROMOTE is a gold-phase output, not a silver body transform — §8 note.) |
 | **4 — Gold derive (machine)** | | | version groups + the queryable index + knowledge graph + manifests | §17.4 | ☐ 0/4 | | |
 | 4 | **consolidate** | 🥇 DOC | `text@normalized`,`assets` → `consolidated` (one anchor per version group; ordered lineage) | §8, §6.6 | ☐ | | `is_latest`; prior bodies as travel-with sidecars |
 | 4 | **index** | 🥇 DOC | `text@normalized`,`consolidated` → `index.db` (docs, sections + **FTS5 over is_latest**, entities, quality, **stable IDs**) | §8 | ☐ | | the lexical/structured search surface |
@@ -180,6 +181,22 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
   edge case on real Word-TOC constructs, *not* introduced here; the §7.4 contract + property test
   hold). **Real corpus:** 61 docs → 89 boilerplate references. §8 `normalize` boilerplate clause
   flipped to done. 368 tests, 100% cov.
+- **2026-06-02** — **P1.c: `normalize` F-step — `(doc_type, era)` template STRIP + `template_id`
+  stamp → `normalize` ✅ (Phase 3 complete).** The last deferred F-step. New pure
+  `stages/normalize/template_pure.py` (mirrors `revision_pure`/`tables_pure`): `apply_template(body,
+  doc_type, era, templates)` matches the curated `(doc_type, era)` template, **strips the unfilled
+  scaffold sections** (a schema heading with no prose and no subsections — the literal skeleton
+  remnant; filled sections + non-scaffold headings retained, fence-aware) and returns the
+  `template_id`. The stage stamps `template_id` into the **frontmatter** (identity provenance, §6.3 —
+  mirroring `source_sha256`); the structural schema stays RETAINED in `registries/templates` (§9.8).
+  era is the title-page decade bucket via the new shared `kernel/text.decade_bucket` (§9.2 — also
+  used by `discover`; `discover.extract_era` now delegates, and its private date constants moved to
+  the kernel). doc_type is the baked identity FM. Consumes P2.2b's curated `registries/templates`.
+  Idempotent. **Real corpus (469 docs):** 120 docs stamped (DIBR 2010s/2020s), 5 had empty scaffold
+  stripped, idempotent 469/469. **Doc-first:** §8 `normalize` row reconciled — template clause →
+  done, and glossary **PROMOTE** clarified as a gold-phase output (not a silver body transform), so
+  §8 no longer over-claims. `normalize` flips to **✅**; Phase 3 silver **✅ 4/4**. 378 tests,
+  100% cov (7 `test_template_pure` + 1 normalize integration + 2 `decade_bucket` kernel).
 - **2026-06-02** — **P1.d: `normalize` F-step — heading-level inference (§6.7).** New pure
   `normalize_pure.infer_heading_levels(body)`: rewrites heading `#` prefixes so the heading tree has
   **no skipped levels** (H1→H4 jumps compacted to nest one level at a time), giving the regenerated
