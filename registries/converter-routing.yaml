@@ -1,0 +1,15 @@
+# registries/converter-routing — which docs to convert with Docling, not Pandoc (ADR-010, §9.6).
+#
+# Keyed by the bundle identity <app>/<slug> (= safe(app_code)/safe(doc_slug)). The disposition is
+# ROUTE — consumed by `convert`, which uses Docling for listed docs and Pandoc for the rest.
+#
+# CURATION FINDING (2026-06-01): `discover`'s convert-quality probe flagged 45 docs (25 CPRS) where
+# Pandoc recovered NO heading structure (a "bare-marker explosion"). We *verified* Docling on a
+# representative sample (the worst CPRS RN at 23.9k words, a CPRS IG, AR/WS, ACR) — Docling produced
+# **0 headings too**. For DOCX, Docling reads Word styles structurally (its layout-ML is for PDF), so
+# when the source has no heading styles neither converter can recover a heading tree that isn't there.
+# → Routing these docs to Docling does not help; the real remedy is HEADING RECOVERY from the doc's own
+#   TOC text + section numbering + template schema (§6.7 old-generation heuristic, a `normalize` step) —
+#   deferred. So the allowlist is intentionally EMPTY: the mechanism stands; no doc currently benefits.
+
+docling: []

@@ -72,7 +72,7 @@ def test_convert_writes_bundle_and_extracts_assets(ctx):
     (result,) = Orchestrator([ConvertStage(convert=fake_convert)]).run(ctx)
 
     assert result.status == "ok"
-    assert result.counts == {"documents": 1, "assets": 1}
+    assert result.counts == {"documents": 1, "assets": 1, "docling": 0}  # not routed → Pandoc
 
     # the bundle landed at the converted path with the app/slug layout
     body = ctx.cfg.silver_converted / "ADT" / "dg_5_3_1057_dibr" / "body.md"
@@ -87,8 +87,31 @@ def test_convert_writes_bundle_and_extracts_assets(ctx):
     assert Cas(ctx.cfg.assets).get(_IMG_SHA, ext="png") == _IMG
 
 
+def test_load_converter_routing_empty_when_absent(tmp_path):
+    from vdocs.stages.convert.stage import _load_converter_routing
+
+    assert _load_converter_routing(tmp_path / "nope.yaml") == frozenset()  # no registry → Pandoc
+
+
 def test_convert_skips_on_clean_rerun(ctx):
     _seed_fetched(ctx)
     orch = Orchestrator([ConvertStage(convert=fake_convert)])
     orch.run(ctx)
     assert orch.run(ctx) == [None]  # SKIP_IF_UNCHANGED → skipped second time
+
+
+def test_convert_routes_allowlisted_doc_to_docling(ctx, tmp_path):
+    # point registries at a temp dir that routes this doc to Docling (ADR-010, §9.6)
+    routing = tmp_path / "registries"
+    routing.mkdir()
+    (routing / "converter-routing.yaml").write_text("docling:\n  - ADT/dg_5_3_1057_dibr\n")
+    ctx.cfg = ctx.cfg.model_copy(update={"registries_dir": routing})
+    _seed_fetched(ctx)
+
+    def docling_fake(data: bytes, ext: str) -> ConvertedDoc:
+        return ConvertedDoc(markdown="# Recovered By Docling\n\n## Setup\n\nstructured\n")
+
+    (result,) = Orchestrator([ConvertStage(convert=fake_convert, docling=docling_fake)]).run(ctx)
+    assert result.counts["docling"] == 1  # routed away from Pandoc
+    body = (ctx.cfg.silver_converted / "ADT" / "dg_5_3_1057_dibr" / "body.md").read_text()
+    assert body.startswith("# Recovered By Docling")  # Docling output, not the Pandoc fake

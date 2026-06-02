@@ -53,7 +53,7 @@ end-to-end on a real 469-doc VA corpus** (seeded offline from v1's `raw/`), not 
 | 2 | **serve-inventory** | 🥇 INV | `catalog.enriched` → gold `inventory.{json,csv,db}`; **HARD GATE = the fetch gate** | §8, §7.3; spec §7 | ✅ | `test_serve_pure`, `test_serve_inventory` | gate green on the full corpus; `vdocs inventory --status` |
 | 2 | **fetch** | 🥉 DOC | gate `ok` + selection + `acquisitions` → `documents/bronze:raw` (CAS) + `index.json` + `acquisitions` | §8, §9.5 | ◐ | `test_fetch_pure`, `test_bronze_dag` | works (CAS, DOCX-pref, index, acquisitions, gate-wired); **explicit selection flags pending** (fetches all `noise==''`) |
 | **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ◐ 2.5/4 | | discover→registry seam built **before** normalize so no pattern is hard-coded |
-| 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc; CAS images) | §8, §1 | ✅ | `test_convert_pure`, `test_convert_stage` + real 469-doc run | **DOCX-only** (§1; PDF out of scope, not a gap). Pandoc GFM + `--extract-media`; bundles `<app>/<slug>/body.md`, images→asset CAS, refs rewritten (markdown **and** HTML `<img>`, by basename); `assets` optional. EMF/WMF→PNG render deferred |
+| 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc/Docling; CAS images) | §8, §1, ADR-010 | ✅ | `test_convert_pure`, `test_convert_stage` + real 469-doc run | **DOCX-only** (§1). Pandoc GFM + `--extract-media`; images→asset CAS, refs rewritten (markdown + HTML `<img>` by basename). **Per-doc converter routing** via `registries/converter-routing` → Docling (out-of-process CLI; typer conflict forbids in-proc); **registry EMPTY** — Docling *verified* not to recover headings on the flagged DOCX (no source heading styles), so nothing is routed. EMF/WMF→PNG deferred |
 | 3 | **discover** | 🥈 DOC | `text@converted` → `reports/patterns` (candidate boilerplate/templates/glossary/structure/converter-routing + disposition) | §8, §9.6 | ✅ | `test_discover_pure`, `test_discover_stage` + real run | recurring-block miner (template RETAIN / phrase DELETE / boilerplate REFERENCE) + acronym glossary (PROMOTE) + **convert-quality probe** (`mine_converter_routing`: flags structureless Pandoc output → Docling ROUTE candidates; real corpus = 45 flagged, 25 CPRS); evidence + grade; **mutates no content** |
 | 3 | **enrich** | 🥈 DOC | `text@converted`,`catalog.enriched` → `text@enriched` (identity FM baked) + `index.db:doc_meta_staged` | §8 | ✅ | `test_enrich_doc_pure`, `test_enrich_stage` | joins each bundle to its inventory record (by `<app>/<slug>`, DOCX-preferred), bakes identity FM via the kernel codec; **computed fields (word_count) staged to index.db, never in the body** (§6.3) |
 | 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7 | ◐ | `test_normalize_pure`, `test_normalize_stage` + real 469-doc run | **v1 F-steps**: strip Pandoc artifacts, subtract curated `registries/phrases`, regenerate `## Contents` TOC from the heading tree (GitHub-slug anchors), stamp `source_sha256`. Verified real (dead `<!-- -->` 79→0, nested TOC on real DIBR). **Deferred**: tables→csv, revision-history→history.yaml, boilerplate REFERENCE, template STRIP+STAMP, refs.yaml + back-links + bookmark rewrite, old-gen heading recovery |
@@ -99,6 +99,16 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 *Append implementation lessons as they accrue (newest first). Inventory-track lessons live in
 [`vdl-crawl-tracker.md`](vdl-crawl-tracker.md); cross-phase / architectural lessons go here.*
 
+- **2026-06-01 — Verify the fix on real data before shipping it: Docling did NOT help.** `discover`'s
+  probe flagged 45 docs (25 CPRS) where Pandoc recovered no headings, proposing Docling (ADR-010). We
+  wired per-doc converter routing + a Docling subprocess backend, installed Docling, and *measured* it on
+  the worst CPRS RN (23.9k words) + 3 more across apps/types: **Docling produced 0 headings too** — for
+  DOCX it reads Word styles structurally (its layout-ML is PDF-only), so it can't recover heading styles
+  the source never had. The "bare-marker explosion" is a *source* property, not a converter defect; the
+  real remedy is **heading recovery** from the doc's own TOC/numbering/template (§6.7 old-gen heuristic, a
+  `normalize` step), deferred. Outcome: the routing **mechanism** stays (correct, tested), the
+  **allowlist is empty** (no doc benefits), and a plausible-but-wrong fix was rejected by data, not shipped.
+  (Aside: Docling pins `typer<0.22` vs our `>=0.26.5` → it must run out-of-process, like Pandoc.)
 - **2026-06-01 — Real documents found a bug synthetic fixtures hid (the case for processing real
   docs).** Running `convert` on 469 real VA DOCX (seeded offline from v1's `raw/`, all 90 CPRS included)
   exposed that **Pandoc emits images as HTML `<img src="…">` with absolute temp paths**, not markdown
@@ -140,6 +150,14 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-01** — **Docling routing wired, then curated to OFF by real-data verification (ADR-010).**
+  `convert` gained per-document converter routing: it reads `registries/converter-routing` and converts
+  listed `<app>/<slug>` docs with **Docling** (run out-of-process via the `docling` CLI — Docling pins
+  `typer<0.22`, conflicting with the project's `typer>=0.26.5`, so in-process is impossible) and Pandoc
+  otherwise. Mechanism is tested with injected fakes. But the curation registry is **empty**: installing
+  Docling and measuring it on the worst flagged CPRS RN + 3 more docs showed **0 headings recovered**
+  (same as Pandoc) — these DOCX have no source heading styles, which Docling reads structurally, so no
+  converter helps. The real remedy (heading recovery, §6.7) is deferred. 255 tests, 100% cov.
 - **2026-06-01** — **Convert-quality probe added to `discover` (ADR-010 evidence).** New
   `mine_converter_routing` flags substantial documents Pandoc converted with **no recovered heading
   structure** (a bare-marker explosion) as Docling ROUTE candidates → `reports/patterns.converter_routing`,
