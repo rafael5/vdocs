@@ -119,3 +119,54 @@ def test_cluster_near_duplicates_high_threshold_keeps_them_apart():
     ]
     clusters = d.cluster_near_duplicates(sigs, threshold=0.99, bands=16)
     assert clusters == [[0], [1]]  # not identical enough at 0.99
+
+
+# --- structural (heading-scaffold) fingerprints (§9.8 template induction) ----
+
+
+def test_structural_fingerprint_same_scaffold_same_fingerprint():
+    a = d.structural_fingerprint(["Introduction", "Getting Started", "Glossary"])
+    b = d.structural_fingerprint(["introduction", "getting  started", "glossary"])  # case/ws noise
+    assert a == b  # normalized → identical scaffold, identical fingerprint
+    assert isinstance(a, str) and len(a) == 64  # sha256 hex
+
+
+def test_structural_fingerprint_different_scaffold_differs():
+    a = d.structural_fingerprint(["Introduction", "Getting Started", "Glossary"])
+    c = d.structural_fingerprint(["Introduction", "Troubleshooting", "Glossary"])
+    assert a != c
+
+
+def test_structural_fingerprint_order_matters():
+    a = d.structural_fingerprint(["A", "B", "C"])
+    b = d.structural_fingerprint(["C", "B", "A"])
+    assert a != b  # section order is load-bearing in a template scaffold
+
+
+def test_scaffold_shingles_cluster_near_identical_scaffolds():
+    base = ["Orientation", "Getting Started", "Options", "Troubleshooting", "Glossary"]
+    near = ["Orientation", "Getting Started", "Options", "Troubleshooting", "Index"]  # 1 differs
+    far = ["Purpose", "Architecture", "Routines", "Files", "Exported Options"]
+    sigs = [
+        d.minhash_signature(d.scaffold_shingles(base)),
+        d.minhash_signature(d.scaffold_shingles(near)),
+        d.minhash_signature(d.scaffold_shingles(far)),
+    ]
+    clusters = d.cluster_near_duplicates(sigs, threshold=0.4)
+    assert [0, 1] in clusters and [2] in clusters  # the two user-guide scaffolds cluster
+
+
+def test_scaffold_shingles_empty_is_empty():
+    assert d.scaffold_shingles([]) == set()
+
+
+def test_scaffold_shingles_short_scaffold_is_single_shingle():
+    # ≤ k headings → one shingle covering the whole (tiny) scaffold
+    assert d.scaffold_shingles(["Introduction", "Glossary"], k=2) == {"introduction › glossary"}
+
+
+def test_auto_bands_falls_back_to_num_perm_when_unsatisfiable():
+    # no banding can be more permissive than threshold 0 → fall back to the finest split
+    assert d._auto_bands(128, 0.0) == 128
+    # a normal threshold picks a real divisor
+    assert d._auto_bands(128, 0.8) == 16

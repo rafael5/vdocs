@@ -54,7 +54,7 @@ end-to-end on a real 469-doc VA corpus** (seeded offline from v1's `raw/`), not 
 | 2 | **fetch** | 🥉 DOC | gate `ok` + **selection** (§5.6) + `acquisitions` → `documents/bronze:raw` (CAS) + `index.json` + `acquisitions` | §8, §5.6, §9.5 | ✅ | `test_fetch_pure`, `test_fetch_stage`, `test_bronze_dag`, `test_cli` | CAS, DOCX-pref, index, acquisitions, gate-wired. **Selection surface**: AND-across/OR-within dimension filters (`--app/--section/--status/--doc-type/--group/--select/--all`), **no blind download** (default fetches nothing + prints count), `--dry-run`; **version completeness** via `anchor_key` group expansion; selection in `inputs_fp` (`extra_input_fps`) so it joins `SKIP_IF_UNCHANGED` |
 | **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ◐ 3.5/4 | | discover→registry seam built **before** normalize so no pattern is hard-coded |
 | 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc/Docling; CAS images) | §8, §1, ADR-010 | ✅ | `test_convert_pure`, `test_convert_stage` + real 469-doc run | **DOCX-only** (§1). Pandoc GFM + `--extract-media`; images→asset CAS, refs rewritten (markdown + HTML `<img>` by basename). **Per-doc converter routing** via `registries/converter-routing` → Docling (out-of-process CLI; typer conflict forbids in-proc), **routes `CPRS/cprsguium`** — verified end-to-end: bare markers 3,058→0, list items 332→3,230, +559 image refs. EMF/WMF→PNG + the few residual `<!-- image -->` deferred |
-| 3 | **discover** | 🥈 DOC | `text@converted` → `reports/patterns` (candidate boilerplate/templates/glossary/structure/converter-routing + disposition) | §8, §9.6 | ✅ | `test_discover_pure`, `test_discover_stage` + real run | recurring-block miner (template RETAIN / phrase DELETE / boilerplate REFERENCE) + acronym glossary (PROMOTE) + **convert-quality probe** (`mine_converter_routing`: flags structureless Pandoc output → Docling ROUTE candidates; real corpus = 45 flagged, 25 CPRS); evidence + grade; **mutates no content** |
+| 3 | **discover** | 🥈 DOC | `text@converted` + `catalog.enriched` (doc_code only) → `reports/patterns` (candidate boilerplate/templates/glossary/structure/converter-routing + disposition) | §8, §9.6, §9.8 | ✅ | `test_discover_pure`, `test_discover_stage` + real run | recurring-block miner (template RETAIN / phrase DELETE / boilerplate REFERENCE) **+ near-dup boilerplate clustering** (`kernel/discovery` MinHash/LSH; real 3051→3560) + acronym glossary (PROMOTE) + **structures** miner (callout/TOC/revision-table → CANONICALIZE; 7 curated) + **`(doc_type, era)` template induction** (structural-scaffold clustering; doc_type←catalog `doc_code`, era←title-page date; STRIP + stamp `template_id` + RETAIN schema, §9.8; 2 DIBR templates curated) + **convert-quality probe** (`mine_converter_routing` → Docling ROUTE); evidence + grade; **mutates no content** |
 | 3 | **enrich** | 🥈 DOC | `text@converted`,`catalog.enriched` → `text@enriched` (identity FM baked) + `index.db:doc_meta_staged` | §8 | ✅ | `test_enrich_doc_pure`, `test_enrich_stage` | joins each bundle to its inventory record (by `<app>/<slug>`, DOCX-preferred), bakes identity FM via the kernel codec; **computed fields (word_count) staged to index.db, never in the body** (§6.3) |
 | 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7, §6.6 | ◐ | `test_normalize_pure`, `test_anchors_pure`, `test_revision_pure`, `test_normalize_stage`, `test_normalize_props` + real 469-doc run | **F-steps**: **heading recovery** from `_Toc` bookmarks (real `or_30_243rn` 0→56 headings); **revision-history → `history.yaml` sidecar** (§6.6; HTML + GFM-pipe dialects; 22 real sidecars, table stripped from body); **anchor substrate → `refs.yaml` sidecar** (§6.7/§5.5: capture Word bookmarks, rewrite `](#_Toc…)`/`](#_Ref…)` cross-refs to GitHub slugs with `UNRESOLVED` fidelity signal, `(stable_id ↔ slug ↔ bookmark)` map + `toc_depth:[2,3]`, round-trip "↑ Back to Contents" back-links — `anchors_pure`); strip Pandoc artifacts; subtract `registries/phrases`; regenerate `## Contents` TOC (GitHub-slug anchors, H2–H3 depth); stamp `source_sha256`. **Deferred** (next slices, in order): tables→csv, boilerplate REFERENCE, template STRIP+STAMP, heading-level inference |
 | **4 — Gold derive (machine)** | | | version groups + the queryable index + knowledge graph + manifests | §17.4 | ☐ 0/4 | | |
@@ -163,6 +163,27 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **P2.2b: `discover` `(doc_type, era)` template induction → `registries/templates`
+  (STRIP + RETAIN schema, §9.8/ADR-018,019).** Second half of P2.2, completing P2.2. **Input-seam
+  decision (raised before coding, per the prompt):** investigated three publication-date sources on
+  the real corpus and chose the title-page body date — DOCX core metadata is 100%-present but
+  collapses to a 2020–21 VA bulk-re-export window (era-invalid); VDL `file_date` is populated for
+  <1%; the **title-page date covers ~95% with a real 1989→2026 spread**. So `era` needs no new
+  input (it's in the body `discover` already reads); only `doc_type` does → added `catalog.enriched`
+  to `discover.requires` for `doc_code` alone (classification stays a `catalog` decision, tenet
+  #13). era = decade bucket + explicit `unknown` (kept/flagged, never dropped). New kernel
+  structural primitives (test-first): `structural_fingerprint` (exact ordered-scaffold sha =
+  `template_id` basis) + `scaffold_shingles` (heading-sequence shingles feeding the existing
+  near-dup clustering); also made `cluster_near_duplicates` auto-derive LSH `bands` from the
+  threshold so banding never drops a true near-dup (fixed a latent recall bug at low thresholds).
+  New `mine_templates` buckets bodies by `(doc_type, era)`, near-dup clusters each bucket by heading
+  scaffold, and emits one `TemplateCandidate` per cluster with a stamped `template_id` and a
+  **retained consensus structural schema** (`TemplateSection`: ordered sections, required-vs-optional,
+  toc_level). **Curated** the high-confidence starter into `registries/templates/templates.yaml` —
+  the two DIBR templates (47-doc 2020s + 20-doc 2010s, 40-section scaffolds, scaffold fp stable
+  across eras); degenerate empty-schema clusters left to curation. **Real corpus (469 docs):**
+  469/469 joined to a doc_type, 16 template candidates, 24 unknown-era. Doc-first: §8 discover row +
+  §9.8 era-determination note. `discover` still mutates no content. 343 tests, 100% cov.
 - **2026-06-02** — **P2.2a: `discover` structural-convention miner → `registries/structures`
   (CANONICALIZE).** First half of the P2.2 split (the prompt sanctioned splitting it). New pure
   `mine_structures` detects three convention families across the corpus and proposes one

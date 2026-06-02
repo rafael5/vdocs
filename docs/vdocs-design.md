@@ -904,7 +904,7 @@ plane), **DOC** = the document medallion (data plane) (§4). The inventory track
 | 🥇 INV | **serve-inventory** | `catalog.enriched` | `inventory/gold` — the **GOLD INVENTORY** (curated · browsable + machine-queryable selection surface; a pure function of `catalog.enriched`). **Postflight HARD GATE** — complete vs. the crawl, enriched, noise-classified, no information loss + sane distributions (crawl-spec §7); `ok` only if green. **This `ok` is the fetch gate.** | SKIP_IF_UNCHANGED |
 | 🥉 DOC | **fetch** | **gold inventory `ok` (the gate, green)** + an explicit **selection** (the selection surface, §5.6); reads `state.db:acquisitions` (prior status — *out-of-contract* mutable state, §5.5) | `documents/bronze:raw` (CAS docx), `raw/index.json` (derived CAS manifest); writes `state.db:acquisitions` (per-doc fetch status — the system of record, *out-of-contract* mutable state, §5.5) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **convert** | `raw`, `raw/index.json` | `text@converted`, `assets` (CAS) | SKIP_IF_UNCHANGED |
-| 🥈 DOC | **discover** | `text@converted` (corpus-global) | `reports/patterns` (candidate boilerplate / `(doc_type, era)` templates / dead phrases / glossary terms / structural patterns + evidence + proposed disposition) → proposes `registries/` updates (§9.6) | SKIP_IF_UNCHANGED |
+| 🥈 DOC | **discover** | `text@converted` (corpus-global) + `catalog.enriched` (for `doc_code` only — the authoritative doc_type for `(doc_type, era)` template induction; classification stays a `catalog` decision, not re-derived) | `reports/patterns` (candidate boilerplate / `(doc_type, era)` templates [`doc_type`←catalog `doc_code`, `era`←title-page publication date bucketed by decade] / dead phrases / glossary terms / structural patterns + evidence + proposed disposition) → proposes `registries/` updates (§9.6) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **enrich** | `text@converted`, `catalog.enriched` | `text@enriched` (identity FM baked), `index.db:doc_meta_staged` | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **normalize** | `text@enriched`, `raw/index.json` (for source_sha256 — metadata only, not the binary tree), `registries` (curated patterns) | `text@normalized` — **done:** `history.yaml` + `refs.yaml` sidecars, dead phrases deleted, **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** (§6.7); **⏳ forward-looking** (deferred F-steps, tracked by the tracker's `normalize ◐` — flip each clause to plain as it lands): `tables/*.csv` sidecars (P1.a), boilerplate referenced (P1.b), template-scaffold stripped + `template_id` stamped (P1.c), glossary single-sourced | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **consolidate** | `text@normalized`, `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage + retained prior bodies captured as travel-with sidecars; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
@@ -1232,6 +1232,16 @@ prose). The strippable furniture leaves the body; the schema stays, for secondar
   heading recovery, §6.7), a revision-history block, a glossary/index, figure/table numbering, the
   anchor/numbering scheme;
 - the **doc-type semantics** — what each section *means*, so downstream consumers can rely on it.
+
+**How `(doc_type, era)` is determined (decided).** `doc_type` is the catalog's authoritative
+`doc_code` (the 57-pattern classification, joined from `catalog.enriched` — *not* re-derived in
+`discover`, tenet #13). `era` is the **decade bucket of the date printed on the document's title
+page** — the only trustworthy publication-era signal. (Investigated and rejected: the DOCX core
+metadata `dcterms:created`/`modified` is 100%-present but collapses to a 2020–21 window — a VA
+bulk-re-export artifact, not authorship; the VDL website `file_date` is populated for <1% of docs.
+The title-page date covers ~95% of the corpus with a believable 1989→2026 spread.) Docs with no
+parseable title-page date fall in an explicit `unknown` era bucket — mined but flagged, never
+silently dropped.
 
 **Two tiers.** `discover` learns the **empirical** template per `(doc_type, era)` (what those docs
 actually were). Curation also defines a **canonical** `doc_type` schema — the normative "ideal"

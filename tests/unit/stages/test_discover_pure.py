@@ -169,6 +169,89 @@ def test_mine_structures_below_threshold_is_not_a_candidate():
     assert dp.mine_structures(docs, min_docs=3) == []
 
 
+def test_extract_era_buckets_title_page_date_by_decade():
+    # the title-page date is the real publication-era signal (DOCX metadata is a 2020-21
+    # bulk-re-export artifact; VDL file_date is ~empty) — bucket it by decade
+    assert dp.extract_era("# Guide\n\nUser Manual\n\nJanuary 1998\n") == "1990s"
+    assert dp.extract_era("# Guide\n\nSeptember 2020\n") == "2020s"
+    assert dp.extract_era("# Guide\n\nMarch 2013\n") == "2010s"
+    # no parseable date in the head → unknown (never silently dropped)
+    assert dp.extract_era("# Guide\n\nno date here at all\n") == "unknown"
+    # a date buried deep in the body (past the title-page window) does not count
+    assert dp.extract_era("# Guide\n\n" + "x\n" * 80 + "June 1995\n") == "unknown"
+
+
+def _doc(title_date, sections):
+    heads = "\n\n".join(f"## {s}" for s in sections)
+    return f"# Title Page\n\n{title_date}\n\n{heads}\n\nbody text here.\n"
+
+
+def test_mine_templates_clusters_same_scaffold_per_doc_type_era():
+    # four user guides (UM), same era, same section scaffold → ONE (doc_type, era) template
+    sections = ["Orientation", "Getting Started", "Options", "Troubleshooting", "Glossary"]
+    docs = {f"APP/um_{i}": _doc("January 2013", sections) for i in range(4)}
+    doc_types = {k: "UM" for k in docs}
+    tmpls = dp.mine_templates(docs, doc_types, min_docs=3)
+    assert len(tmpls) == 1
+    t = tmpls[0]
+    assert t.doc_type == "UM" and t.era == "2010s"
+    assert t.disposition == "STRIP"
+    assert t.doc_count == 4
+    assert t.template_id.startswith("UM:2010s:")
+    # the retained structural schema captures the ordered sections (§9.8)
+    schema_titles = [s.title for s in t.sections]
+    assert schema_titles == sections
+    assert all(s.required for s in t.sections)  # present in every cluster member → required
+
+
+def test_mine_templates_separates_doc_types_and_eras():
+    sections = ["Orientation", "Getting Started", "Glossary"]
+    docs = {}
+    docs.update({f"A/um_{i}": _doc("January 2013", sections) for i in range(3)})  # UM 2010s
+    docs.update({f"A/ig_{i}": _doc("January 2013", sections) for i in range(3)})  # IG 2010s
+    docs.update({f"A/um9_{i}": _doc("January 1998", sections) for i in range(3)})  # UM 1990s
+    doc_types = {}
+    doc_types.update({f"A/um_{i}": "UM" for i in range(3)})
+    doc_types.update({f"A/ig_{i}": "IG" for i in range(3)})
+    doc_types.update({f"A/um9_{i}": "UM" for i in range(3)})
+    tmpls = dp.mine_templates(docs, doc_types, min_docs=3)
+    keys = {(t.doc_type, t.era) for t in tmpls}
+    assert keys == {("UM", "2010s"), ("IG", "2010s"), ("UM", "1990s")}
+
+
+def test_mine_templates_below_threshold_and_unknown_doctype_skipped():
+    sections = ["A", "B", "C"]
+    docs = {f"X/d_{i}": _doc("January 2013", sections) for i in range(2)}  # only 2 (< min_docs)
+    docs["X/notype"] = _doc("January 2013", sections)  # no doc_type → skipped
+    doc_types = {f"X/d_{i}": "TM" for i in range(2)}  # X/notype absent
+    assert dp.mine_templates(docs, doc_types, min_docs=3) == []
+
+
+def test_mine_templates_outlier_subcluster_below_threshold_dropped():
+    # a (doc_type, era) bucket with enough docs total, but one doc's scaffold is an outlier: the
+    # 3-doc consensus cluster emits, the lone outlier sub-cluster is below min_docs and is dropped
+    common = ["Orientation", "Getting Started", "Options", "Troubleshooting", "Glossary"]
+    outlier = ["Architecture", "Routines", "Files", "Protocols", "Exported Options"]
+    docs = {f"A/g_{i}": _doc("June 2016", common) for i in range(3)}
+    docs["A/odd"] = _doc("June 2016", outlier)
+    doc_types = {k: "UM" for k in docs}
+    tmpls = dp.mine_templates(docs, doc_types, min_docs=3, scaffold_threshold=0.6)
+    assert len(tmpls) == 1  # only the 3-doc consensus survives; the outlier is dropped
+    assert tmpls[0].doc_count == 3
+
+
+def test_mine_templates_repeated_heading_counted_once_per_doc():
+    # a section title repeated within one document must count once toward the consensus (not inflate
+    # required/level stats) — exercises the per-doc dedupe in the schema builder
+    sections = ["Overview", "Overview", "Glossary"]  # "Overview" appears twice in each doc
+    docs = {f"A/d_{i}": _doc("March 2008", sections) for i in range(3)}
+    doc_types = {k: "TM" for k in docs}
+    (t,) = dp.mine_templates(docs, doc_types, min_docs=3)
+    titles = [s.title for s in t.sections]
+    assert titles == ["Overview", "Glossary"]  # deduped within each doc
+    assert all(s.required for s in t.sections)
+
+
 def test_curated_structures_registry_is_well_formed():
     # the P2.2a starter set curated from the real corpus must stay consistent with the miner's
     # canonical-form logic (so a curation edit that drifts from the code is caught here)
@@ -188,6 +271,26 @@ def test_curated_structures_registry_is_well_formed():
         if c["convention"] == "callout":
             # the curated canonical_form must match what the miner would emit for that label
             assert c["canonical_form"] == dp._callout_canonical_form(c["label"])
+
+
+def test_curated_templates_registry_is_well_formed():
+    # the P2.2b starter set curated from the real corpus: every template carries a non-trivial
+    # retained schema (§9.8) keyed by (doc_type, era) with a STRIP disposition
+    import yaml
+
+    from vdocs.config import Settings
+
+    path = Settings().registries / "templates" / "templates.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    templates = data["templates"]
+    assert templates, "curated templates starter set is empty"
+    for t in templates:
+        assert t["disposition"] == "STRIP"
+        assert t["status"] == "approved"
+        assert t["template_id"].startswith(f"{t['doc_type']}:{t['era']}:")
+        assert t["sections"], "a curated template must retain a non-trivial schema"
+        for s in t["sections"]:
+            assert {"section_id", "title", "level", "required", "toc_level"} <= set(s)
 
 
 def test_mine_glossary_acronyms_filters_stopwords():

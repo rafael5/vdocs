@@ -11,7 +11,8 @@ primitives they could build on live once in ``kernel/discovery`` (tenet #4).
 from __future__ import annotations
 
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
 
 from pydantic import BaseModel, Field
 
@@ -40,6 +41,19 @@ _TOC_RE = re.compile(
 _REVTABLE_RE = re.compile(
     r"^#{1,3}[ \t]+(?:revision history|revisions)[ \t]*$", re.IGNORECASE | re.MULTILINE
 )
+
+# --- (doc_type, era) template induction (§9.8 / ADR-018,019) ---
+# era comes from the date printed on the title page (the only trustworthy publication-era signal:
+# DOCX core metadata is a 2020-21 bulk-re-export artifact; the VDL file_date is ~empty). Parse the
+# first Month-Year in the title-page window and bucket by decade; missing date yields "unknown".
+_TITLE_PAGE_LINES = 40  # the title-page window (front matter) scanned for a publication date
+_MONTH = (
+    r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
+    r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+)
+_TITLE_DATE_RE = re.compile(rf"\b{_MONTH}\.?,?\s+(\d{{4}})\b", re.IGNORECASE)
+_HEADING_TITLE = re.compile(r"^(#{1,6})[ \t]+(.+?)[ \t]*$", re.MULTILINE)
+_SLUG_STRIP = re.compile(r"[^a-z0-9]+")
 
 # common all-caps English/header words that are not glossary terms (real-corpus noise: the
 # acronym shape over-matches NO/YES/TO/… and form-field labels). Curation can still add real ones.
@@ -98,16 +112,44 @@ class StructureCandidate(BaseModel):
     grade: str  # auto | review (the curation-gate hint)
 
 
+class TemplateSection(BaseModel):
+    """One row of a template's retained structural schema (§9.8): an expected section."""
+
+    section_id: str  # slug of the title — the stable section identity
+    title: str  # the consensus heading title
+    level: int  # the modal heading level (1–6)
+    required: bool  # present in *every* cluster member (vs optional)
+    toc_level: bool  # whether it belongs in the regenerated TOC (level ≤ 3, §6.7)
+
+
+class TemplateCandidate(BaseModel):
+    """An induced per-``(doc_type, era)`` template (§9.8/ADR-018): the scaffold each manual of a
+    type+era was poured into. Disposition **STRIP** — the literal scaffold leaves the body and a
+    ``template_id`` is stamped — but the ordered structural ``schema`` is **RETAINED** (an asset,
+    not just noise: the validation oracle + reuse source). Proposal only; curation approves it."""
+
+    template_id: str  # "<doc_type>:<era>:<scaffold-fp8>" — stable identity stamped onto bodies
+    doc_type: str  # the catalog doc_code (UM/TM/IG/…)
+    era: str  # decade bucket of the title-page date (e.g. "2010s") or "unknown"
+    disposition: str = "STRIP"  # §9.7 templates disposition (STRIP body + stamp + RETAIN schema)
+    sections: list[TemplateSection] = Field(default_factory=list)  # the retained structural schema
+    doc_count: int  # cluster size (docs sharing this scaffold)
+    sample_doc_ids: list[str] = Field(default_factory=list)
+    grade: str  # auto | review (the curation-gate hint)
+
+
 class PatternReport(BaseModel):
     """The ``reports/patterns`` artifact: candidate patterns, pre-curation. ``blocks`` holds the
     recurring-block candidates (each tagged ``registry`` = templates | phrases | boilerplate);
     ``converter_routing`` holds per-document convert-quality routing candidates; ``structures``
-    holds recurring structural-convention candidates."""
+    holds recurring structural-convention candidates; ``templates`` holds the induced
+    ``(doc_type, era)`` template candidates with their retained schemas (§9.8)."""
 
     blocks: list[PatternCandidate] = Field(default_factory=list)
     glossary: list[PatternCandidate] = Field(default_factory=list)
     converter_routing: list[RoutingCandidate] = Field(default_factory=list)
     structures: list[StructureCandidate] = Field(default_factory=list)
+    templates: list[TemplateCandidate] = Field(default_factory=list)
 
 
 def split_blocks(markdown: str) -> list[str]:
@@ -332,6 +374,126 @@ def _structure_candidate(
         sample_doc_ids=sorted(docs)[:_SAMPLE],
         grade="auto" if len(docs) >= auto_docs else "review",
     )
+
+
+def extract_era(body: str, *, head_lines: int = _TITLE_PAGE_LINES) -> str:
+    """Decade bucket of the title-page publication date, or ``"unknown"``.
+
+    Scans only the title-page window (front matter) for the first ``Month YYYY`` — the date the
+    author printed on the cover, which (unlike the DOCX re-export timestamp) tracks the real era."""
+    head = "\n".join(body.splitlines()[:head_lines])
+    m = _TITLE_DATE_RE.search(head)
+    if not m:
+        return "unknown"
+    return f"{(int(m.group(1)) // 10) * 10}s"
+
+
+def parse_scaffold(body: str) -> list[tuple[int, str]]:
+    """Ordered ``(level, title)`` of the body's section headings — the structural scaffold.
+
+    H1 is excluded: it is the document title, not a reusable section of the template scaffold."""
+    out: list[tuple[int, str]] = []
+    for m in _HEADING_TITLE.finditer(body):
+        if len(m.group(1)) >= 2:  # skip H1 (document title)
+            out.append((len(m.group(1)), m.group(2).strip()))
+    return out
+
+
+def _slug(title: str) -> str:
+    return _SLUG_STRIP.sub("-", title.lower()).strip("-") or "section"
+
+
+def mine_templates(
+    docs: dict[str, str],
+    doc_types: dict[str, str],
+    *,
+    min_docs: int = 3,
+    auto_docs: int = 10,
+    scaffold_threshold: float = 0.6,
+) -> list[TemplateCandidate]:
+    """Induce per-``(doc_type, era)`` template candidates by structural clustering (§9.8/ADR-018).
+
+    Bucket bodies by ``(doc_type, era)`` — ``doc_type`` from the curated catalog (``doc_types``
+    map; bodies with no known type are skipped), ``era`` from the title-page date — then near-dup
+    cluster each bucket by heading scaffold (``kernel/discovery``). Each cluster of ≥ ``min_docs``
+    becomes one template with a stamped ``template_id`` and a **retained** consensus structural
+    schema. Proposals only — mutates nothing."""
+    buckets: dict[tuple[str, str], list[tuple[str, list[tuple[int, str]]]]] = defaultdict(list)
+    for doc_id, md in docs.items():
+        dt = doc_types.get(doc_id)
+        if not dt:
+            continue
+        buckets[(dt, extract_era(md))].append((doc_id, parse_scaffold(md)))
+
+    out: list[TemplateCandidate] = []
+    for (dt, era), members in buckets.items():
+        if len(members) < min_docs:
+            continue
+        sigs = [kd.minhash_signature(kd.scaffold_shingles([t for _, t in sc])) for _, sc in members]
+        for cluster in kd.cluster_near_duplicates(sigs, threshold=scaffold_threshold):
+            picked = [members[i] for i in cluster]
+            if len(picked) < min_docs:
+                continue
+            sections = _consensus_schema(picked)
+            fp = kd.structural_fingerprint([s.title for s in sections])
+            out.append(
+                TemplateCandidate(
+                    template_id=f"{dt}:{era}:{fp[:8]}",
+                    doc_type=dt,
+                    era=era,
+                    sections=sections,
+                    doc_count=len(picked),
+                    sample_doc_ids=sorted(d for d, _ in picked)[:_SAMPLE],
+                    grade="auto" if len(picked) >= auto_docs else "review",
+                )
+            )
+    out.sort(key=lambda t: (-t.doc_count, t.template_id))
+    return out
+
+
+@dataclass
+class _SectionAgg:
+    """Per-section accumulator while building a cluster's consensus schema."""
+
+    title: str  # first-seen display spelling
+    count: int = 0  # member docs containing this section
+    levels: Counter[int] = field(default_factory=Counter)
+    positions: list[int] = field(default_factory=list)
+
+
+def _consensus_schema(
+    members: list[tuple[str, list[tuple[int, str]]]],
+) -> list[TemplateSection]:
+    """The retained structural schema for a scaffold cluster: sections present in a majority of
+    members, ordered by mean position, marked ``required`` when present in *every* member (§9.8)."""
+    size = len(members)
+    agg: dict[str, _SectionAgg] = {}
+    for _, scaffold in members:
+        seen: set[str] = set()
+        for pos, (level, title) in enumerate(scaffold):
+            key = " ".join(title.lower().split())
+            if key in seen:  # count each section once per document
+                continue
+            seen.add(key)
+            row = agg.setdefault(key, _SectionAgg(title=title))
+            row.count += 1
+            row.levels[level] += 1
+            row.positions.append(pos)
+    majority = size // 2 + 1
+    rows = sorted(
+        (r for r in agg.values() if r.count >= majority),
+        key=lambda r: sum(r.positions) / len(r.positions),
+    )
+    return [
+        TemplateSection(
+            section_id=_slug(r.title),
+            title=r.title,
+            level=r.levels.most_common(1)[0][0],
+            required=r.count == size,
+            toc_level=r.levels.most_common(1)[0][0] <= 3,
+        )
+        for r in rows
+    ]
 
 
 def count_bare_markers(body: str) -> int:

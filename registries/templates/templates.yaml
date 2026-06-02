@@ -1,0 +1,426 @@
+# registries/templates — induced (doc_type, era) templates: STRIP scaffold + stamp template_id
+# + RETAIN computable structural schema (§9.7/§9.8/ADR-018,019).
+#
+# Curated from `discover`'s mine_templates over the real 469-doc corpus (P2.2b). doc_type comes
+# from catalog.enriched.doc_code; era from the title-page publication date (decade bucket).
+# `sections` is the retained structural schema (ordered expected sections, required vs optional,
+# toc_level); `normalize` will STRIP the matched scaffold from the body and stamp template_id,
+# while the schema stays computable for the template-compliance oracle (§9.8) + reuse.
+# Starter set = high-confidence auto-graded templates with a non-trivial schema; the degenerate
+# empty-schema clusters (doc-types with no consistent section structure) are left to curation.
+
+templates:
+- template_id: DIBR:2020s:341c3495
+  doc_type: DIBR
+  era: 2020s
+  disposition: STRIP
+  status: approved
+  evidence_docs: 47
+  sections:
+  - section_id: purpose
+    title: Purpose
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: dependencies
+    title: Dependencies
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: constraints
+    title: Constraints
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: timeline
+    title: Timeline
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: site-readiness-assessment
+    title: Site Readiness Assessment
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: deployment-topology-targeted-architecture
+    title: Deployment Topology (Targeted Architecture)
+    level: 3
+    required: true
+    toc_level: true
+  - section_id: site-information-locations-deployment-recipients
+    title: Site Information (Locations, Deployment Recipients)
+    level: 3
+    required: false
+    toc_level: true
+  - section_id: site-preparation
+    title: Site Preparation
+    level: 3
+    required: true
+    toc_level: true
+  - section_id: resources
+    title: Resources
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: facility-specifics
+    title: Facility Specifics
+    level: 3
+    required: false
+    toc_level: true
+  - section_id: hardware
+    title: Hardware
+    level: 3
+    required: true
+    toc_level: true
+  - section_id: software
+    title: Software
+    level: 3
+    required: true
+    toc_level: true
+  - section_id: communications
+    title: Communications
+    level: 3
+    required: true
+    toc_level: true
+  - section_id: deployment-installation-back-out-checklist
+    title: Deployment/Installation/Back-Out Checklist
+    level: 4
+    required: false
+    toc_level: false
+  - section_id: pre-installation-and-system-requirements
+    title: Pre-Installation and System Requirements
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: platform-installation-and-preparation
+    title: Platform Installation and Preparation
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: download-and-extract-files
+    title: Download and Extract Files
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: database-creation
+    title: Database Creation
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: installation-scripts
+    title: Installation Scripts
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: cron-scripts
+    title: Cron Scripts
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: access-requirements-and-skills-needed-for-the-installation
+    title: Access Requirements and Skills Needed for the Installation
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: installation-procedure
+    title: Installation Procedure
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: installation-verification-procedure
+    title: Installation Verification Procedure
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: system-configuration
+    title: System Configuration
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: database-tuning
+    title: Database Tuning
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: back-out-strategy
+    title: Back-Out Strategy
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: back-out-considerations
+    title: Back-Out Considerations
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: load-testing
+    title: Load Testing
+    level: 3
+    required: false
+    toc_level: true
+  - section_id: user-acceptance-testing
+    title: User Acceptance Testing
+    level: 3
+    required: false
+    toc_level: true
+  - section_id: back-out-criteria
+    title: Back-Out Criteria
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: back-out-risks
+    title: Back-Out Risks
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: authority-for-back-out
+    title: Authority for Back-Out
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: back-out-procedure
+    title: Back-Out Procedure
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: back-out-verification-procedure
+    title: Back-Out Verification Procedure
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: rollback-considerations
+    title: Rollback Considerations
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: rollback-criteria
+    title: Rollback Criteria
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: rollback-risks
+    title: Rollback Risks
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: authority-for-rollback
+    title: Authority for Rollback
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: rollback-procedure
+    title: Rollback Procedure
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: rollback-verification-procedure
+    title: Rollback Verification Procedure
+    level: 2
+    required: false
+    toc_level: true
+- template_id: DIBR:2010s:341c3495
+  doc_type: DIBR
+  era: 2010s
+  disposition: STRIP
+  status: approved
+  evidence_docs: 20
+  sections:
+  - section_id: purpose
+    title: Purpose
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: dependencies
+    title: Dependencies
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: constraints
+    title: Constraints
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: timeline
+    title: Timeline
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: site-readiness-assessment
+    title: Site Readiness Assessment
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: deployment-topology-targeted-architecture
+    title: Deployment Topology (Targeted Architecture)
+    level: 3
+    required: true
+    toc_level: true
+  - section_id: site-information-locations-deployment-recipients
+    title: Site Information (Locations, Deployment Recipients)
+    level: 3
+    required: false
+    toc_level: true
+  - section_id: site-preparation
+    title: Site Preparation
+    level: 3
+    required: true
+    toc_level: true
+  - section_id: resources
+    title: Resources
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: facility-specifics
+    title: Facility Specifics
+    level: 3
+    required: false
+    toc_level: true
+  - section_id: hardware
+    title: Hardware
+    level: 3
+    required: true
+    toc_level: true
+  - section_id: software
+    title: Software
+    level: 3
+    required: true
+    toc_level: true
+  - section_id: communications
+    title: Communications
+    level: 3
+    required: true
+    toc_level: true
+  - section_id: deployment-installation-back-out-checklist
+    title: Deployment/Installation/Back-Out Checklist
+    level: 4
+    required: true
+    toc_level: false
+  - section_id: pre-installation-and-system-requirements
+    title: Pre-installation and System Requirements
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: platform-installation-and-preparation
+    title: Platform Installation and Preparation
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: download-and-extract-files
+    title: Download and Extract Files
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: database-creation
+    title: Database Creation
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: installation-scripts
+    title: Installation Scripts
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: cron-scripts
+    title: Cron Scripts
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: access-requirements-and-skills-needed-for-the-installation
+    title: Access Requirements and Skills Needed for the Installation
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: installation-procedure
+    title: Installation Procedure
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: installation-verification-procedure
+    title: Installation Verification Procedure
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: system-configuration
+    title: System Configuration
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: database-tuning
+    title: Database Tuning
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: back-out-strategy
+    title: Back-Out Strategy
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: back-out-considerations
+    title: Back-Out Considerations
+    level: 2
+    required: false
+    toc_level: true
+  - section_id: load-testing
+    title: Load Testing
+    level: 3
+    required: true
+    toc_level: true
+  - section_id: user-acceptance-testing
+    title: User Acceptance Testing
+    level: 3
+    required: true
+    toc_level: true
+  - section_id: back-out-criteria
+    title: Back-Out Criteria
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: back-out-risks
+    title: Back-Out Risks
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: authority-for-back-out
+    title: Authority for Back-Out
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: back-out-procedure
+    title: Back-Out Procedure
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: back-out-verification-procedure
+    title: Back-out Verification Procedure
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: rollback-considerations
+    title: Rollback Considerations
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: rollback-criteria
+    title: Rollback Criteria
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: rollback-risks
+    title: Rollback Risks
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: authority-for-rollback
+    title: Authority for Rollback
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: rollback-procedure
+    title: Rollback Procedure
+    level: 2
+    required: true
+    toc_level: true
+  - section_id: rollback-verification-procedure
+    title: Rollback Verification Procedure
+    level: 2
+    required: true
+    toc_level: true
