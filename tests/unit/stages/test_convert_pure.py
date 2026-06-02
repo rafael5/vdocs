@@ -7,14 +7,6 @@ from pathlib import Path
 from vdocs.stages.convert import convert_pure as cp
 
 
-def test_safe_component_sanitises_slashes_and_plus():
-    # case-preserving sanitiser: only path-unsafe runs collapse to '_' (slashes, '+', spaces)
-    assert cp.safe_component("AR/WS") == "AR_WS"
-    assert cp.safe_component("DRM+") == "DRM"  # trailing '_' trimmed
-    assert cp.safe_component("ADT") == "ADT"
-    assert cp.safe_component("///") == "_"
-
-
 def test_bundle_dir():
     root = Path("/lake/silver/text/01-converted")
     assert cp.bundle_dir(root, "ADT", "dg_5_3_1057_dibr") == root / "ADT" / "dg_5_3_1057_dibr"

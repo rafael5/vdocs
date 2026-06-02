@@ -18,9 +18,10 @@ import yaml
 from vdocs.contracts.registry import ASSETS, RAW_INDEX, RAW_TREE, TEXT_CONVERTED
 from vdocs.kernel import cas
 from vdocs.kernel.cas import Cas
+from vdocs.kernel.text import safe_component
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
-from vdocs.stages.convert.convert_pure import ConvertedDoc, safe_component
+from vdocs.stages.convert.convert_pure import ConvertedDoc
 
 Converter = Callable[[bytes, str], ConvertedDoc]
 

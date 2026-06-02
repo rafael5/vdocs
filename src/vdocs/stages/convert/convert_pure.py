@@ -12,12 +12,12 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from vdocs.kernel.text import safe_component
+
 # markdown image: ![alt](target "optional title")
 _MD_IMG_RE = re.compile(r"(!\[[^\]]*\]\()([^)\s]+)([^)]*\))")
 # HTML image (Pandoc emits these for sized/captioned images): <img ... src="target" ... />
 _HTML_IMG_RE = re.compile(r'(<img\b[^>]*?\bsrc=")([^"]+)(")', re.IGNORECASE)
-# app codes may carry slashes/plus (AR/WS, DRM+) — sanitise before any filesystem path (§8)
-_PATH_UNSAFE = re.compile(r"[^A-Za-z0-9._-]+")
 
 
 @dataclass(frozen=True)
@@ -35,11 +35,6 @@ class ConvertedDoc:
 
     markdown: str
     images: tuple[ConvertedImage, ...] = ()
-
-
-def safe_component(name: str) -> str:
-    """Filesystem-safe path component: non-[A-Za-z0-9._-] runs → '_', trimmed (e.g. AR/WS→ar_ws)."""
-    return _PATH_UNSAFE.sub("_", name).strip("_") or "_"
 
 
 def bundle_dir(root: Path, app_code: str, doc_slug: str) -> Path:

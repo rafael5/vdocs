@@ -16,9 +16,9 @@ import yaml
 
 from vdocs.contracts.registry import RAW_INDEX, TEXT_ENRICHED, TEXT_NORMALIZED
 from vdocs.kernel import cas, frontmatter
+from vdocs.kernel.text import safe_component
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
-from vdocs.stages.convert.convert_pure import safe_component
 
 
 class NormalizeStage(Stage):

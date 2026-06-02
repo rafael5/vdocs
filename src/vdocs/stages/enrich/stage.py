@@ -18,10 +18,10 @@ from vdocs.contracts.registry import (
     TEXT_ENRICHED,
 )
 from vdocs.kernel import cas, db, frontmatter
+from vdocs.kernel.text import safe_component
 from vdocs.models.catalog import EnrichedInventory, EnrichedRecord
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
-from vdocs.stages.convert.convert_pure import safe_component
 
 log = structlog.get_logger(__name__)
 

@@ -32,6 +32,14 @@ def test_strip_html_removes_tags_keeps_text():
     assert text.strip_html(html) == "Hello world & link"
 
 
+def test_safe_component_sanitises_slashes_and_plus():
+    # case-preserving bundle-path slug: only path-unsafe runs collapse to '_' (slashes, '+', spaces)
+    assert text.safe_component("AR/WS") == "AR_WS"
+    assert text.safe_component("DRM+") == "DRM"  # trailing '_' trimmed
+    assert text.safe_component("ADT") == "ADT"
+    assert text.safe_component("///") == "_"
+
+
 def test_clean_composes_all_three():
     broken = "<p>itâ€™s\x00 fine</p>"
     assert text.clean(broken) == "it’s fine"

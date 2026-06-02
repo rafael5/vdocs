@@ -31,6 +31,17 @@ _MOJIBAKE_FALLBACK = (
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _TAG_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"[ \t]+")
+# Bundle-path slug: app codes may carry slashes/plus (AR/WS, DRM+) — collapse any run of
+# path-unsafe characters before they reach a filesystem path (§5.2, §8).
+_PATH_UNSAFE = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def safe_component(name: str) -> str:
+    """Filesystem-safe path component: non-[A-Za-z0-9._-] runs → '_', trimmed (e.g. AR/WS→AR_WS).
+
+    The single bundle-path slug sanitiser shared across the document-silver stages (§9.2): a
+    primitive used by ``convert``/``enrich``/``normalize`` lives in the kernel, not a stage."""
+    return _PATH_UNSAFE.sub("_", name).strip("_") or "_"
 
 
 def repair_mojibake(s: str) -> str:
