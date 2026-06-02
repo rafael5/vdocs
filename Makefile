@@ -4,6 +4,7 @@ PTW        := .venv/bin/ptw
 RUFF       := .venv/bin/ruff
 MYPY       := .venv/bin/mypy
 PRECOMMIT  := .venv/bin/pre-commit
+BRANCH      = $(shell git rev-parse --abbrev-ref HEAD)
 
 .PHONY: install test test-lf watch lint format mypy cov check push pull hooks
 
@@ -38,7 +39,7 @@ cov:
 check: lint mypy cov
 
 pull:
-	git pull origin main
+	git pull origin $(BRANCH)
 
 push: check
-	git push origin main
+	git push origin $(BRANCH)
