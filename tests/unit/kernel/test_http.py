@@ -132,3 +132,51 @@ def test_get_bytes_raises_on_persistent_5xx():
     client, _ = _client(handler, max_retries=1)
     with pytest.raises(httpx.HTTPStatusError):
         client.get_bytes("https://vdl.test/doc.docx")
+
+
+def test_retries_on_transport_error_then_succeeds():
+    # R3: connect/read timeouts + protocol errors retry in the same backoff loop as 5xx/429
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise httpx.ReadTimeout("slow", request=request)
+        return httpx.Response(200, text="ok")
+
+    client, slept = _client(handler)
+    page = client.get_page("https://vdl.test/")
+    assert page.status_code == 200 and page.text == "ok"
+    assert calls["n"] == 3  # two transport retries then success
+    assert slept[:2] == [2.0, 4.0]  # same exponential backoff as 5xx
+
+
+def test_get_page_skips_on_persistent_transport_error():
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("down", request=request)
+
+    client, _ = _client(handler, max_retries=2)
+    # never aborts: returns a non-200 skip sentinel so the crawl driver WARNs + skips (§3.6)
+    page = client.get_page("https://vdl.test/")
+    assert page.status_code != 200 and page.text == ""
+
+
+def test_get_bytes_returns_none_on_persistent_transport_error():
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("slow", request=request)
+
+    client, _ = _client(handler, max_retries=1)
+    assert client.get_bytes("https://vdl.test/doc.docx") is None  # skip sentinel, not an exception
+
+
+def test_get_bytes_retries_transport_error_then_returns_content():
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] < 2:
+            raise httpx.ConnectTimeout("slow", request=request)
+        return httpx.Response(200, content=b"PK\x03\x04")
+
+    client, _ = _client(handler, max_retries=2)
+    assert client.get_bytes("https://vdl.test/doc.docx") == b"PK\x03\x04"

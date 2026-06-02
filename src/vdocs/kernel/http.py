@@ -76,30 +76,47 @@ class PoliteClient:
 
     def get_page(self, url: str) -> Page:
         """GET ``url`` as text. Returns the final URL + status even on a persistent 5xx, so
-        the crawl driver can skip a bad page with a WARN rather than aborting (§3.6)."""
+        the crawl driver can skip a bad page with a WARN rather than aborting (§3.6). A persistent
+        transport error (after retries) yields a ``status_code=0`` empty page — the same skip
+        signal, never an exception."""
         resp = self._request(url)
-        page = Page(text=resp.text, url=str(resp.url), status_code=resp.status_code)
+        if resp is None:
+            page = Page(text="", url=url, status_code=0)
+        else:
+            page = Page(text=resp.text, url=str(resp.url), status_code=resp.status_code)
         self._sleep(self._delay)
         return page
 
     def get_bytes(self, url: str) -> bytes | None:
-        """GET ``url`` as bytes; ``None`` on 404 (a missing format), raise on other errors."""
+        """GET ``url`` as bytes; ``None`` on 404 (a missing format) **or** a persistent transport
+        error (the skippable-WARN sentinel the fetch driver records as failed), raise on other
+        errors."""
         resp = self._request(url, timeout=_BYTES_TIMEOUT)
         self._sleep(self._delay)
-        if resp.status_code == 404:
+        if resp is None or resp.status_code == 404:
             return None
         resp.raise_for_status()
         return resp.content
 
-    def _request(self, url: str, *, timeout: float | None = None) -> httpx.Response:
-        """GET with retry: exponential backoff on 5xx, escalating backoff on 429."""
+    def _request(self, url: str, *, timeout: float | None = None) -> httpx.Response | None:
+        """GET with retry: exponential backoff on 5xx and on transport errors (connect/read
+        timeouts, protocol errors), escalating backoff on 429. Returns the response, or ``None``
+        when transport errors persist past ``max_retries`` — the drivers treat ``None`` as a
+        skippable WARN, never an abort (the module's "skip a bad page, never abort" rule + §3.6)."""
         attempt = 0
         backoff_429 = 2.0
         while True:
-            if timeout is None:
-                resp = self._client.get(url)
-            else:
-                resp = self._client.get(url, timeout=timeout)
+            try:
+                if timeout is None:
+                    resp = self._client.get(url)
+                else:
+                    resp = self._client.get(url, timeout=timeout)
+            except httpx.TransportError:
+                if attempt >= self._max_retries:
+                    return None
+                self._sleep(self._backoff * (2.0**attempt))
+                attempt += 1
+                continue
             if attempt >= self._max_retries:
                 return resp
             if resp.status_code == _TOO_MANY_REQUESTS:

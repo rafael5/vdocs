@@ -233,6 +233,11 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):
+  - **C-rel-4 — retry crawl/fetch on transport errors (R3).** `kernel.http._request` only retried
+    429/5xx; an uncaught `httpx.TransportError` (connect/read timeout, protocol error) aborted the
+    whole crawl/fetch. It now retries transport errors in the same exponential-backoff loop and,
+    on exhaustion, returns `None` — `get_page` maps that to a `status_code=0` empty page and
+    `get_bytes` to `None`, the existing skip-with-WARN sentinels (§3.6), never an exception.
   - **C-rel-3 — deterministic strong `sqlite_fingerprint` (R9).** Strong mode hashed `repr(row)`
     ordered `BY 1`, leaving ties (rows sharing the first column) in undefined order — so a
     byte-identical DB built in a different insert order could fingerprint differently. Now encodes
