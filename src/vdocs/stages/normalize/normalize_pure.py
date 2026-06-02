@@ -20,11 +20,16 @@ import re
 from dataclasses import dataclass
 
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
+_HEADING_LINE_RE = re.compile(r"^#{1,6} ", re.MULTILINE)
 _FENCE_RE = re.compile(r"^\s*(```|~~~)")
 _HTML_COMMENT_RE = re.compile(r"^<!--.*-->$")
 _SLUG_DROP = re.compile(r"[^\w\- ]+")  # GitHub slug: drop punctuation, keep word chars/space/hyphen
 _MULTI_BLANK = re.compile(r"\n{3,}")
 _TOC_ENTRY_RE = re.compile(r"^\s*- \[.*\]\(#.*\)\s*$")
+# a paragraph the original Word TOC linked to: a `_Toc…` bookmark anchor span at line start,
+# followed by the heading text. Pandoc leaves these as plain paragraphs (no `#`) — §6.7 recovery.
+_TOC_BOOKMARK_HEADING = re.compile(r'^<span id="_Toc\d+"[^>]*></span>\s*(.+?)\s*$', re.MULTILINE)
+_TAG_RE = re.compile(r"<[^>]+>")
 
 
 @dataclass(frozen=True)
@@ -62,6 +67,24 @@ def parse_headings(body: str) -> list[Heading]:
             continue
         headings.append(Heading(len(m.group(1)), text, github_slug(text, seen)))
     return headings
+
+
+def recover_headings(body: str) -> str:
+    """F-recover (§6.7): give a heading tree to docs Pandoc flattened. The original Word TOC links
+    to ``_Toc…`` bookmarks; Pandoc emits those targets as plain paragraphs (a leading
+    ``<span id="_Toc…" …></span>`` + the heading text). Promote each to a level-2 heading,
+    stripping inline markup. Runs **only when the body has no markdown headings**, so
+    well-structured docs are left untouched. (Level inference from TOC depth/numbering is deferred —
+    a flat tree still gives a working TOC + anchors where there were none.)"""
+    if _HEADING_LINE_RE.search(body):
+        return body
+
+    def repl(m: re.Match[str]) -> str:
+        # strip inline HTML tags and any wrapping markdown emphasis (**bold**/_italic_)
+        text = _TAG_RE.sub("", m.group(1)).strip().strip("*_ ").strip()
+        return f"## {text}" if text else m.group(0)
+
+    return _TOC_BOOKMARK_HEADING.sub(repl, body)
 
 
 def strip_artifacts(body: str) -> str:
@@ -128,5 +151,6 @@ def regenerate_toc(body: str) -> str:
 
 
 def normalize_body(body: str, phrases: frozenset[str]) -> str:
-    """Apply the F-steps in order: strip artifacts → subtract curated phrases → regenerate TOC."""
-    return regenerate_toc(subtract_phrases(strip_artifacts(body), phrases))
+    """Apply the F-steps in order: recover headings → strip artifacts → subtract curated phrases
+    → regenerate TOC (recovery first so the regenerated TOC sees the rebuilt heading tree)."""
+    return regenerate_toc(subtract_phrases(strip_artifacts(recover_headings(body)), phrases))

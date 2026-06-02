@@ -19,6 +19,38 @@ def test_parse_headings_skips_code_fences_and_contents():
     assert [(h.level, h.text) for h in heads] == [(1, "Title"), (2, "Real Section")]
 
 
+def test_recover_headings_promotes_toc_bookmark_paragraphs():
+    # Pandoc flattened these — the original Word TOC linked to the _Toc bookmarks (§6.7)
+    body = (
+        '<span id="_Toc221409085" class="anchor"></span>Revision History\n\n'
+        "Some intro text.\n\n"
+        '<span id="_Toc221409090" class="anchor"></span>**<span class="smallcaps">Known '
+        "Issues</span>**\n\n"
+        "details\n"
+    )
+    out = nz.recover_headings(body)
+    assert "## Revision History" in out
+    assert "## Known Issues" in out  # inline markup stripped
+    assert "Some intro text." in out and "details" in out
+
+
+def test_recover_headings_skips_docs_that_already_have_headings():
+    body = '# Real Heading\n\n<span id="_Toc1" class="anchor"></span>Not Promoted\n'
+    # the doc already has a markdown heading tree → leave its _Toc paragraphs alone
+    assert nz.recover_headings(body) == body
+
+
+def test_recover_headings_then_toc_gives_structureless_doc_a_toc():
+    body = (
+        '<span id="_Toc1" class="anchor"></span>Introduction\n\nbody\n\n'
+        '<span id="_Toc2" class="anchor"></span>Installation\n\nsteps\n'
+    )
+    out = nz.normalize_body(body, frozenset())
+    assert "## Contents" in out
+    assert "- [Introduction](#introduction)" in out
+    assert "- [Installation](#installation)" in out
+
+
 def test_strip_artifacts_removes_empty_comments_and_collapses_blanks():
     body = "Para one.\n\n<!-- -->\n\n\n\nPara two.\n"
     out = nz.strip_artifacts(body)
