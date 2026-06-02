@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from pydantic import BaseModel, Field
 
 from vdocs.kernel import discovery as kd
+from vdocs.kernel.text import block_key as block_key  # shared block identity (§9.2); re-exported
 
 _WS = re.compile(r"\s+")
 _BLOCK_SPLIT = re.compile(r"\n\s*\n")
@@ -155,11 +156,6 @@ class PatternReport(BaseModel):
 def split_blocks(markdown: str) -> list[str]:
     """Split a body into blocks on blank lines; trimmed, non-empty (paragraph grain)."""
     return [b.strip() for b in _BLOCK_SPLIT.split(markdown) if b.strip()]
-
-
-def block_key(block: str) -> str:
-    """Identity for a block: lowercased, whitespace-collapsed (so trivial spacing diffs match)."""
-    return _WS.sub(" ", block.strip().lower())
 
 
 def mine_recurring_blocks(

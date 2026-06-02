@@ -1,9 +1,10 @@
 """The `normalize` stage — text@enriched → text@normalized (the F-steps, §6.7, §9.6).
 
 Per-document, deterministic: for each enriched bundle it applies the pure F-steps (strip
-Pandoc artifacts → subtract the **curated** ``registries/phrases`` → rewrite Word-bookmark
-cross-refs to GitHub slugs → regenerate the ``## Contents`` TOC from the heading tree → insert
-round-trip back-links), stamps ``source_sha256`` into the frontmatter (the bronze provenance it
+Pandoc artifacts → subtract the **curated** ``registries/phrases`` → reference the **curated**
+``registries/boilerplate`` → infer consistent heading levels → rewrite Word-bookmark cross-refs to
+GitHub slugs → regenerate the ``## Contents`` TOC from the heading tree → insert round-trip
+back-links), stamps ``source_sha256`` into the frontmatter (the bronze provenance it
 alone holds), and writes the gold-quality body to ``silver/text/03-normalized``. Subtracts only
 the *curated* registry — so it stays a pure function of ``(document, registry)`` and re-runs
 idempotently (§7.4, §9.6).
@@ -44,11 +45,14 @@ class NormalizeStage(Stage):
         from vdocs.stages.normalize import tables_pure as tbl
 
         phrases = _load_phrases(ctx.cfg.registries / "phrases" / "phrases.yaml")
+        boilerplate = _load_boilerplate(
+            ctx.cfg.registries / "boilerplate" / "boilerplate.yaml", nz.Boilerplate
+        )
         sha_by_path = _sha_by_bundle_path(ctx.cfg.raw_index)
 
         enriched_root = ctx.cfg.silver_enriched
         normalized_root = ctx.cfg.silver_normalized
-        n_docs = n_history = n_tables = n_refs = 0
+        n_docs = n_history = n_tables = n_refs = n_boiler = 0
         for body_path in sorted(enriched_root.rglob("body.md")):
             rel = body_path.parent.relative_to(enriched_root)  # <app>/<slug>
             meta, body = frontmatter.parse(body_path.read_text(encoding="utf-8"))
@@ -62,7 +66,10 @@ class NormalizeStage(Stage):
             # resolve it per (doc_type, era) and pass it to normalize_body (§6.7).
             body, revisions = rev.extract_revision_history(body)
             body, tables = tbl.extract_tables(body)
-            body, anchor_map = nz.normalize_body(body, phrases, doc_id=str(rel))
+            body, anchor_map = nz.normalize_body(
+                body, phrases, doc_id=str(rel), boilerplate=boilerplate
+            )
+            n_boiler += body.count("](_shared/boilerplate/")  # REFERENCE links inserted
             out = frontmatter.emit(meta, body)
             cas.atomic_write(normalized_root / rel / "body.md", out.encode("utf-8"))
             if revisions:
@@ -94,6 +101,7 @@ class NormalizeStage(Stage):
                 "history_sidecars": n_history,
                 "tables_sidecars": n_tables,
                 "refs_sidecars": n_refs,
+                "boilerplate_refs": n_boiler,
                 "phrases": len(phrases),
             }
         )
@@ -105,6 +113,16 @@ def _load_phrases(path) -> frozenset[str]:  # type: ignore[no-untyped-def]
         return frozenset()
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     return frozenset(data.get("phrases") or [])
+
+
+def _load_boilerplate(path, cls):  # type: ignore[no-untyped-def]
+    """The curated boilerplate registry as ``Boilerplate`` entries (empty if absent — a no-op)."""
+    if not path.exists():
+        return ()
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return tuple(
+        cls(id=e["id"], label=e["label"], key=e["key"]) for e in (data.get("boilerplate") or [])
+    )
 
 
 def _sha_by_bundle_path(raw_index):  # type: ignore[no-untyped-def]

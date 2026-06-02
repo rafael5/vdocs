@@ -64,3 +64,11 @@ def test_clean_is_idempotent():
     broken = "<p>the â€œwordâ€\x9d\x07</p>"
     once = text.clean(broken)
     assert text.clean(once) == once
+
+
+def test_block_key_collapses_whitespace_and_lowercases():
+    assert text.block_key("  Hello   World  ") == "hello world"
+    # newlines collapse too (a block may span lines)
+    assert text.block_key("Line one\n  Line two") == "line one line two"
+    # spacing/case-only differences map to the same key
+    assert text.block_key("The  NOTICE.") == text.block_key("the notice.")

@@ -150,3 +150,74 @@ def test_infer_heading_levels_ignores_code_fences():
     out = nz.infer_heading_levels(body)
     assert "#### not a heading" in out  # fenced content untouched
     assert "## Real" in out  # the real H3 compacted to H2
+
+
+def test_infer_heading_levels_leaves_generated_contents_heading():
+    # the generated `## Contents` TOC marker must be skipped, else re-leveling it breaks
+    # normalize_body self-idempotency (it is regenerated each run, not a content section)
+    body = "## Contents\n\n- [Setup](#setup)\n\n## Setup\n\n### Detail\n"
+    out = nz.infer_heading_levels(body)
+    assert "## Contents" in out  # untouched (not promoted to # Contents)
+
+
+def test_normalize_body_is_self_idempotent_with_generated_toc():
+    body = "# Guide\n\n## Setup\n\n#### Deep detail\n\nbody text.\n"
+    once, _ = nz.normalize_body(body, frozenset())
+    assert "## Contents" in once  # a TOC was generated
+    twice, _ = nz.normalize_body(once, frozenset())
+    assert twice == once  # second pass is a fixed point
+
+
+_BP = (
+    nz.Boilerplate(
+        id="bp-1234",
+        label="This document describes the DIBR plan",
+        key=nz.block_key("This document describes the DIBR plan for VA Enterprise products."),
+    ),
+)
+
+
+def test_subtract_boilerplate_replaces_block_with_reference():
+    body = (
+        "# Guide\n\nIntro paragraph.\n\n"
+        "This document describes the DIBR plan for VA Enterprise products.\n\n"
+        "Unique content here.\n"
+    )
+    out = nz.subtract_boilerplate(body, _BP)
+    assert "This document describes the DIBR plan for VA Enterprise" not in out  # text removed
+    assert "(_shared/boilerplate/bp-1234.md)" in out  # replaced by a REFERENCE link
+    assert "Intro paragraph." in out and "Unique content here." in out  # others untouched
+
+
+def test_subtract_boilerplate_matches_modulo_whitespace_and_case():
+    body = "Intro.\n\nthis  document   describes the DIBR PLAN for va enterprise products.\n"
+    out = nz.subtract_boilerplate(body, _BP)
+    assert "(_shared/boilerplate/bp-1234.md)" in out  # block_key match ignores spacing/case
+
+
+def test_subtract_boilerplate_noop_when_no_registry_or_no_match():
+    body = "# Guide\n\nNothing boilerplate here.\n"
+    assert nz.subtract_boilerplate(body, ()) == body  # empty registry → untouched
+    assert nz.subtract_boilerplate(body, _BP) == body  # no matching block → untouched
+
+
+def test_subtract_boilerplate_is_idempotent():
+    body = "Intro.\n\nThis document describes the DIBR plan for VA Enterprise products.\n"
+    once = nz.subtract_boilerplate(body, _BP)
+    assert nz.subtract_boilerplate(once, _BP) == once  # the reference is not a registered block
+
+
+def test_curated_boilerplate_registry_is_well_formed():
+    # the P1.b starter set curated from the real corpus: each `key` must equal block_key(text)
+    import yaml
+
+    from vdocs.config import Settings
+
+    path = Settings().registries / "boilerplate" / "boilerplate.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    entries = data["boilerplate"]
+    assert entries, "curated boilerplate starter set is empty"
+    for e in entries:
+        assert e["status"] == "approved"
+        assert e["key"] == nz.block_key(e["text"])  # the match key matches its canonical text
+        assert e["id"].startswith("bp-")

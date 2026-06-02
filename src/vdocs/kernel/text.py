@@ -19,6 +19,8 @@ _WS_RE = re.compile(r"[ \t]+")
 # Bundle-path slug: app codes may carry slashes/plus (AR/WS, DRM+) — collapse any run of
 # path-unsafe characters before they reach a filesystem path (§5.2, §8).
 _PATH_UNSAFE = re.compile(r"[^A-Za-z0-9._-]+")
+# Block-equality key: collapse *all* whitespace (incl. newlines — a block may span lines).
+_BLOCK_WS_RE = re.compile(r"\s+")
 
 
 def safe_component(name: str) -> str:
@@ -27,6 +29,14 @@ def safe_component(name: str) -> str:
     The single bundle-path slug sanitiser shared across the document-silver stages (§9.2): a
     primitive used by ``convert``/``enrich``/``normalize`` lives in the kernel, not a stage."""
     return _PATH_UNSAFE.sub("_", name).strip("_") or "_"
+
+
+def block_key(block: str) -> str:
+    """Whitespace-collapsed, lowercased identity of a text block — the shared block-equality key.
+
+    Used by ``discover`` (recurring-block mining) and ``normalize`` (boilerplate subtraction) to
+    decide when two blocks are "the same" modulo spacing/case (§9.2 — one primitive, two stages)."""
+    return _BLOCK_WS_RE.sub(" ", block.strip().lower())
 
 
 def repair_mojibake(s: str) -> str:

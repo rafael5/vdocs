@@ -11,11 +11,14 @@
                (§6.7: derive structure, never trust the extracted TOC).
   F-backlink — insert round-trip "↑ Back to Contents" links under each TOC-targeted heading.
 
+  F-boilerplate — reference the **curated** ``registries/boilerplate`` (REFERENCE, not DELETE — the
+               block is replaced by a link to one canonical ``gold/_shared`` copy, §9.6).
+  F-levels   — infer consistent heading levels (gap-free tree) so the regenerated TOC nests sanely.
+
 Complex tables are lifted to ``tables/*.csv`` sidecars by the sibling ``tables_pure`` module (a
 stage-level pre-step, like ``revision_pure``), not by ``normalize_body``. Deferred (noted in the
-tracker): boilerplate REFERENCE + ``gold/_shared``, template STRIP+STAMP, and heading-level
-inference. ``source_sha256`` is added by the stage (it has the bronze sha); these functions stay
-pure over the body text + registries.
+tracker): template STRIP+STAMP. ``source_sha256`` is added by the stage (it has the bronze sha);
+these functions stay pure over the body text + registries.
 
 Heading identity and the anchor substrate live in the sibling ``anchors_pure`` module (mirroring
 the ``revision_pure`` split); ``Heading``/``github_slug``/``parse_headings`` are re-exported here
@@ -25,7 +28,10 @@ for the F-toc helpers and existing callers.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
+from dataclasses import dataclass
 
+from vdocs.kernel.text import block_key
 from vdocs.stages.normalize.anchors_pure import (
     DEFAULT_TOC_DEPTH,
     Heading,
@@ -45,6 +51,9 @@ __all__ = [
     "infer_heading_levels",
     "strip_artifacts",
     "subtract_phrases",
+    "Boilerplate",
+    "subtract_boilerplate",
+    "block_key",
     "strip_existing_toc",
     "build_toc",
     "regenerate_toc",
@@ -93,7 +102,10 @@ def infer_heading_levels(body: str) -> str:
     its depth in a gap-free hierarchy, anchored at the document's *shallowest* heading level — so an
     H2-rooted doc stays H2-rooted (H1 is the document title, never fabricated). Fence-aware (code
     blocks untouched) and idempotent (an already-gap-free tree is returned unchanged). Slugs depend
-    on heading *text*, not level, so the anchor map / recovery paths are unaffected."""
+    on heading *text*, not level, so the anchor map / recovery paths are unaffected.
+
+    The generated ``## Contents`` heading is skipped (as in ``parse_headings``) — it is our own TOC
+    marker, regenerated each run, so re-leveling it would break ``normalize_body`` idempotency."""
     lines = body.split("\n")
     in_fence = False
     found: list[tuple[int, int]] = []  # (line index, original level)
@@ -103,7 +115,7 @@ def infer_heading_levels(body: str) -> str:
             continue
         if in_fence:
             continue
-        if (m := _HEADING_RE.match(line)) is not None:
+        if (m := _HEADING_RE.match(line)) is not None and m.group(2).strip().lower() != "contents":
             found.append((i, len(m.group(1))))
     if not found:
         return body
@@ -133,6 +145,37 @@ def subtract_phrases(body: str, phrases: frozenset[str]) -> str:
     blocks = re.split(r"\n\s*\n", body)
     kept = [b for b in blocks if b.strip().lower() not in lowered]
     return "\n\n".join(kept)
+
+
+@dataclass(frozen=True)
+class Boilerplate:
+    """A curated boilerplate block: its canonical id, a short link label, and the match key.
+
+    The canonical copy (``text``) lives in ``registries/boilerplate`` (destined for
+    ``gold/_shared/boilerplate/<id>.md``); only the ``key`` is needed to recognise a body block."""
+
+    id: str
+    label: str
+    key: str
+
+
+def subtract_boilerplate(body: str, registry: Sequence[Boilerplate]) -> str:
+    """F-boilerplate (§9.6 REFERENCE): replace each body block matching a curated boilerplate
+    block with a link to the canonical shared copy — kept once, de-duplicated (distinct from
+    ``subtract_phrases``, which DELETEs). Matching is whitespace/case-insensitive (``block_key``);
+    idempotent (the reference link it leaves is not a registered block)."""
+    if not registry:
+        return body
+    by_key = {b.key: b for b in registry}
+    out: list[str] = []
+    for block in re.split(r"\n\s*\n", body):
+        bp = by_key.get(block_key(block))
+        if bp is None:
+            out.append(block)
+        else:
+            label = bp.label.replace("[", "").replace("]", "")
+            out.append(f"_[{label} — shared boilerplate](_shared/boilerplate/{bp.id}.md)_")
+    return "\n\n".join(out)
 
 
 def strip_existing_toc(body: str) -> str:
@@ -191,10 +234,12 @@ def normalize_body(
     phrases: frozenset[str],
     doc_id: str = "",
     toc_depth: tuple[int, int] = DEFAULT_TOC_DEPTH,
+    boilerplate: Sequence[Boilerplate] = (),
 ) -> tuple[str, AnchorMap]:
     """Apply the F-steps in order and return ``(body, anchor_map)`` (§6.7).
 
     Order matters for idempotency: recover headings → strip artifacts → subtract curated phrases →
+    **reference curated boilerplate** (REFERENCE, §9.6) →
     **infer consistent heading levels** (gap-free tree) → parse the heading tree **once** (capturing
     bookmarks) → rewrite ``_Toc``/``_Ref`` cross-refs to GitHub slugs (using that tree) → regenerate
     the TOC (same slugs, so TOC + map stay consistent) → insert round-trip back-links. The anchor
@@ -203,6 +248,7 @@ def normalize_body(
     ``toc_depth`` is the H2–H3 fallback today; the template F-step will resolve it per
     ``(doc_type, era)`` and pass it in (the template seam lives in ``anchors_pure``)."""
     body = subtract_phrases(strip_artifacts(recover_headings(body)), phrases)
+    body = subtract_boilerplate(body, boilerplate)
     body = infer_heading_levels(body)
     headings = parse_headings(body, doc_id)
     bookmark_to_slug = {h.bookmark: h.slug for h in headings if h.bookmark}

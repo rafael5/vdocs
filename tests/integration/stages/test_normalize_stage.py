@@ -54,6 +54,13 @@ def test_load_phrases_empty_when_registry_absent(tmp_path):
     assert _load_phrases(tmp_path / "nope.yaml") == frozenset()  # no curated registry → no-op
 
 
+def test_load_boilerplate_empty_when_registry_absent(tmp_path):
+    from vdocs.stages.normalize.normalize_pure import Boilerplate
+    from vdocs.stages.normalize.stage import _load_boilerplate
+
+    assert _load_boilerplate(tmp_path / "nope.yaml", Boilerplate) == ()  # absent → no-op
+
+
 def test_registry_edit_changes_normalize_inputs_fp(tmp_path):
     # §8: a registry change is a contract-version bump for normalize — it must invalidate the
     # input fingerprint so SKIP_IF_UNCHANGED re-runs the affected scopes (§7.3), not skip them.
@@ -175,6 +182,51 @@ def test_normalize_lifts_large_table_to_csv_sidecar(ctx):
     csv_text = (bundle / "tables" / "table-01.csv").read_text()
     assert csv_text.splitlines()[0] == "Field,Type,Desc"
     assert "F0,T0,D0" in csv_text
+
+
+def test_normalize_references_curated_boilerplate(ctx, tmp_path):
+    # point registries at a temp dir with one curated boilerplate block (§9.6 REFERENCE)
+    regs = tmp_path / "registries"
+    (regs / "boilerplate").mkdir(parents=True)
+    block = "This document describes the DIBR plan for all VA Enterprise products."
+    from vdocs.kernel.text import block_key
+
+    (regs / "boilerplate" / "boilerplate.yaml").write_text(
+        "boilerplate:\n"
+        "  - id: bp-test01\n"
+        "    label: DIBR plan intro\n"
+        f"    key: {block_key(block)!r}\n"
+        f"    text: {block!r}\n"
+    )
+    ctx.cfg = ctx.cfg.model_copy(update={"registries_dir": regs})
+
+    enriched = frontmatter.emit(
+        {"title": "DIBR Guide", "app_code": "ADT", "tool_ver": "0.1.0"},
+        f"# DIBR Guide\n\n## Intro\n\n{block}\n\nUnique body content.\n",
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "bp_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(
+        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "bp_doc", "ext": "docx"}})
+    )
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["boilerplate_refs"] == 1
+
+    _, body = frontmatter.parse(
+        (ctx.cfg.silver_normalized / "ADT" / "bp_doc" / "body.md").read_text()
+    )
+    assert block not in body  # the boilerplate text is gone from the body
+    assert "(_shared/boilerplate/bp-test01.md)" in body  # replaced by a reference, not deleted
+    assert "Unique body content." in body  # the rest is untouched
 
 
 def test_normalize_writes_refs_yaml_sidecar(ctx):
