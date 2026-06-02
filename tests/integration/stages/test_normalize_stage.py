@@ -58,7 +58,7 @@ def test_normalize_applies_f_steps_and_stamps_source_sha(ctx):
     _seed(ctx)
     (result,) = Orchestrator([NormalizeStage()]).run(ctx)
     assert result.status == "ok"
-    assert result.counts["documents"] == 1 and result.counts["phrases_curated"] >= 1
+    assert result.counts["documents"] == 1 and result.counts["phrases"] >= 1
 
     meta, body = frontmatter.parse(
         (ctx.cfg.silver_normalized / "ADT" / "ig_doc" / "body.md").read_text()
@@ -71,6 +71,47 @@ def test_normalize_applies_f_steps_and_stamps_source_sha(ctx):
     assert "## Contents" in body
     assert "- [Setup](#setup)" in body and "  - [Prerequisites](#prerequisites)" in body
     assert "Real install steps." in body
+
+
+def test_normalize_writes_history_sidecar_and_strips_table(ctx):
+    import yaml
+
+    enriched = frontmatter.emit(
+        {"title": "Tech Manual", "app_code": "ADT", "tool_ver": "0.1.0"},
+        "# Tech Manual\n\n## Revision History\n\n"
+        "<table><tr><th>Date</th><th>Version</th><th>Change</th></tr>"
+        "<tr><td>03/2024</td><td>5.3</td><td>Updated install</td></tr></table>\n\n"
+        "## Body\n\ncontent\n",
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "tm_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(
+        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "tm_doc", "ext": "docx"}})
+    )
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["history_sidecars"] == 1
+
+    bundle = ctx.cfg.silver_normalized / "ADT" / "tm_doc"
+    _, body = frontmatter.parse((bundle / "body.md").read_text())
+    assert "<table" not in body and "Updated install" not in body  # apparatus stripped
+    history = yaml.safe_load((bundle / "history.yaml").read_text())
+    assert history["revision_count"] == 1
+    assert history["revisions"][0] == {
+        "date": "2024-03",
+        "version": "5.3",
+        "pages": [],
+        "change": "Updated install",
+        "refs": [],
+    }
 
 
 def test_normalize_is_idempotent(ctx):

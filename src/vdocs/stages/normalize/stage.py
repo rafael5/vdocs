@@ -30,24 +30,37 @@ class NormalizeStage(Stage):
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.stages.normalize import normalize_pure as nz
+        from vdocs.stages.normalize import revision_pure as rev
 
         phrases = _load_phrases(ctx.cfg.registries / "phrases.yaml")
         sha_by_path = _sha_by_bundle_path(ctx.cfg.raw_index)
 
         enriched_root = ctx.cfg.silver_enriched
         normalized_root = ctx.cfg.silver_normalized
-        n_docs = 0
+        n_docs = n_history = 0
         for body_path in sorted(enriched_root.rglob("body.md")):
             rel = body_path.parent.relative_to(enriched_root)  # <app>/<slug>
             meta, body = frontmatter.parse(body_path.read_text(encoding="utf-8"))
             sha = sha_by_path.get((rel.parts[0], rel.parts[1]))
             if sha:
                 meta["source_sha256"] = sha
+            # strip the version apparatus → history.yaml sidecar (§6.6), then run the body F-steps
+            body, revisions = rev.extract_revision_history(body)
             out = frontmatter.emit(meta, nz.normalize_body(body, phrases))
             cas.atomic_write(normalized_root / rel / "body.md", out.encode("utf-8"))
+            if revisions:
+                cas.atomic_write(
+                    normalized_root / rel / "history.yaml",
+                    yaml.safe_dump(
+                        rev.history_sidecar(revisions), sort_keys=False, allow_unicode=True
+                    ).encode("utf-8"),
+                )
+                n_history += 1
             n_docs += 1
 
-        return RunResult(counts={"documents": n_docs, "phrases_curated": len(phrases)})
+        return RunResult(
+            counts={"documents": n_docs, "history_sidecars": n_history, "phrases": len(phrases)}
+        )
 
 
 def _load_phrases(path) -> frozenset[str]:  # type: ignore[no-untyped-def]
