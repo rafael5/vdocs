@@ -54,6 +54,33 @@ def test_load_phrases_empty_when_registry_absent(tmp_path):
     assert _load_phrases(tmp_path / "nope.yaml") == frozenset()  # no curated registry → no-op
 
 
+def test_registry_edit_changes_normalize_inputs_fp(tmp_path):
+    # §8: a registry change is a contract-version bump for normalize — it must invalidate the
+    # input fingerprint so SKIP_IF_UNCHANGED re-runs the affected scopes (§7.3), not skip them.
+    from vdocs.config import Settings
+    from vdocs.contracts.registry import REGISTRIES
+    from vdocs.orchestrator.stage import StageContext
+    from vdocs.orchestrator.state import StateStore
+
+    regs = tmp_path / "registries"
+    regs.mkdir()
+    (regs / "phrases.yaml").write_text("phrases:\n  - End of document\n")
+    cfg = Settings(data_dir=tmp_path / "lake", registries_dir=regs)
+    cfg.lake.mkdir(parents=True)
+    store = StateStore.open(cfg.state_db)
+    try:
+        ctx = StageContext(cfg=cfg, state=store)
+        stage = NormalizeStage()
+        assert REGISTRIES in stage.requires
+        before = stage._input_fps(ctx)
+        assert REGISTRIES.key in before
+        (regs / "phrases.yaml").write_text("phrases:\n  - End of document\n  - Continued\n")
+        after = stage._input_fps(ctx)
+        assert after[REGISTRIES.key] != before[REGISTRIES.key]
+    finally:
+        store.close()
+
+
 def test_normalize_applies_f_steps_and_stamps_source_sha(ctx):
     _seed(ctx)
     (result,) = Orchestrator([NormalizeStage()]).run(ctx)

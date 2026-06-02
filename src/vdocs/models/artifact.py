@@ -42,6 +42,18 @@ class StorageClass(StrEnum):
     EXTERNAL = "external"
 
 
+class Root(StrEnum):
+    """Which configured base a file/tree artifact resolves against (§9.1).
+
+    Almost everything lives in the data lake; the curated pattern registries are the one
+    exception — version-controlled repo config, not lake data (§9.7) — yet they are a real,
+    fingerprintable input, so they resolve against ``cfg.registries`` instead of ``cfg.lake``.
+    """
+
+    LAKE = "lake"
+    REGISTRIES = "registries"
+
+
 class Resolved(BaseModel):
     """A located artifact: a filesystem path and, for SQLite kinds, a table name."""
 
@@ -75,7 +87,9 @@ class ArtifactContract(BaseModel):
     storage_class: StorageClass
     produced_by: str | None = None
     optional: bool = False
-    # Locators (resolved against the lake): relpath for files/trees; db+table for SQLite.
+    # Which configured base a file/tree resolves against (lake by default; §9.1).
+    root: Root = Root.LAKE
+    # Locators: relpath for files/trees (None ⇒ the root dir itself); db+table for SQLite.
     relpath: str | None = None
     db: str | None = None
     table: str | None = None
@@ -87,8 +101,11 @@ class ArtifactContract(BaseModel):
         if self.kind in _SQLITE_KINDS:
             assert self.db is not None, f"{self.key}: SQLite artifact needs a db"
             return Resolved(path=cfg.lake / self.db, table=self.table)
-        assert self.relpath is not None, f"{self.key}: file/tree artifact needs a relpath"
-        return Resolved(path=cfg.lake / self.relpath)
+        base = cfg.registries if self.root is Root.REGISTRIES else cfg.lake
+        if self.relpath is not None:
+            return Resolved(path=base / self.relpath)
+        assert self.root is Root.REGISTRIES, f"{self.key}: file/tree artifact needs a relpath"
+        return Resolved(path=base)
 
     def validate(self, cfg: Settings) -> CheckResult:  # type: ignore[override]
         """Check the artifact exists, is structurally usable, and meets min cardinality.

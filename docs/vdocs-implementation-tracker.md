@@ -152,6 +152,19 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **`registries` is now a declared `ArtifactContract` in `normalize.requires` (§8, §7.3).**
+  Pre-Phase-4 compliance fix B2. `normalize` loaded `registries/phrases.yaml` locally but declared only
+  `[text@enriched, raw/index]`, so a curation edit did **not** change its input fingerprint —
+  `SKIP_IF_UNCHANGED` would wrongly skip re-normalization after curation (the stale-input bug §7.3 exists
+  to prevent). Added a `REGISTRIES` contract (`Kind.TREE_TEXT`, `produced_by=None`, new `root=REGISTRIES`
+  selector so it resolves against `cfg.registries` in the **repo**, not the lake) and put it in
+  `normalize.requires`. A real tree fingerprint over the curated registries now participates in
+  `normalize`'s `inputs_fp`; §8 already listed `registries` as a normalize input, so code now matches the
+  doc. 277 tests, 100% cov.
+- **2026-06-02** — **`safe_component` promoted to `kernel/text` (§9.2/§11).** Pre-Phase-4 compliance fix A1.
+  The bundle-path slug sanitiser was defined in `convert_pure` and imported across stage boundaries
+  (`enrich`/`normalize` reaching into `convert`); moved byte-identical to `kernel/text.safe_component` with
+  all four call sites repointed. Its unit test moved to `tests/unit/kernel`.
 - **2026-06-02** — **`normalize` F-step: revision-history → `history.yaml` sidecar (§6.6).** Word manuals
   carry a revision-history table; `normalize` now strips that version apparatus from the body and captures
   it as a structured `history.yaml` bundle sidecar (the lineage `push --replay-history` will replay into

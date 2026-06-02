@@ -8,7 +8,7 @@ bronze→gold artifacts arrive with their stages.
 
 from __future__ import annotations
 
-from vdocs.models.artifact import ArtifactContract, Kind, StorageClass
+from vdocs.models.artifact import ArtifactContract, Kind, Root, StorageClass
 
 
 class ArtifactRegistry:
@@ -40,6 +40,21 @@ VDL = ArtifactContract(
     kind=Kind.EXTERNAL,
     storage_class=StorageClass.EXTERNAL,
     produced_by=None,
+)
+
+
+# The curated pattern registries (§9.6/§9.7): version-controlled repo config, never lake data,
+# so it has no producer (a curated input like VDL) and resolves against `cfg.registries`. But
+# unlike VDL it is a *real* fingerprintable tree — that is the point: a curation edit must change
+# the input fingerprint of every consumer (`normalize`), so SKIP_IF_UNCHANGED re-runs the affected
+# scopes instead of skipping on stale curation (§7.3; §8 treats a registry change like a
+# contract-version bump for normalize).
+REGISTRIES = ArtifactContract(
+    key="registries",
+    kind=Kind.TREE_TEXT,
+    storage_class=StorageClass.EXTERNAL,
+    produced_by=None,
+    root=Root.REGISTRIES,
 )
 
 
@@ -158,6 +173,7 @@ def default_registry() -> ArtifactRegistry:
     """The registry of every artifact declared so far (foundational + bronze)."""
     reg = foundational_registry()
     for contract in (
+        REGISTRIES,
         CATALOG_RAW,
         CATALOG_ENRICHED,
         GOLD_INVENTORY,

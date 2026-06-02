@@ -63,5 +63,29 @@ def test_default_registry_declares_bronze_artifacts():
         "inventory/catalog.enriched",
         "bronze/raw",
         "bronze/raw/index.json",
+        "registries",
     } <= keys
     assert reg.get("bronze/raw").produced_by == "fetch"
+
+
+def test_registries_contract_resolves_to_repo_dir_and_fingerprints_edits(tmp_path):
+    # REGISTRIES is curated repo config (root=REGISTRIES), not lake data — but a *real* tree
+    # fingerprint so a curation edit invalidates its consumers' inputs (§7.3, §8 note).
+    from vdocs.config import Settings
+    from vdocs.contracts.registry import REGISTRIES
+    from vdocs.models.artifact import Kind, Root
+
+    regs = tmp_path / "registries"
+    regs.mkdir()
+    (regs / "phrases.yaml").write_text("phrases: []\n")
+    cfg = Settings(data_dir=tmp_path / "lake", registries_dir=regs)
+
+    assert REGISTRIES.root is Root.REGISTRIES
+    assert REGISTRIES.kind is Kind.TREE_TEXT
+    assert REGISTRIES.produced_by is None  # curated input, like the external VDL source
+    assert REGISTRIES.locate(cfg).path == regs
+    assert REGISTRIES.validate(cfg).ok
+
+    fp1 = REGISTRIES.fingerprint(cfg)
+    (regs / "phrases.yaml").write_text("phrases:\n  - End of document\n")
+    assert REGISTRIES.fingerprint(cfg) != fp1  # an edit changes the signature

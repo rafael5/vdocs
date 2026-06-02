@@ -14,7 +14,7 @@ import json
 
 import yaml
 
-from vdocs.contracts.registry import RAW_INDEX, TEXT_ENRICHED, TEXT_NORMALIZED
+from vdocs.contracts.registry import RAW_INDEX, REGISTRIES, TEXT_ENRICHED, TEXT_NORMALIZED
 from vdocs.kernel import cas, frontmatter
 from vdocs.kernel.text import safe_component
 from vdocs.models.stage import Idempotency, RunResult
@@ -24,7 +24,7 @@ from vdocs.orchestrator.stage import Stage, StageContext
 class NormalizeStage(Stage):
     name = "normalize"
     description = "normalize enriched bodies (strip artifacts, subtract phrases, regenerate TOC)"
-    requires = [TEXT_ENRICHED, RAW_INDEX]
+    requires = [TEXT_ENRICHED, RAW_INDEX, REGISTRIES]
     produces = [TEXT_NORMALIZED]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
 
