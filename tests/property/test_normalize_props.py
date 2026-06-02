@@ -47,3 +47,34 @@ def test_no_anchor_points_nowhere(headings: list[tuple[int, str]]):
             assert amap.outbound.get(target) == ac.UNRESOLVED
             continue
         assert target in slugs  # resolved slugs always land in the anchor map
+
+
+@given(texts=st.lists(_words, min_size=1, max_size=10))
+def test_github_slug_is_deterministic_and_unique(texts: list[str]):
+    seen: dict[str, int] = {}
+    slugs = [ac.github_slug(t, seen) for t in texts]
+    assert len(set(slugs)) == len(slugs)  # every minted slug is unique within a document
+    # determinism: the same input sequence (fresh `seen`) yields the identical slugs
+    seen2: dict[str, int] = {}
+    assert [ac.github_slug(t, seen2) for t in texts] == slugs
+
+
+@given(text=_words, n=st.integers(min_value=1, max_value=6))
+def test_github_slug_suffix_is_monotonic(text: str, n: int):
+    seen: dict[str, int] = {}
+    slugs = [ac.github_slug(text, seen) for _ in range(n)]
+    base = slugs[0]
+    # the k-th repeat of a heading gets the GitHub `-1`, `-2`, … document-order suffix
+    assert slugs == [base] + [f"{base}-{i}" for i in range(1, n)]
+
+
+@given(headings=st.lists(st.tuples(st.integers(min_value=1, max_value=4), _words), max_size=8))
+def test_normalize_body_is_idempotent(headings: list[tuple[int, str]]):
+    # §12's literal invariant: normalize_body(normalize_body(x)) == normalize_body(x)
+    parts: list[str] = []
+    for level, text in headings:
+        parts += ["#" * level + " " + text, "", "Some body prose.", ""]
+    body = "\n".join(parts) + "\n"
+    once, _ = nz.normalize_body(body, frozenset(), doc_id="app/d")
+    twice, _ = nz.normalize_body(once, frozenset(), doc_id="app/d")
+    assert twice == once

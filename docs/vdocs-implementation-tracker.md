@@ -103,7 +103,7 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
 
 | Stage | Layer | St | Ref | Goal |
 |---|:--:|:--:|---|---|
-| property tests | — | ◐ | §10 | Hypothesis tests, pure transforms |
+| property tests | — | ✅ | §10 | Hypothesis tests, pure transforms (7 invariants + branch cov) |
 | --verify | — | ◐ | §7.4 | full-content-hash fingerprint |
 | gc | — | ☐ | §17.7 | sweep superseded silver |
 | docs/stages gen | — | ☐ | §17.7 | per-stage ref from contracts |
@@ -233,6 +233,16 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):
+  - **D — property tests + branch coverage + Hypothesis profile (§12).** Added 7 Hypothesis
+    `@given` property tests under `tests/property/`: `kernel.csv.to_csv` adversarial round-trip
+    (commas/quotes/newlines — confirmed correct, no escaping bug); `normalize_body` idempotency over
+    generated heading trees; `github_slug` determinism + uniqueness + monotonic `-N` suffix;
+    `extract_tables` idempotency; `revision_pure` HTML↔pipe dialect equivalence + `_norm_date`
+    idempotency; `tree_fingerprint` order-independence + single-byte sensitivity; and
+    `estimate_jaccard ≈ exact_jaccard` within MinHash tolerance (making `exact_jaccard` a live
+    reference oracle — closes A1's note). Enabled `branch = true` in the coverage gate and registered
+    a `vdocs` Hypothesis profile (`max_examples=200`, `deadline=None`) in `tests/conftest.py`. The ◐
+    property-test tracker row flips to ✅. 457 tests; branch coverage 99.7% (gate ≥95%).
   - **C-rel-8 — stale-output pruning (R5); tree-atomicity (R4) SPLIT to a follow-up.** This was the
     largest item and was split as the plan sanctioned — **R5 landed first**, R4 deferred. New shared
     `kernel.cas.prune_bundles(root, kept)` removes any `<app>/<slug>` bundle under a silver-tree root
