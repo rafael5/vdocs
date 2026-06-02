@@ -33,7 +33,10 @@ def shingles(text: str, k: int = 3) -> set[str]:
 
 
 def exact_jaccard(a: set[str], b: set[str]) -> float:
-    """Exact Jaccard similarity of two shingle sets; 0.0 when both are empty."""
+    """Exact Jaccard similarity of two shingle sets; 0.0 when both are empty.
+
+    The reference oracle for :func:`estimate_jaccard`: the MinHash estimate is validated against
+    this exact value (within tolerance) by the ``estimate_jaccard`` property test (Phase D)."""
     if not a and not b:
         return 0.0
     return len(a & b) / len(a | b)

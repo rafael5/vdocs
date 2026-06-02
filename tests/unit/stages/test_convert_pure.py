@@ -43,18 +43,3 @@ def test_rewrite_image_refs_markdown_and_html_by_basename():
 def test_rewrite_image_refs_noop_when_no_map():
     md = "![x](media/y.png)"
     assert cp.rewrite_image_refs(md, {}) == md
-
-
-def test_image_targets_collects_markdown_and_html_in_order():
-    # both inline-image syntaxes Pandoc emits; targets returned verbatim (not basenamed)
-    md = (
-        "# Title\n\n"
-        "![logo](aaa.png)\n"
-        '<img src="bbb.gif" style="width:2in" />\n'
-        "![ext](https://example/other.png)\n"
-    )
-    assert cp.image_targets(md) == ["aaa.png", "https://example/other.png", "bbb.gif"]
-
-
-def test_image_targets_empty_when_no_images():
-    assert cp.image_targets("# Just text\n\nno pictures here") == []

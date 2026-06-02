@@ -230,6 +230,12 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
+  A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
+  detail (newest sub-item first):
+  - **A1 — dead code removed.** Deleted `convert_pure.image_targets` (no `src/` caller) + its two
+    tests. Documented `kernel.discovery.exact_jaccard` as the reference oracle for the
+    `estimate_jaccard` property test (Phase D) — it stops being dead once that test lands.
 - **2026-06-02** — **Phase-4 kickoff prep: resolved 3 design seams + retired a stale branch (doc-only).**
   Wrote the Phase-4 kickoff prompt the tracker references
   ([`docs/prompts/next-session-phase-4-kickoff.md`](prompts/next-session-phase-4-kickoff.md)) and
