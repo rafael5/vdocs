@@ -361,7 +361,8 @@ while separating *by lifecycle/type*:
 ```
 <doc-slug>/
   body.md            # prose + small inline tables + figure refs; IDENTITY frontmatter baked in
-  history.yaml       # version-lineage sidecar: ordered patch history + refs to retained prior bodies (machine-owned)
+  revisions.yaml     # this version's own revision-history table, lifted from the body (machine-owned; §6.4)
+  #                    the cross-version `history.yaml` lineage is a GOLD anchor-bundle sidecar — §6.6
   tables/            # large data tables extracted to data sidecars
     field-listing.csv
     file-attributes.csv
@@ -598,7 +599,7 @@ classifies every metadata field by lifecycle and routes it accordingly:
 |---|---|---|---|
 | **Identity / human-curated** | title, doc_type, app_code, section, pkg_ns, version, source provenance (the required keys) | **Baked into `body.md` frontmatter** | defines the document; stable; docs-as-code norm; atomic with the prose |
 | **Computed / derived** | word_count, page_count, quality_score, is_latest, keywords, extracted entities, stub flag | **`index.db` only — never in the body** | mechanically regenerated; baking it churns the body hash and guarantees staleness |
-| **Heavy structured / machine-owned** | revision history, anchor/alias + link maps, large data tables | **Bundle sidecars** (`history.yaml`, `refs.yaml`, `tables/*.csv`) | would pollute prose; consumed structurally |
+| **Heavy structured / machine-owned** | revision history, anchor/alias + link maps, large data tables | **Bundle sidecars** (`revisions.yaml`, `refs.yaml`, `tables/*.csv`) | would pollute prose; consumed structurally |
 
 Consequence: once computed fields leave the body, `enrich`/`normalize` stop rewriting
 bodies for metadata-only reasons, so the silver tree fingerprints (§7) mean what we want —
@@ -611,7 +612,7 @@ Beyond images and revision history (already split in v1), v2 adopts these splits
 | Component | Decision | Where it goes |
 |---|---|---|
 | **Images** | split — write-once, huge, render-consumer | content-addressed `assets/`, referenced by sha256 |
-| **Revision history** | split — machine-structured, query-consumer, prose-polluting | `history.yaml` sidecar (ordered lineage + refs to retained prior bodies); `revision_sidecar` pointer in body FM; **captured for later, opt-in git commit-replay** (§6.6) |
+| **Revision history** | split — machine-structured, query-consumer, prose-polluting | `revisions.yaml` sidecar (**this document's own revision-history table**, extracted from the body); `revision_sidecar` pointer in body FM. `consolidate` later folds each version's `revisions.yaml` into the version group's cross-version `history.yaml` lineage, **captured for later, opt-in git commit-replay** (§6.6) |
 | **Large data tables** (data-dictionary / file-field listings) | **split** — structured data masquerading as prose; wreck diffs; API wants them as data | `tables/*.csv` sidecars; a reference/embed stub left in body. Small inline tables stay. |
 | **Corpus-wide boilerplate** (legal notices, "how to use this manual", standard headers/footers) | **single-source** — duplicated across hundreds of docs | *discovered* by `discover`, *curated* into `registries/boilerplate`, canonical copy single-sourced to `gold/_shared/boilerplate/`; bodies carry a reference, not the text (§9.6) |
 | **Document template / scaffold** (the empty skeleton each doc was poured into — standard front/title pages, fixed scaffold sections, placeholder prose, layout furniture) | **subtract the furniture, *retain the schema*** — the literal scaffold is noise, but the *structure it encodes* (expected sections / TOC / markers) is a valuable computable asset | `discover` infers the template per `(doc_type, era)` by structural clustering (user guide ≠ technical guide ≠ install guide); the scaffold is *stripped* + `template_id` stamped, while the **structural schema is retained computably** in `registries/templates` for reuse and the template-compliance QC check (§9.8) |
@@ -655,9 +656,13 @@ content.
 **captures the full lineage into sidecars that travel with the anchor document**, so the bundle is
 self-describing and a later replay needs nothing else:
 
-- `history.yaml` — the ordered patch lineage: for each version, its patch id, official date,
-  revision note, `source_sha256`, document stable ID, and a content-addressed reference to that
-  version's **retained normalized body**.
+- `history.yaml` — the ordered patch lineage **of the version group**: for each member version, its
+  patch id, official date, revision note, `source_sha256`, document stable ID, a content-addressed
+  reference to that version's **retained normalized body**, and a reference to that version's own
+  `revisions.yaml` revision-table extract (§6.4). *(Naming, two grains: the per-version `revisions.yaml`
+  is one document's own revision table; this group-level `history.yaml` is the chain across versions.
+  Distinct artifacts, distinct names — `consolidate` reads each member's `revisions.yaml` and writes the
+  group's `history.yaml`.)*
 - the prior-version normalized bodies themselves are **retained** (content-addressed; never
   re-acquired) and referenced by hash from `history.yaml` — so the ordered chain of *what each
   patch actually said*, not merely a changelog *about* it, travels with the anchor.
@@ -682,7 +687,7 @@ lineage lives in the sidecars — losing nothing, deferring only the mechanical 
 
 **Declutter (now, independent of replay).** `normalize` strips the manual version-control
 apparatus from the body — revision / patch-history tables, change-page markers, inline "(Patch
-NN)" provenance annotations — routing the structured facts to `history.yaml` (§6.4). The *structure*
+NN)" provenance annotations — routing the structured facts to `revisions.yaml` (§6.4). The *structure*
 (the table, the dates/patches) becomes lineage; the *descriptive filler around it* ("see the
 revision history below for a list of changes", "this document supersedes…") is meaningless dead text
 and is removed via `registries/phrases` (§9.6). What remains in `body.md` is the document, not its
@@ -741,7 +746,7 @@ removes that heading plus the entries beneath it up to the next real heading, *b
 fresh `## Contents`. Registry-driven (the recognised variants are curated data, not a hard-coded list —
 tenet #13) and idempotent (a prior run's generated `## Contents` is itself stripped and rebuilt
 identically). The structured **revision-history** apparatus leaves the body the same way but to a sidecar,
-not by deletion (`history.yaml`, §6.6); the `callout` convention of the same registry (admonition
+not by deletion (`revisions.yaml`, §6.4); the `callout` convention of the same registry (admonition
 styling → GFM alerts) is the remaining CANONICALIZE consumer.
 
 **Round-trip navigation.** The TOC is emitted under a stable `## Contents` heading at the top of the
@@ -918,13 +923,13 @@ plane), **DOC** = the document medallion (data plane) (§4). The inventory track
 | 🥈 DOC | **convert** | `raw`, `raw/index.json` | `text@converted`, `assets` (CAS) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **discover** | `text@converted` (corpus-global) + `catalog.enriched` (for `doc_code` only — the authoritative doc_type for `(doc_type, era)` template induction; classification stays a `catalog` decision, not re-derived) | `reports/patterns` (candidate boilerplate / `(doc_type, era)` templates [`doc_type`←catalog `doc_code`, `era`←title-page publication date bucketed by decade] / dead phrases / glossary terms / structural patterns + evidence + proposed disposition) → proposes `registries/` updates (§9.6) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **enrich** | `text@converted`, `catalog.enriched` | `text@enriched` (identity FM baked), `index.db:doc_meta_staged` | SKIP_IF_UNCHANGED |
-| 🥈 DOC | **normalize** | `text@enriched`, `raw/index.json` (for source_sha256 — metadata only, not the binary tree), `registries` (curated patterns) | `text@normalized` — `history.yaml` + `tables/*.csv` + `refs.yaml` sidecars; dead phrases deleted; boilerplate referenced (REFERENCE to `gold/_shared`); heading levels inferred; per-`(doc_type, era)` template scaffold stripped + `template_id` stamped (§9.8); legacy in-body TOC stripped via `registries/structures` (CANONICALIZE `toc`) then **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** (§6.7). (Glossary **PROMOTE** to the single `gold/glossary.md` is a gold-phase output — §9.7 lists `normalize` as a consumer of `registries/glossary`, but the shared artifact is materialised downstream, not in this silver body transform.) | SKIP_IF_UNCHANGED |
-| 🥇 DOC | **consolidate** | `text@normalized`, `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage + retained prior bodies captured as travel-with sidecars; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
+| 🥈 DOC | **normalize** | `text@enriched`, `raw/index.json` (for source_sha256 — metadata only, not the binary tree), `registries` (curated patterns) | `text@normalized` — `revisions.yaml` + `tables/*.csv` + `refs.yaml` sidecars; dead phrases deleted; boilerplate referenced (REFERENCE to `gold/_shared`); heading levels inferred; per-`(doc_type, era)` template scaffold stripped + `template_id` stamped (§9.8); legacy in-body TOC stripped via `registries/structures` (CANONICALIZE `toc`) then **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** (§6.7). (Glossary **PROMOTE** to the single `gold/glossary.md` is a gold-phase output — §9.7 lists `normalize` as a consumer of `registries/glossary`, but the shared artifact is materialised downstream, not in this silver body transform.) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **consolidate** | `text@normalized` (incl. each version's `revisions.yaml`), `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage [folds each member's `revisions.yaml`, §6.4] + retained prior bodies captured as travel-with sidecars; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **index** | `text@normalized`, `consolidated` (grouping) | `index.db` (documents, doc_sections [all, with `is_latest`] **+ FTS5 over `is_latest` only — the search surface**, entities, quality, views; **stable IDs**) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **relate** | `index.db` (documents, entities, sections) | `index.db:relations` (doc↔entity, doc↔doc xref, entity↔entity — the knowledge graph) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **embed** | `index.db:doc_sections` (**`is_latest` only**) | `vectors.db` (per-chunk embeddings + ANN index over anchor/current sections; prior-version chunks excluded — §14.6) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **fidelity** | `text@normalized`, `raw` (bronze `S`), `index.db` (structure/sections/template schema), `registries` (to dereference single-sourced content) | `reports/fidelity` (per-document migration-fidelity records — content/provenance/history axes, template compliance, TOC integrity — + corpus report; `fidelity-framework.md`) | SKIP_IF_UNCHANGED |
-| 🥇 DOC | **manifest** | `consolidated`, `index.db`, `vectors.db`, `state.db` (lineage) | `corpus-manifest.json` + `discovery.json` | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **manifest** | `consolidated`, `index.db`, `vectors.db` (**optional** — produced by `embed` in Phase 6; absent ⇒ embedding/vector fields omitted), `state.db` (lineage) | `corpus-manifest.json` + `discovery.json` | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **publish** | `corpus-manifest.json`, `text@normalized`, `consolidated`, `assets`, `catalog.enriched`, `glossary` | `publish` (markdown-only human tree + INDEX) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **validate** | `publish`, `text@normalized`, `index.db`, `vectors.db`, `reports/fidelity` | (HARD GATE — schema + lineage + dead-anchor + ID/vector integrity + **fidelity verdict** [PASS / REVIEW-with-sign-off only; QUARANTINE blocks]; sets its own `ok`) | ALWAYS_RERUN |
 | 🚀 DOC | **push** | `publish` (+ validate `ok`) | `git:vistadocs/vdl` (one anchor file per version group + travel-with lineage sidecars; **commit-replay deferred behind opt-in `--replay-history`**, §6.6) | FORCE_ONLY |
@@ -988,6 +993,14 @@ Notes:
 - **`embed` is idempotent on the embedding-model id+version** (carried in `contract_ver`): a
   model change invalidates `vectors.db` and forces a re-embed; unchanged model + unchanged
   chunks → skip. The model id+version is recorded in lineage.
+- **`index` owns entity extraction; `relate` only adds edges.** Entity recognition is
+  **discovery-is-data** (tenet #13): the entity vocabulary lives in the curated `registries/entities`
+  (package namespaces, FileMan file numbers, routines, options, RPCs, protocols, HL7 segments, mail
+  groups, globals, build/patch ids — a VistA-domain registry like `registries/inventory`, seeded from
+  domain knowledge and augmented by `discover` corpus-frequency candidates), and a generic pure
+  extraction pass in `index` (`entities_pure.py`) recognizes them over the normalized bodies and writes
+  `index.db:entities` keyed by the `(type, canonical-name)` stable ID (§5.5). No entity patterns are
+  hard-coded in stage code.
 - **`relate`** materializes the knowledge graph from already-extracted entities and
   cross-references — it adds no new extraction, only edges, so it is cheap and re-runnable.
 - **`analyze`** is diagnostic and parallel; nothing depends on it.
@@ -1144,8 +1157,8 @@ stamp** (the skeleton is structural noise but *which* template is an audit fact 
 and **a dead phrase is simply deleted** (it is pure paper-era residue with nothing worth keeping or
 referencing). Templates are keyed by **document type as well as era** because a user guide and a
 technical guide were built from different skeletons — each `(doc_type, era)` combination is its own
-discovered, registered template. Revision-history *structure* is handled as lineage (→ `history.yaml`,
-§6.6); the surrounding descriptive *phrases* are dead text and go to `registries/phrases`.
+discovered, registered template. Revision-history *structure* is lifted to `revisions.yaml` and folded
+into the group lineage (§6.4/§6.6); the surrounding descriptive *phrases* are dead text and go to `registries/phrases`.
 
 The table above teaches the *distinction*; the **canonical catalog of every registry** — including
 the structural-conventions registry and what discovers/consumes each — is the **registry index
@@ -1198,6 +1211,7 @@ for what `normalize` (or `convert`) does with a match; the disposition vocabular
 - **PROMOTE** — lift to a single shared corpus artifact and de-duplicate per-doc copies.
 - **CANONICALIZE** — rewrite a recognized convention into the one standard GFM form.
 - **ROUTE** — select a processing path (does not alter body content).
+- **EXTRACT** — recognize domain entities in the body and emit them to `index.db:entities` (does not alter body content).
 
 | Registry | What it catches | Key | Disposition | Discovered by | Consumed by | Canonical-content home |
 |---|---|---|---|---|---|---|
@@ -1207,6 +1221,7 @@ for what `normalize` (or `convert`) does with a match; the disposition vocabular
 | `registries/glossary` | acronyms & defined terms | term | **PROMOTE** + dedupe | `discover` | `normalize` | `gold/glossary.md` (+ `index.db` terms) |
 | `registries/structures` | recurring structural conventions — callout/admonition/notice styling, revision-table shape, TOC shape | convention id | **CANONICALIZE** to standard GFM | `discover` | `normalize` | — (rules only; output is the canonicalized body) |
 | `registries/converter-routing` | which DOCX docs need Docling instead of Pandoc (the bare-marker-explosion allowlist, ADR-010) | doc identity / signature | **ROUTE** | `convert` (bare-marker eval) | `convert` | — (rules only) |
+| `registries/entities` | VistA domain entities — package namespaces, FileMan file numbers, routines, options, RPCs, protocols, HL7 segments, mail groups, globals, build/patch ids | `(type, pattern)` | **EXTRACT** to `index.db:entities` | curated (VistA domain) + `discover` (corpus-frequency candidates) | `index` | — (rows in `index.db`; entity ID = `(type, canonical-name)`, §5.5) |
 
 Reading the family by **disposition** is the quickest way to keep the kinds straight: *content worth
 keeping but not copying* → REFERENCE (boilerplate) / PROMOTE (glossary); *structure that is noise* →
@@ -1380,6 +1395,7 @@ registries/        # CURATED, version-controlled pattern catalog (full index: §
   phrases/         #   dead paper-era phrases + revision-history filler → DELETE (no copy, no reference)
   glossary/        #   acronyms/terms → PROMOTE + dedupe to gold/glossary.md
   structures/      #   callout/TOC/revision-table conventions → CANONICALIZE to standard GFM
+  entities/        #   VistA entity patterns (namespaces, file numbers, routines, options, RPCs, …) → EXTRACT (consumed by index)
   converter-routing/  # Docling-vs-Pandoc allowlist (ADR-010) → ROUTE (consumed by convert)
   inventory/       #   catalog-track vocabularies (package-master, doc-types, …) → consumed by `catalog` (§9.7); not a §9.6 pattern registry
 tests/
@@ -1496,6 +1512,13 @@ corpus schema (entity types, fields, enums), counts, the stable-ID scheme, the e
 model id+version, and the MCP capabilities. This is the "front door" that lets an agent (or
 another tool) understand the corpus *without* crawling it — JSON Schema for the data, plus the
 MCP capability manifest the server advertises on connect.
+
+**`vectors.db` is an optional input** (it is produced by `embed`, Phase 6). `manifest` runs over
+whatever exists: built in Phase 4 against `consolidated` + `index.db` alone, it omits the
+embedding-model id+version and marks semantic search **unavailable** in the capability manifest;
+re-run in Phase 6 once `vectors.db` exists, it fills those fields and flips the capability on. This
+is the same generic "optional produces don't gate" rule the orchestrator already applies to
+`convert`'s `assets` — a missing optional input is not a preflight failure.
 
 ### 14.5 Boundaries
 

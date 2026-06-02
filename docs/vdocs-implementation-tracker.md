@@ -112,6 +112,17 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
 
 *Ref `FF` = [`fidelity-framework.md`](fidelity-framework.md).*
 
+**Phase-4 prerequisites (decided in the design `2026-06-02`; do these as the first commits of Phase 4):**
+- **`normalize` sidecar rename `history.yaml` → `revisions.yaml` (Phase-4 STEP 0).** The design now reserves
+  `history.yaml` for `consolidate`'s version-group lineage (§6.6) and names `normalize`'s per-document
+  revision-table extract `revisions.yaml` (§6.4/§5.2). The shipped `normalize` code still writes
+  `history.yaml` (`stages/normalize/stage.py` + `revision_pure.py` + tests) — a tracked, transitional
+  doc-vs-code deviation; rename it TDD-first before `consolidate` consumes it.
+- **`registries/entities` (new, EXTRACT) seeded for `index`.** §8/§9.7 now define a curated VistA-domain
+  entity registry (namespaces, FileMan file numbers, routines, options, RPCs, protocols, HL7, mail groups,
+  globals, build/patch ids) consumed by `index`'s generic `entities_pure` pass → `index.db:entities` keyed
+  by `(type, canonical-name)`. Seed `registries/entities/` (starter set + README) when building `index`.
+
 **Open follow-ups (non-blocking, carried out of dropped detail columns):**
 - `normalize` — `callout`→GFM-alert + `revision-table`-heading **CANONICALIZE** consumers are curated in
   `registries/structures` but **not yet applied** (the `toc` consumer shipped; these are their own increment).
@@ -121,7 +132,8 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
 - `publish` — resolve `normalize`'s gold-root-relative boilerplate refs (`_shared/boilerplate/<id>.md`,
   `SHARED_BOILERPLATE_DIR`) to each bundle's published depth when materialising the human tree (PUBLISH
   SEAM marked in `normalize_pure.subtract_boilerplate`, §5.3/§9.7).
-- Two **dependabot PRs** (#1 actions/checkout, #2 setup-uv) remain open and independent.
+- Both **dependabot PRs** (#1 actions/checkout→v6, #2 setup-uv→v7) are **merged** to `master`; `ci.yml`
+  is on the upgraded pins. (The stale `docs/phase-4-kickoff` branch that downgraded them was retired.)
 
 **Current focus → Phase 4 `consolidate`.** Phases 1–3 are ✅ and **merged to `master`** (origin tip
 `224ab51`): the inventory medallion + gated bronze, and the full document-silver pipeline
@@ -218,6 +230,26 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **Phase-4 kickoff prep: resolved 3 design seams + retired a stale branch (doc-only).**
+  Wrote the Phase-4 kickoff prompt the tracker references
+  ([`docs/prompts/next-session-phase-4-kickoff.md`](prompts/next-session-phase-4-kickoff.md)) and
+  **resolved in `vdocs-design.md` the three seams** the draft had flagged as open:
+  (1) **the two revision sidecars are now distinct** — `normalize` emits the per-document
+  **`revisions.yaml`** (its own revision-history table, §6.4/§5.2) and `consolidate` owns the
+  version-group **`history.yaml`** lineage (§6.6), which folds each member's `revisions.yaml` + a CAS ref
+  to its retained body; `history.yaml` is reserved for the lineage (the dominant §6.6/§13/ADR-016
+  meaning). (2) **entity extraction is `index`'s job, vocabulary is DATA** — new `EXTRACT` disposition +
+  curated `registries/entities` (VistA domain: namespaces, FileMan file numbers, routines, options, RPCs,
+  protocols, HL7, mail groups, globals, build/patch ids) recognized by a generic `entities_pure` pass →
+  `index.db:entities` keyed by `(type, canonical-name)`; `relate` only adds edges (tenet #13, §8/§9.6/§9.7).
+  (3) **`manifest`'s `vectors.db` input is now OPTIONAL** (Phase 6) — manifest builds against
+  `consolidated` + `index.db` alone and marks semantic search unavailable until `embed` lands (§8/§14.4),
+  the same "optional produces don't gate" rule as `convert`'s `assets`. Logged the two carried code tasks
+  as **Phase-4 prerequisites** above (the `normalize` `history.yaml`→`revisions.yaml` rename = STEP 0; seed
+  `registries/entities`). **Git hygiene:** retired the stale `docs/phase-4-kickoff` branch (it predated the
+  compliance work — would have regressed the tracker to 385 tests and reverted the dependabot CI upgrades
+  checkout@v6/setup-uv@v7 back to v4/v5); harvested its `consolidate` build-recipe into the canonical
+  kickoff. No code change this commit; the design is now unambiguous for the Phase-4 build.
 - **2026-06-02** — **Pre-Phase-4 compliance-review remediation (8 low-severity findings, TDD-first).** A
   full code-vs-design audit of Phases 1–3 confirmed the spine substantially faithful (contract_ver gating
   real, pure/IO split clean, one-kernel-each holds, hard gate blocks, no-blind-download); eight
