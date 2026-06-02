@@ -22,6 +22,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from vdocs.kernel.markdown import MULTI_BLANK, iter_headings, strip_tags
 from vdocs.kernel.text import github_slug_base
 
 # Depth (decided, §6.7): template-governed `toc_level` per section is the goal, but
@@ -30,12 +31,9 @@ from vdocs.kernel.text import github_slug_base
 # from the template schema and pass it in instead of this constant.
 DEFAULT_TOC_DEPTH = (2, 3)
 
-# `#+` (not `#{1,6}`): upstream emits >6 `#` from deep DOCX outline levels; capture them so they
-# get slugs/anchors. By the time `parse_headings` runs in `normalize_body`, `infer_heading_levels`
-# has already collapsed the tree to ≤6 (see normalize_pure for the rationale).
-_HEADING_RE = re.compile(r"^(#+)\s+(.*?)\s*$")
-_FENCE_RE = re.compile(r"^\s*(```|~~~)")
-_TAG_RE = re.compile(r"<[^>]+>")
+# Heading/fence parsing + the fence-aware heading scan come from `kernel.markdown` (§9.2). By the
+# time `parse_headings` runs in `normalize_body`, `infer_heading_levels` has already collapsed the
+# tree to ≤6; `iter_headings` recognizes >6-`#` headings (the canonical `#+`) regardless.
 
 # A Word bookmark id is `_Toc…`/`_Ref…`. Four shapes we read/match it in:
 _BOOKMARK_SPAN_RE = re.compile(r'<span id="(_(?:Toc|Ref)\w+)"[^>]*>\s*</span>')  # inline on heading
@@ -45,7 +43,6 @@ _ANCHOR_SPAN_RE = re.compile(r'<span id="_(?:Toc|Ref)\w+"[^>]*>\s*</span>')  # r
 
 _BACKLINK = "[↑ Back to Contents](#contents)"
 _BACKLINK_RE = re.compile(r"^\[↑ Back to Contents\]\(#contents\)\s*$")
-_MULTI_BLANK = re.compile(r"\n{3,}")
 
 UNRESOLVED = "UNRESOLVED"
 
@@ -103,29 +100,20 @@ def parse_headings(body: str, doc_id: str = "") -> list[Heading]:
     immediately above it (the recovery-seed shape) — for both late-gen and old-gen docs (§6.7)."""
     headings: list[Heading] = []
     seen: dict[str, int] = {}
-    in_fence = False
-    prev_bookmark: str | None = None  # a lone bookmark span on the immediately preceding line
-    for line in body.splitlines():
-        if _FENCE_RE.match(line):
-            in_fence = not in_fence
-            prev_bookmark = None
-            continue
-        if in_fence:
-            continue
-        m = _HEADING_RE.match(line)
-        if m is None:
-            lone = _LONE_BOOKMARK_RE.match(line)
-            prev_bookmark = lone.group(1) if lone else None
-            continue
-        raw = m.group(2)
+    lines = body.split("\n")
+    for idx, level, raw in iter_headings(body):  # fence- + Contents-aware (kernel.markdown, §9.2)
         inline = _BOOKMARK_SPAN_RE.search(raw)
-        bookmark = inline.group(1) if inline else prev_bookmark
-        prev_bookmark = None
-        text = _TAG_RE.sub("", raw).strip()
-        if not text or text.lower() == "contents":
+        if inline is not None:
+            bookmark: str | None = inline.group(1)
+        else:
+            # the recovery-seed shape: a lone bookmark span on the line immediately above
+            lone = _LONE_BOOKMARK_RE.match(lines[idx - 1]) if idx > 0 else None
+            bookmark = lone.group(1) if lone else None
+        text = strip_tags(raw).strip()
+        if not text:  # a bookmark-only heading (Contents already dropped by iter_headings)
             continue
         slug = github_slug(text, seen)
-        headings.append(Heading(len(m.group(1)), text, slug, bookmark, _stable_id(doc_id, slug)))
+        headings.append(Heading(level, text, slug, bookmark, _stable_id(doc_id, slug)))
     return headings
 
 
@@ -193,25 +181,22 @@ def insert_back_links(
     body = strip_back_links(body)
     lo, hi = min(toc_depth), max(toc_depth)
     targeted = {h.slug for h in headings if lo <= h.level <= hi}
-    out: list[str] = []
+    # Re-slug in document order (same skip + dedup sequence as parse_headings) to find which source
+    # lines carry a TOC-targeted heading; then emit every line, inserting the back-link after them.
     seen: dict[str, int] = {}
-    in_fence = False
-    for line in body.split("\n"):
-        out.append(line)
-        if _FENCE_RE.match(line):
-            in_fence = not in_fence
-            continue
-        if in_fence:
-            continue
-        m = _HEADING_RE.match(line)
-        if m is None:
-            continue
-        text = _TAG_RE.sub("", m.group(2)).strip()
-        if not text or text.lower() == "contents":
+    targeted_lines: set[int] = set()
+    for idx, _level, raw in iter_headings(body):
+        text = strip_tags(raw).strip()
+        if not text:
             continue
         if github_slug(text, seen) in targeted:
+            targeted_lines.add(idx)
+    out: list[str] = []
+    for i, line in enumerate(body.split("\n")):
+        out.append(line)
+        if i in targeted_lines:
             out += ["", _BACKLINK]
-    return _MULTI_BLANK.sub("\n\n", "\n".join(out)).strip("\n") + "\n"
+    return MULTI_BLANK.sub("\n\n", "\n".join(out)).strip("\n") + "\n"
 
 
 def anchor_sidecar(amap: AnchorMap) -> dict:

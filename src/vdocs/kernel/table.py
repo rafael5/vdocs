@@ -11,17 +11,18 @@ from __future__ import annotations
 import html as _html
 import re
 
+from vdocs.kernel.text import TAG_RE  # the single shared HTML-tag matcher (§9.2)
+
 # --- HTML <table> dialect (Pandoc) ---
 TABLE_RE = re.compile(r"<table\b.*?</table>", re.DOTALL | re.IGNORECASE)
 ROW_RE = re.compile(r"<tr\b[^>]*>(.*?)</tr>", re.DOTALL | re.IGNORECASE)
 CELL_RE = re.compile(r"<t[dh]\b[^>]*>(.*?)</t[dh]>", re.DOTALL | re.IGNORECASE)
-_TAG_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"\s+")
 
 
 def flatten_html(cell_html: str) -> str:
     """Strip tags, unescape entities, collapse whitespace → the cell's plain text."""
-    return _WS_RE.sub(" ", _html.unescape(_TAG_RE.sub("", cell_html))).strip()
+    return _WS_RE.sub(" ", _html.unescape(TAG_RE.sub("", cell_html))).strip()
 
 
 def html_rows(table_html: str) -> list[list[str]]:

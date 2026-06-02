@@ -14,7 +14,9 @@ import ftfy
 
 # C0 controls except tab/newline/carriage-return, plus the lone DEL.
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
-_TAG_RE = re.compile(r"<[^>]+>")
+# The single HTML-tag matcher (§9.2): one ``<[^>]+>`` shared by every tag-stripper across the
+# kernel and the normalize stages (was copy-pasted 5×). ``kernel.markdown`` re-exports it.
+TAG_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"[ \t]+")
 # Bundle-path slug: app codes may carry slashes/plus (AR/WS, DRM+) — collapse any run of
 # path-unsafe characters before they reach a filesystem path (§5.2, §8).
@@ -87,9 +89,18 @@ def scrub_control_chars(s: str) -> str:
     return _CONTROL_RE.sub("", s)
 
 
+def strip_tags(s: str) -> str:
+    """Remove HTML tags (``<…>``) from ``s`` — the bare tag-strip primitive (§9.2).
+
+    The minimal shared form (no entity-unescape, no whitespace collapse): callers that need
+    those layer them on. :func:`strip_html` is the full repair; ``kernel.markdown`` re-exports
+    this for the heading/markdown call sites."""
+    return TAG_RE.sub("", s)
+
+
 def strip_html(s: str) -> str:
     """Strip HTML tags and unescape entities, collapsing the residual spaces."""
-    no_tags = _TAG_RE.sub("", s)
+    no_tags = TAG_RE.sub("", s)
     unescaped = html.unescape(no_tags)
     return _WS_RE.sub(" ", unescaped).strip()
 

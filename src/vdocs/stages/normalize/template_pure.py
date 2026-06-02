@@ -15,12 +15,10 @@ and stamps the returned ``template_id`` into the frontmatter (identity provenanc
 
 from __future__ import annotations
 
-import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-_FENCE_RE = re.compile(r"^\s*(```|~~~)")
-_HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
+from vdocs.kernel.markdown import iter_headings
 
 
 @dataclass(frozen=True)
@@ -57,25 +55,19 @@ def strip_template_scaffold(body: str, section_titles: frozenset[str]) -> str:
     if not section_titles:
         return body
     lines = body.split("\n")
-    # heading (line index, level), fence-aware, in document order
-    headings: list[tuple[int, int]] = []
-    in_fence = False
-    for i, line in enumerate(lines):
-        if _FENCE_RE.match(line):
-            in_fence = not in_fence
-            continue
-        if not in_fence and (m := _HEADING_RE.match(line)) is not None:
-            headings.append((i, len(m.group(1))))
+    # (line index, level, raw text), fence- + Contents-aware, in document order (kernel.markdown,
+    # §9.2). `#+` now recognizes >6-`#` headings too (the canonical resolution).
+    headings = list(iter_headings(body))
 
     drop: set[int] = set()
-    for pos, (idx, level) in enumerate(headings):
-        title = _norm(_HEADING_RE.match(lines[idx]).group(2))  # type: ignore[union-attr]
+    for pos, (idx, level, raw) in enumerate(headings):
+        title = _norm(raw)
         if title not in section_titles:
             continue
         # the section runs to the next heading of the *same or shallower* level — so subsections
         # (deeper headings) count as content and keep the parent from being treated as empty.
         end = len(lines)
-        for nidx, nlevel in headings[pos + 1 :]:
+        for nidx, nlevel, _ in headings[pos + 1 :]:
             if nlevel <= level:
                 end = nidx
                 break

@@ -27,9 +27,9 @@ from vdocs.kernel.table import (
     pipe_cells,
     strip_md_links,
 )
+from vdocs.kernel.text import TAG_RE  # the single shared HTML-tag matcher (§9.2)
 
 _HREF_RE = re.compile(r'href="(#[^"]+)"')
-_TAG_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"\s+")
 _BLOCK_END_RE = re.compile(r"</(?:li|p|ul|ol)>", re.IGNORECASE)
 _INT_RE = re.compile(r"\d+")
@@ -54,7 +54,7 @@ class RevisionRecord:
 # --- cell flattening + date normalisation ----------------------------------
 def _flatten_change(cell_html: str) -> str:
     s = _BLOCK_END_RE.sub(" \n", cell_html)
-    s = _html.unescape(_TAG_RE.sub("", s))
+    s = _html.unescape(TAG_RE.sub("", s))
     parts = [_WS_RE.sub(" ", line).strip() for line in s.split("\n")]
     return "; ".join(p for p in parts if p)
 

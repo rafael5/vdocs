@@ -24,6 +24,16 @@ def test_parse_headings_captures_bookmark_on_line_above():
     assert head.text == "Recovered" and head.bookmark == "_Ref99"
 
 
+def test_bookmark_only_heading_is_skipped_everywhere():
+    # a heading line that is *only* a bookmark span has no display text → not a heading anchor;
+    # both parse_headings and insert_back_links drop it (no slug, no back-link)
+    body = '## Real Section\n\nbody\n\n## <span id="_Toc9"></span>\n\nmore\n'
+    heads = ac.parse_headings(body)
+    assert [h.text for h in heads] == ["Real Section"]
+    out = ac.insert_back_links(body, heads, (2, 3))
+    assert out.count("[↑ Back to Contents](#contents)") == 1  # only under the real section
+
+
 def test_rewrite_link_targets_maps_bookmark_to_slug():
     body = "See [Intro](#_Toc1234) for details.\n"
     out, outbound = ac.rewrite_link_targets(body, {"_Toc1234": "introduction"})

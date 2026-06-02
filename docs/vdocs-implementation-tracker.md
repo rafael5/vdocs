@@ -233,6 +233,16 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):
+  - **B1 — `kernel/markdown.py`: the single markdown-primitive home (D1, D2).** New kernel module
+    owning `HEADING_RE` (canonical `#+`), `FENCE_RE`, `MULTI_BLANK`, and a fence-aware
+    `iter_headings(body) → (line_idx, level, text)` generator (skips fenced code + the generated
+    `## Contents`). Migrated all five hand-rolled fence-aware heading scans onto it
+    (`normalize_pure.infer_heading_levels`, `anchors_pure.parse_headings` + `insert_back_links`,
+    `template_pure.strip_template_scaffold`, `discover_pure.parse_scaffold`) and collapsed the
+    five `_TAG_RE` copies onto one `kernel.text.TAG_RE`/`strip_tags` (re-exported by `markdown`).
+    **Behavior delta (intended unification):** `template_pure` and `discover.parse_scaffold` move
+    `#{1,6}` → `#+`, so they now recognize oversized (>6-`#`) headings — matching the `e1e3b44`
+    legacy-TOC fix; `parse_scaffold` is now fence- + Contents-aware too. 424 tests.
   - **A2 — `normalize` revision sidecar renamed `history.yaml` → `revisions.yaml`.** Closes the
     latent filename collision with `consolidate`'s version-group lineage (§6.4 vs §6.6). Renamed
     `revision_pure.history_sidecar` → `revision_sidecar`, the emitted filename, and the

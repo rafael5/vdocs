@@ -67,3 +67,11 @@ def test_strip_ignores_headings_in_code_fences():
 def test_strip_with_empty_titles_is_noop():
     body = "# G\n\n## Purpose\n\n"
     assert tp.strip_template_scaffold(body, frozenset()) == body  # nothing to strip
+
+
+def test_strip_recognizes_oversized_heading():
+    # the `#{1,6}` → `#+` unification (B1): upstream emits >6-`#` scaffold headings; strip them too
+    body = "# G\n\n########### Rollback\n\n## Body\n\ncontent\n"
+    out = tp.strip_template_scaffold(body, frozenset({"rollback"}))
+    assert "Rollback" not in out  # the empty oversized scaffold heading is now stripped
+    assert "## Body" in out

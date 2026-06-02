@@ -181,6 +181,16 @@ def test_extract_era_buckets_title_page_date_by_decade():
     assert dp.extract_era("# Guide\n\n" + "x\n" * 80 + "June 1995\n") == "unknown"
 
 
+def test_parse_scaffold_recognizes_oversized_headings_and_skips_fences():
+    # the `#{1,6}` → `#+` unification (B1): >6-`#` headings are real scaffold; H1 + fenced + the
+    # generated `## Contents` marker are excluded
+    body = (
+        "# Doc Title\n\n## Contents\n\n- [a](#a)\n\n"
+        "## Intro\n\n########### Deep Section\n\n```\n## Fenced\n```\n"
+    )
+    assert dp.parse_scaffold(body) == [(2, "Intro"), (11, "Deep Section")]
+
+
 def _doc(title_date, sections):
     heads = "\n\n".join(f"## {s}" for s in sections)
     return f"# Title Page\n\n{title_date}\n\n{heads}\n\nbody text here.\n"

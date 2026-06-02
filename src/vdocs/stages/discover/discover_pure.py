@@ -17,12 +17,15 @@ from dataclasses import dataclass, field
 from pydantic import BaseModel, Field
 
 from vdocs.kernel import discovery as kd
+from vdocs.kernel.markdown import iter_headings
 from vdocs.kernel.text import block_key as block_key  # shared block identity (§9.2); re-exported
 from vdocs.kernel.text import decade_bucket
 
 _WS = re.compile(r"\s+")
 _BLOCK_SPLIT = re.compile(r"\n\s*\n")
-_HEADING = re.compile(r"^#{1,6}\s")
+# `#+` (not `#{1,6}`): a recurring block that opens with an oversized heading is still template
+# scaffold — the canonical heading resolution shared across the markdown stages (kernel.markdown).
+_HEADING = re.compile(r"^#+\s")
 _BARE_MARKER_RE = re.compile(r"^[ \t]*(?:\d+\.|[-*])[ \t]*$", re.MULTILINE)
 _ACRONYM = re.compile(r"\b[A-Z][A-Z0-9]{1,7}\b")
 _SAMPLE = 5  # how many example doc_ids to carry as evidence
@@ -49,7 +52,6 @@ _REVTABLE_RE = re.compile(
 # `decade_bucket` — also used by `normalize` template matching). The title-page window is the front
 # matter; missing date yields "unknown".
 _TITLE_PAGE_LINES = 40  # the title-page window (front matter) scanned for a publication date
-_HEADING_TITLE = re.compile(r"^(#{1,6})[ \t]+(.+?)[ \t]*$", re.MULTILINE)
 _SLUG_STRIP = re.compile(r"[^a-z0-9]+")
 
 # common all-caps English/header words that are not glossary terms (real-corpus noise: the
@@ -380,12 +382,10 @@ def extract_era(body: str, *, head_lines: int = _TITLE_PAGE_LINES) -> str:
 def parse_scaffold(body: str) -> list[tuple[int, str]]:
     """Ordered ``(level, title)`` of the body's section headings — the structural scaffold.
 
-    H1 is excluded: it is the document title, not a reusable section of the template scaffold."""
-    out: list[tuple[int, str]] = []
-    for m in _HEADING_TITLE.finditer(body):
-        if len(m.group(1)) >= 2:  # skip H1 (document title)
-            out.append((len(m.group(1)), m.group(2).strip()))
-    return out
+    H1 is excluded: it is the document title, not a reusable section of the template scaffold.
+    Fence- + Contents-aware via the shared ``kernel.markdown.iter_headings`` (§9.2), recognizing
+    ``#+`` headings (>6 levels) uniformly with the other markdown stages."""
+    return [(level, text.strip()) for _, level, text in iter_headings(body) if level >= 2]
 
 
 def _slug(title: str) -> str:

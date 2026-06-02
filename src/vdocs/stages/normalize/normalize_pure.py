@@ -31,6 +31,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from vdocs.kernel.markdown import HEADING_RE, MULTI_BLANK, iter_headings, strip_tags
 from vdocs.kernel.text import block_key
 from vdocs.stages.normalize.anchors_pure import (
     DEFAULT_TOC_DEPTH,
@@ -61,17 +62,11 @@ __all__ = [
     "normalize_body",
 ]
 
-# `#+` (not `#{1,6}`) on purpose: upstream (Pandoc/convert) emits >6 `#` from deep DOCX outline
-# levels (e.g. `########### Table of Contents`). Recognizing them lets `strip_legacy_toc` catch an
-# oversized legacy-TOC heading and `infer_heading_levels` collapse the rest into a gap-free ≤6 tree
-# — leaving an invalid >6 ATX heading (GitHub renders it as literal text) would be the bug.
-_HEADING_RE = re.compile(r"^(#+)\s+(.*?)\s*$")
+# Heading/fence/blank-run regexes + the fence-aware scan come from `kernel.markdown` (§9.2) — the
+# canonical `#+` resolution (recognize >6-`#` headings) is shared by all four markdown stages.
 _HEADING_LINE_RE = re.compile(r"^#+ ", re.MULTILINE)
-_FENCE_RE = re.compile(r"^\s*(```|~~~)")
 _HTML_COMMENT_RE = re.compile(r"^<!--.*-->$")
-_MULTI_BLANK = re.compile(r"\n{3,}")
 _TOC_ENTRY_RE = re.compile(r"^\s*- \[.*\]\(#.*\)\s*$")
-_TAG_RE = re.compile(r"<[^>]+>")
 # a paragraph the original Word TOC linked to: a `_Toc…`/`_Ref…` bookmark anchor span at line
 # start, followed by the heading text. Pandoc leaves these as plain paragraphs (no `#`). Recovery
 # promotes each to a level-2 heading while **keeping** the anchor span on the line above, so
@@ -93,7 +88,7 @@ def recover_headings(body: str) -> str:
 
     def repl(m: re.Match[str]) -> str:
         # strip inline HTML tags and any wrapping markdown emphasis (**bold**/_italic_)
-        text = _TAG_RE.sub("", m.group(2)).strip().strip("*_ ").strip()
+        text = strip_tags(m.group(2)).strip().strip("*_ ").strip()
         return f"{m.group(1)}\n## {text}" if text else m.group(0)
 
     return _RECOVER_RE.sub(repl, body)
@@ -112,26 +107,16 @@ def infer_heading_levels(body: str) -> str:
     The generated ``## Contents`` heading is skipped (as in ``parse_headings``) — it is our own TOC
     marker, regenerated each run, so re-leveling it would break ``normalize_body`` idempotency."""
     lines = body.split("\n")
-    in_fence = False
-    found: list[tuple[int, int]] = []  # (line index, original level)
-    for i, line in enumerate(lines):
-        if _FENCE_RE.match(line):
-            in_fence = not in_fence
-            continue
-        if in_fence:
-            continue
-        if (m := _HEADING_RE.match(line)) is not None and m.group(2).strip().lower() != "contents":
-            found.append((i, len(m.group(1))))
+    found = list(iter_headings(body))  # (line index, original level, text); fence- + Contents-aware
     if not found:
         return body
-    base = min(level for _, level in found)
+    base = min(level for _, level, _ in found)
     stack: list[int] = []  # original levels of the current heading's strict ancestors
-    for i, level in found:
+    for i, level, text in found:
         while stack and stack[-1] >= level:
             stack.pop()
         new_level = base + len(stack)
         stack.append(level)
-        text = _HEADING_RE.match(lines[i]).group(2)  # type: ignore[union-attr]
         lines[i] = "#" * new_level + " " + text
     return "\n".join(lines)
 
@@ -139,7 +124,7 @@ def infer_heading_levels(body: str) -> str:
 def strip_artifacts(body: str) -> str:
     """F-strip: drop standalone empty HTML comments (Pandoc emits many) + collapse blank runs."""
     kept = [ln for ln in body.split("\n") if not _HTML_COMMENT_RE.match(ln.strip())]
-    return _MULTI_BLANK.sub("\n\n", "\n".join(kept)).strip("\n") + "\n"
+    return MULTI_BLANK.sub("\n\n", "\n".join(kept)).strip("\n") + "\n"
 
 
 def subtract_phrases(body: str, phrases: frozenset[str]) -> str:
@@ -215,11 +200,11 @@ def strip_legacy_toc(body: str, titles: frozenset[str], max_level: int = 3) -> s
     out: list[str] = []
     i = 0
     while i < len(lines):
-        m = _HEADING_RE.match(lines[i])
+        m = HEADING_RE.match(lines[i])
         level = len(m.group(1)) if m else 0
         if m and (level <= max_level or level > 6) and m.group(2).strip().lower() in wanted:
             i += 1
-            while i < len(lines) and not _HEADING_RE.match(lines[i]):
+            while i < len(lines) and not HEADING_RE.match(lines[i]):
                 i += 1
             continue
         out.append(lines[i])
@@ -271,7 +256,7 @@ def regenerate_toc(body: str, toc_depth: tuple[int, int] = DEFAULT_TOC_DEPTH) ->
     for idx, ln in enumerate(lines):
         if not ln.strip():
             continue
-        if _HEADING_RE.match(ln) and ln.startswith("# "):
+        if HEADING_RE.match(ln) and ln.startswith("# "):
             insert_at = idx + 1
         break
     head, tail = lines[:insert_at], lines[insert_at:]
