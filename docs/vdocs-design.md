@@ -36,6 +36,7 @@ per-document QA verdict that gates `publish`/`push`. Both are bounded by, and co
   - [5.3 Layer → directory map](#53-layer--directory-map)
   - [5.4 Why not shred the source into component files (DITA/S1000D)?](#54-why-not-shred-the-source-into-component-files-ditas1000d)
   - [5.5 The derived stores (no naming collisions)](#55-the-derived-stores-no-naming-collisions)
+  - [5.6 The fetch selection surface (deciding *what* to download)](#56-the-fetch-selection-surface-deciding-what-to-download)
 - [6. Content model and document decomposition](#6-content-model-and-document-decomposition)
   - [6.1 The governing rule](#61-the-governing-rule)
   - [6.2 Whole file as source; every machine view derived from it](#62-whole-file-as-source-every-machine-view-derived-from-it)
@@ -82,13 +83,19 @@ per-document QA verdict that gates `publish`/`push`. Both are bounded by, and co
 ## 1. Purpose and scope
 
 `vdocs` turns the **VA VistA Document Library (VDL)** — a sprawling website of
-DOCX/PDF technical manuals — into two co-equal deliverables:
+technical manuals — into two co-equal deliverables:
 
 1. a **clean, human-browsable markdown corpus published on GitHub** (docs-as-code), and
 2. a **maximally machine-discoverable knowledge base** exposed through an **MCP server**
    that provides **structured, computable, semantic search** across the entire corpus.
 
 It is an **ETL/document-modernization pipeline**: acquire → conform → curate → **serve**.
+
+**Scope: DOCX only.** The VDL publishes most manuals as both DOCX and PDF; `vdocs` ingests the
+**DOCX** representation exclusively — DOCX is the richer, structure-preserving source and the only
+format the pipeline converts, normalizes, and publishes. **PDF is out of scope**: a document that
+exists *only* as PDF is flagged in the inventory as out-of-scope and is never fetched, converted, or
+published. There is no PDF code path anywhere in the pipeline.
 
 There are exactly **two classes of consumer**, and the entire architecture is shaped by
 serving both without compromising either:
@@ -235,7 +242,7 @@ INVENTORY MEDALLION  ── control plane · entire VDL site · metadata only, n
         ═══════════════ FETCH GATE — gold inventory green + an explicit selection ═══════════════
                                             ▼
 DOCUMENT MEDALLION  ── data plane · only the selected subset · turns bytes into corpus + machine views
-  🥉 BRONZE   ──fetch──►   raw/<sha256>.<docx|pdf> (write-once)  +  raw/index.json (derived CAS manifest)
+  🥉 BRONZE   ──fetch──►   raw/<sha256>.docx (write-once)  +  raw/index.json (derived CAS manifest)
   🥈 SILVER   ──convert──► text@converted + assets/ (CAS images) ──discover──► reports/patterns ─curate─► registries/
               ──enrich──►  text@enriched (identity FM) ──normalize──► text@normalized + sidecars (history·tables·refs)
   🥇 GOLD     ──consolidate──► consolidated/ ──index──► index.db (+FTS5; stable IDs) ──relate──► index.db:relations
@@ -246,6 +253,49 @@ DOCUMENT MEDALLION  ── data plane · only the selected subset · turns bytes
                                           ◄── index.db + vectors.db + corpus bundles
 
   Cross-cutting:  state.db  (stage_runs · fingerprints · acquisitions)
+```
+
+The same architecture as a rendered graph (the ASCII above is authoritative for arrow labels;
+this view is for orientation):
+
+```mermaid
+flowchart TD
+    subgraph INV["INVENTORY MEDALLION — control plane · entire VDL site · metadata only"]
+        direction TB
+        VDL["VDL site"]
+        CATRAW["🥉 catalog.raw<br/>(immutable evidence)"]
+        CATENR["🥈 catalog.enriched<br/>(identity · doc-type · noise · groups · pairing · drift)"]
+        GOLDINV["🥇 GOLD INVENTORY<br/>(curated · validated · queryable selection surface)"]
+        VDL -->|crawl| CATRAW
+        CATRAW -->|catalog| CATENR
+        CATENR -->|validate + serve-inventory| GOLDINV
+    end
+
+    GOLDINV ==>|FETCH GATE<br/>gold inventory green + explicit selection| RAW
+
+    subgraph DOC["DOCUMENT MEDALLION — data plane · selected subset · bytes to corpus"]
+        direction TB
+        RAW["🥉 raw/&lt;sha256&gt;.docx<br/>+ raw/index.json (CAS)"]
+        CONV["🥈 text@converted<br/>+ assets/ (CAS images)"]
+        NORM["🥈 text@enriched → text@normalized<br/>+ sidecars (history · tables · refs)"]
+        REG["registries/"]
+        CONS["🥇 consolidated/ → index.db<br/>(+FTS5 · stable IDs · relations)"]
+        EMB["🥇 vectors.db · reports/fidelity<br/>corpus-manifest.json · discovery.json"]
+        PUB["🥇 publish/ → validate<br/>HARD GATE (schema · lineage · anchors · fidelity)"]
+        RAW -->|fetch| CONV
+        CONV -->|discover → curate| REG
+        CONV -->|enrich · normalize| NORM
+        NORM -->|consolidate · index · relate| CONS
+        CONS -->|embed · fidelity · manifest| EMB
+        EMB -->|publish| PUB
+    end
+
+    PUB -->|push| GH["github.com/vistadocs/vdl<br/>(humans)"]
+    PUB -->|mcp| MCP["MCP endpoint<br/>(agents)"]
+
+    STATE[("state.db<br/>stage_runs · fingerprints · acquisitions")]
+    STATE -.->|acquisition status| GOLDINV
+    STATE -.-> DOC
 ```
 
 **Layer invariants:**
@@ -273,7 +323,7 @@ key structural fact and the thing most easily gotten wrong: **`crawl`/`catalog` 
   loop (§7.6); it refreshes on its **own cadence**, independently of document processing.
 - **Document medallion — data plane** (`fetch` → … → `publish`/`serve`). The heavy ETL that turns *the
   selected subset's* actual bytes into the markdown corpus and machine views. *Bronze:* `raw/<sha>`
-  fetched docx/pdf (write-once) + `raw/index.json`. *Silver:* `text@{converted,enriched,normalized}` +
+  fetched docx (write-once) + `raw/index.json`. *Silver:* `text@{converted,enriched,normalized}` +
   `assets/`. *Gold:* `consolidated/`, `index.db`, `vectors.db`, `publish/`. It advances **only for
   documents selected and fetched**, always *driven from* the inventory.
 
@@ -296,7 +346,7 @@ inverts this:
 
 | Class | What | Policy | Why |
 |---|---|---|---|
-| **Asset store** (write-once) | raw docx/pdf; extracted images | content-addressed (`<sha256>.<ext>`), never mutated or copied | dominates size; never changes; referenced by hash from text |
+| **Asset store** (write-once) | raw docx; extracted images | content-addressed (`<sha256>.<ext>`), never mutated or copied | dominates size; never changes; referenced by hash from text |
 | **Versioned text** | markdown + frontmatter + structured sidecars | a new immutable tree per conforming stage; kept | tiny (≈1 GB for the *entire* history); diffable; rollback = tree swap |
 
 Result: **full per-stage text history *and* a net storage reduction** (≈4 GB saved by
@@ -338,7 +388,7 @@ $LAKE/                                       # DATA_DIR, default ~/data/vdocs, e
     # inventory_status = inventory.gold ⋈ state.db:acquisitions  (fetch status — a view, §5.5)
 
   documents/                                 # ── DOCUMENT MEDALLION (data plane; the selected subset)
-    bronze/raw/<sha256>.<docx|pdf>           #   fetch   — content-addressed, write-once
+    bronze/raw/<sha256>.docx                 #   fetch   — content-addressed, write-once
     bronze/raw/index.json                    #   fetch   — derived CAS manifest (sha256 → provenance)
     assets/<sha256>.<ext>                    #   convert — content-addressed image store
     silver/text/01-converted/<app>/<slug>/   #   convert (bundles)
@@ -441,6 +491,63 @@ an entity ID from `(type, canonical-name)`. IDs are **never** SQLite rowids. Thi
 contract is what lets the published markdown anchors, the vector index keys, the graph nodes,
 and the MCP resource URIs all reference the *same* unit unambiguously — and lets a re-embed
 or re-index reuse prior work instead of rebuilding from scratch.
+
+### 5.6 The fetch selection surface (deciding *what* to download)
+
+§5.5 establishes that the **enriched inventory owns the selection surface** — nothing is fetched
+that isn't a green, `noise_type==''` row. This section makes that surface concrete: how an operator
+narrows the breadth-complete inventory down to the subset `fetch` actually downloads. There is **no
+blind/full download** (tenet, §8): `fetch` requires an *explicit* selection, so the default with no
+arguments is to fetch nothing and print the matching count — the operator opts into breadth, never
+backs into it.
+
+**Selection is a pure predicate over `catalog.enriched` rows.** A selection is the conjunction (AND)
+of zero or more **dimension filters**, each matching one field of the `EnrichedRecord` schema (§5.5).
+Within a single dimension, multiple values are a disjunction (OR). The dimensions:
+
+| Dimension | Enriched field | Match | Example |
+|---|---|---|---|
+| **Application** | `app_name_abbrev` (code) / `app_name_full` | exact code, or substring of full name | `--app ADT` / `--app CPRS,LR` |
+| **Category** | `section_code` / `section_name` (the VDL section = application category) | exact section code | `--section CLIN` |
+| **Status** | `app_status` (`active` \| `decommissioned`) | exact | `--status active` |
+| **Doc type** | `doc_code` (e.g. `UM`, `DIBR`) | exact | `--doc-type UM` |
+| **Version group** | `group_key` / `anchor_key` | exact | `--group "ADT:DG:5.3"` |
+| **Curated list** | `doc_id` (`app_code:doc_slug`) | membership in an explicit id list / file | `--select ids.txt` |
+
+`--all` is the explicit "whole genuine inventory" selector (empty dimension set, matches every green
+row) — it exists so that fetching everything is a deliberate, named act, not the absence of arguments.
+
+**Two invariants always hold, independent of the selection** (the selection only ever *narrows*):
+
+1. **The noise gate.** Rows with `noise_type != ''` are never candidates, even if a filter would
+   match them (§9.5). Selection runs *after* the genuine-row filter, never around it.
+2. **Version completeness.** Selection picks *logical documents / version groups*, and `fetch`
+   then acquires **every version** in each selected group (§8: acquisition is per-version-group, not
+   per-latest) — selection must not silently drop patches, because the historical bodies are what
+   `push` replays. A filter therefore matches at group granularity; it cannot select "only the latest
+   patch of a group."
+
+**Source format is always DOCX — there is no format dimension.** PDF is out of scope (§1), so `fetch`
+acquires the **DOCX** representation of each selected document, full stop. Out-of-scope is **explicit,
+not implied**: every enriched row carries an `out_of_scope_reason` field (empty ⇒ in scope; otherwise
+the disqualifying format, e.g. `pdf`/`doc`), derived from `doc_format` — so the gold inventory exposes
+scope as a first-class, queryable column alongside `noise_type`. A logical document with **no in-scope
+(DOCX) row** is a PDF-only document: it is never a fetch candidate (`select_fetch_targets` skips any row
+with `out_of_scope_reason` set, just as it skips `noise_type` rows), and the `inventory_status` view
+reports it with status **`out_of_scope`** rather than the misleading `not_acquired`. `doc_format` is not
+itself a selectable filter; `out_of_scope_reason` is the single source of truth for "is this fetchable."
+
+**Where selection lives, and lineage.** The resolved selection (the normalized predicate + the
+concrete `doc_id` set it expands to) is recorded as part of `fetch`'s **input fingerprint** (§7.3),
+so it participates in `SKIP_IF_UNCHANGED`: re-running with the same selection is a no-op; broadening
+it (a superset) fetches only the newly-included documents, leaving prior `acquisitions` rows
+untouched. Narrowing a selection **never deletes** already-fetched bronze (CAS is write-once, §5.1) —
+it only changes what this run targets. CLI flags are the primary surface; a curated selection **file**
+(`--select <path>`, one `doc_id` per line) is the durable, reviewable form for a fixed corpus, and
+`Settings` may carry a default selection for unattended/scheduled runs. The operator decides the
+selection by inspecting the green gold inventory's browsable/queryable surface (`inventory_status` =
+enriched ⋈ acquisitions, §5.5) — building the inventory track is the prerequisite for selecting, not
+an afterthought.
 
 ---
 
@@ -775,7 +882,7 @@ plane), **DOC** = the document medallion (data plane) (§4). The inventory track
 | 🥉 INV | **crawl** | `vdl` (external) | `inventory/bronze:catalog.raw` (raw scraped catalog — immutable evidence) | FORCE_ONLY (network) |
 | 🥈 INV | **catalog** | `catalog.raw` | `inventory/silver:catalog.enriched` — the **conformed enriched inventory**: full multi-pass enrichment + system classification per **[`vdl-crawl-spec.md`](vdl-crawl-spec.md)** (patch identity incl. multi-NS, doc-type/labels, `group_key` + version-free `anchor_key`, **noise classification**, companion pairing, drift) | SKIP_IF_UNCHANGED |
 | 🥇 INV | **serve-inventory** | `catalog.enriched`, `state.db:acquisitions` | `inventory/gold` — the **GOLD INVENTORY** (curated · browsable + machine-queryable selection surface; `inventory_status` = enriched ⋈ acquisitions). **Postflight HARD GATE** — complete vs. the crawl, enriched, noise-classified, no information loss + sane distributions (crawl-spec §7); `ok` only if green. **This `ok` is the fetch gate.** | SKIP_IF_UNCHANGED |
-| 🥉 DOC | **fetch** | **gold inventory `ok` (the gate, green)** + an explicit **selection** + `state.db:acquisitions` (prior status) | `documents/bronze:raw` (CAS docx/pdf), `state.db:acquisitions` (per-doc fetch status — the system of record), `raw/index.json` (derived CAS manifest) | SKIP_IF_UNCHANGED |
+| 🥉 DOC | **fetch** | **gold inventory `ok` (the gate, green)** + an explicit **selection** (the selection surface, §5.6) + `state.db:acquisitions` (prior status) | `documents/bronze:raw` (CAS docx), `state.db:acquisitions` (per-doc fetch status — the system of record), `raw/index.json` (derived CAS manifest) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **convert** | `raw`, `raw/index.json` | `text@converted`, `assets` (CAS) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **discover** | `text@converted` (corpus-global) | `reports/patterns` (candidate boilerplate / `(doc_type, era)` templates / dead phrases / glossary terms / structural patterns + evidence + proposed disposition) → proposes `registries/` updates (§9.6) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **enrich** | `text@converted`, `catalog.enriched` | `text@enriched` (identity FM baked), `index.db:doc_meta_staged` | SKIP_IF_UNCHANGED |
@@ -802,9 +909,9 @@ Notes:
   run until that gate is green** — the consumer-preflight rule (§7.3) makes this automatic (fetch requires
   the gold-inventory stage `ok` + fingerprint match), and there is **no blind/full download**: `fetch`
   acquires only an explicit, curated *selection* of the inventory (genuine candidates = rows with
-  `noise_type==""`; selection by app/section/doc_type/group or a curated list). Deciding *what* to fetch
-  is done by inspecting the green gold inventory; building the inventory track is the prerequisite, not an
-  afterthought.
+  `noise_type==""`; selection by app/section/doc_type/group/format/status or a curated list — the full
+  predicate is specified in **§5.6**). Deciding *what* to fetch is done by inspecting the green gold
+  inventory; building the inventory track is the prerequisite, not an afterthought.
 - **`catalog`** is the promoted, first-class home of v1's hidden `enrich_inventory.py`
   logic. It is a normal stage with a contract — never a hand-run script.
 - **`crawl` + `catalog` are the drift detector.** On a scheduled re-run, `catalog` diffs the fresh
@@ -997,7 +1104,7 @@ disposition. The disposition is the crux of the boilerplate-vs-template-vs-phras
 | **`registries/templates`** | the document *skeleton* each manual was poured into — discovered **per `doc_type` × era** (user-guide vs technical-guide vs install-guide vs security-guide; 1990s vs 2000s vs 2010s layouts) — **and its computable structural schema** (§9.8) | `(doc_type, era)` | **STRIP + STAMP + RETAIN** — scaffold removed from the body; `template_id` recorded; the **structural schema kept computably** for reuse + the template-compliance QC check, never re-inlined |
 | **`registries/phrases`** | short recurring **meaningless** strings — paper-era residue ("This page intentionally left blank", "Continued on next page", "End of document", page furniture) **and** descriptive filler *associated with* revision history (e.g. "Refer to the revision history below for changes") | phrase / regex + context | **DELETE** — removed outright; *no* reference, *no* canonical copy (it has zero meaning in a GitHub corpus) |
 | **`registries/glossary`** | acronyms & defined terms | term | **PROMOTE + DEDUPE** to `gold/glossary.md` |
-| **`registries/converter-routing`** | which docs need Docling vs Pandoc (ADR-010) | doc identity / signature | **ROUTE** (consumed by `convert`, not `normalize`) |
+| **`registries/converter-routing`** | which DOCX docs need Docling instead of Pandoc — the bare-marker-explosion allowlist (ADR-010; both converters read DOCX) | doc identity / signature | **ROUTE** (consumed by `convert`, not `normalize`) |
 
 The three subtractive dispositions are deliberately different: **boilerplate is referenced** (the
 content matters, just shouldn't be copied N times), **a template is stripped with a provenance
@@ -1026,8 +1133,9 @@ recurs wherever the pipeline must *learn* something corpus-shaped rather than be
 
 - **catalog** — discovers app/section structure and version-group keys from the crawled catalog.
 - **convert** — the Pandoc-vs-Docling routing (ADR-010) is a *discovered, evidence-driven* allowlist
-  (bare-marker-explosion detection), curated into a `registries/converter-routing`, **not** a
-  hand-edited constant as in v1.
+  over DOCX documents. **Both converters read DOCX**; the allowlist names the docs where Pandoc's
+  cross-ref **bare-marker explosion** forces Docling instead. Curated into
+  `registries/converter-routing`, **not** a hand-edited constant as in v1.
 - **normalize** — the main instance: boilerplate / `(doc_type, era)` templates / dead phrases /
   glossary / structural patterns (above).
 - **index / relate** — entity and cross-reference conventions (routine/global/RPC/file-number
@@ -1066,7 +1174,7 @@ for what `normalize` (or `convert`) does with a match; the disposition vocabular
 | `registries/phrases` | dead paper-era strings ("this page intentionally left blank", "continued on next page", page furniture) + descriptive filler around revision history | phrase / regex (+ context) | **DELETE** | `discover` | `normalize` | — (nothing kept) |
 | `registries/glossary` | acronyms & defined terms | term | **PROMOTE** + dedupe | `discover` | `normalize` | `gold/glossary.md` (+ `index.db` terms) |
 | `registries/structures` | recurring structural conventions — callout/admonition/notice styling, revision-table shape, TOC shape | convention id | **CANONICALIZE** to standard GFM | `discover` | `normalize` | — (rules only; output is the canonicalized body) |
-| `registries/converter-routing` | which documents need Docling vs Pandoc (the bare-marker-explosion allowlist, ADR-010) | doc identity / signature | **ROUTE** | `convert` (bare-marker eval) | `convert` | — (rules only) |
+| `registries/converter-routing` | which DOCX docs need Docling instead of Pandoc (the bare-marker-explosion allowlist, ADR-010) | doc identity / signature | **ROUTE** | `convert` (bare-marker eval) | `convert` | — (rules only) |
 
 Reading the family by **disposition** is the quickest way to keep the kinds straight: *content worth
 keeping but not copying* → REFERENCE (boilerplate) / PROMOTE (glossary); *structure that is noise* →
@@ -1160,7 +1268,7 @@ Decided up front. Each: choice, why, and the credible alternative we rejected.
 | 007 | Logging | **structlog** | structured, context-rich, CI/TTY aware | stdlib logging only |
 | 008 | Testing | **pytest + Hypothesis**, TDD | property tests fit pure transforms; team TDD rule | example-only tests |
 | 009 | CLI | **Typer** | type-hint-driven, modern DX, auto-help; one command per stage + `run` | Click (v1; fine, but Typer is the greenfield upgrade) |
-| 010 | DOCX/PDF → markdown | **Pandoc default + Docling for an evidence-based allowlist** (the allowlist is a *discovered, curated* `registries/converter-routing`, not a hand-edited constant — §9.6) | v1's hardest-won lesson: Docling avoids the cross-ref bare-marker explosion for specific docs; keep it per-doc and evidence-driven | Docling-for-all (slower, heavier) · Pandoc-for-all (breaks on the allowlisted docs) · hand-maintained `DOCLING_DOCS` constant (v1; drifts, un-adaptive) |
+| 010 | DOCX → markdown | **Pandoc default + Docling for an evidence-based allowlist** — *both converters read DOCX*; Docling is the drop-in alternative for the documents where Pandoc produces the cross-ref bare-marker explosion. The allowlist is a *discovered, curated* `registries/converter-routing`, not a hand-edited constant (§9.6). **(PDF is out of scope — §1; there is no PDF converter.)** | v1's hardest-won lesson: Docling avoids the bare-marker explosion on specific DOCX docs; keep the routing per-doc and evidence-driven. | Docling-for-all (slower, heavier) · Pandoc-for-all (breaks on the allowlisted docs) · hand-maintained `DOCLING_DOCS` constant (v1; drifts, un-adaptive) |
 | 011 | Markdown flavor / publish | **GFM**, docs-as-code, markdown-only in git, images materialized+gitignored | standard, GitHub-native, diff-friendly | committing images to git (bloat) |
 | 012 | Vector store | **sqlite-vec** (`vectors.db`) | keeps the zero-ops single-file ethos; embeds ANN in SQLite at our scale (~tens of thousands of chunks); same backup/versioning story as `index.db` | dedicated vector DB (Qdrant/LanceDB — ops overhead, unneeded) · pgvector (needs Postgres) |
 | 013 | Embedding model | **Pluggable provider, default a high-quality local model**; model id+version recorded in lineage and gates `vectors.db` | reproducible, offline, free; lineage makes re-embeds tracked; pluggable allows upgrades | hardcoded API embeddings (cost, network, non-reproducible) — kept as an opt-in provider |
