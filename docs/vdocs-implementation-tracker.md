@@ -25,70 +25,76 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 ## Overall status
 
 **Pipeline stages (§8): 8 ✅ · 0 ◐ · 11 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
-counted separately below). Last updated **2026-06-02**. **The full document-silver pipeline runs
-end-to-end on a real 469-doc VA corpus** (seeded offline from v1's `raw/`), not just fixtures.
-**Phase 3 silver is complete** — `normalize` finished all F-steps (compliance remediation P0–P2 + P1).
+counted separately below). Last updated **2026-06-02**. **Phases 1–3 complete and merged to `master`**
+(PRs #3/#4/#5) — inventory medallion + gated bronze + the full document-silver pipeline, run
+end-to-end on a real 469-doc VA corpus; `make check` green (**385 tests, 100% cov**, ruff+mypy clean).
+**Next: Phase 4 `consolidate`.**
 
 | Phase | Title | Status | Progress |
-|---|---|---|---|
-| 1 | Spine (kernel · config · models · contracts · orchestrator) | ✅ | 4/4 |
-| 2 | Inventory medallion + doc-bronze | ✅ | 4/4 (`fetch` selection surface landed; DOCX-only §1) |
-| 3 | Silver — document text (convert · discover · enrich · normalize) | ✅ | `convert` ✅ · `discover` ✅ · `enrich` ✅ · `normalize` ✅ (all F-steps shipped) |
-| 4 | Gold derive (consolidate · index · relate · manifest) | ☐ | 0/4 |
-| 5 | Gold deliver (fidelity · publish · validate · push · analyze) | ☐ | 0/5 |
-| 6 | Machine interface (embed · serve-mcp) | ☐ | 0/2 |
-| 7 | Harden (property tests · `--verify` · gc · docs-gen · replay · refresh) | ◐ | 2 ◐ · 1 ⬚ · 3 ☐ |
+|---|---|:--:|:--:|
+| 1 | Spine (kernel·config·models·contracts·orchestrator) | ✅ | 4/4 |
+| 2 | Inventory medallion + doc-bronze | ✅ | 4/4 |
+| 3 | Silver — document text (convert·discover·enrich·normalize) | ✅ | 4/4 |
+| 4 | Gold derive (consolidate·index·relate·manifest) | ☐ | 0/4 |
+| 5 | Gold deliver (fidelity·publish·validate·push·analyze) | ☐ | 0/5 |
+| 6 | Machine interface (embed·serve-mcp) | ☐ | 0/2 |
+| 7 | Harden (property·--verify·gc·docs-gen·replay·refresh) | ◐ | 2◐·1⬚·3☐ |
 
 ## Phase / stage summary
 
-| Phase | Stage | Layer | Goal (requires → produces) | Design ref | Status | Evidence | Notes |
-|---|---|---|---|---|---|---|---|
-| **1 — Spine** | | | the Stage/Artifact abstraction + generic DAG runner, proven by a no-op DAG | §7, §17.1 | ✅ 4/4 | | the contract-enforcing core everything else fills in |
-| 1 | kernel | — | text · frontmatter · fingerprint · cas · lineage · db · discovery · **http** (one each, §9.2) | §9.2 | ✅ | `tests/unit/kernel/*` | `http` hardened this session (PoliteClient: UA/retry/429/redirect/final-URL/delay) |
-| 1 | config | — | `Settings` off `DATA_DIR`; all lake paths derived; no module-level path constants | §5.3, §9.1 | ✅ | `test_config` | inventory medallion + gold-inventory + registries paths added |
-| 1 | models / contracts | — | Pydantic boundary types; `ArtifactContract` (locate/validate/fingerprint); the registry | §7.1 | ✅ | `test_artifact`, `test_registry` | |
-| 1 | orchestrator | — | `Stage` base (generic preflight/postflight), DAG engine, `state.db:stage_runs` | §7.1–7.3 | ✅ | `test_noop_dag`, `test_engine_edges` | one execution path; no stage re-implements gating |
-| **2 — Inventory medallion + doc-bronze** | | | gold inventory of the whole site + the fetch gate, then a selected bronze | §4, §17.2 | ✅ 4/4 | see [`vdl-crawl-tracker.md`](vdl-crawl-tracker.md) | inventory medallion ✅; `fetch` selection surface ✅ |
-| 2 | **crawl** | 🥉 INV | `vdl` → `inventory/bronze:catalog.raw` (polite 3-level walk; final-URL base; skip non-200) | §8; spec §3 | ✅ | `test_crawl_pure`, `test_crawl_stage` | live bounded smoke (B3) still manual |
-| 2 | **catalog** | 🥈 INV | `catalog.raw` → `catalog.enriched` (5-pass enrichment + system classification, §5 cols) | §8; spec §4 | ✅ | `test_enrich_pure`, `test_catalog_inventory` | **§7 distributions reproduce exactly** vs the pinned 8,834-row fixture |
-| 2 | **serve-inventory** | 🥇 INV | `catalog.enriched` → gold `inventory.{json,csv,db}`; **HARD GATE = the fetch gate** | §8, §7.3; spec §7 | ✅ | `test_serve_pure`, `test_serve_inventory` | gate green on the full corpus; `vdocs inventory --status` |
-| 2 | **fetch** | 🥉 DOC | gate `ok` + **selection** (§5.6) + `acquisitions` → `documents/bronze:raw` (CAS) + `index.json` + `acquisitions` | §8, §5.6, §9.5 | ✅ | `test_fetch_pure`, `test_fetch_stage`, `test_bronze_dag`, `test_cli` | CAS, DOCX-pref, index, acquisitions, gate-wired. **Selection surface**: AND-across/OR-within dimension filters (`--app/--section/--status/--doc-type/--group/--select/--all`), **no blind download** (default fetches nothing + prints count), `--dry-run`; **version completeness** via `anchor_key` group expansion; selection in `inputs_fp` (`extra_input_fps`) so it joins `SKIP_IF_UNCHANGED` |
-| **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ✅ 4/4 | | discover→registry seam built **before** normalize so no pattern is hard-coded |
-| 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc/Docling; CAS images) | §8, §1, ADR-010 | ✅ | `test_convert_pure`, `test_convert_stage` + real 469-doc run | **DOCX-only** (§1). Pandoc GFM + `--extract-media`; images→asset CAS, refs rewritten (markdown + HTML `<img>` by basename). **Per-doc converter routing** via `registries/converter-routing` → Docling (out-of-process CLI; typer conflict forbids in-proc), **routes `CPRS/cprsguium`** — verified end-to-end: bare markers 3,058→0, list items 332→3,230, +559 image refs. EMF/WMF→PNG + the few residual `<!-- image -->` deferred |
-| 3 | **discover** | 🥈 DOC | `text@converted` + `catalog.enriched` (doc_code only) → `reports/patterns` (candidate boilerplate/templates/glossary/structure/converter-routing + disposition) | §8, §9.6, §9.8 | ✅ | `test_discover_pure`, `test_discover_stage` + real run | recurring-block miner (template RETAIN / phrase DELETE / boilerplate REFERENCE) **+ near-dup boilerplate clustering** (`kernel/discovery` MinHash/LSH; real 3051→3560) + acronym glossary (PROMOTE) + **structures** miner (callout/TOC/revision-table → CANONICALIZE; 7 curated) + **`(doc_type, era)` template induction** (structural-scaffold clustering; doc_type←catalog `doc_code`, era←title-page date; STRIP + stamp `template_id` + RETAIN schema, §9.8; 2 DIBR templates curated) + **convert-quality probe** (`mine_converter_routing` → Docling ROUTE); evidence + grade; **mutates no content** |
-| 3 | **enrich** | 🥈 DOC | `text@converted`,`catalog.enriched` → `text@enriched` (identity FM baked) + `index.db:doc_meta_staged` | §8 | ✅ | `test_enrich_doc_pure`, `test_enrich_stage` | joins each bundle to its inventory record (by `<app>/<slug>`, DOCX-preferred), bakes identity FM via the kernel codec; **computed fields (word_count) staged to index.db, never in the body** (§6.3) |
-| 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7, §6.6, §9.8 | ✅ | `test_normalize_pure`, `test_anchors_pure`, `test_revision_pure`, `test_tables_pure`, `test_template_pure`, `test_normalize_stage`, `test_normalize_props` + real 469-doc run | **F-steps (all shipped)**: **heading recovery** from `_Toc` bookmarks; **revision-history → `history.yaml` sidecar** (§6.6; HTML + GFM-pipe); **anchor substrate → `refs.yaml` sidecar** (§6.7/§5.5: bookmarks, `](#_Toc…)` rewrite w/ `UNRESOLVED` signal, `(stable_id ↔ slug ↔ bookmark)` map, round-trip back-links — `anchors_pure`); strip Pandoc artifacts; subtract `registries/phrases`; **boilerplate REFERENCE** (`subtract_boilerplate` + curated `registries/boilerplate`; shared `kernel/text.block_key`; real 61 docs/89 refs); **complex tables → `tables/*.csv`** (§6.4/§6.5; `tables_pure`, ≥10-row/≥8-col guardrail, `kernel/csv`; real 276 docs/1326 sidecars); **`(doc_type, era)` template STRIP + `template_id` stamp** (§9.8; `template_pure` + curated `registries/templates`; era=`kernel/text.decade_bucket`; real 120 stamped); **heading-level inference** (`infer_heading_levels`: gap-free tree, fence-safe; real 316 adjusted); **legacy in-body TOC stripped** via `registries/structures` CANONICALIZE `toc` (`strip_legacy_toc` keyed on curated `match` variants — closes the duplicate-TOC deviation where the source's text TOC survived next to the derived one); regenerate `## Contents` TOC (GitHub-slug anchors, H2–H3 depth); stamp `source_sha256`. (Glossary PROMOTE is a gold-phase output, not a silver body transform — §8 note.) **Remaining structures consumer:** `callout` CANONICALIZE (admonition→GFM alerts) + `revision-table` heading-shape (the revision *table* already leaves the body to `history.yaml`) — curated in `registries/structures`, not yet applied. |
-| **4 — Gold derive (machine)** | | | version groups + the queryable index + knowledge graph + manifests | §17.4 | ☐ 0/4 | | |
-| 4 | **consolidate** | 🥇 DOC | `text@normalized`,`assets` → `consolidated` (one anchor per version group; ordered lineage) | §8, §6.6 | ☐ | | `is_latest`; prior bodies as travel-with sidecars |
-| 4 | **index** | 🥇 DOC | `text@normalized`,`consolidated` → `index.db` (docs, sections + **FTS5 over is_latest**, entities, quality, **stable IDs**) | §8 | ☐ | | the lexical/structured search surface |
-| 4 | **relate** | 🥇 DOC | `index.db` → `index.db:relations` (doc↔entity, doc↔doc xref, entity↔entity) | §8 | ☐ | | the knowledge graph |
-| 4 | **manifest** | 🥇 DOC | `consolidated`,`index.db`,`vectors.db`,`state.db` → `corpus-manifest.json` + `discovery.json` | §8, §14 | ☐ | | lineage + machine-discovery descriptor |
-| **5 — Gold deliver (humans)** | | | per-doc fidelity verdict → published human tree → hard gate → push | §17.5 | ☐ 0/5 | | |
-| 5 | **fidelity** | 🥇 DOC | `text@normalized`,`raw`,`index.db`,`registries` → `reports/fidelity` (per-doc S→T verdict + corpus report) | §8; [`fidelity-framework.md`](fidelity-framework.md) | ☐ | | content/provenance/history axes + template compliance + TOC integrity |
-| 5 | **publish** | 🥇 DOC | manifest, `text@normalized`, `consolidated`, `assets`, `catalog.enriched`, `glossary` → `publish` (md-only tree + INDEX) | §8 | ☐ | | markdown-only; images materialized + gitignored |
-| 5 | **validate** | 🥇 DOC | `publish`,`text@normalized`,`index.db`,`vectors.db`,`reports/fidelity` → **HARD GATE** (schema·lineage·anchors·IDs·fidelity verdict) | §8, §7.3 | ☐ | | ALWAYS_RERUN; QUARANTINE blocks; REVIEW needs sign-off |
-| 5 | **push** | 🚀 DOC | `publish` (+ validate `ok`) → `git:vistadocs/vdl` (anchor files + lineage sidecars) | §8, §6.6 | ☐ | | FORCE_ONLY; commit-replay deferred behind `--replay-history` |
-| 5 | **analyze** | ⬩ DOC | `text@normalized` → `reports/{survey,headings,lexicon}` (off critical path) | §8 | ☐ | | diagnostic only |
-| **6 — Machine interface (§14)** | | | embeddings + the MCP server (hybrid search) — the headline machine output | §17.6, §14 | ☐ 0/2 | | |
-| 6 | **embed** | 🥇 DOC | `index.db:doc_sections` (**is_latest only**) → `vectors.db` (per-chunk embeddings + ANN) | §8, §14.6 | ☐ | | prior-version chunks excluded |
-| 6 | **serve-mcp** | 🥇 DOC | `index.db`,`vectors.db`,`corpus-manifest`,`discovery.json` → MCP server (semantic+lexical+structured+graph, RRF) | §14 | ☐ | | MCP Python SDK; read-only stores |
-| **7 — Harden** | | | property tests · `--verify` · `gc` · generated stage docs · history-replay · `refresh` | §17.7 | ◐ 2◐ | | filling robustness against a frozen spine |
-| 7 | property tests | — | Hypothesis property tests for the pure transforms | §10 | ◐ | `tests/property/*` (text, frontmatter, **normalize** — "no anchor points nowhere", §13) | extend to enrich + the remaining normalize transforms as they land |
-| 7 | `--verify` mode | — | upgrade fingerprints to full content hashes for CI/paranoid runs | §7.4 | ◐ | wired in `ArtifactContract.fingerprint(verify=)` | exercise end-to-end |
-| 7 | `gc` | — | sweep superseded silver trees | §17.7 | ☐ | | |
-| 7 | `docs/stages/` gen | — | per-stage reference generated from contracts | §17.7 | ☐ | | |
-| 7 | `push --replay-history` | — | build git commit history from `history.yaml` sidecars + retained prior bodies | §6.6 | ⬚ | | deferred git-native payoff |
-| 7 | `refresh` | — | scheduled crawl-diff + incremental re-processing; refresh fidelity/currency verdicts | §7.6 | ☐ | | drift: NEW/SUPERSEDED/CHANGED propagate only |
+*Compact, page-width view — terse goal only. **Full evidence, test counts, and rationale live in the
+Change Log** below and in `vdocs-design.md` §8. Status: ✅ done · ◐ partial · ☐ todo · ⬚ deferred.
+Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC = document medallion.*
 
-**Current focus:** **Phase 1 ✅, inventory medallion ✅, the whole document-silver pipeline runs on real
-docs** — `convert`/`discover`/`enrich`/`normalize` (v1) all green and verified on a real 469-doc corpus;
-pipeline is now **DOCX-only** (§1). `make check` green (316 tests, 100% cov, ruff + mypy clean). The
-**anchor substrate is shipped** — `refs.yaml` + bookmark→slug rewrite + round-trip back-links close the
-load-bearing Phase-4 prerequisite (§6.7/§5.5). **Next:** finish the remaining deferred `normalize` F-steps
-(tables→csv, boilerplate REFERENCE, template STRIP+STAMP, heading-level inference, in that order) **or**
-start **Phase 4** (`consolidate`→`index`→`relate`→`manifest`). The
-load-bearing ordering rule is to **build `discover` → `registries/` before `normalize`** so no pattern is
-ever hard-coded (§9.6, tenet #13): `convert` → `discover` → `enrich` → `normalize`.
+| Ph | Stage | Layer | St | Ref | Goal (requires → produces) |
+|:--:|---|:--:|:--:|---|---|
+| 1 | kernel | — | ✅ | §9.2 | cross-cutting primitives (text·cas·db·http·discovery·…) |
+| 1 | config | — | ✅ | §5.3 | `Settings` off `DATA_DIR`; all lake paths derived |
+| 1 | models/contracts | — | ✅ | §7.1 | Pydantic types; `ArtifactContract`; the registry |
+| 1 | orchestrator | — | ✅ | §7.1 | `Stage` base + DAG engine + `state.db:stage_runs` |
+| 2 | crawl | 🥉 INV | ✅ | §8 | vdl → catalog.raw (polite 3-level walk) |
+| 2 | catalog | 🥈 INV | ✅ | §8 | catalog.raw → catalog.enriched (5-pass + classify) |
+| 2 | serve-inventory | 🥇 INV | ✅ | §7.3 | → gold inventory; **HARD GATE = the fetch gate** |
+| 2 | fetch | 🥉 DOC | ✅ | §5.6 | gate + selection → bronze raw (CAS) + index.json |
+| 3 | convert | 🥈 DOC | ✅ | §1 | raw → text@converted + assets (Pandoc/Docling) |
+| 3 | discover | 🥈 DOC | ✅ | §9.6 | converted → reports/patterns → curate `registries/` |
+| 3 | enrich | 🥈 DOC | ✅ | §8 | converted → text@enriched (identity FM baked) |
+| 3 | normalize | 🥈 DOC | ✅ | §6.7 | enriched → text@normalized (+history/tables/refs; TOC) |
+| 4 | consolidate | 🥇 DOC | ☐ | §6.6 | normalized → consolidated (1 anchor/group; lineage) |
+| 4 | index | 🥇 DOC | ☐ | §8 | → index.db (sections+FTS5, entities, stable IDs) |
+| 4 | relate | 🥇 DOC | ☐ | §8 | index.db → relations (knowledge graph) |
+| 4 | manifest | 🥇 DOC | ☐ | §14 | → corpus-manifest.json + discovery.json |
+| 5 | fidelity | 🥇 DOC | ☐ | FF | → reports/fidelity (per-doc S→T verdict) |
+| 5 | publish | 🥇 DOC | ☐ | §8 | → publish (markdown-only tree + INDEX) |
+| 5 | validate | 🥇 DOC | ☐ | §7.3 | → **HARD GATE** (schema·lineage·anchors·IDs·fidelity) |
+| 5 | push | 🚀 DOC | ☐ | §6.6 | publish → git (anchor files + lineage sidecars) |
+| 5 | analyze | ⬩ DOC | ☐ | §8 | → reports/{survey,headings,lexicon} (off path) |
+| 6 | embed | 🥇 DOC | ☐ | §14.6 | doc_sections (is_latest) → vectors.db (per-chunk ANN) |
+| 6 | serve-mcp | 🥇 DOC | ☐ | §14 | → MCP server (semantic+lexical+structured+graph, RRF) |
+| 7 | property tests | — | ◐ | §10 | Hypothesis property tests for pure transforms |
+| 7 | --verify | — | ◐ | §7.4 | full-content-hash fingerprint mode |
+| 7 | gc | — | ☐ | §17.7 | sweep superseded silver trees |
+| 7 | docs/stages gen | — | ☐ | §17.7 | per-stage reference generated from contracts |
+| 7 | push --replay-history | — | ⬚ | §6.6 | git commits from history.yaml + prior bodies |
+| 7 | refresh | — | ☐ | §7.6 | crawl-diff + incremental reprocess |
+
+*Ref `FF` = [`fidelity-framework.md`](fidelity-framework.md).*
+
+**Open follow-ups (non-blocking, carried out of dropped detail columns):**
+- `normalize` — `callout`→GFM-alert + `revision-table`-heading **CANONICALIZE** consumers are curated in
+  `registries/structures` but **not yet applied** (the `toc` consumer shipped; these are their own increment).
+- `normalize` — template-governed **TOC depth** is still the **H2–H3 fallback** (§6.7) until
+  `registries/templates` depth is consumed (seam marked in `anchors_pure`/`stage.py`).
+- Phase 7 — extend **property tests** to `enrich` + remaining `normalize` transforms; exercise `--verify` e2e.
+- Two **dependabot PRs** (#1 actions/checkout, #2 setup-uv) remain open and independent.
+
+**Current focus → Phase 4 `consolidate`.** Phases 1–3 are ✅ and **merged to `master`** (origin tip
+`224ab51`): the inventory medallion + gated bronze, and the full document-silver pipeline
+(`convert`→`discover`→`enrich`→`normalize`), all green on a real 469-doc corpus, **DOCX-only** (§1);
+`make check` 385 tests, 100% cov. `normalize` shipped every F-step incl. the **legacy-TOC strip**
+(`registries/structures` CANONICALIZE `toc`). **Next:** `consolidate` (§6.6) — version-group grouping +
+anchor document + append-only `history.yaml` lineage — then `index`→`relate`→`manifest`. Kickoff prompt:
+[`docs/prompts/next-session-phase-4-kickoff.md`](prompts/next-session-phase-4-kickoff.md).
 
 **Dependency spine:** Phase 1 ⇒ Phase 2 (crawl→catalog→serve-inventory→**gate**→fetch) ⇒ Phase 3
 (convert→discover→enrich→normalize) ⇒ Phase 4 (consolidate→index→relate→manifest) ⇒ Phase 5
@@ -177,6 +183,20 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **`normalize` legacy-TOC strip (closes the duplicate-TOC deviation) + Phase 3 merged +
+  tracker compacted.** Wired the previously-orphaned `registries/structures` `toc` convention into
+  `normalize` as a registry-driven `strip_legacy_toc` F-step (keyed on a curated `match` variant list):
+  it removes the source's in-body table of contents — the legacy heading (`Table of Contents`/`Contents`,
+  H1–H3) plus its page-numbered entries up to the next heading — **before** the derived `## Contents` is
+  generated, so the normalized body carries exactly one TOC (§6.7/§9.6 CANONICALIZE). Root cause: a
+  curated registry with no consumer (see Lessons). The `callout` + `revision-table` structures consumers
+  remain curated-but-unbuilt (logged as follow-ups). Design §6.7/§8 + `registries/structures` README +
+  this tracker reconciled. TDD: unit + integration tests first (RED on missing `strip_legacy_toc`).
+  **385 tests, 100% cov.** PRs **#3** (Phase-3 P0–P2 + normalize), **#4** (5 compliance deviations), **#5**
+  (legacy-TOC) all **merged to `master`** (`224ab51`); only the two dependabot PRs remain open. Also
+  **compacted this tracker** to a page-width stage table (verbose Goal/Evidence/Notes columns → terse
+  one-liners; detail preserved here in the Change Log). Next: Phase 4 `consolidate`
+  ([`docs/prompts/next-session-phase-4-kickoff.md`](prompts/next-session-phase-4-kickoff.md)).
 - **2026-06-02** — **Design-compliance audit remediation (5 deviations fixed).** A full code-vs-design
   sweep of Phases 1–3 found the spine substantially faithful; five deviations were fixed TDD-first
   (397 tests, 100% cov, ruff+mypy clean). (1) **`contract_ver` now actually gates (§7.3 step 2).** It
