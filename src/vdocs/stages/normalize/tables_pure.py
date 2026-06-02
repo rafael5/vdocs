@@ -1,7 +1,7 @@
 """Pure complex-table extraction → ``tables/*.csv`` sidecars (§6.4/§6.5/§9.6).
 
 `convert` emits complex tables as raw HTML ``<table>`` (Pandoc) or GFM pipe tables (Docling). The
-revision-history table is handled separately (``revision_pure`` → ``history.yaml``); this module
+revision-history table is handled separately (``revision_pure`` → ``revisions.yaml``); this module
 handles the *remaining* data tables. **Qualifying** (genuinely large) tables — data dictionaries,
 long code/option tables — are lifted to a ``tables/*.csv`` bundle sidecar and replaced in the body
 with a markdown reference link, so the body stays readable and the tabular data stays queryable.

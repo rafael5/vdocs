@@ -109,7 +109,7 @@ def test_normalize_applies_f_steps_and_stamps_source_sha(ctx):
     assert "Real install steps." in body
 
 
-def test_normalize_writes_history_sidecar_and_strips_table(ctx):
+def test_normalize_writes_revisions_sidecar_and_strips_table(ctx):
     import yaml
 
     enriched = frontmatter.emit(
@@ -134,12 +134,13 @@ def test_normalize_writes_history_sidecar_and_strips_table(ctx):
         )  # fmt: skip
 
     (result,) = Orchestrator([NormalizeStage()]).run(ctx)
-    assert result.counts["history_sidecars"] == 1
+    assert result.counts["revision_sidecars"] == 1
 
     bundle = ctx.cfg.silver_normalized / "ADT" / "tm_doc"
     _, body = frontmatter.parse((bundle / "body.md").read_text())
     assert "<table" not in body and "Updated install" not in body  # apparatus stripped
-    history = yaml.safe_load((bundle / "history.yaml").read_text())
+    assert not (bundle / "history.yaml").exists()  # the cross-version lineage name is consolidate's
+    history = yaml.safe_load((bundle / "revisions.yaml").read_text())
     assert history["revision_count"] == 1
     assert history["revisions"][0] == {
         "date": "2024-03",

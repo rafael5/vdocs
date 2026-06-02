@@ -95,9 +95,9 @@ def test_find_revision_table_ignores_non_revision_pipe_table():
     assert rev.find_revision_table(body) is None  # header lacks date/change → not a revision table
 
 
-def test_history_sidecar_summary_and_records():
+def test_revision_sidecar_summary_and_records():
     _, records = rev.extract_revision_history(_HTML)
-    side = rev.history_sidecar(records)
+    side = rev.revision_sidecar(records)
     assert side["revision_count"] == 2
     assert side["revision_newest"] == "2024-03" and side["revision_oldest"] == "2020-01"
     assert side["revisions"][0]["change"] == "Updated install steps"

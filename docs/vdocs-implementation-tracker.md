@@ -233,6 +233,11 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):
+  - **A2 — `normalize` revision sidecar renamed `history.yaml` → `revisions.yaml`.** Closes the
+    latent filename collision with `consolidate`'s version-group lineage (§6.4 vs §6.6). Renamed
+    `revision_pure.history_sidecar` → `revision_sidecar`, the emitted filename, and the
+    `history_sidecars` count key → `revision_sidecars`. The design doc (§6.4/§6.6/§8) already
+    reserved the two grains; the code now matches.
   - **A1 — dead code removed.** Deleted `convert_pure.image_targets` (no `src/` caller) + its two
     tests. Documented `kernel.discovery.exact_jaccard` as the reference oracle for the
     `estimate_jaccard` property test (Phase D) — it stops being dead once that test lands.

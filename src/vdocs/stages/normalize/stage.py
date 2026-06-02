@@ -12,7 +12,8 @@ idempotently (§7.4, §9.6).
 
 Recognised bundle sidecars written next to ``body.md`` (the ``TEXT_NORMALIZED`` contract is a
 ``TREE_TEXT`` over the whole bundle, so they need no separate contract):
-  * ``history.yaml`` — the structured revision apparatus (§6.6).
+  * ``revisions.yaml`` — this document's own structured revision-history table (§6.4); the
+    cross-version ``history.yaml`` lineage is ``consolidate``'s artifact (§6.6).
   * ``tables/*.csv`` — qualifying complex tables lifted out of the body, body left a reference
     link (§6.4/§6.5).
   * ``refs.yaml`` — the ``(stable_section_id ↔ github_slug ↔ original_bookmark)`` anchor map +
@@ -62,14 +63,14 @@ class NormalizeStage(Stage):
 
         enriched_root = ctx.cfg.silver_enriched
         normalized_root = ctx.cfg.silver_normalized
-        n_docs = n_history = n_tables = n_refs = n_boiler = n_template = 0
+        n_docs = n_revision = n_tables = n_refs = n_boiler = n_template = 0
         for body_path in sorted(enriched_root.rglob("body.md")):
             rel = body_path.parent.relative_to(enriched_root)  # <app>/<slug>
             meta, body = frontmatter.parse(body_path.read_text(encoding="utf-8"))
             sha = sha_by_path.get((rel.parts[0], rel.parts[1]))
             if sha:
                 meta["source_sha256"] = sha
-            # strip the version apparatus → history.yaml (§6.6); then lift qualifying complex tables
+            # strip the version apparatus → revisions.yaml (§6.4); then lift qualifying tables
             # → tables/*.csv (§6.4/§6.5) — *after* revision extraction so it never grabs the
             # revision table; then run the body F-steps.
             # TEMPLATE SEAM: toc_depth defaults to the H2–H3 fallback; the template F-step will
@@ -94,18 +95,18 @@ class NormalizeStage(Stage):
             cas.atomic_write(normalized_root / rel / "body.md", out.encode("utf-8"))
             if revisions:
                 cas.atomic_write(
-                    normalized_root / rel / "history.yaml",
+                    normalized_root / rel / "revisions.yaml",
                     yaml.safe_dump(
-                        rev.history_sidecar(revisions), sort_keys=False, allow_unicode=True
+                        rev.revision_sidecar(revisions), sort_keys=False, allow_unicode=True
                     ).encode("utf-8"),
                 )
-                n_history += 1
+                n_revision += 1
             for tab in tables:  # one CSV per lifted table, inside the bundle's tables/ dir
                 cas.atomic_write(
                     normalized_root / rel / "tables" / tab.name, tab.csv_text.encode("utf-8")
                 )
             n_tables += len(tables)
-            if anchor_map.rows:  # conditional, like history.yaml — no anchors → no sidecar
+            if anchor_map.rows:  # conditional, like revisions.yaml — no anchors → no sidecar
                 cas.atomic_write(
                     normalized_root / rel / "refs.yaml",
                     yaml.safe_dump(
@@ -118,7 +119,7 @@ class NormalizeStage(Stage):
         return RunResult(
             counts={
                 "documents": n_docs,
-                "history_sidecars": n_history,
+                "revision_sidecars": n_revision,
                 "tables_sidecars": n_tables,
                 "refs_sidecars": n_refs,
                 "boilerplate_refs": n_boiler,

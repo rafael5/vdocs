@@ -1,9 +1,11 @@
-"""Pure revision-history extraction — the manual version apparatus → ``history.yaml`` (§6.6).
+"""Pure revision-history extraction — the manual version apparatus → ``revisions.yaml`` (§6.4).
 
 Word-origin manuals carry a revision-history table at the top. `normalize` strips that apparatus
-from the body (git carries lineage instead) and captures it as a structured ``history.yaml``
-sidecar that travels with the bundle — the source `push --replay-history` replays into commit
-history later (§6.6). Two table dialects are recognised: the HTML ``<table>`` Pandoc dumps, and
+from the body (git carries lineage instead) and captures it as a structured ``revisions.yaml``
+sidecar that travels with the bundle — this document's own revision-history table. `consolidate`
+later folds each version's ``revisions.yaml`` into the version group's cross-version
+``history.yaml`` lineage (the source `push --replay-history` replays later, §6.6). Two table
+dialects are recognised: the HTML ``<table>`` Pandoc dumps, and
 the GFM pipe table Docling emits (for the converter-routed docs). Ported from v1 ``vista-docs``;
 pure — plain values in, records + cleaned body out; the stage writes the sidecar.
 """
@@ -204,8 +206,10 @@ def extract_revision_history(body: str) -> tuple[str, list[RevisionRecord]]:
     return cleaned, records
 
 
-def history_sidecar(records: list[RevisionRecord]) -> dict:
-    """The ``history.yaml`` mapping: a summary + the ordered revision records (§6.6)."""
+def revision_sidecar(records: list[RevisionRecord]) -> dict:
+    """The ``revisions.yaml`` mapping: a summary + this document's own ordered revision-history
+    records (§6.4). Named for the per-document grain — the cross-version ``history.yaml`` *lineage*
+    (which folds each member's ``revisions.yaml``) is ``consolidate``'s artifact (§6.6)."""
     dates = [r.date for r in records if re.fullmatch(r"\d{4}-\d{2}", r.date)]
     return {
         "revision_count": len(records),

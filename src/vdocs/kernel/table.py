@@ -1,7 +1,7 @@
 """Shared HTML/GFM table-cell parsing primitives (§9.2/§11 anti-duplication).
 
 `convert` emits tables in two dialects — Pandoc HTML ``<table>`` and Docling GFM pipe tables.
-Two ``normalize`` F-steps parse them: ``revision_pure`` (→ ``history.yaml``) and ``tables_pure``
+Two ``normalize`` F-steps parse them: ``revision_pure`` (→ ``revisions.yaml``) and ``tables_pure``
 (→ ``tables/*.csv``). The cell/row/regex mechanics they share live here exactly once; each stage
 keeps only its stage-specific row interpretation. Pure: strings in, plain lists/strings out.
 """

@@ -14,7 +14,7 @@ v1's measured reality). Those bookmarks don't resolve on GitHub. This module:
   * inserts the round-trip **"↑ Back to Contents"** back-links that make navigation bidirectional.
 
 Pure: plain values in, records + rewritten body out; the stage writes the sidecar (mirrors
-``revision_pure`` / ``history.yaml``).
+``revision_pure`` / ``revisions.yaml``).
 """
 
 from __future__ import annotations
@@ -216,7 +216,7 @@ def insert_back_links(
 
 def anchor_sidecar(amap: AnchorMap) -> dict:
     """The ``refs.yaml`` mapping: doc id + chosen depth + the per-heading anchor rows + the
-    outbound cross-ref map (§6.7). Mirrors ``revision_pure.history_sidecar``."""
+    outbound cross-ref map (§6.7). Mirrors ``revision_pure.revision_sidecar``."""
     return {
         "doc_id": amap.doc_id,
         "toc_depth": list(amap.toc_depth),
