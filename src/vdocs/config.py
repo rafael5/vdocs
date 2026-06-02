@@ -138,6 +138,11 @@ class Settings(BaseSettings):
         """document-silver 01: raw markdown bundles from ``convert`` (pre-identity-FM)."""
         return self.silver_text / "01-converted"
 
+    @property
+    def silver_enriched(self) -> Path:
+        """document-silver 02: bundles with identity frontmatter baked in (from ``enrich``)."""
+        return self.silver_text / "02-enriched"
+
     # --- gold (curated, derived, computable) ---
     @property
     def gold(self) -> Path:

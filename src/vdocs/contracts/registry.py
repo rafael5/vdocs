@@ -121,6 +121,22 @@ PATTERNS = ArtifactContract(
     produced_by="discover",
     relpath="reports/patterns/patterns.json",
 )
+# `enrich`: bundles with identity frontmatter baked in + the staged doc-meta table for `index`.
+TEXT_ENRICHED = ArtifactContract(
+    key="silver/text@enriched",
+    kind=Kind.TREE_TEXT,
+    storage_class=StorageClass.TEXT_VERSIONED,
+    produced_by="enrich",
+    relpath="silver/text/02-enriched",
+)
+DOC_META_STAGED = ArtifactContract(
+    key="index.db:doc_meta_staged",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="enrich",
+    db="index.db",
+    table="doc_meta_staged",
+)
 
 
 def foundational_registry() -> ArtifactRegistry:
@@ -143,6 +159,8 @@ def default_registry() -> ArtifactRegistry:
         TEXT_CONVERTED,
         ASSETS,
         PATTERNS,
+        TEXT_ENRICHED,
+        DOC_META_STAGED,
     ):
         reg.register(contract)
     return reg

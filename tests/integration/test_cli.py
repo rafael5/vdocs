@@ -76,6 +76,7 @@ def test_help_lists_stage_subcommands():
         "fetch",
         "convert",
         "discover",
+        "enrich",
         "inventory",
         "run",
     ):
@@ -128,6 +129,7 @@ def _faked_stages():
     from vdocs.stages.convert.stage import ConvertStage
     from vdocs.stages.crawl.stage import CrawlStage
     from vdocs.stages.discover.stage import DiscoverStage
+    from vdocs.stages.enrich.stage import EnrichStage
     from vdocs.stages.fetch.stage import FetchStage
     from vdocs.stages.serve_inventory.stage import ServeInventoryStage
 
@@ -141,6 +143,7 @@ def _faked_stages():
         FetchStage(fetch_bytes=_BYTES.get),
         ConvertStage(convert=lambda data, ext: ConvertedDoc(markdown="# Converted\n")),
         DiscoverStage(),
+        EnrichStage(),
     ]
 
 
@@ -179,6 +182,15 @@ def test_crawl_catalog_fetch_commands_in_sequence(tmp_path, monkeypatch):
     # discover mines the converted corpus into the candidate-patterns report
     assert runner.invoke(app, ["discover"], env=env).exit_code == 0
     assert cfg.patterns_report.exists()
+
+    # enrich bakes identity frontmatter onto the converted bundle
+    assert runner.invoke(app, ["enrich"], env=env).exit_code == 0
+    enriched = list(cfg.silver_enriched.rglob("body.md"))
+    assert len(enriched) == 1
+    from vdocs.kernel import frontmatter
+
+    meta, _ = frontmatter.parse(enriched[0].read_text())
+    assert meta["app_code"] == "DG" and meta["title"].startswith("DG*5.3*1")
 
 
 def test_inventory_status_without_gold_inventory_errors(tmp_path):

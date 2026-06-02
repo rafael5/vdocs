@@ -24,14 +24,14 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 
 ## Overall status
 
-**Pipeline stages (§8): 4 ✅ · 2 ◐ · 13 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
+**Pipeline stages (§8): 5 ✅ · 2 ◐ · 12 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
 counted separately below). Last updated **2026-06-01**.
 
 | Phase | Title | Status | Progress |
 |---|---|---|---|
 | 1 | Spine (kernel · config · models · contracts · orchestrator) | ✅ | 4/4 |
 | 2 | Inventory medallion + doc-bronze | ◐ | 3/4 ✅ · `fetch` ◐ (selection flags) |
-| 3 | Silver — document text (convert · discover · enrich · normalize) | ◐ | `convert` ◐ · `discover` ✅ · enrich/normalize ☐ |
+| 3 | Silver — document text (convert · discover · enrich · normalize) | ◐ | `convert` ◐ · `discover` ✅ · `enrich` ✅ · `normalize` ☐ |
 | 4 | Gold derive (consolidate · index · relate · manifest) | ☐ | 0/4 |
 | 5 | Gold deliver (fidelity · publish · validate · push · analyze) | ☐ | 0/5 |
 | 6 | Machine interface (embed · serve-mcp) | ☐ | 0/2 |
@@ -51,10 +51,10 @@ counted separately below). Last updated **2026-06-01**.
 | 2 | **catalog** | 🥈 INV | `catalog.raw` → `catalog.enriched` (5-pass enrichment + system classification, §5 cols) | §8; spec §4 | ✅ | `test_enrich_pure`, `test_catalog_inventory` | **§7 distributions reproduce exactly** vs the pinned 8,834-row fixture |
 | 2 | **serve-inventory** | 🥇 INV | `catalog.enriched` → gold `inventory.{json,csv,db}`; **HARD GATE = the fetch gate** | §8, §7.3; spec §7 | ✅ | `test_serve_pure`, `test_serve_inventory` | gate green on the full corpus; `vdocs inventory --status` |
 | 2 | **fetch** | 🥉 DOC | gate `ok` + selection + `acquisitions` → `documents/bronze:raw` (CAS) + `index.json` + `acquisitions` | §8, §9.5 | ◐ | `test_fetch_pure`, `test_bronze_dag` | works (CAS, DOCX-pref, index, acquisitions, gate-wired); **explicit selection flags pending** (fetches all `noise==''`) |
-| **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ◐ 1.5/4 | | discover→registry seam built **before** normalize so no pattern is hard-coded |
+| **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ◐ 2.5/4 | | discover→registry seam built **before** normalize so no pattern is hard-coded |
 | 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc + Docling; CAS images) | §8 | ◐ | `test_convert_pure`, `test_convert_stage` | DOCX→md via Pandoc (GFM + `--extract-media`) works; bundles `<app>/<slug>/body.md`, images→asset CAS, refs rewritten; **PDF backend (Docling) deferred**; `assets` made an optional produce |
 | 3 | **discover** | 🥈 DOC | `text@converted` → `reports/patterns` (candidate boilerplate/templates/glossary/structure + disposition) | §8, §9.6 | ✅ | `test_discover_pure`, `test_discover_stage` | recurring-block miner (boilerplate REFERENCE / dead-phrase DELETE by block identity) + acronym glossary (PROMOTE); evidence + auto/review grade; **mutates no content**. Template/structural miners deferred |
-| 3 | **enrich** | 🥈 DOC | `text@converted`,`catalog.enriched` → `text@enriched` (identity FM baked) + `index.db:doc_meta_staged` | §8 | ☐ | | joins inventory identity onto each bundle |
+| 3 | **enrich** | 🥈 DOC | `text@converted`,`catalog.enriched` → `text@enriched` (identity FM baked) + `index.db:doc_meta_staged` | §8 | ✅ | `test_enrich_doc_pure`, `test_enrich_stage` | joins each bundle to its inventory record (by `<app>/<slug>`, DOCX-preferred), bakes identity FM via the kernel codec; **computed fields (word_count) staged to index.db, never in the body** (§6.3) |
 | 3 | **normalize** | 🥈 DOC | `text@enriched`,`raw`,`registries` → `text@normalized` (+ history/tables/refs sidecars; TOC regen) | §8, §6.7 | ☐ | | F1–F10; subtracts curated patterns; single-sources boilerplate/glossary; strips version apparatus |
 | **4 — Gold derive (machine)** | | | version groups + the queryable index + knowledge graph + manifests | §17.4 | ☐ 0/4 | | |
 | 4 | **consolidate** | 🥇 DOC | `text@normalized`,`assets` → `consolidated` (one anchor per version group; ordered lineage) | §8, §6.6 | ☐ | | `is_latest`; prior bodies as travel-with sidecars |
@@ -78,11 +78,10 @@ counted separately below). Last updated **2026-06-01**.
 | 7 | `push --replay-history` | — | build git commit history from `history.yaml` sidecars + retained prior bodies | §6.6 | ⬚ | | deferred git-native payoff |
 | 7 | `refresh` | — | scheduled crawl-diff + incremental re-processing; refresh fidelity/currency verdicts | §7.6 | ☐ | | drift: NEW/SUPERSEDED/CHANGED propagate only |
 
-**Current focus:** **Phase 1 ✅, inventory medallion ✅, Phase 3 underway** — `convert` (DOCX→bundles +
-image-CAS) and `discover` (pattern-candidate miners → `reports/patterns`) are in; the discover→registry
-seam now exists *before* `normalize`. `make check` green (223 tests, 100% cov, ruff + mypy clean).
-**Next in Phase 3: `enrich`** (bake identity frontmatter from `catalog.enriched` onto each bundle), then
-`normalize`. The
+**Current focus:** **Phase 1 ✅, inventory medallion ✅, Phase 3 nearly done** — `convert`, `discover`, and
+`enrich` (identity FM baked + doc metadata staged to `index.db`) are in. `make check` green (230 tests,
+100% cov, ruff + mypy clean). **Next: `normalize`** — the last document-silver stage (F1–F10 + sidecars;
+subtract the *curated* registries; TOC regen), which closes Phase 3. The
 load-bearing ordering rule is to **build `discover` → `registries/` before `normalize`** so no pattern is
 ever hard-coded (§9.6, tenet #13): `convert` → `discover` → `enrich` → `normalize`.
 
@@ -130,6 +129,14 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-01** — **Phase 3 `enrich` shipped (✅).** New `enrich` stage joins each `text@converted`
+  bundle to its inventory record (by the `<app>/<slug>` bundle path, DOCX-preferred, noise excluded) and
+  bakes the **identity frontmatter** (title/doc_type/app_code/section/pkg_ns/version/patch_id/source_url)
+  into `body.md` via the kernel codec → `text@enriched` (02-enriched); computed `word_count` and the full
+  identity are staged into `index.db:doc_meta_staged` for `index`. Per §6.3, **computed fields never enter
+  the body** (so a body diff stays a real content diff). `TEXT_ENRICHED` + `DOC_META_STAGED` contracts,
+  `silver_enriched` config, `vdocs enrich` CLI; reuses `convert`'s `safe_component` (no copy-paste).
+  230 tests, 100% cov.
 - **2026-06-01** — **Phase 3 `discover` shipped (✅).** New `discover` stage mines the converted corpus
   (proposals only, mutating nothing): a recurring-block miner keyed by block identity proposes
   `boilerplate` (REFERENCE) for longer meaningful blocks and `phrases` (DELETE) for short paper-era

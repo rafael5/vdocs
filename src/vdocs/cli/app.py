@@ -17,6 +17,7 @@ from vdocs.stages.catalog.stage import CatalogStage
 from vdocs.stages.convert.stage import ConvertStage
 from vdocs.stages.crawl.stage import CrawlStage
 from vdocs.stages.discover.stage import DiscoverStage
+from vdocs.stages.enrich.stage import EnrichStage
 from vdocs.stages.fetch.stage import FetchStage
 from vdocs.stages.serve_inventory.stage import ServeInventoryStage
 
@@ -34,6 +35,7 @@ def build_stages() -> list[Stage]:
         FetchStage(),
         ConvertStage(),
         DiscoverStage(),
+        EnrichStage(),
     ]
 
 
@@ -98,6 +100,12 @@ def convert(force: bool = typer.Option(False, "--force", "-f")) -> None:
 def discover(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Mine candidate patterns (boilerplate / dead phrases / glossary) into reports/patterns."""
     _drive(only="discover", force=force)
+
+
+@app.command()
+def enrich(force: bool = typer.Option(False, "--force", "-f")) -> None:
+    """Bake identity frontmatter onto converted bundles (text@enriched) + stage doc metadata."""
+    _drive(only="enrich", force=force)
 
 
 @app.command()
