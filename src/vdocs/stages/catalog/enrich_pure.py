@@ -128,7 +128,14 @@ def classify_noise(url: str, vba_hosts: frozenset[str]) -> str:
 
 
 def make_doc_slug(doc_filename: str) -> str:
-    """URL-safe stem: lowercased, non-alnum → '_', trimmed. PDF/DOCX pairs share it."""
+    """Filesystem-path slug for a document's bundle: lowercased stem, **every** non-alnum run → '_',
+    trimmed. PDF/DOCX pairs share it.
+
+    Deliberately NOT ``kernel.text.slugify`` (the GitHub-anchor rule): this is a path-safety
+    transform that *collapses* punctuation rather than dropping it, so a filename version like
+    ``DG_5.3`` becomes ``dg_5_3`` (the ``.`` is a separator here, not deleted as in an anchor).
+    Different purpose, different rule — kept local to ``catalog`` (its only consumer), not a §9.2
+    duplicate of the anchor slug."""
     stem = PurePosixPath(doc_filename).stem
     return _SLUG_NON_ALNUM.sub("_", stem.lower()).strip("_")
 

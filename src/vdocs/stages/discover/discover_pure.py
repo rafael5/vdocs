@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from vdocs.kernel import discovery as kd
 from vdocs.kernel.markdown import iter_headings
 from vdocs.kernel.text import block_key as block_key  # shared block identity (§9.2); re-exported
-from vdocs.kernel.text import decade_bucket
+from vdocs.kernel.text import decade_bucket, slugify
 
 _WS = re.compile(r"\s+")
 _BLOCK_SPLIT = re.compile(r"\n\s*\n")
@@ -52,7 +52,6 @@ _REVTABLE_RE = re.compile(
 # `decade_bucket` — also used by `normalize` template matching). The title-page window is the front
 # matter; missing date yields "unknown".
 _TITLE_PAGE_LINES = 40  # the title-page window (front matter) scanned for a publication date
-_SLUG_STRIP = re.compile(r"[^a-z0-9]+")
 
 # common all-caps English/header words that are not glossary terms (real-corpus noise: the
 # acronym shape over-matches NO/YES/TO/… and form-field labels). Curation can still add real ones.
@@ -389,7 +388,9 @@ def parse_scaffold(body: str) -> list[tuple[int, str]]:
 
 
 def _slug(title: str) -> str:
-    return _SLUG_STRIP.sub("-", title.lower()).strip("-") or "section"
+    # the shared GitHub-anchor rule (§9.2/D3): a section's slug now MATCHES the anchor `normalize`
+    # emits for the same heading, so `index` can join a discovered section to its published heading.
+    return slugify(title, fallback="section")
 
 
 def mine_templates(

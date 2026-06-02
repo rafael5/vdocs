@@ -181,6 +181,15 @@ def test_extract_era_buckets_title_page_date_by_decade():
     assert dp.extract_era("# Guide\n\n" + "x\n" * 80 + "June 1995\n") == "unknown"
 
 
+def test_discover_section_slug_matches_github_anchor():
+    # the index-join fix (B2/D3): discover's section slug == the GitHub anchor `normalize` emits,
+    # so `index` can join a discovered section to its published heading. Both call kernel.slugify.
+    from vdocs.stages.normalize import anchors_pure as ac
+
+    for title in ("Sign-On & Security_Setup", "Getting Started", "Options (v3)"):
+        assert dp._slug(title) == ac.github_slug(title, {})
+
+
 def test_parse_scaffold_recognizes_oversized_headings_and_skips_fences():
     # the `#{1,6}` → `#+` unification (B1): >6-`#` headings are real scaffold; H1 + fenced + the
     # generated `## Contents` marker are excluded

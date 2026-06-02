@@ -3,6 +3,21 @@
 from vdocs.kernel import text
 
 
+def test_slugify_keeps_github_rule_and_honors_sep_and_fallback():
+    # the single slug primitive: drop punctuation, keep word chars/hyphens, spaces→sep
+    assert text.slugify("Getting Started") == "getting-started"
+    assert text.slugify("Sign On", sep="_") == "sign_on"
+    assert text.slugify("", fallback="section") == "section"
+    assert text.slugify("&&&", fallback="x") == "x"  # all-punctuation → empty → fallback
+
+
+def test_github_slug_base_is_slugify_with_hyphen():
+    # github_slug_base is just slugify(sep='-'); behavior pinned (GitHub-accurate) is unchanged
+    assert text.github_slug_base("FileMan & the Data_Dictionary (v22.2)") == text.slugify(
+        "FileMan & the Data_Dictionary (v22.2)"
+    )
+
+
 def test_github_slug_base_lowercases_and_hyphenates():
     assert text.github_slug_base("Getting Started") == "getting-started"
 

@@ -43,14 +43,28 @@ def safe_component(name: str) -> str:
     return _PATH_UNSAFE.sub("_", name).strip("_") or "_"
 
 
+def slugify(text: str, *, sep: str = "-", fallback: str = "") -> str:
+    """The single slug primitive (§9.2/D3): lowercase, drop punctuation, keep word chars and
+    existing hyphens, render spaces as ``sep``; empty result → ``fallback``.
+
+    This is the **GitHub heading-anchor rule** (so the anchors ``normalize`` emits, ``discover``'s
+    section ids, and ``index``'s canonical section ids all agree — closing the latent index-join
+    divergence). ``sep`` lets a caller pick the separator (``-`` for anchors, ``_`` elsewhere);
+    ``fallback`` names an otherwise-empty slug. *Not* the catalog **filesystem** slug —
+    ``catalog.make_doc_slug`` keeps its own path-safety rule (collapse every non-alnum run,
+    so ``5.3`` → ``5_3``), a deliberately different transform for bundle paths, not anchors."""
+    return (_GH_SLUG_DROP.sub("", text.strip().lower()).replace(" ", sep)) or fallback
+
+
 def github_slug_base(text: str) -> str:
     """The GitHub heading-anchor slug *base* (lowercase, punctuation dropped, spaces→hyphens),
     **without** duplicate disambiguation (§6.7).
 
-    The single home for the GitHub-slug rule shared by the published-markdown anchors, the TOC,
-    and (soon) ``index``'s canonical section IDs (§5.5/§9.2). ``anchors_pure.github_slug`` layers
-    GitHub's ``-1``/``-2`` document-order dedup on top of this base."""
-    return _GH_SLUG_DROP.sub("", text.strip().lower()).replace(" ", "-")
+    Thin alias for :func:`slugify` (sep ``-``) — the shared home for the GitHub-slug rule used by
+    the published-markdown anchors, the TOC, ``discover``'s section ids, and ``index``'s canonical
+    section IDs (§5.5/§9.2). ``anchors_pure.github_slug`` layers GitHub's ``-1``/``-2``
+    document-order dedup on top of this base."""
+    return slugify(text)
 
 
 def block_key(block: str) -> str:

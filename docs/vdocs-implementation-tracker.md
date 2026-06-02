@@ -233,6 +233,16 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):
+  - **B2 — `kernel.text.slugify`: one slug primitive (D3).** Added
+    `slugify(text, *, sep="-", fallback="")` (the GitHub-anchor rule); `github_slug_base` is now a
+    thin alias and `discover_pure._slug` calls it with `fallback="section"` — so a discovered
+    section's slug **provably matches** the GitHub anchor `normalize` emits for the same heading
+    (new cross-check test), closing the latent `index`-join divergence. **Hard-blocker surfaced &
+    decided (doc-first):** `catalog.make_doc_slug` is a genuinely different transform — a
+    *filesystem-path* slug that **collapses** every non-alnum run (so `DG_5.3` → `dg_5_3`), where
+    the anchor rule **drops** punctuation (`v22.2` → `v222`). A single `slugify(sep=…)` cannot
+    produce both without breaking one of the two pinned tests, so `make_doc_slug` stays catalog-local
+    with a docstring explaining the deliberate distinction (it has one consumer → not a §9.2 dup).
   - **B1 — `kernel/markdown.py`: the single markdown-primitive home (D1, D2).** New kernel module
     owning `HEADING_RE` (canonical `#+`), `FENCE_RE`, `MULTI_BLANK`, and a fence-aware
     `iter_headings(body) → (line_idx, level, text)` generator (skips fenced code + the generated
