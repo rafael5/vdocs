@@ -67,6 +67,13 @@ class Stage(ABC):
         """Stage-specific output gate; default passes. ``validate`` overrides this (§7.3)."""
         return PostflightResult(ok=True)
 
+    def extra_input_fps(self, ctx: StageContext) -> dict[str, str]:
+        """Stage-specific contributions to the input fingerprint, beyond the ``requires``
+        contracts (§7.3). The default is none; ``fetch`` overrides it to fold its resolved
+        selection into ``inputs_fp`` so the selection participates in ``SKIP_IF_UNCHANGED``
+        (§5.6). Keys must not collide with any ``requires`` artifact key."""
+        return {}
+
     # --- generic preflight (§7.3) ---
     def preflight(self, ctx: StageContext, force: bool) -> PreflightResult:
         cfg = ctx.cfg
@@ -135,11 +142,13 @@ class Stage(ABC):
 
     # --- helpers ---
     def _input_fps(self, ctx: StageContext) -> dict[str, str]:
-        return {
+        fps = {
             c.key: c.fingerprint(ctx.cfg, verify=ctx.verify)
             for c in self.requires
             if c.validate(ctx.cfg).ok
         }
+        fps.update(self.extra_input_fps(ctx))
+        return fps
 
     def _write(
         self,

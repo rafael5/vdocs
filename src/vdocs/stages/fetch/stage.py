@@ -16,6 +16,7 @@ from vdocs.kernel.cas import Cas, atomic_write
 from vdocs.models.catalog import EnrichedInventory
 from vdocs.models.stage import Acquisition, Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
+from vdocs.stages.fetch.fetch_pure import Selection
 
 ByteFetcher = Callable[[str], bytes | None]
 
@@ -29,8 +30,17 @@ class FetchStage(Stage):
     produces = [RAW_TREE, RAW_INDEX]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
 
-    def __init__(self, fetch_bytes: ByteFetcher | None = None) -> None:
+    def __init__(
+        self, fetch_bytes: ByteFetcher | None = None, selection: Selection | None = None
+    ) -> None:
         self._get = fetch_bytes or http.get_bytes
+        # The §5.6 selection surface. Default = empty ⇒ select nothing (no blind download); the
+        # CLI sets it from the operator's flags. Public + mutable so the driver can inject it.
+        self.selection = selection or Selection()
+
+    def extra_input_fps(self, ctx: StageContext) -> dict[str, str]:
+        # the resolved selection participates in SKIP_IF_UNCHANGED (§5.6/§7.3)
+        return {"selection": self.selection.fingerprint()}
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.stages.fetch import fetch_pure as fp
@@ -38,7 +48,7 @@ class FetchStage(Stage):
         inventory = EnrichedInventory.model_validate_json(
             ctx.cfg.gold_inventory_json.read_text(encoding="utf-8")
         )
-        targets = fp.select_fetch_targets(inventory.records)
+        targets = fp.select_fetch_targets(inventory.records, self.selection)
 
         store = Cas(ctx.cfg.bronze_raw)
         index: dict[str, dict[str, str]] = {}

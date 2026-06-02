@@ -548,17 +548,26 @@ with `out_of_scope_reason` set, just as it skips `noise_type` rows), and the `in
 reports it with status **`out_of_scope`** rather than the misleading `not_acquired`. `doc_format` is not
 itself a selectable filter; `out_of_scope_reason` is the single source of truth for "is this fetchable."
 
-**Where selection lives, and lineage.** The resolved selection (the normalized predicate + the
-concrete `doc_id` set it expands to) is recorded as part of `fetch`'s **input fingerprint** (§7.3),
-so it participates in `SKIP_IF_UNCHANGED`: re-running with the same selection is a no-op; broadening
-it (a superset) fetches only the newly-included documents, leaving prior `acquisitions` rows
-untouched. Narrowing a selection **never deletes** already-fetched bronze (CAS is write-once, §5.1) —
-it only changes what this run targets. CLI flags are the primary surface; a curated selection **file**
-(`--select <path>`, one `doc_id` per line) is the durable, reviewable form for a fixed corpus, and
-`Settings` may carry a default selection for unattended/scheduled runs. The operator decides the
-selection by inspecting the green gold inventory's browsable/queryable surface (`inventory_status` =
-enriched ⋈ acquisitions, §5.5) — building the inventory track is the prerequisite for selecting, not
-an afterthought.
+**Where selection lives, and lineage.** The resolved selection's **normalized predicate** is recorded
+as part of `fetch`'s **input fingerprint** (§7.3) — via the generic `Stage.extra_input_fps` hook, which
+folds a stable, order-independent hash of the selection into `inputs_fp` alongside the `requires`
+contracts — so it participates in `SKIP_IF_UNCHANGED`: re-running with the same selection is a no-op;
+changing it re-runs. The *concrete `doc_id` set* the selection expands to need not be hashed separately:
+the gold inventory is itself a required `fetch` input, so any inventory change that would grow that set
+already trips the gate via `GOLD_INVENTORY`'s fingerprint. Broadening a selection (a superset) thus
+fetches only the newly-included documents, leaving prior `acquisitions` rows untouched. Narrowing a
+selection **never deletes** already-fetched bronze (CAS is write-once, §5.1) — it only changes what this
+run targets. CLI flags are the primary surface; a curated selection **file** (`--select <path>`, one
+`doc_id` per line) is the durable, reviewable form for a fixed corpus, and `Settings` may carry a default
+selection for unattended/scheduled runs. The operator decides the selection by inspecting the green gold
+inventory's browsable/queryable surface (`inventory_status` = enriched ⋈ acquisitions, §5.5) — building
+the inventory track is the prerequisite for selecting, not an afterthought.
+
+The version-completeness invariant is realized by grouping on the version-free **`anchor_key`**
+(`app:pkg:doc_code`, §9.4): a selection that matches any row pulls in every genuine in-scope row sharing
+its `anchor_key`, so selecting one patch acquires the whole lineage. Rows whose `doc_code` is still
+unresolved (empty `anchor_key`) are selected as singletons; authoritative cross-version grouping for
+those is finalized by `consolidate` (§6.6).
 
 ---
 

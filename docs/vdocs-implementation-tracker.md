@@ -24,14 +24,14 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 
 ## Overall status
 
-**Pipeline stages (§8): 6 ✅ · 2 ◐ · 11 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
-counted separately below). Last updated **2026-06-01**. **The full document-silver pipeline runs
+**Pipeline stages (§8): 7 ✅ · 1 ◐ · 11 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
+counted separately below). Last updated **2026-06-02**. **The full document-silver pipeline runs
 end-to-end on a real 469-doc VA corpus** (seeded offline from v1's `raw/`), not just fixtures.
 
 | Phase | Title | Status | Progress |
 |---|---|---|---|
 | 1 | Spine (kernel · config · models · contracts · orchestrator) | ✅ | 4/4 |
-| 2 | Inventory medallion + doc-bronze | ◐ | 3/4 ✅ · `fetch` ◐ (selection flags; now DOCX-only §1) |
+| 2 | Inventory medallion + doc-bronze | ✅ | 4/4 (`fetch` selection surface landed; DOCX-only §1) |
 | 3 | Silver — document text (convert · discover · enrich · normalize) | ◐ | `convert` ✅ · `discover` ✅ · `enrich` ✅ · `normalize` ◐ (v1) |
 | 4 | Gold derive (consolidate · index · relate · manifest) | ☐ | 0/4 |
 | 5 | Gold deliver (fidelity · publish · validate · push · analyze) | ☐ | 0/5 |
@@ -47,11 +47,11 @@ end-to-end on a real 469-doc VA corpus** (seeded offline from v1's `raw/`), not 
 | 1 | config | — | `Settings` off `DATA_DIR`; all lake paths derived; no module-level path constants | §5.3, §9.1 | ✅ | `test_config` | inventory medallion + gold-inventory + registries paths added |
 | 1 | models / contracts | — | Pydantic boundary types; `ArtifactContract` (locate/validate/fingerprint); the registry | §7.1 | ✅ | `test_artifact`, `test_registry` | |
 | 1 | orchestrator | — | `Stage` base (generic preflight/postflight), DAG engine, `state.db:stage_runs` | §7.1–7.3 | ✅ | `test_noop_dag`, `test_engine_edges` | one execution path; no stage re-implements gating |
-| **2 — Inventory medallion + doc-bronze** | | | gold inventory of the whole site + the fetch gate, then a selected bronze | §4, §17.2 | ◐ 3/4 | see [`vdl-crawl-tracker.md`](vdl-crawl-tracker.md) | inventory medallion ✅; `fetch` ◐ (selection flags) |
+| **2 — Inventory medallion + doc-bronze** | | | gold inventory of the whole site + the fetch gate, then a selected bronze | §4, §17.2 | ✅ 4/4 | see [`vdl-crawl-tracker.md`](vdl-crawl-tracker.md) | inventory medallion ✅; `fetch` selection surface ✅ |
 | 2 | **crawl** | 🥉 INV | `vdl` → `inventory/bronze:catalog.raw` (polite 3-level walk; final-URL base; skip non-200) | §8; spec §3 | ✅ | `test_crawl_pure`, `test_crawl_stage` | live bounded smoke (B3) still manual |
 | 2 | **catalog** | 🥈 INV | `catalog.raw` → `catalog.enriched` (5-pass enrichment + system classification, §5 cols) | §8; spec §4 | ✅ | `test_enrich_pure`, `test_catalog_inventory` | **§7 distributions reproduce exactly** vs the pinned 8,834-row fixture |
 | 2 | **serve-inventory** | 🥇 INV | `catalog.enriched` → gold `inventory.{json,csv,db}`; **HARD GATE = the fetch gate** | §8, §7.3; spec §7 | ✅ | `test_serve_pure`, `test_serve_inventory` | gate green on the full corpus; `vdocs inventory --status` |
-| 2 | **fetch** | 🥉 DOC | gate `ok` + selection + `acquisitions` → `documents/bronze:raw` (CAS) + `index.json` + `acquisitions` | §8, §9.5 | ◐ | `test_fetch_pure`, `test_bronze_dag` | works (CAS, DOCX-pref, index, acquisitions, gate-wired); **explicit selection flags pending** (fetches all `noise==''`) |
+| 2 | **fetch** | 🥉 DOC | gate `ok` + **selection** (§5.6) + `acquisitions` → `documents/bronze:raw` (CAS) + `index.json` + `acquisitions` | §8, §5.6, §9.5 | ✅ | `test_fetch_pure`, `test_fetch_stage`, `test_bronze_dag`, `test_cli` | CAS, DOCX-pref, index, acquisitions, gate-wired. **Selection surface**: AND-across/OR-within dimension filters (`--app/--section/--status/--doc-type/--group/--select/--all`), **no blind download** (default fetches nothing + prints count), `--dry-run`; **version completeness** via `anchor_key` group expansion; selection in `inputs_fp` (`extra_input_fps`) so it joins `SKIP_IF_UNCHANGED` |
 | **3 — Silver (document text)** | | | bytes → conformed, normalized markdown bundles; discovery→registry seam first | §17.3 | ◐ 2.5/4 | | discover→registry seam built **before** normalize so no pattern is hard-coded |
 | 3 | **convert** | 🥈 DOC | `raw`,`index.json` → `text@converted` + `assets` (Pandoc/Docling; CAS images) | §8, §1, ADR-010 | ✅ | `test_convert_pure`, `test_convert_stage` + real 469-doc run | **DOCX-only** (§1). Pandoc GFM + `--extract-media`; images→asset CAS, refs rewritten (markdown + HTML `<img>` by basename). **Per-doc converter routing** via `registries/converter-routing` → Docling (out-of-process CLI; typer conflict forbids in-proc), **routes `CPRS/cprsguium`** — verified end-to-end: bare markers 3,058→0, list items 332→3,230, +559 image refs. EMF/WMF→PNG + the few residual `<!-- image -->` deferred |
 | 3 | **discover** | 🥈 DOC | `text@converted` → `reports/patterns` (candidate boilerplate/templates/glossary/structure/converter-routing + disposition) | §8, §9.6 | ✅ | `test_discover_pure`, `test_discover_stage` + real run | recurring-block miner (template RETAIN / phrase DELETE / boilerplate REFERENCE) + acronym glossary (PROMOTE) + **convert-quality probe** (`mine_converter_routing`: flags structureless Pandoc output → Docling ROUTE candidates; real corpus = 45 flagged, 25 CPRS); evidence + grade; **mutates no content** |
@@ -161,6 +161,16 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **`fetch` selection surface (§5.6) — Phase 2 finished.** Replaced fetch's
+  "download every genuine row" with an explicit selection: a pure `Selection` value object (six
+  dimension filters — `--app/--section/--status/--doc-type/--group/--select`, AND across dimensions,
+  OR within; plus `--all`), applied by `select_fetch_targets` after the always-on noise gate + DOCX
+  scope. **No blind download**: with no selection `vdocs fetch` fetches nothing and prints the available
+  count; `--dry-run` previews a selection's match count. **Version completeness** (invariant 2) via
+  `anchor_key` group expansion — selecting one patch pulls the whole lineage. The resolved selection's
+  predicate enters fetch's `inputs_fp` through a new generic `Stage.extra_input_fps` hook, so it
+  participates in `SKIP_IF_UNCHANGED` (the expanded id-set is covered transitively by the
+  `GOLD_INVENTORY` require). §5.6 refined to document the realization. 295 tests, 100% cov.
 - **2026-06-02** — **`kernel/text.clean` made idempotent again after the ftfy switch.** Follow-up to the
   mojibake unification: a Hypothesis seed found `clean(clean(x)) != clean(x)` for inputs like
   `"Â\x0c\x80"` — an interstitial control byte hid adjacent mojibake from ftfy on the first pass and it

@@ -48,13 +48,14 @@ def _drive(
     only: str | None = None,
     force: bool = False,
     verify: bool = False,
+    stages: list[Stage] | None = None,
 ) -> None:
     cfg = Settings()
     cfg.lake.mkdir(parents=True, exist_ok=True)
     store = StateStore.open(cfg.state_db)
     ctx = StageContext(cfg=cfg, state=store, verify=verify)
     try:
-        results = Orchestrator(build_stages()).run(
+        results = Orchestrator(stages or build_stages()).run(
             ctx, from_=from_stage, to=to_stage, only=only, force=force
         )
     except StageFailed as exc:
@@ -86,10 +87,84 @@ def serve_inventory(force: bool = typer.Option(False, "--force", "-f")) -> None:
     _drive(only="serve-inventory", force=force)
 
 
+def _flatten(values: list[str]) -> frozenset[str]:
+    """Repeatable + comma-separated option values → a flat set (``--app A,B --app C``)."""
+    return frozenset(v.strip() for raw in values for v in raw.split(",") if v.strip())
+
+
+def _read_select_file(path: str) -> frozenset[str]:
+    """One ``doc_id`` per line (blank lines and ``#`` comments ignored) — the §5.6 curated list."""
+    from pathlib import Path
+
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    return frozenset(s.strip() for s in lines if s.strip() and not s.lstrip().startswith("#"))
+
+
 @app.command()
-def fetch(force: bool = typer.Option(False, "--force", "-f")) -> None:
-    """Download catalog documents into the content-addressed bronze raw store."""
-    _drive(only="fetch", force=force)
+def fetch(
+    apps: list[str] = typer.Option([], "--app", help="app code (exact) or app-name substring"),
+    sections: list[str] = typer.Option([], "--section", help="section code (exact)"),
+    statuses: list[str] = typer.Option([], "--status", help="app status: active|decommissioned"),
+    doc_types: list[str] = typer.Option([], "--doc-type", help="doc code, e.g. UM, DIBR (exact)"),
+    groups: list[str] = typer.Option([], "--group", help="group_key or anchor_key (exact)"),
+    select_file: str = typer.Option(None, "--select", help="file of doc_ids, one per line"),
+    all_: bool = typer.Option(False, "--all", help="select the whole genuine inventory"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="report the match count, fetch nothing"),
+    force: bool = typer.Option(False, "--force", "-f"),
+) -> None:
+    """Download a **selection** of documents into the content-addressed bronze raw store (§5.6).
+
+    There is no blind/full download: with no selection this fetches nothing and prints how many
+    genuine in-scope documents are available. Narrow with the dimension filters (AND across them,
+    OR within each), or take the whole genuine inventory with ``--all``. The selection always
+    acquires every version in a selected logical document's lineage (§5.6 invariant 2).
+    """
+    from vdocs.models.catalog import EnrichedInventory
+    from vdocs.stages.fetch.fetch_pure import Selection, select_fetch_targets
+
+    cfg = Settings()
+    if not cfg.gold_inventory_json.exists():
+        typer.echo("no gold inventory yet — run: vdocs serve-inventory")
+        raise typer.Exit(code=1)
+    records = EnrichedInventory.model_validate_json(
+        cfg.gold_inventory_json.read_text(encoding="utf-8")
+    ).records
+    selection = Selection(
+        apps=_flatten(apps),
+        sections=_flatten(sections),
+        statuses=_flatten(statuses),
+        doc_types=_flatten(doc_types),
+        groups=_flatten(groups),
+        ids=_read_select_file(select_file) if select_file else frozenset(),
+        all_=all_,
+    )
+
+    available = len(select_fetch_targets(records, Selection(all_=True)))
+    if selection.is_empty:
+        typer.echo(
+            f"no selection — fetched nothing. {available} genuine in-scope documents available; "
+            "narrow with --app/--section/--status/--doc-type/--group/--select, or all with --all."
+        )
+        return
+    targets = select_fetch_targets(records, selection)
+    if dry_run:
+        typer.echo(
+            f"selection matches {len(targets)} of {available} genuine in-scope documents "
+            "(dry-run; nothing fetched)."
+        )
+        return
+    if not targets:
+        typer.echo(
+            f"selection matched 0 of {available} genuine in-scope documents — nothing to fetch."
+        )
+        return
+
+    stages = build_stages()
+    for stage in stages:
+        if stage.name == "fetch":
+            stage.selection = selection  # type: ignore[attr-defined]
+    typer.echo(f"fetching {len(targets)} of {available} genuine in-scope documents…")
+    _drive(only="fetch", stages=stages, force=force)
 
 
 @app.command()

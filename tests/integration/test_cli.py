@@ -93,6 +93,76 @@ def test_catalog_command_enriches(tmp_path):
     assert enriched["records"][0]["patch_id"] == "DG*5.3*1057"
 
 
+def _seed_gold_inventory(tmp_path):
+    """A gold inventory with one genuine DOCX, its PDF twin (out of scope), and a noise row."""
+    from vdocs.models.catalog import EnrichedInventory, EnrichedRecord
+
+    def rec(slug, fmt, *, noise="", app="ADT"):
+        return EnrichedRecord(
+            doc_title="T",
+            doc_url=f"https://va.gov/d/{slug}.{fmt}",
+            doc_filename=f"{slug}.{fmt}",
+            doc_format=fmt,
+            app_name_abbrev=app,
+            app_name_full=f"{app} App ({app})",
+            section_code="CLIN",
+            doc_slug=slug,
+            doc_code="DIBR",
+            anchor_key=f"{app}:DG:DIBR",
+            noise_type=noise,
+        )
+
+    cfg = Settings(data_dir=tmp_path)
+    cfg.inventory_gold.mkdir(parents=True, exist_ok=True)
+    records = [rec("d1", "docx"), rec("d1", "pdf"), rec("form", "docx", noise="vba_form")]
+    cfg.gold_inventory_json.write_text(EnrichedInventory(records=records).model_dump_json())
+    return cfg
+
+
+def test_fetch_no_selection_fetches_nothing_and_reports_count(tmp_path):
+    _seed_gold_inventory(tmp_path)
+    env = {"DATA_DIR": str(tmp_path)}
+    result = runner.invoke(app, ["fetch"], env=env)
+    assert result.exit_code == 0
+    # no blind download (§5.6): nothing fetched, the available count is reported
+    assert "1 genuine" in result.stdout and "--all" in result.stdout
+    assert not Settings(data_dir=tmp_path).raw_index.exists()
+
+
+def test_fetch_dry_run_reports_match_count_without_fetching(tmp_path):
+    _seed_gold_inventory(tmp_path)
+    env = {"DATA_DIR": str(tmp_path)}
+    result = runner.invoke(app, ["fetch", "--all", "--dry-run"], env=env)
+    assert result.exit_code == 0
+    assert "matches 1" in result.stdout
+    assert not Settings(data_dir=tmp_path).raw_index.exists()
+
+
+def test_fetch_non_matching_selection_fetches_nothing(tmp_path):
+    _seed_gold_inventory(tmp_path)
+    env = {"DATA_DIR": str(tmp_path)}
+    result = runner.invoke(app, ["fetch", "--app", "NOPE"], env=env)
+    assert result.exit_code == 0
+    assert "0 of 1" in result.stdout
+    assert not Settings(data_dir=tmp_path).raw_index.exists()
+
+
+def test_fetch_select_file_is_read(tmp_path):
+    _seed_gold_inventory(tmp_path)
+    ids = tmp_path / "ids.txt"
+    ids.write_text("# a curated list\nADT:d1\n\n")  # blank + comment lines ignored
+    env = {"DATA_DIR": str(tmp_path)}
+    result = runner.invoke(app, ["fetch", "--select", str(ids), "--dry-run"], env=env)
+    assert result.exit_code == 0
+    assert "matches 1" in result.stdout
+
+
+def test_fetch_without_gold_inventory_errors(tmp_path):
+    result = runner.invoke(app, ["fetch", "--all"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 1
+    assert "serve-inventory" in result.stdout
+
+
 def test_run_only_catalog(tmp_path):
     _seed_catalog_raw(tmp_path)
     result = runner.invoke(app, ["run", "--only", "catalog"], env={"DATA_DIR": str(tmp_path)})
@@ -164,7 +234,7 @@ def test_crawl_catalog_fetch_commands_in_sequence(tmp_path, monkeypatch):
     assert runner.invoke(app, ["serve-inventory"], env=env).exit_code == 0
     assert cfg.gold_inventory_json.exists() and cfg.gold_inventory_db.exists()
 
-    assert runner.invoke(app, ["fetch"], env=env).exit_code == 0
+    assert runner.invoke(app, ["fetch", "--all"], env=env).exit_code == 0
     assert json.loads(cfg.raw_index.read_text())
 
     # the inventory ⋈ acquisitions status view reflects the fetched document

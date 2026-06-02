@@ -14,6 +14,7 @@ from vdocs.models.catalog import EnrichedInventory
 from vdocs.orchestrator.engine import Orchestrator
 from vdocs.stages.catalog.stage import CatalogStage
 from vdocs.stages.crawl.stage import CrawlStage
+from vdocs.stages.fetch.fetch_pure import Selection
 from vdocs.stages.fetch.stage import FetchStage
 from vdocs.stages.serve_inventory.stage import ServeInventoryStage
 
@@ -65,7 +66,7 @@ def _stages():
         CrawlStage(page_fetcher=fake_page),
         CatalogStage(),
         ServeInventoryStage(),
-        FetchStage(fetch_bytes=fake_bytes),
+        FetchStage(fetch_bytes=fake_bytes, selection=Selection(all_=True)),
     ]
 
 
@@ -115,6 +116,23 @@ def test_bronze_dag_skips_on_clean_rerun(bronze_ctx):
     assert second == [None, None, None, None]
 
 
+def test_fetch_reruns_when_selection_changes(bronze_ctx):
+    ctx = bronze_ctx
+    # bring the inventory track up and fetch everything once
+    Orchestrator(_stages()).run(ctx, force=True)
+
+    # re-running fetch with the SAME (--all) selection, no force → skipped (inputs unchanged)
+    same = Orchestrator([FetchStage(fetch_bytes=fake_bytes, selection=Selection(all_=True))])
+    assert same.run(ctx) == [None]
+
+    # a DIFFERENT selection changes fetch's input fingerprint (§5.6) → it re-runs, not skips
+    narrowed = Orchestrator(
+        [FetchStage(fetch_bytes=fake_bytes, selection=Selection(apps=frozenset({"ADT"})))]
+    )
+    (sr,) = narrowed.run(ctx)
+    assert sr is not None and sr.status == "ok" and sr.counts["fetched"] == 1
+
+
 def test_fetch_does_not_fall_back_to_pdf(bronze_ctx):
     ctx = bronze_ctx
     # only the PDF is downloadable upstream — but PDF is out of scope (§1), so fetch targets
@@ -125,7 +143,7 @@ def test_fetch_does_not_fall_back_to_pdf(bronze_ctx):
             CrawlStage(page_fetcher=fake_page),
             CatalogStage(),
             ServeInventoryStage(),
-            FetchStage(fetch_bytes={pdf_url: b"%PDF-1.5 fake"}.get),
+            FetchStage(fetch_bytes={pdf_url: b"%PDF-1.5 fake"}.get, selection=Selection(all_=True)),
         ]
     ).run(ctx, force=True)
 
@@ -143,7 +161,7 @@ def test_fetch_records_failure_when_docx_unavailable(bronze_ctx):
             CrawlStage(page_fetcher=fake_page),
             CatalogStage(),
             ServeInventoryStage(),
-            FetchStage(fetch_bytes=lambda u: None),
+            FetchStage(fetch_bytes=lambda u: None, selection=Selection(all_=True)),
         ]
     ).run(ctx, force=True)
 
