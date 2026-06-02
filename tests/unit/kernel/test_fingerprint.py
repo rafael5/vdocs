@@ -93,3 +93,27 @@ def test_sqlite_fingerprint_verify_changes_with_content(tmp_path):
     conn.commit()
     conn.close()
     assert fp.sqlite_fingerprint(db, "t", verify=True) != before
+
+
+def _make_tie_db(path, rows):
+    # `grp` is non-unique, so ORDER BY 1 leaves the tie order undefined (rowid/insert order)
+    conn = sqlite3.connect(path)
+    conn.execute("CREATE TABLE t (grp TEXT, v TEXT)")
+    conn.executemany("INSERT INTO t (grp, v) VALUES (?, ?)", rows)
+    conn.commit()
+    conn.close()
+
+
+def test_sqlite_fingerprint_strong_is_insert_order_independent(tmp_path):
+    # R9: byte-identical content inserted in different orders → same strong fingerprint
+    a, b = tmp_path / "a.db", tmp_path / "b.db"
+    _make_tie_db(a, [("g", "1"), ("g", "2")])
+    _make_tie_db(b, [("g", "2"), ("g", "1")])  # same rows, opposite insert order
+    assert fp.sqlite_fingerprint(a, "t", verify=True) == fp.sqlite_fingerprint(b, "t", verify=True)
+
+
+def test_sqlite_fingerprint_strong_detects_single_cell_change(tmp_path):
+    a, b = tmp_path / "a.db", tmp_path / "b.db"
+    _make_tie_db(a, [("g", "1"), ("g", "2")])
+    _make_tie_db(b, [("g", "1"), ("g", "3")])  # one cell differs
+    assert fp.sqlite_fingerprint(a, "t", verify=True) != fp.sqlite_fingerprint(b, "t", verify=True)

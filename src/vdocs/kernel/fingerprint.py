@@ -65,10 +65,18 @@ def sqlite_fingerprint(db_path: Path, table: str, *, verify: bool = False) -> st
         if not verify:
             (count,) = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
             return f"rows:{count}"
+        # Strong: a pure function of the table's row *content*, independent of insert/row order.
+        # `ORDER BY 1` left ties (rows sharing the first column) in undefined order; instead encode
+        # each row from its typed cell values (not `repr(row)`, which is fragile) and sort the
+        # encoded rows in Python, giving a canonical content order. NULL is encoded distinctly from
+        # the empty string so a NULL↔'' change is still detected.
         h = hashlib.sha256()
-        cursor = conn.execute(f"SELECT * FROM {table} ORDER BY 1")
-        for row in cursor:
-            h.update(repr(row).encode("utf-8"))
+        rows = conn.execute(f"SELECT * FROM {table}").fetchall()
+        encoded = [
+            "\x01".join("\x00NULL\x00" if v is None else str(v) for v in row) for row in rows
+        ]
+        for line in sorted(encoded):
+            h.update(line.encode("utf-8"))
             h.update(b"\n")
         return h.hexdigest()
     finally:

@@ -233,6 +233,12 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):
+  - **C-rel-3 — deterministic strong `sqlite_fingerprint` (R9).** Strong mode hashed `repr(row)`
+    ordered `BY 1`, leaving ties (rows sharing the first column) in undefined order — so a
+    byte-identical DB built in a different insert order could fingerprint differently. Now encodes
+    each row from its typed cell values (NULL distinct from `''`) and sorts the encoded rows in
+    Python → a canonical content order independent of insert/row order. Tests: insert-order
+    independence + single-cell-change sensitivity.
   - **C-rel-2 — `build_atomic` WAL hardening (R7).** The atomic DB build opened the temp in WAL
     and renamed only the main file, so a crash could orphan `.<name>.tmp-wal`/`.tmp-shm`.
     `kernel.db.connect` gained a `journal_mode` flag; `build_atomic` now builds the temp in
