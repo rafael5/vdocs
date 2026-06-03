@@ -289,6 +289,26 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
   asserted"). **Scope:** `validate` is built as the single verification consumer (the §8 HARD GATE);
   the broader `fidelity` S→T axes (C1/C3/C4…) and the full `validate` schema/ID/vector gate remain
   TODO and feed the same gate later. Code (Steps 1–3) lands in the following commits.
+- **2026-06-03** — **Phase 5 Steps 1–3 (code): typed absence + count reconciliation + ref
+  resolution (TDD).** **Step 1 (§6.4):** `normalize` now writes a **`capture.yaml` for every bundle**
+  via the pure `stages/normalize/capture_pure.py` (scan_residue — an independent, deliberately-broad
+  second-signal re-scan + classify into captured/failed/absent-expected/absent-unexpected +
+  build_manifest); `tables_pure.count_qualifying_tables` is the table residue post-condition; the
+  driver surfaces `capture_sidecars` + `absent_unexpected` counts; `consolidate` propagates the
+  latest member's `capture.yaml` to the anchor (like flags/toc). **Steps 2–3 (§8 HARD GATE):** a new
+  **`validate` stage** (the §8 gate's first slice, `ALWAYS_RERUN`) with pure cores
+  `stages/validate/reconcile_pure.py` (per-doc absent-unexpected + corpus-zero whole-detector failure
+  + cross-run count-drop, reading the emitted `stage_runs[normalize].counts` + the prior report as
+  the baseline) and `stages/validate/refs_pure.py` (severed vs. unmapped outbound-ref classification);
+  the driver writes `reports/validation/verification.json` and fails loudly via `deep_gate`. New
+  `VALIDATION_REPORT` contract + `cfg.validation_report` + the `validate` CLI command + DAG wiring.
+  **Ref-gate semantics (doc refined to match code):** severed cross-refs hard-floor zero; `UNRESOLVED`
+  is the already-flagged measured class bounded by the C5 ≤0.02 rate (FF C5, §8 validate row updated).
+  Tests: 16 `capture_pure` + 6 `refs_pure` + 6 `reconcile_pure` unit + 4 property + 3 normalize / 1
+  consolidate / 8 validate integration. **`make check` green: 652 tests, coverage 98.72%** (gate
+  ≥95%), ruff + mypy clean. **DoD met:** a missing sidecar is no longer ambiguous — benign absence
+  (`absent-expected`) is distinct from a silent detector failure (`absent-unexpected`), and the gate
+  fails loudly on the latter. (Not yet smoke-run on the full 469-doc lake; pure+integration only.)
 - **2026-06-02** — **Phase 4 Increment 4: `manifest` ✅ — Phase 4 COMPLETE (§14.4, D3).** Final
   gold-derive stage: the agent front door. Pure assembler `manifest_pure` builds `corpus-manifest.json`
   (counts, lineage `tool_ver`/`generated_at`, the stable-ID scheme, the MCP capability manifest) +

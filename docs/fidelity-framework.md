@@ -189,12 +189,18 @@ targets** (§9), not arbitrary — they are confirmed/adjusted against the golde
     `stable_id`) **and** the outbound cross-ref map (each original Word `_Toc…`/`_Ref…` bookmark →
     its resolved slug, or `UNRESOLVED`). DITA migrations report that the most common silent-loss mode
     is a **severed cross-reference** — a link whose target id changed, broken silently. `validate`
-    therefore resolves **every** outbound ref against that bundle's live anchor set and **fails on any
-    dead anchor**: an outbound entry marked `UNRESOLVED`, or one whose resolved slug matches no live
-    anchor row, is a dead cross-ref. This is the same round-trip the **TOC integrity** check below
-    already specifies (every TOC entry → a real heading), generalised to *all* cross-references — the
-    single most common fragile-reference class, now gated, not merely measured. **Hard floor: zero
-    dead cross-ref anchors.**
+    therefore resolves **every** outbound ref against that bundle's live anchor set and classifies
+    each, keeping two failure modes apart:
+    - **severed** — the resolved target slug matches **no** live anchor row. A ref that *was* good
+      now points nowhere — a true dead anchor and a silent regression. This is the same round-trip
+      the **TOC integrity** check below specifies (every TOC entry → a real heading), generalised to
+      *all* cross-references. **Hard floor: zero severed cross-refs** — any one blocks.
+    - **unmapped** — the `UNRESOLVED` marker `normalize` already wrote for a Word bookmark it could
+      not map to any heading. This never resolved (it is not a *new* loss) and is already a recorded
+      fidelity signal, so it is the **measured** class: it blocks only above the C5 cross-ref
+      dead-anchor rate (≤ 0.02), not on every occurrence.
+    Keeping them apart is the point — failing on every pre-existing `UNRESOLVED` would re-flag known
+    issues rather than catch the silent severance this check exists for.
   - **TOC integrity (the highest-value navigation check).** Because the TOC is the primary
     navigational *and* semantic structure (vdocs-design §6.7) and is *derived from the heading tree*,
     it is scored explicitly: **accuracy** (TOC entries match the heading tree), **completeness**

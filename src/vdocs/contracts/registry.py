@@ -230,6 +230,17 @@ DISCOVERY_JSON = ArtifactContract(
 )
 
 
+# `validate`: the sidecar-verification gate's findings report (§8 — Phase-5 slice). A FILE the gate
+# always (re)writes; its recorded counts are the cross-run baseline for the §5.2 drop check.
+VALIDATION_REPORT = ArtifactContract(
+    key="reports/validation",
+    kind=Kind.FILE,
+    storage_class=StorageClass.STATE,
+    produced_by="validate",
+    relpath="reports/validation/verification.json",
+)
+
+
 def foundational_registry() -> ArtifactRegistry:
     """Build a registry seeded with the artifacts that exist before any stage runs."""
     reg = ArtifactRegistry()
@@ -261,6 +272,7 @@ def default_registry() -> ArtifactRegistry:
         RELATIONS,
         CORPUS_MANIFEST,
         DISCOVERY_JSON,
+        VALIDATION_REPORT,
     ):
         reg.register(contract)
     return reg
