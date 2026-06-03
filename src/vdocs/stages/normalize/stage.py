@@ -51,6 +51,7 @@ class NormalizeStage(Stage):
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.kernel.text import decade_bucket
         from vdocs.stages.normalize import anchors_pure as anchors
+        from vdocs.stages.normalize import capture_pure as capture
         from vdocs.stages.normalize import normalize_pure as nz
         from vdocs.stages.normalize import revision_pure as rev
         from vdocs.stages.normalize import tables_pure as tbl
@@ -72,6 +73,7 @@ class NormalizeStage(Stage):
         normalized_root = ctx.cfg.silver_normalized
         n_docs = n_revision = n_tables = n_refs = n_boiler = n_template = n_errors = 0
         n_published = n_titlepage = n_titleimg = n_flags = n_toc = 0
+        n_capture = n_absent_unexpected = 0
         body_files = sorted(enriched_root.rglob("body.md"))
         kept = {p.parent.relative_to(enriched_root).as_posix() for p in body_files}
         for body_path in body_files:
@@ -192,6 +194,29 @@ class NormalizeStage(Stage):
                         ).encode("utf-8"),
                     )
                     n_flags += 1
+                # TYPED CAPTURE-ATTEMPT RECORDS (§6.4): write capture.yaml for *every* bundle
+                # (unlike the conditional sidecars) so a missing sidecar is never ambiguous. Each
+                # attempt's outcome (captured/failed/absent-expected/absent-unexpected) plus an
+                # independent residue re-scan of the final body is recorded; an absent-unexpected is
+                # a per-document silent detector miss the validate gate trips on (§8).
+                manifest = capture.build_manifest(
+                    str(rel),
+                    body,
+                    toc_titles,
+                    revisions_count=len(revisions),
+                    revision_failed=bool(rev_flag),
+                    tables_count=len(tables),
+                    refs_count=len(anchor_map.rows),
+                    toc_count=len(anchor_map.legacy_toc),
+                    title_date_captured=bool(published),
+                )
+                cas.atomic_write(
+                    normalized_root / rel / "capture.yaml",
+                    yaml.safe_dump(manifest, sort_keys=False, allow_unicode=True).encode("utf-8"),
+                )
+                n_capture += 1
+                if capture.has_unexpected_absence(manifest):
+                    n_absent_unexpected += 1
                 n_docs += 1
             except Exception as exc:
                 n_errors += 1
@@ -212,6 +237,8 @@ class NormalizeStage(Stage):
                 "title_images_removed": n_titleimg,
                 "toc_sidecars": n_toc,
                 "flag_sidecars": n_flags,
+                "capture_sidecars": n_capture,
+                "absent_unexpected": n_absent_unexpected,
                 "phrases": len(phrases),
                 "errors": n_errors,
                 "pruned": n_pruned,

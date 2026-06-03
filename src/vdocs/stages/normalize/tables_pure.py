@@ -125,6 +125,15 @@ def _pipe_spans(body: str) -> list[_Span]:
     return spans
 
 
+def count_qualifying_tables(body: str) -> int:
+    """Number of extraction-qualifying tables (§6.5 thresholds) present in ``body`` — the residue
+    post-condition check feeding ``capture.yaml`` (§6.4). After ``extract_tables`` has run, a
+    qualifying table still sitting in the normalized body is a silent table-extraction miss, so this
+    is normalize's independent re-scan signal for the ``tables`` capture outcome (capture_pure)."""
+    spans = _html_spans(body) + _pipe_spans(body)
+    return sum(1 for s in spans if _qualifies(s.rows))
+
+
 def extract_tables(body: str) -> tuple[str, list[ExtractedTable]]:
     """Lift qualifying tables to CSV and replace each with a reference link (§6.4/§6.5).
 

@@ -232,3 +232,33 @@ def test_consolidate_fails_when_error_rate_is_systemic(ctx, monkeypatch):
     monkeypatch.setattr(cs, "_member_from", boom)  # every doc fails → systemic → stage fails
     with pytest.raises(PostflightError):
         Orchestrator([ConsolidateStage()]).run(ctx)
+
+
+def test_consolidate_propagates_latest_capture_manifest(ctx):
+    # §8/§6.4: the latest member's capture.yaml (typed capture-attempt records) travels with the
+    # anchor, like flags.yaml/toc.yaml — so the gold grain carries the completeness manifest too.
+    def _capture(slug):
+        return yaml.safe_dump(
+            {"doc_id": f"CPRS/{slug}", "captures": {"refs": {"outcome": "captured"}}}
+        ).encode()
+
+    _seed_member(
+        ctx, slug="or_3_190_ig", patch_id="OR*3*190", body="# IG\n\nv190\n", date="2018-01"
+    )
+    cas.atomic_write(
+        ctx.cfg.silver_normalized / "CPRS" / "or_3_190_ig" / "capture.yaml", _capture("or_3_190_ig")
+    )
+    _seed_member(
+        ctx, slug="or_3_566_ig", patch_id="OR*3.0*566", body="# IG\n\nv566\n", date="2022-06"
+    )
+    cas.atomic_write(
+        ctx.cfg.silver_normalized / "CPRS" / "or_3_566_ig" / "capture.yaml", _capture("or_3_566_ig")
+    )
+    _seed_assets(ctx)
+    _bless(ctx, "normalize", TEXT_NORMALIZED)
+
+    Orchestrator([ConsolidateStage()]).run(ctx)
+
+    anchor = ctx.cfg.gold_consolidated / "CPRS" / "or_ig"
+    manifest = yaml.safe_load((anchor / "capture.yaml").read_text())
+    assert manifest["doc_id"] == "CPRS/or_3_566_ig"  # the LATEST member's manifest, not the prior
