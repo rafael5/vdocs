@@ -238,6 +238,18 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):
+  - **F — data lake regenerated from immutable bronze (no re-crawl/fetch).** Ran
+    `catalog`/`serve-inventory`/`convert`/`discover`/`enrich`/`normalize` `--force` over the
+    preserved bronze evidence (469 docx, `catalog.raw.json`, `state.db` acquisitions). Results:
+    convert 469 docs / 5289 assets / 0 errors; normalize 469 docs / 22 `revisions.yaml` / 0 errors.
+    **Verified:** `CPRS/cprsguium/body.md` has 0 legacy `heading<TAB>page` TOC lines, 0
+    `########### Table of Contents`, exactly one `## Contents`; corpus-wide **0/469** bundles carry
+    any `>6-#` heading or tab+page-number TOC line; 469 normalized bundles; **0** `history.yaml`,
+    **22** `revisions.yaml`. **One-time migration cleanup:** 22 stale `history.yaml` from a
+    pre-A2-rename run lingered (each beside a now-correct `revisions.yaml`) and were deleted — they
+    expose that bundle-level R5 pruning does **not** remove a *renamed sidecar within a still-kept
+    bundle*; the deferred **R4** full-tree (`OUT.tmp` rebuild) eliminates this class of intra-bundle
+    stale file, so the follow-up should land R4 before the next rename.
   - **E — doc reconciliation + bounded gate distributions.** (C1/D-dec-1) Reworded §8's `catalog`
     row so drift detection (NEW/SUPERSEDED/CHANGED/UNCHANGED/WITHDRAWN) is owned by the §7.6
     scheduled/incremental layer (Phase 7), stating `catalog.enriched` is a **pure function of one
