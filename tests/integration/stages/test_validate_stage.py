@@ -134,16 +134,20 @@ def test_validate_fails_on_count_drop_vs_prior_report(ctx):
     assert any(f["kind"] == "count-drop" for f in report["reconcile_findings"])
 
 
-def test_validate_tolerates_unmapped_bookmark_below_floor(ctx):
-    # an UNRESOLVED bookmark is the already-flagged class, not a severed regression — one in many
-    # outbound refs is below the C5 cross-ref rate floor, so it does not block.
-    outbound = {f"_Toc{i}": "intro" for i in range(99)}
-    outbound["_TocX"] = "UNRESOLVED"
+def test_validate_does_not_block_on_high_unmapped_rate(ctx):
+    # the real corpus is ~92% UNRESOLVED (Word cross-refs point at non-heading anchors) — a high
+    # unmapped rate is expected, not a defect, so it is reported as a metric and never gated
+    # (memory: normalize anchor reality; FF C5: the hard floor is for TOC + the heading tree).
+    outbound = {f"_Toc{i}": "UNRESOLVED" for i in range(92)}
+    outbound.update({f"_Ref{i}": "intro" for i in range(8)})  # ~92% unmapped, like the real corpus
     _seed_bundle(ctx, "a", captures={"refs": "captured"}, outbound=outbound)
     _bless_normalize(ctx, {"documents": 1, "refs_sidecars": 1})
 
     (result,) = Orchestrator([ValidateStage()]).run(ctx)
     assert result.status == "ok" and result.counts["blocking"] == 0
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    assert report["ref_findings"]["unmapped_above_c5_target"] is True  # reported…
+    assert not report["ref_findings"]["severed"]  # …but no severed refs, so not blocked
 
 
 def test_validate_handles_bundle_without_sidecars(ctx):

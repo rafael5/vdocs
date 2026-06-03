@@ -196,11 +196,13 @@ targets** (§9), not arbitrary — they are confirmed/adjusted against the golde
       the **TOC integrity** check below specifies (every TOC entry → a real heading), generalised to
       *all* cross-references. **Hard floor: zero severed cross-refs** — any one blocks.
     - **unmapped** — the `UNRESOLVED` marker `normalize` already wrote for a Word bookmark it could
-      not map to any heading. This never resolved (it is not a *new* loss) and is already a recorded
-      fidelity signal, so it is the **measured** class: it blocks only above the C5 cross-ref
-      dead-anchor rate (≤ 0.02), not on every occurrence.
-    Keeping them apart is the point — failing on every pre-existing `UNRESOLVED` would re-flag known
-    issues rather than catch the silent severance this check exists for.
+      not map to any heading. On the real corpus **~92%** of `_Toc`/`_Ref` cross-refs are unmapped —
+      they point at page numbers, figures, and spans, **not** headings — so a high unmapped rate is
+      **expected, not a defect**. It is therefore a **reported metric, never gated** (the ≤ 0.02
+      figure is an informational C5 target, not a gate). The dead-anchor hard floor applies to **TOC
+      entries + the heading tree** (the round-trip below), not to every inbound body cross-ref.
+    Keeping them apart is the point — *severed* is a silent regression to catch; *unmapped* is the
+    expected, already-flagged corpus baseline to measure, not block on.
   - **TOC integrity (the highest-value navigation check).** Because the TOC is the primary
     navigational *and* semantic structure (vdocs-design §6.7) and is *derived from the heading tree*,
     it is scored explicitly: **accuracy** (TOC entries match the heading tree), **completeness**

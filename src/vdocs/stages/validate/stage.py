@@ -11,8 +11,10 @@ already records but nothing read — the per-bundle ``capture.yaml`` typed captu
      (the emitted ``stage_runs[normalize].counts`` finally consumed; the prior validate report is
      the cross-run baseline);
   3. **ref resolution** (Step 3, §5.5) — any **severed** outbound ref (a target slug no heading
-     carries — the DITA severed-conref class, hard floor zero); ``UNRESOLVED`` bookmarks are the
-     already-flagged class, bounded by the C5 cross-ref dead-anchor rate.
+     carries — the DITA severed-conref class, hard floor zero). ``UNRESOLVED`` (unmapped) bookmarks
+     are **reported as a C5 metric, not gated**: on the real corpus ~92% of Word ``_Toc``/``_Ref``
+     cross-refs point at non-heading anchors (page numbers, figures, spans), so a high unmapped rate
+     is expected, not a defect — the dead-anchor hard floor is for TOC entries + the heading tree.
 
 It always (re)writes ``reports/validation/verification.json`` (the findings + the count baseline)
 and sets its own ``ok`` via the deep gate. ``ALWAYS_RERUN`` — a gate re-checks every time. Pure
@@ -39,9 +41,13 @@ log = structlog.get_logger(__name__)
 # The corpus-size floor below which a zero expected-nonzero count is not treated as a whole-detector
 # failure (a small selection may legitimately carry none) — §5.2 / reconcile_pure.
 CORPUS_MIN = 50
-# The C5 cross-ref dead-anchor rate floor: UNRESOLVED (unmapped) bookmarks below this share are the
-# already-flagged class, not a blocking regression (severed refs always block, floor 0).
-UNMAPPED_RATE_FLOOR = 0.02
+# The C5 cross-ref dead-anchor rate TARGET (informational only). On the real corpus ~92% of Word
+# `_Toc`/`_Ref` cross-refs are UNRESOLVED — they point at page numbers / figures / spans, not
+# headings — so a high unmapped rate is *expected, not a defect* (memory: normalize anchor reality;
+# fidelity-framework C5: the hard dead-anchor floor is for TOC entries + the heading tree, NOT every
+# inbound body cross-ref). The unmapped rate is therefore **reported as a metric, never gated**;
+# only **severed** refs (a resolved slug matching no live anchor — a true violation) block.
+UNMAPPED_RATE_TARGET = 0.02
 
 
 class ValidateStage(Stage):
@@ -84,15 +90,14 @@ class ValidateStage(Stage):
         unmapped = [f for f in ref_findings if f.kind == rp.UNMAPPED]
         unmapped_rate = (len(unmapped) / outbound_total) if outbound_total else 0.0
 
+        # The gate blocks on reconciliation findings + SEVERED refs only. Unmapped (UNRESOLVED)
+        # cross-refs are reported as a C5 metric, never gated — a high unmapped rate is expected on
+        # the real corpus (~92%), not a defect (see UNMAPPED_RATE_TARGET).
         blocked_by: list[str] = []
         if reconcile_findings:
             blocked_by.append(f"{len(reconcile_findings)} reconciliation finding(s)")
         if severed:
             blocked_by.append(f"{len(severed)} severed cross-ref(s)")
-        if unmapped_rate > UNMAPPED_RATE_FLOOR:
-            blocked_by.append(
-                f"unmapped cross-ref rate {unmapped_rate:.3f} > {UNMAPPED_RATE_FLOOR}"
-            )
         self._blocking = bool(blocked_by)
         self._reason = "; ".join(blocked_by)
 
@@ -107,10 +112,11 @@ class ValidateStage(Stage):
                 for f in reconcile_findings
             ],
             "ref_findings": {
-                "severed": [_ref_dict(f) for f in severed],
-                "unmapped": [_ref_dict(f) for f in unmapped],
+                "severed": [_ref_dict(f) for f in severed],  # gated: hard floor zero
+                "unmapped_count": len(unmapped),  # reported metric, not gated (expected ~92%)
                 "outbound_total": outbound_total,
                 "unmapped_rate": round(unmapped_rate, 4),
+                "unmapped_above_c5_target": unmapped_rate > UNMAPPED_RATE_TARGET,
             },
         }
         cas.atomic_write(
