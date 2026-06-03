@@ -94,22 +94,16 @@ def _write_staged(index_db, staged: list[dict[str, object]]) -> None:  # type: i
     )
     placeholders = ", ".join("?" for _ in ep.STAGED_COLUMNS)
     rows = [[row[c] for c in ep.STAGED_COLUMNS] for row in staged]
-    conn = db.connect(index_db)
-    try:
-        # Atomic rebuild (§7.4): build the replacement in a side table — the live
-        # doc_meta_staged is untouched until the swap — then drop-old + rename-new inside one
-        # transaction, so a crash never exposes a missing or half-written table.
-        conn.execute("DROP TABLE IF EXISTS doc_meta_staged__new")
-        conn.execute(f"CREATE TABLE doc_meta_staged__new ({cols}, PRIMARY KEY (doc_id))")
+
+    # Atomic single-table swap (§7.4/§9.2): build the replacement in a side table — the live
+    # doc_meta_staged is untouched until the swap — via the shared kernel primitive (also used by
+    # relate), so a crash never exposes a missing or half-written table.
+    def build_new(conn, new):  # type: ignore[no-untyped-def]
+        conn.execute(f"CREATE TABLE {new} ({cols}, PRIMARY KEY (doc_id))")
         conn.executemany(
-            f"INSERT OR REPLACE INTO doc_meta_staged__new ({', '.join(ep.STAGED_COLUMNS)}) "
+            f"INSERT OR REPLACE INTO {new} ({', '.join(ep.STAGED_COLUMNS)}) "
             f"VALUES ({placeholders})",
             rows,
         )
-        conn.commit()
-        conn.execute("BEGIN IMMEDIATE")
-        conn.execute("DROP TABLE IF EXISTS doc_meta_staged")
-        conn.execute("ALTER TABLE doc_meta_staged__new RENAME TO doc_meta_staged")
-        conn.commit()
-    finally:
-        conn.close()
+
+    db.replace_table_atomic(index_db, "doc_meta_staged", build_new)

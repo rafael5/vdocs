@@ -137,3 +137,53 @@ def test_connect_read_only_refuses_writes(tmp_path):
             ro.execute("INSERT INTO t VALUES ('x')")
     finally:
         ro.close()
+
+
+def test_replace_table_atomic_swaps_and_preserves_siblings(tmp_path):
+    """The named table is replaced; other tables in the store survive untouched (§9.2)."""
+    path = tmp_path / "index.db"
+    conn = db.connect(path)
+    db.apply_schema(conn, "CREATE TABLE keep (x TEXT); INSERT INTO keep VALUES ('survivor');")
+    conn.execute("CREATE TABLE rel (a TEXT)")
+    conn.execute("INSERT INTO rel VALUES ('old')")
+    conn.commit()
+    conn.close()
+
+    def build_new(c, new):
+        c.execute(f"CREATE TABLE {new} (a TEXT)")
+        c.executemany(f"INSERT INTO {new} VALUES (?)", [("new1",), ("new2",)])
+
+    db.replace_table_atomic(path, "rel", build_new)
+
+    ro = db.connect(path, read_only=True)
+    try:
+        assert ro.execute("SELECT count(*) FROM rel").fetchone()[0] == 2  # replaced
+        vals = [r[0] for r in ro.execute("SELECT a FROM rel ORDER BY a")]
+        assert vals == ["new1", "new2"]
+        assert ro.execute("SELECT x FROM keep").fetchone()[0] == "survivor"  # sibling intact
+        # no leftover side table
+        names = {r[0] for r in ro.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        assert "rel__new" not in names
+    finally:
+        ro.close()
+
+
+def test_replace_table_atomic_preserves_old_on_failed_build(tmp_path):
+    """If build_new raises, the live table is untouched (no swap happened)."""
+    path = tmp_path / "index.db"
+    conn = db.connect(path)
+    db.apply_schema(conn, "CREATE TABLE rel (a TEXT); INSERT INTO rel VALUES ('keep');")
+    conn.close()
+
+    def boom(c, new):
+        c.execute(f"CREATE TABLE {new} (a TEXT)")
+        raise RuntimeError("build failed")
+
+    with pytest.raises(RuntimeError):
+        db.replace_table_atomic(path, "rel", boom)
+
+    ro = db.connect(path, read_only=True)
+    try:
+        assert ro.execute("SELECT a FROM rel").fetchone()[0] == "keep"  # prior table survives
+    finally:
+        ro.close()

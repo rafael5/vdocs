@@ -30,16 +30,16 @@ counted separately below). Last updated **2026-06-02**. **Phases 1–3 complete 
 end-to-end on a real 469-doc VA corpus; the pre-Phase-4 hardening pass (reliability R1–R9 [R4 split
 out], redundancy D1–D5, the `revisions.yaml` rename, drift-doc reconciliation, a 7-invariant property
 suite + branch coverage) is **fast-forwarded onto `master`** (`e725f5a`). **Phase 4 in progress:**
-`consolidate` ✅ (§6.6 version rollup) and `index` ✅ (§5.5/§14.6 derived index) landed on branch
-`feat/phase-4-gold-derive`; `make check` green (**503 tests, branch cov 99.7% / gate ≥95%**,
-ruff+mypy clean). **Next: Phase 4 `relate`.**
+`consolidate` ✅ (§6.6 version rollup), `index` ✅ (§5.5/§14.6 derived index), and `relate` ✅ (§8
+knowledge graph) landed on branch `feat/phase-4-gold-derive`; `make check` green (**514 tests, branch
+cov 99.7% / gate ≥95%**, ruff+mypy clean). **Next: Phase 4 `manifest`.**
 
 | Phase | Title | Status | Progress |
 |---|---|:--:|:--:|
 | 1 | Spine (kernel·config·models·contracts·orchestrator) | ✅ | 4/4 |
 | 2 | Inventory medallion + doc-bronze | ✅ | 4/4 |
 | 3 | Silver — document text (convert·discover·enrich·normalize) | ✅ | 4/4 |
-| 4 | Gold derive (consolidate·index·relate·manifest) | ◐ | 2/4 |
+| 4 | Gold derive (consolidate·index·relate·manifest) | ◐ | 3/4 |
 | 5 | Gold deliver (fidelity·publish·validate·push·analyze) | ☐ | 0/5 |
 | 6 | Machine interface (embed·serve-mcp) | ☐ | 0/2 |
 | 7 | Harden (property·--verify·gc·docs-gen·replay·refresh) | ◐ | 2◐·1⬚·3☐ |
@@ -77,13 +77,13 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
 | enrich | 🥈 DOC | ✅ | §8 | converted → enriched (FM) |
 | normalize | 🥈 DOC | ✅ | §6.7 | enriched → normalized (+TOC/refs) |
 
-**Phase 4 — Gold derive** ◐ 2/4
+**Phase 4 — Gold derive** ◐ 3/4
 
 | Stage | Layer | St | Ref | Goal |
 |---|:--:|:--:|---|---|
 | consolidate | 🥇 DOC | ✅ | §6.6 | normalized → consolidated (lineage) |
 | index | 🥇 DOC | ✅ | §8 | → index.db (FTS5, IDs) |
-| relate | 🥇 DOC | ☐ | §8 | index.db → relations (graph) |
+| relate | 🥇 DOC | ✅ | §8 | index.db → relations (graph) |
 | manifest | 🥇 DOC | ☐ | §14 | → corpus-manifest + discovery |
 
 **Phase 5 — Gold deliver** ☐ 0/5
@@ -270,6 +270,23 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **Phase 4 Increment 3: `relate` ✅ (knowledge graph, §8).** Third gold-derive
+  stage — cheap, re-runnable, adds **only edges** over the entities `index` extracted (no new
+  extraction). Pure core `relate_pure.derive_edges` builds three edge families from the same mention
+  rows: **`mentions`** (doc→entity, weight = mention count), **`cooccurs`** (entity↔entity within a
+  *section* — the tight, bounded scope; undirected, `src<dst`), and **`xref`** (doc↔doc via a shared
+  *significant* entity — `XREF_TYPES` = build/fileman_file/package_namespace, excluding ubiquitous raw
+  globals so the doc graph stays meaningful). Thin driver reads `entity_mentions ⋈ entities` and
+  appends the `relations` table. **§9.2 promotion:** `enrich`'s atomic single-table-swap extracted to
+  **`kernel.db.replace_table_atomic`** (build a side table → drop-old/rename-new in one
+  `BEGIN IMMEDIATE`); `enrich` repointed onto it, `relate` uses it to add `relations` **without
+  touching `index`'s tables in the same file** — and because the cheap SQLite fingerprint is
+  per-table row-count, relate's write doesn't invalidate `index`'s recorded fingerprints (both skip on
+  a clean re-run, verified). `RELATIONS` contract + the `relate` CLI + DAG wiring (`…index → relate`).
+  Tests: 6 `relate_pure` + 3 integration (edge families, per-type counts, idempotent + index tables
+  untouched) + 2 new `kernel.db` (swap + failed-build preservation). **Real lake:** 469 docs → **24 366
+  edges** (3 099 mentions / 17 368 cooccurs / 3 899 xref); index's documents/entities/doc_meta_staged
+  intact; clean re-run skips. **514 tests, branch cov 99.7%**, ruff+mypy clean.
 - **2026-06-02** — **Phase 4 Increment 2: `index` ✅ (derived corpus index, §5.5/§14.6).** Second
   gold-derive stage. Builds `index.db` fresh via `kernel.db.build_atomic`: `documents` (keyed by the
   URL-safe `doc_key` = bundle path, with the inventory colon `doc_id` alongside — the D4 ID

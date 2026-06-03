@@ -22,6 +22,7 @@ from vdocs.stages.enrich.stage import EnrichStage
 from vdocs.stages.fetch.stage import FetchStage
 from vdocs.stages.index.stage import IndexStage
 from vdocs.stages.normalize.stage import NormalizeStage
+from vdocs.stages.relate.stage import RelateStage
 from vdocs.stages.serve_inventory.stage import ServeInventoryStage
 
 app = typer.Typer(
@@ -42,6 +43,7 @@ def build_stages() -> list[Stage]:
         NormalizeStage(),
         ConsolidateStage(),
         IndexStage(),
+        RelateStage(),
     ]
 
 
@@ -206,6 +208,12 @@ def consolidate(force: bool = typer.Option(False, "--force", "-f")) -> None:
 def index(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Build index.db: documents + doc_sections (+ FTS5 over is_latest only) + entities."""
     _drive(only="index", force=force)
+
+
+@app.command()
+def relate(force: bool = typer.Option(False, "--force", "-f")) -> None:
+    """Materialize the knowledge graph (doc↔entity, entity↔entity, doc↔doc) into relations."""
+    _drive(only="relate", force=force)
 
 
 @app.command()

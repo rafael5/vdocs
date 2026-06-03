@@ -11,6 +11,8 @@ import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 
+__all__ = ["apply_schema", "build_atomic", "connect", "replace_table_atomic"]
+
 
 def connect(
     path: Path, *, read_only: bool = False, journal_mode: str = "WAL"
@@ -78,3 +80,29 @@ def build_atomic(path: Path, build: Callable[[sqlite3.Connection], None]) -> Non
         conn.close()
     _sweep()
     os.replace(tmp, path)
+
+
+def replace_table_atomic(
+    path: Path, table: str, build_new: Callable[[sqlite3.Connection, str], None]
+) -> None:
+    """Atomically (re)place **one** table in an existing DB, leaving other tables intact (§7.4).
+
+    ``build_new(conn, new_name)`` must CREATE and fill a side table named ``new_name``
+    (``<table>__new``); this helper then drop-old + rename-new in one ``BEGIN IMMEDIATE`` — the live
+    ``table`` is untouched until the swap and a crash (or a raising ``build_new``) never exposes a
+    missing or half-written table. The single shared single-table-swap primitive (§9.2): ``enrich``
+    rebuilds ``doc_meta_staged`` and ``relate`` appends ``relations`` through it, rather than each
+    re-spelling the drop/rename dance. (Use :func:`build_atomic` instead when *rebuilding the whole
+    store*; use this when adding/replacing one table in a store other tables must survive.)"""
+    new = f"{table}__new"
+    conn = connect(path)
+    try:
+        conn.execute(f"DROP TABLE IF EXISTS {new}")
+        build_new(conn, new)
+        conn.commit()
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(f"DROP TABLE IF EXISTS {table}")
+        conn.execute(f"ALTER TABLE {new} RENAME TO {table}")
+        conn.commit()
+    finally:
+        conn.close()

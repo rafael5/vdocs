@@ -201,6 +201,17 @@ INDEX_ENTITIES = ArtifactContract(
     db="index.db",
     table="entities",
 )
+# `relate`: the knowledge-graph edges, appended to index.db over the entities `index` extracted
+# (doc↔entity, entity↔entity, doc↔doc — §8). Added via `kernel.db.replace_table_atomic`, so it never
+# touches `index`'s tables in the same file.
+RELATIONS = ArtifactContract(
+    key="index.db:relations",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="relate",
+    db="index.db",
+    table="relations",
+)
 
 
 def foundational_registry() -> ArtifactRegistry:
@@ -231,6 +242,7 @@ def default_registry() -> ArtifactRegistry:
         INDEX_DOCUMENTS,
         INDEX_SECTIONS,
         INDEX_ENTITIES,
+        RELATIONS,
     ):
         reg.register(contract)
     return reg
