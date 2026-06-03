@@ -19,7 +19,7 @@ from math import ceil
 from pydantic import BaseModel, Field
 
 from vdocs.kernel import discovery as kd
-from vdocs.kernel.markdown import is_markdown_artifact, iter_headings
+from vdocs.kernel.markdown import REVISION_HEADING_TEXTS, is_markdown_artifact, iter_headings
 from vdocs.kernel.text import block_key as block_key  # shared block identity (§9.2); re-exported
 from vdocs.kernel.text import decade_bucket, slugify
 
@@ -45,8 +45,13 @@ _GFM_ALERTS = frozenset({"note", "tip", "important", "warning", "caution"})
 _TOC_RE = re.compile(
     r"^#{1,3}[ \t]+(?:table of contents|contents)[ \t]*$", re.IGNORECASE | re.MULTILINE
 )
+# Broadened beyond `#`-ATX to the bold / blockquote / plain forms the corpus carries (§6.4), built
+# from the single shared revision-heading vocabulary (`kernel.markdown.REVISION_HEADING_TEXTS`) so
+# `discover`'s miner and `normalize`'s proximity guard never drift apart.
+_REV_ALT = "|".join(sorted(REVISION_HEADING_TEXTS, key=len, reverse=True))
 _REVTABLE_RE = re.compile(
-    r"^#{1,3}[ \t]+(?:revision history|revisions)[ \t]*$", re.IGNORECASE | re.MULTILINE
+    r"^[ \t>#*]*(?:" + _REV_ALT + r")[ \t*:]*$",
+    re.IGNORECASE | re.MULTILINE,
 )
 
 # --- (doc_type, era) template induction (§9.8 / ADR-018,019) ---
