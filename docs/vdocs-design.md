@@ -608,7 +608,7 @@ classifies every metadata field by lifecycle and routes it accordingly:
 
 | Class | Examples | Storage | Rationale |
 |---|---|---|---|
-| **Identity / human-curated** | title, doc_type, app_code, section, pkg_ns, version, source provenance (the required keys) | **Baked into `body.md` frontmatter** | defines the document; stable; docs-as-code norm; atomic with the prose |
+| **Identity / human-curated** | title, doc_type, app_code, section, pkg_ns, version, **published** (publication date — title-page-sourced, §6.4), source provenance (the required keys) | **Baked into `body.md` frontmatter** | defines the document; stable; docs-as-code norm; atomic with the prose. `published` is the **capture-gate** for title-page removal — it is the sole copy of the date the legacy cover carries |
 | **Computed / derived** | word_count, page_count, quality_score, is_latest, keywords, extracted entities, stub flag | **`index.db` only — never in the body** | mechanically regenerated; baking it churns the body hash and guarantees staleness |
 | **Heavy structured / machine-owned** | revision history, anchor/alias + link maps, large data tables | **Bundle sidecars** (`revisions.yaml`, `refs.yaml`, `tables/*.csv`) | would pollute prose; consumed structurally |
 
@@ -636,6 +636,39 @@ Beyond images and revision history (already split in v1), v2 adopts these splits
 The split detectors already exist in v1 (`boilerplate_pure`, `tables_pure`, `lexicon`) and
 are the strongest reuse candidates (§16) — in v2 they become the **miners inside the `discover`
 stage** (§9.6), feeding the curated registries rather than running as one-off scripts.
+
+**Revision-table detection contract (corrected).** The revision apparatus may only be removed
+once it has been *recognised and captured*; a detector that fails to recognise the real VA table
+dialects silently leaves the apparatus in the body and writes an empty `revisions.yaml`. The
+authoritative VA revision tables across the corpus use the columns **Date · Revision · Description ·
+Author** (and the `Version`/`Author(s)`/`Contacts`/`Project Manager`/`Technical Writer` variants),
+**not** `Date · Version · Change`. The detection predicate is therefore: a table is a
+revision-history table iff its header (with `**bold**`/markup stripped, case-folded) contains a
+**date** column **and** a change-description column (`description` **or** `change`), optionally with
+a version-ish column (`version` **or** `revision` **or** `patch`). To prevent false-positive
+stripping of an unrelated date/description table, recognition is **gated on proximity to a
+revision-history section header** — broadened beyond `#`-ATX headings to the bold/blockquote/plain
+forms the corpus actually carries (`Revision History`, `Documentation Revisions`,
+`Template Revision History`, `Documentation Revision History`). *(This corrects the v1-ported
+predicate that required `change` **and** (`version`|`patch`), which matched ~0 of the corpus's real
+tables.)*
+
+**Capture-before-strip (fail-safe).** `normalize` strips the revision apparatus **only after** it
+has been parsed into `revisions.yaml`. If detection finds a revision-history *section header* but no
+parseable table beneath it, the apparatus is **left in the body and flagged** (a fidelity signal,
+§9.8 / fidelity C2) — never deleted unverified. The same rule governs the title page (below): no
+legacy block leaves the body until the fact it uniquely carries has been persisted.
+
+**Title-page publication-date capture.** The legacy title page is the **sole source of the
+document's publication date** for ~97% of the corpus (it is absent from frontmatter, and
+`history.yaml.official_date` is derived from the revision table — so it was empty wherever the
+detector above failed). Before the title-page scaffold is subtracted, `normalize`/`discover` lift
+its **Month-YYYY publication date** (the same title-page window the `era` helper already scans,
+§9.8) into the identity frontmatter `published` field (and feed `official_date`). The title page is
+then replaced by a **standardized block** built from frontmatter (`title`, `version`/`patch_id`,
+`published`, `source_url`) rather than the raw legacy layout — so the cover is uniform across the
+corpus and no provenance is lost. **Gate:** title-page removal is blocked until `published` is
+captured.
 
 ### 6.5 The "don't over-decompose" guardrail
 
@@ -719,7 +752,10 @@ lineage lives in the sidecars — losing nothing, deferring only the mechanical 
 
 **Declutter (now, independent of replay).** `normalize` strips the manual version-control
 apparatus from the body — revision / patch-history tables, change-page markers, inline "(Patch
-NN)" provenance annotations — routing the structured facts to `revisions.yaml` (§6.4). The *structure*
+NN)" provenance annotations — routing the structured facts to `revisions.yaml` (§6.4) **only once
+they are captured there** (the capture-before-strip fail-safe, §6.4: detection uses the corrected
+column/heading contract, and an unparseable apparatus is flagged and retained, never deleted blind).
+The *structure*
 (the table, the dates/patches) becomes lineage; the *descriptive filler around it* ("see the
 revision history below for a list of changes", "this document supersedes…") is meaningless dead text
 and is removed via `registries/phrases` (§9.6). What remains in `body.md` is the document, not its
@@ -780,7 +816,14 @@ so the text match is trusted at those levels too) and
 removes that heading plus the entries beneath it up to the next real heading, *before* deriving the
 fresh `## Contents`. Registry-driven (the recognised variants are curated data, not a hard-coded list —
 tenet #13) and idempotent (a prior run's generated `## Contents` is itself stripped and rebuilt
-identically). The structured **revision-history** apparatus leaves the body the same way but to a sidecar,
+identically). **Capture-gate (correlate before dropping).** The legacy TOC is removed only after the
+role-1 cross-check above runs: every legacy-TOC entry's target (its `(#anchor)` — a `_Toc…`/`_Ref…`
+bookmark or a slug) must map to a heading in the derived `## Contents`. Entries with no counterpart
+are either (a) a Word bookmark that never resolved to a heading or (b) an intended section that lost
+its heading level in conversion — both are **heading-recovery inputs (role 2) and fidelity flags**,
+not silent losses. The derived `## Contents` thus *leverages* the legacy TOC as its completeness
+oracle and recovery seed rather than discarding it; only once correlation is clean (or the misses are
+recovered/flagged) does the legacy text TOC leave the body. The structured **revision-history** apparatus leaves the body the same way but to a sidecar,
 not by deletion (`revisions.yaml`, §6.4); the `callout` convention of the same registry (admonition
 styling → GFM alerts) is the remaining CANONICALIZE consumer.
 
@@ -1294,6 +1337,33 @@ prose). The strippable furniture leaves the body; the schema stays, for secondar
   heading recovery, §6.7), a revision-history block, a glossary/index, figure/table numbering, the
   anchor/numbering scheme;
 - the **doc-type semantics** — what each section *means*, so downstream consumers can rely on it.
+
+**How the section fields are induced (decided).** `discover` builds each `TemplateSection` from the
+scaffold cluster, not from a single document:
+- **`title_pattern`** is a regex induced by clustering the section's observed title spellings with
+  their *leading section number stripped* — so `Introduction`, `1. Introduction`, `1 Introduction`,
+  and `2.1 Introduction` align to one section, and the generated pattern (number prefix optional,
+  case-insensitive) still matches every spelling. This numbering-tolerant alignment is applied at
+  **both** the scaffold-clustering step and the consensus-keying step, and is what lets the
+  heterogeneous, numbered-heading doc-types (`IG`/`RN`/`TM`/`UG`/`DG`) induce a real skeleton where
+  the spike's exact-anchor method saw only noise (spike §5).
+- **`semantic_role`** (orientation / installation / back-out / glossary / …) is a coarse,
+  *proposal-time* label inferred from the section title; it is left **null when not inferable**
+  rather than guessed, and curation confirms or edits it via the `registries/` PR. It never mutates
+  a body, so a heuristic is safe here (tenet #13 is about subtractive patterns, not advisory labels).
+- **`repeatable`** is set when the section legitimately recurs *within* a single document (e.g.
+  per-patch subsections), detected by a within-doc multiplicity > 1 in any cluster member.
+
+**The `required` policy (decided): a coverage ratio, not "every member".** A section is **retained**
+in the schema when it covers ≥ **25 %** of the cluster's members (with an absolute floor of 2 docs,
+so a lone heading is never mistaken for template structure) and marked **`required`** when it covers
+≥ **50 %**; the band `[25 %, 50 %)` is the **optional tier**. The earlier rule — required ⇔ present
+in *every* member — was rejected against the observed coverage distribution: the spike found genuine,
+clearly-template DIBR sections at **60–94 %** coverage, never a clean 100 % (real manuals omit
+inapplicable sections), so "every member" mislabels core sections as optional. The 50 % cut (the
+spike's threshold) marks those 60–94 % sections required as intended, while the 25 % admit floor
+keeps real-but-not-universal sections in the oracle instead of discarding them. Both ratios are
+named constants in `discover_pure` (`_ADMIT_RATIO`, `_REQUIRED_RATIO`).
 
 **How `(doc_type, era)` is determined (decided).** `doc_type` is the catalog's authoritative
 `doc_code` (the 57-pattern classification, joined from `catalog.enriched` — *not* re-derived in

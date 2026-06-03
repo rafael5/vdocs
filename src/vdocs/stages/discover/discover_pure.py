@@ -12,12 +12,14 @@ from __future__ import annotations
 
 import re
 from collections import Counter, defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass, field
+from math import ceil
 
 from pydantic import BaseModel, Field
 
 from vdocs.kernel import discovery as kd
-from vdocs.kernel.markdown import iter_headings
+from vdocs.kernel.markdown import is_markdown_artifact, iter_headings
 from vdocs.kernel.text import block_key as block_key  # shared block identity (§9.2); re-exported
 from vdocs.kernel.text import decade_bucket, slugify
 
@@ -111,12 +113,17 @@ class StructureCandidate(BaseModel):
 
 
 class TemplateSection(BaseModel):
-    """One row of a template's retained structural schema (§9.8): an expected section."""
+    """One row of a template's retained **computable** structural schema (§9.8): an expected
+    section, rich enough to be a validation oracle (the template-compliance check) and a reuse
+    asset, not just a strippable title."""
 
-    section_id: str  # slug of the title — the stable section identity
-    title: str  # the consensus heading title
-    level: int  # the modal heading level (1–6)
-    required: bool  # present in *every* cluster member (vs optional)
+    section_id: str  # slug of the consensus title — the stable section identity
+    title: str  # the consensus (most common) heading title
+    title_pattern: str  # a regex matching the section's title across docs (numbering-tolerant)
+    level: int  # the modal heading level (1–6, or >6 for oversized ATX)
+    required: bool  # present in ≥ REQUIRED_RATIO of cluster members (§9.8 — not "every member")
+    repeatable: bool  # the section legitimately recurs within a doc (e.g. per-patch subsections)
+    semantic_role: str | None  # the section's role (orientation/installation/…), null if unknown
     toc_level: bool  # whether it belongs in the regenerated TOC (level ≤ 3, §6.7)
 
 
@@ -151,8 +158,26 @@ class PatternReport(BaseModel):
 
 
 def split_blocks(markdown: str) -> list[str]:
-    """Split a body into blocks on blank lines; trimmed, non-empty (paragraph grain)."""
-    return [b.strip() for b in _BLOCK_SPLIT.split(markdown) if b.strip()]
+    """Split a body into blocks on blank lines; trimmed, non-empty (paragraph grain).
+
+    A block whose lines are *entirely* markdown artifacts — nav/TOC links, ``<img>`` figure tags,
+    table-CSV markers (``kernel.markdown.is_markdown_artifact``, §9.2) — is dropped, so that
+    structural furniture never surfaces as "boilerplate" (the dominant noise the spike found: a
+    `[↑ Back to Contents](#contents)` line present in every DIBR doc). Headings and prose are kept,
+    including a paragraph that merely *contains* an inline link (block grain is preserved — a block
+    is dropped only when every one of its lines is an artifact)."""
+    blocks: list[str] = []
+    for raw in _BLOCK_SPLIT.split(markdown):
+        b = raw.strip()
+        if not b:
+            continue
+        lines = [ln for ln in b.splitlines() if ln.strip()]
+        # drop if every line is an artifact, or the whole block collapses to a single artifact
+        # (a multi-line ``<img …>`` tag spread across lines) — handles both grains.
+        if all(is_markdown_artifact(ln) for ln in lines) or is_markdown_artifact(" ".join(lines)):
+            continue
+        blocks.append(b)
+    return blocks
 
 
 def mine_recurring_blocks(
@@ -393,6 +418,90 @@ def _slug(title: str) -> str:
     return slugify(title, fallback="section")
 
 
+# --- §9.8 computable schema: title-pattern induction + semantic-role labelling ---
+# A leading section number (`1.`, `1.2.3`, `1`, with optional trailing dot) — stripped to align
+# `1. Introduction` / `1 Introduction` / `Introduction` into one section (the heterogeneous-type
+# alignment win, spike §5). The *generated* title_pattern makes that prefix optional so the regex
+# still matches every numbered or unnumbered spelling.
+_NUMBERING_RE = re.compile(r"^\s*\d+(?:\.\d+)*\.?\s+")
+_NUMBER_PREFIX = r"(?:\d+(?:\.\d+)*\.?\s+)?"
+
+# Section title → semantic role (§9.8). A *proposal-time* hint only: `discover` proposes, curation
+# confirms/edits it via the `registries/` PR (so a coarse heuristic is safe — it never mutates a
+# body, and unknown titles stay null rather than being guessed). Substrings are checked in order;
+# the first match wins, so the more specific labels (back-out, installation) precede the general.
+_ROLE_KEYWORDS: tuple[tuple[str, str], ...] = (
+    ("glossary", "glossary"),
+    ("acronym", "glossary"),
+    ("revision history", "revision-history"),
+    ("back-out", "back-out"),
+    ("back out", "back-out"),
+    ("rollback", "back-out"),
+    ("roll back", "back-out"),
+    ("install", "installation"),
+    ("deployment", "installation"),
+    ("troubleshoot", "troubleshooting"),
+    ("introduction", "orientation"),
+    ("overview", "orientation"),
+    ("orientation", "orientation"),
+    ("purpose", "orientation"),
+    ("scope", "orientation"),
+    ("getting started", "orientation"),
+)
+
+# `required`/admission policy (§9.8). The spike's exact-anchor method found real DIBR sections at
+# 60–94% coverage, never a clean 100%, so "required = present in *every* member" understates the
+# template. We use a ratio: a section is RETAINED when it covers ≥ ADMIT_RATIO of the cluster (with
+# an absolute floor of 2 docs, so a lone heading is never template structure) and marked REQUIRED
+# when it covers ≥ REQUIRED_RATIO. The gap [ADMIT_RATIO, REQUIRED_RATIO) is the optional tier —
+# sections that genuinely belong to the template but not to every instance.
+_ADMIT_RATIO = 0.25
+_REQUIRED_RATIO = 0.5
+
+
+def _strip_numbering(title: str) -> str:
+    """Drop a leading section number (``1.``/``1.2.3``/``1``) so numbered and unnumbered spellings
+    of the same heading align to one section key (§9.8)."""
+    return _NUMBERING_RE.sub("", title).strip()
+
+
+def _core_key(title: str) -> str:
+    """Numbering-stripped, lowercased, ws-collapsed section identity for clustering titles."""
+    return " ".join(_strip_numbering(title).lower().split())
+
+
+def induce_title_pattern(variants: Sequence[str]) -> str:
+    """A regex matching every observed spelling of one section's title (§9.8).
+
+    The spellings are aligned by stripping any leading section number; the generated pattern makes
+    that number prefix optional (so ``Introduction`` and ``1. Introduction`` both match) and is
+    case-insensitive. Distinct cores (genuinely different wordings clustered together) become an
+    alternation, so the pattern still matches each spelling it was induced from."""
+    cores: dict[str, str] = {}  # lowercased core → representative display spelling
+    has_numbering = False
+    for v in variants:
+        if _NUMBERING_RE.match(v):
+            has_numbering = True
+        core = _strip_numbering(v)
+        cores.setdefault(core.lower(), core)
+    prefix = _NUMBER_PREFIX if has_numbering else ""
+    if len(cores) == 1:
+        body = re.escape(next(iter(cores.values())))
+    else:
+        body = "(?:" + "|".join(re.escape(c) for _, c in sorted(cores.items())) + ")"
+    return f"(?i)^{prefix}{body}$"
+
+
+def infer_semantic_role(title: str) -> str | None:
+    """The section's semantic role where inferable (orientation/installation/back-out/…), else
+    ``None`` — a curation-overridable proposal hint, never a guess (§9.8)."""
+    t = " ".join(title.lower().split())
+    for keyword, role in _ROLE_KEYWORDS:
+        if keyword in t:
+            return role
+    return None
+
+
 def mine_templates(
     docs: dict[str, str],
     doc_types: dict[str, str],
@@ -419,7 +528,12 @@ def mine_templates(
     for (dt, era), members in buckets.items():
         if len(members) < min_docs:
             continue
-        sigs = [kd.minhash_signature(kd.scaffold_shingles([t for _, t in sc])) for _, sc in members]
+        # cluster on numbering-stripped titles so `1. Introduction` and `Introduction` align — the
+        # same key the consensus schema uses (the heterogeneous-type alignment win, §9.8 / spike §5)
+        sigs = [
+            kd.minhash_signature(kd.scaffold_shingles([_strip_numbering(t) for _, t in sc]))
+            for _, sc in members
+        ]
         for cluster in kd.cluster_near_duplicates(sigs, threshold=scaffold_threshold):
             picked = [members[i] for i in cluster]
             if len(picked) < min_docs:
@@ -445,45 +559,69 @@ def mine_templates(
 class _SectionAgg:
     """Per-section accumulator while building a cluster's consensus schema."""
 
-    title: str  # first-seen display spelling
+    title: str  # first-seen display spelling (the consensus title is the most common variant)
     count: int = 0  # member docs containing this section
     levels: Counter[int] = field(default_factory=Counter)
     positions: list[int] = field(default_factory=list)
+    variants: Counter[str] = field(default_factory=Counter)  # every display spelling seen
+    repeats_in_doc: int = 0  # member docs where this section appears more than once
 
 
 def _consensus_schema(
     members: list[tuple[str, list[tuple[int, str]]]],
+    *,
+    admit_ratio: float = _ADMIT_RATIO,
+    required_ratio: float = _REQUIRED_RATIO,
 ) -> list[TemplateSection]:
-    """The retained structural schema for a scaffold cluster: sections present in a majority of
-    members, ordered by mean position, marked ``required`` when present in *every* member (§9.8)."""
+    """The retained computable schema for a scaffold cluster (§9.8).
+
+    Sections are keyed by numbering-stripped title (so ``1. Introduction`` and ``Introduction``
+    align), ordered by mean position, and admitted when they cover ≥ ``admit_ratio`` of members
+    (absolute floor 2); each is marked ``required`` at ≥ ``required_ratio`` coverage, ``repeatable``
+    when it recurs within any member, carries a numbering-tolerant ``title_pattern`` induced from
+    its observed spellings, and an inferred ``semantic_role`` (null when unknown)."""
     size = len(members)
     agg: dict[str, _SectionAgg] = {}
     for _, scaffold in members:
         seen: set[str] = set()
+        per_doc: Counter[str] = Counter()
         for pos, (level, title) in enumerate(scaffold):
-            key = " ".join(title.lower().split())
-            if key in seen:  # count each section once per document
+            key = _core_key(title)
+            per_doc[key] += 1
+            row = agg.setdefault(key, _SectionAgg(title=title))
+            row.variants[title] += 1
+            if key in seen:  # count docs / levels / position once per document
                 continue
             seen.add(key)
-            row = agg.setdefault(key, _SectionAgg(title=title))
             row.count += 1
             row.levels[level] += 1
             row.positions.append(pos)
-    majority = size // 2 + 1
+        for key, n in per_doc.items():
+            if n > 1:
+                agg[key].repeats_in_doc += 1
+    admit_floor = max(2, ceil(admit_ratio * size))
+    required_floor = required_ratio * size
     rows = sorted(
-        (r for r in agg.values() if r.count >= majority),
+        (r for r in agg.values() if r.count >= admit_floor),
         key=lambda r: sum(r.positions) / len(r.positions),
     )
-    return [
-        TemplateSection(
-            section_id=_slug(r.title),
-            title=r.title,
-            level=r.levels.most_common(1)[0][0],
-            required=r.count == size,
-            toc_level=r.levels.most_common(1)[0][0] <= 3,
+    out: list[TemplateSection] = []
+    for r in rows:
+        consensus_title = r.variants.most_common(1)[0][0]
+        level = r.levels.most_common(1)[0][0]
+        out.append(
+            TemplateSection(
+                section_id=_slug(consensus_title),
+                title=consensus_title,
+                title_pattern=induce_title_pattern(list(r.variants)),
+                level=level,
+                required=r.count >= required_floor,
+                repeatable=r.repeats_in_doc > 0,
+                semantic_role=infer_semantic_role(consensus_title),
+                toc_level=level <= 3,
+            )
         )
-        for r in rows
-    ]
+    return out
 
 
 def count_bare_markers(body: str) -> int:

@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import re
+
+from hypothesis import assume, given
+from hypothesis import strategies as st
+
 from vdocs.stages.discover import discover_pure as dp
 
 _BOILER = (
@@ -14,6 +19,54 @@ def test_split_blocks_and_key():
     md = "# H\n\nFirst block.\n\n\nSecond   block.\n"
     assert dp.split_blocks(md) == ["# H", "First block.", "Second   block."]
     assert dp.block_key("  Second   Block.  ") == "second block."  # ws-collapsed, lowercased
+
+
+def test_split_blocks_drops_markdown_artifacts_keeps_inline_links():
+    # the spike found the dominant boilerplate *noise* is structural markdown, not prose: nav
+    # links, secondary TOC lines, <img> tags, table-CSV markers. Drop blocks that are *entirely*
+    # such artifacts; keep headings and prose paragraphs (even ones with an inline link).
+    md = (
+        "# Heading\n\n"
+        "[↑ Back to Contents](#contents)\n\n"
+        "[1 Introduction [1](#introduction)](#introduction)\n\n"
+        '<img src="media/image1.png" />\n\n'
+        "_[Table 1 (extracted to CSV)](tables/table-01.csv)_\n\n"
+        "See [the install guide](#install) for the full procedure.\n\n"
+        "Plain prose paragraph with no links at all.\n"
+    )
+    assert dp.split_blocks(md) == [
+        "# Heading",
+        "See [the install guide](#install) for the full procedure.",
+        "Plain prose paragraph with no links at all.",
+    ]
+
+
+def test_split_blocks_drops_image_blocks_incl_multiline_img_tags():
+    # corpus reality (Task 3): CAS image refs appear as markdown `![](hash.png)` and as multi-line
+    # Pandoc `<img …>` tags — both are entirely structural and must not surface as boilerplate
+    md = (
+        "Real prose paragraph.\n\n"
+        "![](27daafb0abc.png)\n\n"
+        '<img src="a0e627d135.png"\n  width="468"\n  height="60" />\n\n'
+        "Closing prose.\n"
+    )
+    assert dp.split_blocks(md) == ["Real prose paragraph.", "Closing prose."]
+
+
+def test_split_blocks_keeps_mixed_block_with_some_prose():
+    # a block is dropped only when *every* line is an artifact; a block mixing an artifact line
+    # with prose is kept intact (block grain preserved)
+    md = "Real sentence here.\n[↑ Back to Contents](#contents)\n"
+    assert dp.split_blocks(md) == ["Real sentence here.\n[↑ Back to Contents](#contents)"]
+
+
+def test_artifact_lines_no_longer_surface_as_boilerplate():
+    # the regression the spike flagged: `[↑ Back to Contents](#contents)` in every doc was the
+    # top "boilerplate". After the pre-filter it must not appear as a candidate at all.
+    nav = "[↑ Back to Contents](#contents)"
+    docs = {f"d/{i}": f"# {i}\n\n{nav}\n\nUnique body {i}.\n" for i in range(8)}
+    cands = dp.mine_recurring_blocks(docs, min_docs=3)
+    assert all("back to contents" not in c.key for c in cands)
 
 
 def test_recurring_block_below_threshold_is_not_a_candidate():
@@ -310,6 +363,102 @@ def test_curated_templates_registry_is_well_formed():
         assert t["sections"], "a curated template must retain a non-trivial schema"
         for s in t["sections"]:
             assert {"section_id", "title", "level", "required", "toc_level"} <= set(s)
+
+
+def test_induce_title_pattern_aligns_numbered_variants():
+    # §9.8: a section's title varies by leading numbering across docs; the induced regex aligns them
+    # (`Introduction` / `1. Introduction` / `1 Introduction` / `2.1 Introduction`)
+    variants = ["Introduction", "1. Introduction", "1 Introduction", "2.1 Introduction"]
+    pat = re.compile(dp.induce_title_pattern(variants))
+    assert all(pat.match(v) for v in variants)
+    assert not pat.match("Conclusion")
+
+
+def test_induce_title_pattern_alternates_distinct_cores():
+    # genuinely different spellings (not just numbering) become an alternation — still matches each
+    pat = re.compile(dp.induce_title_pattern(["Back-Out Strategy", "1. Back Out Strategy"]))
+    assert pat.match("Back-Out Strategy")
+    assert pat.match("1. Back Out Strategy")
+
+
+@given(st.lists(st.text(alphabet="abcdefg 0123456789.", min_size=1, max_size=30), min_size=1))
+def test_induce_title_pattern_matches_all_its_evidence(variants):
+    # property: the induced pattern always matches every variant it was induced from
+    cleaned = [v.strip() for v in variants if v.strip()]
+    assume(cleaned)
+    pat = re.compile(dp.induce_title_pattern(cleaned))
+    for v in cleaned:
+        assert pat.match(v) is not None
+
+
+def test_infer_semantic_role_labels_known_sections_else_none():
+    assert dp.infer_semantic_role("Glossary") == "glossary"
+    assert dp.infer_semantic_role("Back-Out Procedure") == "back-out"
+    assert dp.infer_semantic_role("Rollback Criteria") == "back-out"
+    assert dp.infer_semantic_role("Installation Procedure") == "installation"
+    assert dp.infer_semantic_role("Introduction") == "orientation"
+    assert dp.infer_semantic_role("Troubleshooting") == "troubleshooting"
+    assert dp.infer_semantic_role("Frobnicate the Quux") is None  # not guessed → null (§9.8)
+
+
+def test_template_section_carries_enriched_schema_fields():
+    # §9.8: TemplateSection is a computable schema — title_pattern, semantic_role, repeatable.
+    # One doc numbers the heading; "Introduction" stays the consensus title (2 of 3 docs).
+    docs = {
+        "A/d_0": _doc("January 2013", ["1. Introduction", "Glossary"]),
+        "A/d_1": _doc("January 2013", ["Introduction", "Glossary"]),
+        "A/d_2": _doc("January 2013", ["Introduction", "Glossary"]),
+    }
+    doc_types = {k: "UM" for k in docs}
+    (t,) = dp.mine_templates(docs, doc_types, min_docs=3)
+    intro = next(s for s in t.sections if s.title == "Introduction")
+    assert intro.semantic_role == "orientation"
+    assert re.match(intro.title_pattern, "Introduction")
+    assert re.match(intro.title_pattern, "1. Introduction")  # numbering-tolerant oracle
+    assert intro.repeatable is False  # appears once per doc
+
+
+def test_numbered_titles_align_into_one_section():
+    # the heterogeneous-alignment win (§9.8 / spike §5): `1. Introduction` and `Introduction`
+    # across docs are ONE section, not two — numbering is stripped for the consensus key
+    docs = {
+        "A/d_0": _doc("June 2016", ["1. Introduction", "2. Glossary"]),
+        "A/d_1": _doc("June 2016", ["1 Introduction", "2 Glossary"]),
+        "A/d_2": _doc("June 2016", ["Introduction", "Glossary"]),
+    }
+    doc_types = {k: "IG" for k in docs}
+    (t,) = dp.mine_templates(docs, doc_types, min_docs=3)
+    titles = sorted(s.title.lower().lstrip("0123456789. ") for s in t.sections)
+    assert len(t.sections) == 2  # aligned, not 6 distinct numbered headings
+    assert titles == ["glossary", "introduction"]
+
+
+def test_repeatable_flag_set_for_within_doc_recurring_section():
+    # a section that legitimately recurs within a document (e.g. per-patch subsections) → repeatable
+    sections = ["Overview", "Patch Notes", "Patch Notes", "Glossary"]
+    docs = {f"A/d_{i}": _doc("March 2008", sections) for i in range(3)}
+    doc_types = {k: "TM" for k in docs}
+    (t,) = dp.mine_templates(docs, doc_types, min_docs=3)
+    pn = next(s for s in t.sections if s.title == "Patch Notes")
+    assert pn.repeatable is True
+    assert next(s for s in t.sections if s.title == "Overview").repeatable is False
+
+
+def test_required_uses_ratio_and_admits_optional_sections():
+    # the `required` policy decision (§9.8): a section is required at ≥ 50% coverage (not "every
+    # member" — the spike found real DIBR sections at 60–94%); an optional tier is retained between
+    # the admit floor (≥ 25%) and the required ratio; sub-floor one-offs are dropped.
+    base = ["Purpose", "Scope", "Overview", "Details", "Summary"]
+    docs = {f"A/d_{i}": _doc("January 2013", base) for i in range(8)}
+    for i in range(3):  # "Appendix" in 3 of 8 (optional: admitted, < 50%)
+        docs[f"A/d_{i}"] = _doc("January 2013", base + ["Appendix"])
+    docs["A/d_0"] = _doc("January 2013", base + ["Appendix", "One Off Section"])  # 1 of 8 → dropped
+    doc_types = {k: "TM" for k in docs}
+    (t,) = dp.mine_templates(docs, doc_types, min_docs=3)
+    by_title = {s.title: s for s in t.sections}
+    assert all(by_title[b].required for b in base)  # 8/8 → required
+    assert "Appendix" in by_title and not by_title["Appendix"].required  # 3/8 → optional, retained
+    assert "One Off Section" not in by_title  # 1/8 → below admit floor, dropped
 
 
 def test_mine_glossary_acronyms_filters_stopwords():

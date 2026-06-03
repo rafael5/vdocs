@@ -58,3 +58,24 @@ def test_iter_headings_yields_raw_text_with_inline_markup():
     (_, level, text) = next(iter(md.iter_headings(body)))
     assert level == 2
     assert text == '<span id="_Toc1"></span>Intro'  # raw — bookmark span retained for callers
+
+
+def test_is_markdown_artifact_matches_structural_only_lines():
+    # the dominant boilerplate *noise* is structural markdown, not prose (vdocs-spike §Task 1):
+    # nav links, secondary plain-text TOC lines, figure images, table-CSV markers — all entirely
+    # structure, with optional `_`/`*`/`↑` wrappers
+    assert md.is_markdown_artifact("[↑ Back to Contents](#contents)")
+    assert md.is_markdown_artifact("[1 Introduction [1](#introduction)](#introduction)")
+    assert md.is_markdown_artifact('<img src="media/image1.png" width="200" />')
+    assert md.is_markdown_artifact("_[Table 1 (extracted to CSV)](tables/table-01.csv)_")
+    assert md.is_markdown_artifact("  *[Figure 2](assets/fig-02.png)*  ")  # wrapped + indented
+    assert md.is_markdown_artifact("![](27daafb0.png)")  # markdown image syntax (CAS asset ref)
+    assert md.is_markdown_artifact("![alt caption](assets/a0e627.jpeg)")
+
+
+def test_is_markdown_artifact_keeps_prose_with_inline_link():
+    # a real sentence that merely *contains* an inline link is prose, never an artifact
+    assert not md.is_markdown_artifact("See [the install guide](#install) for the procedure.")
+    assert not md.is_markdown_artifact("Plain prose paragraph with no links at all.")
+    assert not md.is_markdown_artifact("## Introduction")  # a heading is structure, not an artifact
+    assert not md.is_markdown_artifact("")  # a blank line is not, by itself, an artifact
