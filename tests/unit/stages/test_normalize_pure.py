@@ -68,6 +68,40 @@ def test_subtract_phrases_deletes_matching_blocks_only():
     assert nz.subtract_phrases(body, frozenset()) == body
 
 
+def test_subtract_phrases_matches_emphasis_wrapped_and_extended_furniture():
+    # the real corpus wraps blank-page furniture in emphasis + adds a trailing clause:
+    # `*This page intentionally left blank for double-sided printing.*` — a curated long phrase
+    # (≥4 words) prefix-matches the marker-stripped block so the variant is still deleted
+    body = "Real.\n\n*This page intentionally left blank for double-sided printing.*\n\nMore.\n"
+    out = nz.subtract_phrases(body, frozenset({"This page intentionally left blank"}))
+    assert "intentionally left blank" not in out
+    assert "Real." in out and "More." in out
+
+
+def test_subtract_phrases_short_phrase_stays_exact_to_avoid_false_deletes():
+    # a short (<4-word) phrase must NOT prefix-match real prose that merely begins with it
+    body = "End of document processing starts in the morning.\n"
+    assert nz.subtract_phrases(body, frozenset({"End of document"})) == body
+
+
+def test_effective_toc_depth_includes_top_level_when_there_is_no_single_title():
+    # a lone leading H1 is the document title → H2–H3 (the default)
+    single = nz.parse_headings("# Title\n\n## A\n\n### B\n")
+    assert nz.effective_toc_depth(single) == (2, 3)
+    # many H1s (sections, not a title) → include H1 so the doc gets a Contents
+    many = nz.parse_headings("# One\n\nx\n\n# Two\n\ny\n\n# Three\n\nz\n")
+    assert nz.effective_toc_depth(many) == (1, 2)
+    assert nz.effective_toc_depth([]) == (2, 3)  # no headings → default
+
+
+def test_normalize_body_generates_contents_for_multi_h1_doc():
+    body = "# Section One\n\nalpha\n\n# Section Two\n\nbeta\n\n# Section Three\n\ngamma\n"
+    out, _ = nz.normalize_body(body, frozenset())
+    assert out.count("## Contents") == 1  # a Contents IS generated for the all-H1 doc
+    assert "- [Section One](#section-one)" in out
+    assert "- [Section Two](#section-two)" in out
+
+
 def test_regenerate_toc_builds_contents_with_anchor_links():
     body = "# Install Guide\n\nIntro.\n\n## Setup\n\nsteps\n\n### Details\n\nx\n"
     out = nz.regenerate_toc(body)
@@ -279,6 +313,106 @@ def test_strip_legacy_toc_leaves_unrelated_headings():
     # a non-TOC heading that merely contains the word is not a contents section
     body = "# Manual\n\n## Table of Contents Overview\n\nkept\n"
     assert nz.strip_legacy_toc(body, _TOC_TITLES) == body  # exact text match only
+
+
+def test_strip_legacy_toc_removes_plain_text_header_and_double_bracket_entries():
+    # the real corpus shape (§6.7): a *plain-text* `Table of Contents` line (not an ATX heading)
+    # followed by the page-numbered `[Title [n](#anchor)](#anchor)` entry block
+    body = (
+        "Department of Veterans Affairs\n\n"
+        "Table of Contents\n\n"
+        "[Introduction [1](#introduction)](#introduction)\n\n"
+        "[Routines [8](#routines-1)](#routines-1)\n\n"
+        "# Introduction\n\nreal text\n\n## Routines\n\nx\n\n## Routines\n\ny\n"
+    )
+    out = nz.strip_legacy_toc(body, _TOC_TITLES)
+    assert "Table of Contents" not in out
+    assert "[Introduction [1]" not in out and "[Routines [8]" not in out  # entries gone
+    assert "# Introduction" in out and "real text" in out  # real content kept
+
+
+def test_strip_legacy_toc_drops_bare_header_with_degraded_entries():
+    # a legacy `Table of Contents` whose entries degraded to plain text / page-numbered headings
+    # (no `(#anchor)` links left): the stale header label is dropped on its own
+    body = "Cover\n\nTable of Contents\n\n# Introduction 1\n\nbody text\n"
+    out = nz.strip_legacy_toc(body, _TOC_TITLES)
+    assert "Table of Contents" not in out
+    assert "# Introduction 1" in out and "body text" in out  # real (page-numbered) heading kept
+
+
+def test_strip_legacy_toc_drops_blockquote_and_bullet_prefixed_entries():
+    body = (
+        "Contents\n\n"
+        "> [3.2 Site Info [4](#site-info)](#site-info)\n\n"
+        "  - [[2237](#_bookmark10)](#2237_bookmark10)\n\n"
+        "# Real\n\nkept\n"
+    )
+    out = nz.strip_legacy_toc(body, _TOC_TITLES)
+    assert "site-info" not in out and "2237" not in out  # prefixed legacy entries dropped
+    assert "# Real" in out and "kept" in out
+
+
+def test_strip_legacy_toc_handles_list_of_figures_and_bold_atx_header():
+    # the corpus also carries `List of Figures`/`List of Tables` plain-text TOCs and bold-markup
+    # ATX headers (`# **Table of Contents**`) — both must be recognised and dropped (§6.7)
+    titles = frozenset({"table of contents", "list of figures"})
+    body = (
+        "# **Table of Contents**\n\n"
+        "[Intro [1](#intro)](#intro)\n\n"
+        "List of Figures\n\n"
+        "[Figure 1 [5](#_Toc1)](#_Toc1)\n\n"
+        "# Intro\n\nreal\n"
+    )
+    out = nz.strip_legacy_toc(body, titles)
+    assert "Table of Contents" not in out and "List of Figures" not in out
+    assert "[Intro [1]" not in out and "[Figure 1 [5]" not in out
+    assert "# Intro" in out and "real" in out
+
+
+def test_strip_legacy_toc_removes_orphaned_double_bracket_entries():
+    # a figure-list / header-less block whose header text isn't curated still loses its unambiguous
+    # double-bracket page-numbered entries (only ever legacy nav) — even with an empty titles set
+    body = (
+        "Some intro paragraph.\n\n"
+        "[Figure 1 - Foo [5](#_Toc1)](#_Toc1)\n\n"
+        "[Figure 2 - Bar [6](#_Toc2)](#_Toc2)\n\n"
+        "## Real Section\n\nkept\n"
+    )
+    out = nz.strip_legacy_toc(body, frozenset())  # no curated titles at all
+    assert "[Figure 1 - Foo" not in out and "[Figure 2 - Bar" not in out
+    assert "Some intro paragraph." in out and "## Real Section" in out and "kept" in out
+
+
+def test_legacy_toc_targets_collects_outer_anchors():
+    body = (
+        "Table of Contents\n\n"
+        "[Introduction [1](#introduction)](#introduction)\n\n"
+        "[Lost Section [9](#_Toc55)](#_Toc55)\n\n"
+        "# Introduction\n\nx\n"
+    )
+    assert nz.legacy_toc_targets(body, _TOC_TITLES) == ["#introduction", "#_Toc55"]
+
+
+def test_correlate_legacy_toc_flags_unresolved_entries():
+    # role-1 cross-check: a target with no derived-heading counterpart is unresolved (Word bookmark
+    # that never resolved, or a heading lost in conversion) — a fidelity flag, not a silent loss
+    headings = nz.parse_headings("# Introduction\n\nx\n")  # only `introduction` exists
+    unresolved = nz.correlate_legacy_toc(["#introduction", "#_Toc55", "#missing"], headings)
+    assert unresolved == ["#_Toc55", "#missing"]  # #introduction resolves; the others don't
+
+
+def test_normalize_body_strips_plain_text_legacy_toc_and_records_unresolved():
+    body = (
+        "Table of Contents\n\n"
+        "[Overview [1](#overview)](#overview)\n\n"
+        "[Ghost [9](#_Toc99)](#_Toc99)\n\n"
+        "# Introduction\n\nreal text\n\n## Overview\n\ndetails\n"
+    )
+    out, amap = nz.normalize_body(body, frozenset(), toc_titles=_TOC_TITLES)
+    assert "Table of Contents" not in out and "#_Toc99" not in out  # legacy TOC dropped
+    assert out.count("## Contents") == 1  # exactly one derived TOC
+    assert "- [Overview](#overview)" in out
+    assert amap.toc_unresolved == ["#_Toc99"]  # the unresolved bookmark is flagged, not lost
 
 
 def test_normalize_body_strips_legacy_toc_then_derives_single_contents():
