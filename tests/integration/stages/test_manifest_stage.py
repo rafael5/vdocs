@@ -1,0 +1,156 @@
+"""manifest integration — index.db + consolidated → corpus-manifest.json + discovery.json (§14.4).
+Seeds a small index.db (documents/sections/entities/relations) + a consolidated bundle, runs
+ManifestStage through the orchestrator, and asserts the JSON schema, counts matching index.db, and
+the semantic-search-unavailable flag (no vectors.db, D3).
+"""
+
+from __future__ import annotations
+
+import json
+
+from vdocs.contracts.registry import (
+    CONSOLIDATED,
+    INDEX_DOCUMENTS,
+    INDEX_ENTITIES,
+    RELATIONS,
+)
+from vdocs.kernel import cas, db
+from vdocs.models.stage import Decision, StageRun
+from vdocs.orchestrator.engine import Orchestrator
+from vdocs.stages.manifest.stage import ManifestStage
+
+
+def _seed(ctx):
+    conn = db.connect(ctx.cfg.index_db)
+    conn.executescript(
+        """
+        CREATE TABLE documents (doc_key TEXT PRIMARY KEY, is_latest INTEGER);
+        CREATE TABLE doc_sections (section_id TEXT PRIMARY KEY, is_latest INTEGER);
+        CREATE TABLE entities (entity_id TEXT PRIMARY KEY, type TEXT);
+        CREATE TABLE relations (src_id TEXT, rel TEXT, dst_id TEXT);
+        """
+    )
+    conn.executemany("INSERT INTO documents VALUES (?, ?)", [("d1", 1), ("d2", 0), ("d3", 1)])
+    conn.executemany(
+        "INSERT INTO doc_sections VALUES (?, ?)", [("d1/a", 1), ("d2/a", 0), ("d3/a", 1)]
+    )
+    conn.executemany(
+        "INSERT INTO entities VALUES (?, ?)",
+        [("build:X", "build"), ("global:G", "global"), ("global:H", "global")],
+    )
+    conn.executemany(
+        "INSERT INTO relations VALUES (?, ?, ?)",
+        [("d1", "mentions", "build:X"), ("d1", "xref", "d3")],
+    )
+    conn.commit()
+    conn.close()
+    # a consolidated bundle (the version-group rollup input)
+    cas.atomic_write(
+        ctx.cfg.gold_consolidated / "CPRS" / "or_ig" / "history.yaml", b"anchor_key: x\n"
+    )
+
+    ctx.state.record(
+        StageRun(
+            stage="index",
+            scope="",
+            status="ok",
+            started_at="t",
+            finished_at="t",
+            inputs_fp={},
+            outputs_fp={a.key: a.fingerprint(ctx.cfg) for a in (INDEX_DOCUMENTS, INDEX_ENTITIES)},
+            counts={},
+            contract_ver=1,
+            tool_ver=ctx.cfg.tool_ver,
+        )  # fmt: skip
+    )
+    for stage, art in (("consolidate", CONSOLIDATED), ("relate", RELATIONS)):
+        ctx.state.record(
+            StageRun(
+                stage=stage,
+                scope="",
+                status="ok",
+                started_at="t",
+                finished_at="t",
+                inputs_fp={},
+                outputs_fp={art.key: art.fingerprint(ctx.cfg)},
+                counts={},
+                contract_ver=1,
+                tool_ver=ctx.cfg.tool_ver,
+            )  # fmt: skip
+        )
+
+
+def test_manifest_writes_both_json_with_counts_and_semantic_off(ctx):
+    _seed(ctx)
+    (result,) = Orchestrator([ManifestStage()]).run(ctx)
+    assert result.status == "ok"
+    assert result.counts["semantic_available"] == 0  # no vectors.db (D3)
+
+    manifest = json.loads(ctx.cfg.corpus_manifest.read_text())
+    assert manifest["counts"]["documents"] == 3
+    assert manifest["counts"]["version_groups"] == 2  # the two is_latest docs
+    assert manifest["counts"]["sections_searchable"] == 2
+    assert manifest["counts"]["entities_by_type"] == {"build": 1, "global": 2}
+    assert manifest["counts"]["relations_by_type"] == {"mentions": 1, "xref": 1}
+    # semantic search unavailable until embed (Phase 6); the other modes are live
+    assert manifest["capabilities"] == {
+        "lexical": True,
+        "structured": True,
+        "graph": True,
+        "semantic": False,
+    }
+    assert manifest["embedding"] is None
+    assert "section_id" in manifest["id_scheme"]  # the stable-ID contract advertised
+
+    discovery = json.loads(ctx.cfg.discovery_json.read_text())
+    assert set(discovery["entity_types"]) == {"build", "global"}
+    assert discovery["capabilities"]["semantic"] is False
+    assert discovery["counts"]["version_groups"] == 2
+
+
+def test_manifest_flips_semantic_on_when_vectors_present(ctx):
+    # D3: a Phase-6 vectors.db with an embedding_model row fills the embedding fields + turns
+    # semantic search on (the same manifest re-run, now with vectors present)
+    _seed(ctx)
+    vconn = db.connect(ctx.cfg.vectors_db)
+    vconn.executescript("CREATE TABLE embedding_model (model TEXT, version TEXT, dim INTEGER)")
+    vconn.execute("INSERT INTO embedding_model VALUES ('all-MiniLM-L6-v2', '2', 384)")
+    vconn.commit()
+    vconn.close()
+
+    (result,) = Orchestrator([ManifestStage()]).run(ctx)
+    assert result.counts["semantic_available"] == 1
+    manifest = json.loads(ctx.cfg.corpus_manifest.read_text())
+    assert manifest["capabilities"]["semantic"] is True
+    assert manifest["embedding"] == {"model": "all-MiniLM-L6-v2", "version": "2", "dim": 384}
+
+
+def test_manifest_treats_vectors_without_meta_as_unavailable(ctx):
+    # a vectors.db that exists but lacks the embedding_model table ⇒ semantic stays off (no crash)
+    _seed(ctx)
+    vconn = db.connect(ctx.cfg.vectors_db)
+    vconn.execute("CREATE TABLE other (x TEXT)")
+    vconn.commit()
+    vconn.close()
+    (result,) = Orchestrator([ManifestStage()]).run(ctx)
+    assert result.counts["semantic_available"] == 0
+
+
+def test_manifest_skips_on_unchanged_rerun(ctx):
+    _seed(ctx)
+    Orchestrator([ManifestStage()]).run(ctx)
+    assert ManifestStage().preflight(ctx, force=False).decision is Decision.SKIP
+
+
+def test_manifest_counts_stable_across_forced_rerun(ctx):
+    # generated_at tracks the clock (so a forced rebuild's timestamp differs by design); the corpus
+    # *counts* and capabilities are a pure function of the inputs and must be byte-stable
+    _seed(ctx)
+    orch = Orchestrator([ManifestStage()])
+    orch.run(ctx)
+    first = json.loads(ctx.cfg.corpus_manifest.read_text())
+    orch.run(ctx, force=True)
+    second = json.loads(ctx.cfg.corpus_manifest.read_text())
+    assert first["counts"] == second["counts"]
+    assert first["capabilities"] == second["capabilities"]
+    assert first["generated_at"] != second["generated_at"]  # the clock advanced

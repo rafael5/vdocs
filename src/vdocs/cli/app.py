@@ -21,6 +21,7 @@ from vdocs.stages.discover.stage import DiscoverStage
 from vdocs.stages.enrich.stage import EnrichStage
 from vdocs.stages.fetch.stage import FetchStage
 from vdocs.stages.index.stage import IndexStage
+from vdocs.stages.manifest.stage import ManifestStage
 from vdocs.stages.normalize.stage import NormalizeStage
 from vdocs.stages.relate.stage import RelateStage
 from vdocs.stages.serve_inventory.stage import ServeInventoryStage
@@ -44,6 +45,7 @@ def build_stages() -> list[Stage]:
         ConsolidateStage(),
         IndexStage(),
         RelateStage(),
+        ManifestStage(),
     ]
 
 
@@ -214,6 +216,12 @@ def index(force: bool = typer.Option(False, "--force", "-f")) -> None:
 def relate(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Materialize the knowledge graph (doc↔entity, entity↔entity, doc↔doc) into relations."""
     _drive(only="relate", force=force)
+
+
+@app.command()
+def manifest(force: bool = typer.Option(False, "--force", "-f")) -> None:
+    """Assemble corpus-manifest.json + discovery.json — the MCP front door (semantic off now)."""
+    _drive(only="manifest", force=force)
 
 
 @app.command()

@@ -212,6 +212,22 @@ RELATIONS = ArtifactContract(
     db="index.db",
     table="relations",
 )
+# `manifest`: the agent front door — corpus schema/counts/ID-scheme/capabilities (§14.4).
+# `vectors.db` is an OPTIONAL input (Phase 6); absent ⇒ semantic search marked unavailable (D3).
+CORPUS_MANIFEST = ArtifactContract(
+    key="gold/corpus-manifest.json",
+    kind=Kind.FILE,
+    storage_class=StorageClass.STATE,
+    produced_by="manifest",
+    relpath="documents/gold/corpus-manifest.json",
+)
+DISCOVERY_JSON = ArtifactContract(
+    key="gold/discovery.json",
+    kind=Kind.FILE,
+    storage_class=StorageClass.STATE,
+    produced_by="manifest",
+    relpath="documents/gold/discovery.json",
+)
 
 
 def foundational_registry() -> ArtifactRegistry:
@@ -243,6 +259,8 @@ def default_registry() -> ArtifactRegistry:
         INDEX_SECTIONS,
         INDEX_ENTITIES,
         RELATIONS,
+        CORPUS_MANIFEST,
+        DISCOVERY_JSON,
     ):
         reg.register(contract)
     return reg

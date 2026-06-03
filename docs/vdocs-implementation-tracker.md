@@ -24,22 +24,24 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 
 ## Overall status
 
-**Pipeline stages (§8): 9 ✅ · 0 ◐ · 10 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
+**Pipeline stages (§8): 12 ✅ · 0 ◐ · 7 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
 counted separately below). Last updated **2026-06-02**. **Phases 1–3 complete and merged to `master`**
 (PRs #3/#4/#5) — inventory medallion + gated bronze + the full document-silver pipeline, run
 end-to-end on a real 469-doc VA corpus; the pre-Phase-4 hardening pass (reliability R1–R9 [R4 split
 out], redundancy D1–D5, the `revisions.yaml` rename, drift-doc reconciliation, a 7-invariant property
-suite + branch coverage) is **fast-forwarded onto `master`** (`e725f5a`). **Phase 4 in progress:**
-`consolidate` ✅ (§6.6 version rollup), `index` ✅ (§5.5/§14.6 derived index), and `relate` ✅ (§8
-knowledge graph) landed on branch `feat/phase-4-gold-derive`; `make check` green (**514 tests, branch
-cov 99.7% / gate ≥95%**, ruff+mypy clean). **Next: Phase 4 `manifest`.**
+suite + branch coverage) is **fast-forwarded onto `master`** (`e725f5a`). **Phase 4 COMPLETE** on
+branch `feat/phase-4-gold-derive` (not yet merged): the gold-derive layer `consolidate` ✅ (§6.6
+version rollup) → `index` ✅ (§5.5/§14.6 derived index) → `relate` ✅ (§8 knowledge graph) → `manifest`
+✅ (§14.4 MCP front door), regenerated on the real 469-doc lake (no re-fetch) and a no-`--force`
+re-run SKIPs all four. `make check` green (**524 tests, branch cov 99.7% / gate ≥95%**, ruff+mypy
+clean). **Next: Phase 5 `fidelity`.**
 
 | Phase | Title | Status | Progress |
 |---|---|:--:|:--:|
 | 1 | Spine (kernel·config·models·contracts·orchestrator) | ✅ | 4/4 |
 | 2 | Inventory medallion + doc-bronze | ✅ | 4/4 |
 | 3 | Silver — document text (convert·discover·enrich·normalize) | ✅ | 4/4 |
-| 4 | Gold derive (consolidate·index·relate·manifest) | ◐ | 3/4 |
+| 4 | Gold derive (consolidate·index·relate·manifest) | ✅ | 4/4 |
 | 5 | Gold deliver (fidelity·publish·validate·push·analyze) | ☐ | 0/5 |
 | 6 | Machine interface (embed·serve-mcp) | ☐ | 0/2 |
 | 7 | Harden (property·--verify·gc·docs-gen·replay·refresh) | ◐ | 2◐·1⬚·3☐ |
@@ -77,14 +79,14 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
 | enrich | 🥈 DOC | ✅ | §8 | converted → enriched (FM) |
 | normalize | 🥈 DOC | ✅ | §6.7 | enriched → normalized (+TOC/refs) |
 
-**Phase 4 — Gold derive** ◐ 3/4
+**Phase 4 — Gold derive** ✅ 4/4
 
 | Stage | Layer | St | Ref | Goal |
 |---|:--:|:--:|---|---|
 | consolidate | 🥇 DOC | ✅ | §6.6 | normalized → consolidated (lineage) |
 | index | 🥇 DOC | ✅ | §8 | → index.db (FTS5, IDs) |
 | relate | 🥇 DOC | ✅ | §8 | index.db → relations (graph) |
-| manifest | 🥇 DOC | ☐ | §14 | → corpus-manifest + discovery |
+| manifest | 🥇 DOC | ✅ | §14 | → corpus-manifest + discovery |
 
 **Phase 5 — Gold deliver** ☐ 0/5
 
@@ -270,6 +272,23 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **Phase 4 Increment 4: `manifest` ✅ — Phase 4 COMPLETE (§14.4, D3).** Final
+  gold-derive stage: the agent front door. Pure assembler `manifest_pure` builds `corpus-manifest.json`
+  (counts, lineage `tool_ver`/`generated_at`, the stable-ID scheme, the MCP capability manifest) +
+  `discovery.json` (corpus schema + entity-type vocabulary + ID scheme + capabilities) from corpus
+  counts the driver gathers off `index.db`. **D3 — `vectors.db` is OPTIONAL:** built against
+  `consolidated` + `index.db` alone it omits the embedding-model id+version and marks **semantic search
+  unavailable** (`capabilities.semantic=false`, `embedding=null`); the lexical/structured/graph modes
+  are live. A test proves the Phase-6 flip: a `vectors.db` with an `embedding_model` row turns semantic
+  on. `generated_at` tracks the clock (so a forced rebuild's timestamp differs by design; the *counts*
+  are a pure function of inputs), and the no-force SKIP path never rewrites. `CORPUS_MANIFEST` +
+  `DISCOVERY_JSON` contracts + the `manifest` CLI + DAG wiring (`…relate → manifest`). Tests: 5
+  `manifest_pure` + 5 integration (JSON schema, counts == index.db, semantic-off, semantic-flip,
+  vectors-without-meta, skip, forced-rerun count stability). **Real lake (DoD):** the whole gold-derive
+  layer regenerated in one `vdocs run --from consolidate --to manifest --force` pass (consolidate 290
+  groups → index 469 docs/25 981 sections/16 756 FTS → relate 24 366 edges → manifest 469 docs/290
+  groups, semantic unavailable); a no-`--force` re-run **SKIPs all four**. **Pipeline tally: 12 ✅** (8
+  + the 4 gold-derive stages). **524 tests, branch cov 99.7%**, ruff+mypy clean.
 - **2026-06-02** — **Phase 4 Increment 3: `relate` ✅ (knowledge graph, §8).** Third gold-derive
   stage — cheap, re-runnable, adds **only edges** over the entities `index` extracted (no new
   extraction). Pure core `relate_pure.derive_edges` builds three edge families from the same mention
