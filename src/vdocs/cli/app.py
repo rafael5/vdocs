@@ -20,6 +20,7 @@ from vdocs.stages.crawl.stage import CrawlStage
 from vdocs.stages.discover.stage import DiscoverStage
 from vdocs.stages.enrich.stage import EnrichStage
 from vdocs.stages.fetch.stage import FetchStage
+from vdocs.stages.index.stage import IndexStage
 from vdocs.stages.normalize.stage import NormalizeStage
 from vdocs.stages.serve_inventory.stage import ServeInventoryStage
 
@@ -40,6 +41,7 @@ def build_stages() -> list[Stage]:
         EnrichStage(),
         NormalizeStage(),
         ConsolidateStage(),
+        IndexStage(),
     ]
 
 
@@ -198,6 +200,12 @@ def consolidate(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Collapse each version group to one anchor document + capture its append-only lineage
     (history.yaml + retained prior bodies); the deferred git replay is push --replay-history."""
     _drive(only="consolidate", force=force)
+
+
+@app.command()
+def index(force: bool = typer.Option(False, "--force", "-f")) -> None:
+    """Build index.db: documents + doc_sections (+ FTS5 over is_latest only) + entities."""
+    _drive(only="index", force=force)
 
 
 @app.command()

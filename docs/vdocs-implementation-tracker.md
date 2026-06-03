@@ -30,15 +30,16 @@ counted separately below). Last updated **2026-06-02**. **Phases 1–3 complete 
 end-to-end on a real 469-doc VA corpus; the pre-Phase-4 hardening pass (reliability R1–R9 [R4 split
 out], redundancy D1–D5, the `revisions.yaml` rename, drift-doc reconciliation, a 7-invariant property
 suite + branch coverage) is **fast-forwarded onto `master`** (`e725f5a`). **Phase 4 in progress:**
-`consolidate` ✅ landed (§6.6 version rollup) on branch `feat/phase-4-gold-derive`; `make check` green
-(**484 tests, branch cov 99.7% / gate ≥95%**, ruff+mypy clean). **Next: Phase 4 `index`.**
+`consolidate` ✅ (§6.6 version rollup) and `index` ✅ (§5.5/§14.6 derived index) landed on branch
+`feat/phase-4-gold-derive`; `make check` green (**503 tests, branch cov 99.7% / gate ≥95%**,
+ruff+mypy clean). **Next: Phase 4 `relate`.**
 
 | Phase | Title | Status | Progress |
 |---|---|:--:|:--:|
 | 1 | Spine (kernel·config·models·contracts·orchestrator) | ✅ | 4/4 |
 | 2 | Inventory medallion + doc-bronze | ✅ | 4/4 |
 | 3 | Silver — document text (convert·discover·enrich·normalize) | ✅ | 4/4 |
-| 4 | Gold derive (consolidate·index·relate·manifest) | ◐ | 1/4 |
+| 4 | Gold derive (consolidate·index·relate·manifest) | ◐ | 2/4 |
 | 5 | Gold deliver (fidelity·publish·validate·push·analyze) | ☐ | 0/5 |
 | 6 | Machine interface (embed·serve-mcp) | ☐ | 0/2 |
 | 7 | Harden (property·--verify·gc·docs-gen·replay·refresh) | ◐ | 2◐·1⬚·3☐ |
@@ -76,12 +77,12 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
 | enrich | 🥈 DOC | ✅ | §8 | converted → enriched (FM) |
 | normalize | 🥈 DOC | ✅ | §6.7 | enriched → normalized (+TOC/refs) |
 
-**Phase 4 — Gold derive** ◐ 1/4
+**Phase 4 — Gold derive** ◐ 2/4
 
 | Stage | Layer | St | Ref | Goal |
 |---|:--:|:--:|---|---|
 | consolidate | 🥇 DOC | ✅ | §6.6 | normalized → consolidated (lineage) |
-| index | 🥇 DOC | ☐ | §8 | → index.db (FTS5, IDs) |
+| index | 🥇 DOC | ✅ | §8 | → index.db (FTS5, IDs) |
 | relate | 🥇 DOC | ☐ | §8 | index.db → relations (graph) |
 | manifest | 🥇 DOC | ☐ | §14 | → corpus-manifest + discovery |
 
@@ -132,6 +133,11 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
 - `normalize` — template-governed **TOC depth** is still the **H2–H3 fallback** (§6.7) until
   `registries/templates` depth is consumed (seam marked in `anchors_pure`/`stage.py`).
 - Phase 7 — extend **property tests** to `enrich` + remaining `normalize` transforms; exercise `--verify` e2e.
+- `normalize` — **`github_slug` global-uniqueness:** `anchors_pure.github_slug` uses GitHub's per-base
+  `-N` rule, which can collide a repeated heading's suffixed slug with a literal same-named heading
+  (`Example`/`Example 1` → both `example-1`; 3 docs in the corpus). `index` guards its `section_id` PK
+  with a `-dup-N` disambiguator; align `normalize` to a globally-unique slug rule so `refs.yaml`,
+  the published anchors, and `index` agree on the disambiguated form (a silver change; Phase-4 §14.6 note).
 - `publish` — resolve `normalize`'s gold-root-relative boilerplate refs (`_shared/boilerplate/<id>.md`,
   `SHARED_BOILERPLATE_DIR`) to each bundle's published depth when materialising the human tree (PUBLISH
   SEAM marked in `normalize_pure.subtract_boilerplate`, §5.3/§9.7).
@@ -161,6 +167,19 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 *Append implementation lessons as they accrue (newest first). Inventory-track lessons live in
 [`vdl-crawl-tracker.md`](vdl-crawl-tracker.md); cross-phase / architectural lessons go here.*
 
+- **2026-06-02 — A "stable id" derived from GitHub heading slugs is not guaranteed unique — real
+  data proved it (the case for smoke-running every gold stage).** `index` keys `doc_sections` on
+  `section_id = <doc_key>/<slug>` (matching `refs.yaml`), a PRIMARY KEY. On the 469-doc lake the build
+  hit a `UNIQUE constraint failed` on **3 docs / 12 sections**: GitHub's per-base `-N` rule slugs a
+  repeated `## Example` heading to `example`/`example-1`/… while a literal `## Example 1` heading
+  *also* slugs to `example-1` — a genuine GitHub anchor ambiguity (GitHub itself emits the colliding
+  anchor). Fix: a deterministic `-dup-N` disambiguator in `index`'s `shred_sections` so section ids
+  stay unique; the GitHub anchor for those rare headings is ambiguous regardless, so `refs.yaml`
+  can't disambiguate either. **Follow-up:** align `normalize`'s `anchors_pure.github_slug` to a
+  globally-unique rule (track emitted slugs, not a per-base counter) so the published anchors,
+  `refs.yaml`, and `index` agree on the disambiguated slug — a silver change, deferred out of Phase 4.
+  Lesson: pure-unit fixtures with tidy headings never produce this; only the real corpus does. Smoke
+  every gold stage on the full lake before declaring it done.
 - **2026-06-02 — The grouping key a downstream stage needs may already be reconstructible from the
   artifact it already requires.** `consolidate` (§8) `requires` only `text@normalized` + `assets`,
   yet must group members by `anchor_key` and order by patch number — data `catalog` computes and that
@@ -251,6 +270,29 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **Phase 4 Increment 2: `index` ✅ (derived corpus index, §5.5/§14.6).** Second
+  gold-derive stage. Builds `index.db` fresh via `kernel.db.build_atomic`: `documents` (keyed by the
+  URL-safe `doc_key` = bundle path, with the inventory colon `doc_id` alongside — the D4 ID
+  reconciliation), `doc_sections` (ALL sections, each with `is_latest`; section id = `refs.yaml`'s
+  `<doc_key>/<slug>`) **+ FTS5 over `is_latest` sections only** (the anchor-only search surface, §14.6),
+  `entities` + `entity_mentions` (generic registry-driven extraction, anchor-only), and a `quality`
+  view. **TDD pure cores:** `entities_pure` (a generic recognizer driven by `registries/entities` —
+  pattern- or terms-mode, no patterns in stage code) + `index_pure.shred_sections` (structure-aligned
+  chunking, fence-aware, slugs matching `refs.yaml`). **`registries/entities/` seeded** (D2): build /
+  global / fileman_file / package_namespace recognizers + README (EXTRACT disposition). **Two
+  doc-first decisions** (§5.5 + §8 updated): (1) derived stores key on the URL-safe `doc_key`, keeping
+  the colon `doc_id` for join-back — resolves the 3 `/`-bearing app codes (`AR/WS`); (2) `index`
+  `requires` `doc_meta_staged` explicitly **and carries it forward** in the rebuild, so a fresh
+  `build_atomic` doesn't wipe the table it consumes (re-runnable). **Real-data fix:** a `section_id`
+  PK collision on 3 docs from the GitHub-slug `-N` quirk → a `-dup-N` guard in `shred_sections` (see
+  Lessons; `github_slug` global-uniqueness logged as a `normalize` follow-up). Contracts
+  `INDEX_DOCUMENTS`/`INDEX_SECTIONS`/`INDEX_ENTITIES` + the `index` CLI + DAG wiring (`…consolidate →
+  index`). Tests: 6 `index_pure` + 8 `entities_pure` + 5 integration (documents/sections/entities,
+  is_latest, FTS anchor-only, refs.yaml-id match, staged carry-forward, forced-rebuild survival,
+  empty-staged, refs toc_depth). **Real lake (no re-fetch):** 469 docs → 25 981 sections / 16 756
+  is_latest FTS rows / 290 `is_latest` documents (== version groups) / 1 796 entities / 22 870
+  mentions; `doc_meta_staged` survives; 0 FTS rows on non-latest; clean re-run skips. **503 tests,
+  branch cov 99.7%**, ruff+mypy clean.
 - **2026-06-02** — **Phase 4 Increment 1: `consolidate` ✅ (gold version rollup, §6.6).** First
   gold-derive stage, on branch `feat/phase-4-gold-derive` (off the fast-forwarded `master` tip
   `e725f5a` = the full hardening pass; no PR existed, so the branch was FF-merged, not reviewed).

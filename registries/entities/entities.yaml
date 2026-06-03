@@ -1,0 +1,58 @@
+# registries/entities — curated VistA-domain entity vocabulary → EXTRACT (§8 note, §9.7, D2).
+#
+# Drives index's generic `entities_pure` recognizer: each entry recognizes one `type` by a regex
+# `pattern` or a literal `terms` vocabulary, and `index` writes index.db:entities keyed by the
+# `(type, canonical-name)` stable id (§5.5). NO entity patterns live in stage code (tenet #13).
+# High-confidence starter set; `discover` proposes corpus-frequency additions through the §9.6 gate.
+
+entities:
+  # --- KIDS build / patch ids: NS*ver*num — unambiguous (the '*' triple is VistA-specific) ---
+  - type: build
+    pattern: '\b[A-Z][A-Z0-9]{1,7}\*\d+(?:\.\d+)?\*\d+\b'
+    canonical: whole
+    casefold: true
+    status: approved
+    note: e.g. OR*3.0*539, PSO*7*123 — the retrievable patch identity.
+
+  # --- M globals: caret-prefixed, high precision in technical manuals ---
+  - type: global
+    pattern: '\^%?[A-Z][A-Z0-9]+\b'
+    canonical: whole
+    casefold: true
+    status: approved
+    note: e.g. ^DPT, ^DGPM, ^%ZOSF — leading caret disambiguates from prose.
+
+  # --- FileMan files: require the "file #N" context so bare "#2" page refs don't match ---
+  - type: fileman_file
+    pattern: '(?i)\bfiles?\s+#?(\d+(?:\.\d+)?)\b'
+    canonical: group1
+    status: approved
+    note: canonical is the file number (e.g. 2, 200, 101) captured from "file #N".
+
+  # --- VistA package namespaces: distinctive uppercase codes, matched case-sensitively as whole
+  #     words (the ambiguous English homographs OR / PS / IT / IB are deliberately omitted from the
+  #     starter set; add them only with disambiguating context if discover shows they're needed).
+  - type: package_namespace
+    terms:
+      - DG     # Registration
+      - LR     # Lab
+      - PX     # PCE / Clinical Reporting
+      - GMRC   # Consults
+      - GMTS   # Health Summary
+      - PSO    # Outpatient Pharmacy
+      - PSB    # Bar Code Med Admin
+      - PSJ    # Inpatient Pharmacy
+      - RA     # Radiology
+      - SD     # Scheduling
+      - DGPM   # PIMS Movement
+      - YS      # Mental Health
+      - GMPL   # Problem List
+      - PXRM   # Clinical Reminders
+      - TIU     # Text Integration Utilities
+      - HL      # HL7
+      - XU      # Kernel
+      - XM      # MailMan
+      - DI      # FileMan (VA FileMan namespace)
+    case_sensitive: true
+    status: approved
+    note: distinctive namespaces; canonical is the namespace itself.

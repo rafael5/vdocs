@@ -504,6 +504,17 @@ contract is what lets the published markdown anchors, the vector index keys, the
 and the MCP resource URIs all reference the *same* unit unambiguously — and lets a re-embed
 or re-index reuse prior work instead of rebuilding from scratch.
 
+**Two document ids, one URL-safe (the derived/MCP key), one the inventory join key.** The inventory
+`doc_id` is `app_code:doc_slug` (§5.6) — the selection/acquisition key, kept verbatim. But a handful
+of app codes contain a `/` (e.g. `AR/WS`), so `app_code:doc_slug` is *not* URL-safe for a resource
+URI or a section-id prefix. The **derived stores therefore key on `doc_key`** — the URL-safe
+bundle-path form `<safe_app>/<doc_slug>` (`AR/WS` → `AR_WS/…`) that `normalize`'s `refs.yaml` already
+uses as its `doc_id`/`stable_id` base (`anchors_pure` "Decision 1"). So `index.documents` records
+**both** — `doc_key` (the addressable derived/MCP id + the `<doc_key>/<slug>` section-id base) and
+`doc_id` (the inventory colon id, for join-back) — and the **section id is `refs.yaml`'s
+`<doc_key>/<slug>`** verbatim. The two forms coincide for all but the `/`-bearing apps; `doc_key` is
+the one the published anchors, FTS rows, graph nodes, and (later) vector keys share.
+
 ### 5.6 The fetch selection surface (deciding *what* to download)
 
 §5.5 establishes that the **enriched inventory owns the selection surface** — nothing is fetched
@@ -949,7 +960,7 @@ plane), **DOC** = the document medallion (data plane) (§4). The inventory track
 | 🥈 DOC | **enrich** | `text@converted`, `catalog.enriched` | `text@enriched` (identity FM baked), `index.db:doc_meta_staged` | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **normalize** | `text@enriched`, `raw/index.json` (for source_sha256 — metadata only, not the binary tree), `registries` (curated patterns) | `text@normalized` — `revisions.yaml` + `tables/*.csv` + `refs.yaml` sidecars; dead phrases deleted; boilerplate referenced (REFERENCE to `gold/_shared`); heading levels inferred; per-`(doc_type, era)` template scaffold stripped + `template_id` stamped (§9.8); legacy in-body TOC stripped via `registries/structures` (CANONICALIZE `toc`) then **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** (§6.7). (Glossary **PROMOTE** to the single `gold/glossary.md` is a gold-phase output — §9.7 lists `normalize` as a consumer of `registries/glossary`, but the shared artifact is materialised downstream, not in this silver body transform.) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **consolidate** | `text@normalized` (incl. each version's `revisions.yaml`), `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage [folds each member's `revisions.yaml`, §6.4] + retained prior bodies captured as travel-with sidecars; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
-| 🥇 DOC | **index** | `text@normalized`, `consolidated` (grouping) | `index.db` (documents, doc_sections [all, with `is_latest`] **+ FTS5 over `is_latest` only — the search surface**, entities, quality, views; **stable IDs**) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **index** | `text@normalized`, `consolidated` (grouping → `is_latest`), `index.db:doc_meta_staged` (the staged identity `enrich` writes — an explicit input, not a hidden read; the build **carries it forward** so a fresh rebuild stays self-contained) | `index.db` (documents [keyed by URL-safe `doc_key`, with the inventory `doc_id` alongside — §5.5], doc_sections [all, with `is_latest`, section id = `refs.yaml`'s `<doc_key>/<slug>`] **+ FTS5 over `is_latest` only — the search surface**, entities + entity_mentions [registry-driven extraction, anchor-only], quality view; **stable IDs**) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **relate** | `index.db` (documents, entities, sections) | `index.db:relations` (doc↔entity, doc↔doc xref, entity↔entity — the knowledge graph) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **embed** | `index.db:doc_sections` (**`is_latest` only**) | `vectors.db` (per-chunk embeddings + ANN index over anchor/current sections; prior-version chunks excluded — §14.6) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **fidelity** | `text@normalized`, `raw` (bronze `S`), `index.db` (structure/sections/template schema), `registries` (to dereference single-sourced content) | `reports/fidelity` (per-document migration-fidelity records — content/provenance/history axes, template compliance, TOC integrity — + corpus report; `fidelity-framework.md`) | SKIP_IF_UNCHANGED |

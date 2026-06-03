@@ -1,0 +1,226 @@
+"""index integration — normalized bundles (+ consolidated grouping + staged meta) → index.db
+(§5.5/§14.6). Seeds two normalized bundles that are a version group (one is_latest), the
+`doc_meta_staged` rows `enrich` writes, and the `consolidated` history flagging the anchor; runs
+IndexStage through the orchestrator and asserts documents/doc_sections row counts, `is_latest`
+flagging, FTS5 returning only is_latest sections, entities keyed by `(type, canonical)`, stable ids
+matching `refs.yaml`, and that the consumed `doc_meta_staged` survives the rebuild.
+"""
+
+from __future__ import annotations
+
+import yaml
+
+from vdocs.contracts.registry import CONSOLIDATED, DOC_META_STAGED, TEXT_NORMALIZED
+from vdocs.kernel import cas, db, frontmatter
+from vdocs.models.stage import StageRun
+from vdocs.orchestrator.engine import Orchestrator
+from vdocs.stages.enrich.enrich_pure import STAGED_COLUMNS
+from vdocs.stages.enrich.stage import _write_staged
+from vdocs.stages.index.stage import IndexStage
+
+# two patches of one logical doc (CPRS:OR:IG); the v566 patch is the anchor (is_latest)
+_OLD = ("CPRS", "or_3_190_ig", "OR*3*190", "# IG\n\n## Setup\n\nOld setup. Set ^DPT here.\n")
+_NEW = (
+    "CPRS",
+    "or_3_566_ig",
+    "OR*3.0*566",
+    "# IG\n\n## Setup\n\nNew setup; install OR*3.0*566 and set ^DPT in file #2.\n\n"
+    "## Usage\n\nUse the DG package.\n",
+)
+
+
+def _bless(ctx, stage, art):
+    ctx.state.record(
+        StageRun(
+            stage=stage,
+            scope="",
+            status="ok",
+            started_at="t",
+            finished_at="t",
+            inputs_fp={},
+            outputs_fp={art.key: art.fingerprint(ctx.cfg)},
+            counts={},
+            contract_ver=1,
+            tool_ver=ctx.cfg.tool_ver,
+        )  # fmt: skip
+    )
+
+
+def _seed_bundle(ctx, app, slug, patch_id, body):
+    doc_id = f"{app}:{slug}"
+    text = frontmatter.emit(
+        {
+            "title": "Install Guide",
+            "doc_type": "IG",
+            "app_code": app,
+            "pkg_ns": "OR",
+            "version": "3.0",
+            "patch_id": patch_id,
+            "tool_ver": "0.1.0",
+        },  # fmt: skip
+        body,
+    )
+    cas.atomic_write(ctx.cfg.silver_normalized / app / slug / "body.md", text.encode())
+    return doc_id
+
+
+def _seed_staged(ctx, docs):
+    """Write doc_meta_staged the way enrich does (the table index consumes + preserves)."""
+    rows = [
+        {c: "" for c in STAGED_COLUMNS}
+        | {
+            "doc_id": d,
+            "app_code": d.split(":")[0],
+            "doc_slug": d.split(":")[1],
+            "doc_code": "IG",
+            "doc_title": "Install Guide",
+            "pkg_ns": "OR",
+            "anchor_key": "CPRS:OR:IG",
+            "group_key": "CPRS:OR:3.0",
+            "word_count": 10,
+            "bundle_path": f"{d.split(':')[0]}/{d.split(':')[1]}",
+        }  # fmt: skip
+        for d in docs
+    ]
+    _write_staged(ctx.cfg.index_db, rows)
+
+
+def _seed_consolidated(ctx, latest_doc_id, all_doc_ids):
+    hist = {
+        "anchor_key": "CPRS:OR:IG",
+        "member_count": len(all_doc_ids),
+        "members": [
+            {"doc_id": d, "doc_slug": d.split(":")[1], "is_latest": d == latest_doc_id}
+            for d in all_doc_ids
+        ],
+    }
+    cas.atomic_write(
+        ctx.cfg.gold_consolidated / "CPRS" / "or_ig" / "history.yaml",
+        yaml.safe_dump(hist, sort_keys=False).encode(),
+    )
+
+
+def _seed(ctx):
+    old = _seed_bundle(ctx, *_OLD)
+    new = _seed_bundle(ctx, *_NEW)
+    _seed_staged(ctx, [old, new])
+    _seed_consolidated(ctx, latest_doc_id=new, all_doc_ids=[old, new])
+    for stage, art in (
+        ("normalize", TEXT_NORMALIZED),
+        ("consolidate", CONSOLIDATED),
+        ("enrich", DOC_META_STAGED),
+    ):
+        _bless(ctx, stage, art)
+    return old, new
+
+
+def test_index_builds_documents_sections_entities(ctx):
+    old, new = _seed(ctx)
+    (result,) = Orchestrator([IndexStage()]).run(ctx)
+    assert result.status == "ok"
+    assert result.counts["documents"] == 2
+
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        # is_latest flagging from consolidated: the v566 anchor is latest, v190 is not
+        latest = dict(conn.execute("SELECT doc_id, is_latest FROM documents").fetchall())
+        assert latest[new] == 1 and latest[old] == 0
+
+        # ALL sections present (both docs), each carrying is_latest
+        n_sections = conn.execute("SELECT count(*) FROM doc_sections").fetchone()[0]
+        assert n_sections == 5  # old: IG + Setup; new: IG + Setup + Usage (every heading a section)
+
+        # stable ids match refs.yaml's <doc_key>/<slug> form
+        ids = {r[0] for r in conn.execute("SELECT section_id FROM doc_sections")}
+        assert "CPRS/or_3_566_ig/usage" in ids and "CPRS/or_3_190_ig/setup" in ids
+
+        # FTS5 is anchor-only: a term unique to the OLD body returns nothing; the NEW body matches
+        fts_old = conn.execute(
+            "SELECT count(*) FROM doc_sections_fts WHERE doc_sections_fts MATCH 'Old'"
+        ).fetchone()[0]
+        fts_new = conn.execute(
+            "SELECT doc_key FROM doc_sections_fts WHERE doc_sections_fts MATCH 'install'"
+        ).fetchall()
+        assert fts_old == 0  # superseded section excluded from the search surface (§14.6)
+        assert all(r[0] == "CPRS/or_3_566_ig" for r in fts_new) and fts_new
+
+        # entities keyed by (type, canonical), extracted from the anchor only
+        ents = {(t, c) for t, c in conn.execute("SELECT type, canonical_name FROM entities")}
+        assert ("build", "OR*3.0*566") in ents
+        assert ("global", "^DPT") in ents
+        assert ("fileman_file", "2") in ents
+        assert ("package_namespace", "DG") in ents
+
+        # the consumed doc_meta_staged survived the rebuild (self-contained, re-runnable)
+        staged_n = conn.execute("SELECT count(*) FROM doc_meta_staged").fetchone()[0]
+        assert staged_n == 2
+    finally:
+        conn.close()
+
+
+def test_index_reads_toc_depth_from_refs_yaml(ctx):
+    # a bundle's refs.yaml toc_depth drives section toc_level (not the default)
+    old, new = _seed(ctx)
+    cas.atomic_write(
+        ctx.cfg.silver_normalized / "CPRS" / "or_3_566_ig" / "refs.yaml",
+        yaml.safe_dump({"doc_id": "CPRS/or_3_566_ig", "toc_depth": [2, 2], "anchors": []}).encode(),
+    )
+    _bless(ctx, "normalize", TEXT_NORMALIZED)  # the tree changed → re-fingerprint
+    (result,) = Orchestrator([IndexStage()]).run(ctx)
+    assert result.status == "ok"
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        # toc_depth (2,2) ⇒ the H1 "ig" and H2 "usage" sections: only H2 is in-TOC
+        rows = dict(
+            conn.execute(
+                "SELECT slug, toc_level FROM doc_sections WHERE doc_key = 'CPRS/or_3_566_ig'"
+            ).fetchall()
+        )
+        assert rows["usage"] == 1 and rows["ig"] == 0
+    finally:
+        conn.close()
+
+
+def test_index_handles_empty_staged_table(ctx):
+    # a normalized bundle with no matching staged row → identity falls back to FM; empty staged
+    # carries forward as an empty table (no rows) without error
+    _seed_bundle(ctx, "ADT", "lone_doc", "ADT*1*1", "# Lone\n\n## S\n\nbody ^DPT\n")
+    _seed_consolidated(ctx, latest_doc_id="ADT:lone_doc", all_doc_ids=["ADT:lone_doc"])
+    _write_staged(ctx.cfg.index_db, [])  # enrich produced an empty staging table
+    for stage, art in (
+        ("normalize", TEXT_NORMALIZED),
+        ("consolidate", CONSOLIDATED),
+        ("enrich", DOC_META_STAGED),
+    ):
+        _bless(ctx, stage, art)
+    (result,) = Orchestrator([IndexStage()]).run(ctx)
+    assert result.status == "ok" and result.counts["documents"] == 1
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        row = conn.execute("SELECT doc_id, is_latest FROM documents").fetchone()
+        assert row[0] == "ADT:lone_doc" and row[1] == 1  # FM-derived doc_id; is_latest from history
+        assert conn.execute("SELECT count(*) FROM doc_meta_staged").fetchone()[0] == 0
+    finally:
+        conn.close()
+
+
+def test_index_skips_on_unchanged_rerun(ctx):
+    _seed(ctx)
+    Orchestrator([IndexStage()]).run(ctx)
+    from vdocs.models.stage import Decision
+
+    assert IndexStage().preflight(ctx, force=False).decision is Decision.SKIP
+
+
+def test_index_preserves_staged_across_forced_rebuild(ctx):
+    # a forced re-run must still find doc_meta_staged (index carried it forward, not wiped)
+    _seed(ctx)
+    orch = Orchestrator([IndexStage()])
+    orch.run(ctx)
+    orch.run(ctx, force=True)
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        assert conn.execute("SELECT count(*) FROM doc_meta_staged").fetchone()[0] == 2
+        assert conn.execute("SELECT count(*) FROM documents").fetchone()[0] == 2
+    finally:
+        conn.close()

@@ -173,6 +173,34 @@ CONSOLIDATED = ArtifactContract(
     produced_by="consolidate",
     relpath="documents/gold/consolidated",
 )
+# `index`: the derived corpus index — documents + doc_sections (+ FTS5 over is_latest only) +
+# entities, all keyed by stable IDs (§5.5/§14.6). Built fresh with `kernel.db.build_atomic`, which
+# also carries forward `enrich`'s `doc_meta_staged` (index consumes + preserves it, so a forced
+# re-run is self-contained). One SQLITE_TABLE contract per table `relate`/`manifest` reference.
+INDEX_DOCUMENTS = ArtifactContract(
+    key="index.db:documents",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="index",
+    db="index.db",
+    table="documents",
+)
+INDEX_SECTIONS = ArtifactContract(
+    key="index.db:doc_sections",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="index",
+    db="index.db",
+    table="doc_sections",
+)
+INDEX_ENTITIES = ArtifactContract(
+    key="index.db:entities",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="index",
+    db="index.db",
+    table="entities",
+)
 
 
 def foundational_registry() -> ArtifactRegistry:
@@ -200,6 +228,9 @@ def default_registry() -> ArtifactRegistry:
         DOC_META_STAGED,
         TEXT_NORMALIZED,
         CONSOLIDATED,
+        INDEX_DOCUMENTS,
+        INDEX_SECTIONS,
+        INDEX_ENTITIES,
     ):
         reg.register(contract)
     return reg
