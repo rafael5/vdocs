@@ -123,3 +123,17 @@ def test_decade_bucket_respects_line_window():
     body = "title\n" + "x\n" * 50 + "June 1995\n"  # date past the window
     assert text.decade_bucket(body, max_lines=40) == "unknown"
     assert text.decade_bucket(body) == "1990s"  # no window → found
+
+
+def test_month_year_iso_normalises_first_month_year():
+    assert text.month_year_iso("Cover\n\nJanuary 1998\n") == "1998-01"
+    assert text.month_year_iso("September 2020") == "2020-09"
+    assert text.month_year_iso("Sept. 2007") == "2007-09"  # abbreviated + period
+    assert text.month_year_iso("Feb 2018") == "2018-02"
+    assert text.month_year_iso("no date here") is None
+
+
+def test_month_year_iso_respects_line_window():
+    body = "title\n" + "x\n" * 50 + "June 1995\n"
+    assert text.month_year_iso(body, max_lines=40) is None
+    assert text.month_year_iso(body) == "1995-06"

@@ -33,6 +33,15 @@ _MONTH = (
     r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
 )
 _MONTH_YEAR_RE = re.compile(rf"\b{_MONTH}\.?,?\s+(\d{{4}})\b", re.IGNORECASE)
+# Same signal, capturing the month name too, so the full ``YYYY-MM`` publication date can be lifted
+# (§6.4 title-page capture) — not merely its decade. The 3-letter prefix keys the month number.
+_MONTH_NAME_YEAR_RE = re.compile(rf"\b({_MONTH})\.?,?\s+(\d{{4}})\b", re.IGNORECASE)
+_MONTH_NUM = {
+    m: i
+    for i, m in enumerate(
+        ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"), 1
+    )
+}
 
 
 def safe_component(name: str) -> str:
@@ -85,6 +94,21 @@ def decade_bucket(text: str, *, max_lines: int | None = None) -> str:
     if m is None:
         return "unknown"
     return f"{(int(m.group(1)) // 10) * 10}s"
+
+
+def month_year_iso(text: str, *, max_lines: int | None = None) -> str | None:
+    """The first ``Month YYYY`` in ``text`` as a normalised ``"YYYY-MM"`` string, or ``None``.
+
+    The publication-date sibling of :func:`decade_bucket` (same title-page signal, full precision):
+    ``normalize`` lifts it into the identity-frontmatter ``published`` field before the title page
+    is stripped (§6.4 capture-before-strip), and ``revision_pure`` reuses it to normalise
+    month-name revision-table dates (e.g. ``"Feb 2018"`` → ``"2018-02"``). Optionally scans only the
+    first ``max_lines`` (the title-page window)."""
+    head = "\n".join(text.splitlines()[:max_lines]) if max_lines is not None else text
+    m = _MONTH_NAME_YEAR_RE.search(head)
+    if m is None:
+        return None
+    return f"{int(m.group(2))}-{_MONTH_NUM[m.group(1)[:3].lower()]:02d}"
 
 
 def repair_mojibake(s: str) -> str:

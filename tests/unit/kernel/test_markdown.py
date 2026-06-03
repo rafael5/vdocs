@@ -79,3 +79,47 @@ def test_is_markdown_artifact_keeps_prose_with_inline_link():
     assert not md.is_markdown_artifact("Plain prose paragraph with no links at all.")
     assert not md.is_markdown_artifact("## Introduction")  # a heading is structure, not an artifact
     assert not md.is_markdown_artifact("")  # a blank line is not, by itself, an artifact
+
+
+def test_is_revision_heading_matches_every_corpus_form():
+    # the broadened §6.4 detector: ATX, bold, blockquote-bold, plain, caps, the longer dialects
+    for line in (
+        "# Revision History",
+        "## Revision History",
+        "### Template Revision History",
+        "**Revision History**",
+        "> **Revision History**",
+        "> Revision History",
+        "Revision History",
+        "REVISION HISTORY**",
+        "Documentation Revisions",
+        "> **Documentation Revisions**",
+        "Documentation Revision History",
+        "Revisions",
+    ):
+        assert md.is_revision_heading(line), line
+
+
+def test_is_revision_heading_rejects_prose_and_other_headings():
+    assert not md.is_revision_heading("# Introduction")
+    assert not md.is_revision_heading("Table of Contents")
+    # a descriptive sentence that merely starts with the words is not a section header
+    assert not md.is_revision_heading(
+        "Revision History showing date artifact was created or revised, version, description."
+    )
+    assert not md.is_revision_heading("")
+
+
+def test_is_legacy_toc_entry_matches_double_bracket_page_numbered_lines():
+    assert md.is_legacy_toc_entry("[Introduction [1](#introduction)](#introduction)")
+    assert md.is_legacy_toc_entry("  [Routines [8](#routines-1)](#routines-1)  ")
+    assert not md.is_legacy_toc_entry("- [Introduction](#introduction)")  # modern Contents entry
+    assert not md.is_legacy_toc_entry("See [the guide [1](#g)](#g) now.")  # prose, not anchored
+    assert not md.is_legacy_toc_entry("plain prose")
+
+
+def test_legacy_toc_target_returns_outer_anchor():
+    # the outer link is the real target; the inner `[12](#…)` is the page number
+    assert md.legacy_toc_target("[Intro [1](#intro)](#intro)") == "#intro"
+    assert md.legacy_toc_target("[X [9](#_Toc55)](#_Toc55)") == "#_Toc55"
+    assert md.legacy_toc_target("not an entry") is None
