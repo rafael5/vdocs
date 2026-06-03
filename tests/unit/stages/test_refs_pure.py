@@ -50,3 +50,15 @@ def test_empty_outbound_is_clean():
 def test_missing_keys_do_not_crash():
     # a refs.yaml with no anchors/outbound (defensive) resolves to nothing
     assert rp.resolve_refs({"doc_id": "x"}) == []
+
+
+def test_ref_to_existing_empty_slug_anchor_is_not_severed():
+    # real-corpus case: a heading titled ";" slugifies to "" — a degenerate but REAL anchor row.
+    # A ref targeting it resolves (the heading exists); it must NOT be mis-flagged as severed.
+    refs = {
+        "doc_id": "AR_WS/wstech",
+        "anchors": [{"slug": "intro"}, {"slug": "", "title": ";"}],
+        "outbound": {"_Toc1": "intro", "_Toc2": ""},
+    }
+    assert rp.resolve_refs(refs) == []
+    assert "" in rp.live_anchor_slugs(refs)

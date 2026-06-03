@@ -44,10 +44,37 @@ ABSENT_UNEXPECTED = "absent-unexpected"
 # The five capture attempts `normalize` records, in manifest order.
 KINDS = ("revisions", "tables", "refs", "toc", "title_date")
 
-# Residue: a revision-history heading in any *loosely* recognised form — deliberately broader than
-# ``kernel.is_revision_heading`` (which keys on the exact curated ``REVISION_HEADING_TEXTS``), so a
-# real revision heading whose spelling the strict detector missed still trips ``absent-unexpected``.
-_LOOSE_REVISION_RE = re.compile(r"revision|change history|version history|change log")
+# Residue: recognise a revision-history *section heading* in a form broader than
+# ``kernel.is_revision_heading`` (which keys on the exact curated ``REVISION_HEADING_TEXTS``) — so a
+# real missed variant (``Change History``, ``Revision Log``…) still trips ``absent-unexpected`` —
+# WITHOUT the bare-substring false positives the real corpus exposed: ``Package Revision Data`` (a
+# routine section), ``…Change Logical Links`` (``change log`` inside ``logical``), prose paragraphs
+# promoted to headings, ``Revision History Archive`` (an appendix). The rule: the heading's text
+# (leading section numbering stripped) **ends with** a curated revision-history phrase, and the
+# heading is short enough to be a section title — a prose line promoted to a heading is not.
+_REVISION_TAILS = (
+    "revision history",
+    "revisions",
+    "revision log",
+    "revision record",
+    "revision summary",
+    "change history",
+    "change log",
+    "version history",
+    "document history",
+    "modification history",
+    "record of changes",
+    "history of changes",
+)
+_LEADING_NUMBER_RE = re.compile(r"^[\d.\s]+")  # a leading "3 " / "3. " / "3.1 " section number
+_MAX_REVISION_HEADING_LEN = 60  # a section title, not a paragraph promoted to a heading
+
+
+def _is_revision_heading_residue(bare: str) -> bool:
+    if not bare or len(bare) > _MAX_REVISION_HEADING_LEN:
+        return False
+    stripped = _LEADING_NUMBER_RE.sub("", bare).strip()
+    return any(stripped == t or stripped.endswith(" " + t) for t in _REVISION_TAILS)
 
 
 @dataclass(frozen=True)
@@ -78,7 +105,7 @@ def scan_residue(body: str, toc_titles: frozenset[str]) -> Residue:
     for _idx, _level, text in iter_headings(body):
         heading = True
         bare = heading_furniture_text(text)
-        if _LOOSE_REVISION_RE.search(bare):
+        if _is_revision_heading_residue(bare):
             revision = True
         if bare in toc_titles:
             legacy_toc = True

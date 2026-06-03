@@ -38,8 +38,13 @@ class RefFinding:
 
 
 def live_anchor_slugs(refs: dict) -> set[str]:
-    """The set of slugs a bundle's headings actually mint — the live anchor set (§6.7)."""
-    return {str(a["slug"]) for a in (refs.get("anchors") or []) if a.get("slug")}
+    """The set of slugs a bundle's headings actually mint — the live anchor set (§6.7).
+
+    Includes a slug recorded as the empty string: a punctuation-only heading (e.g. titled ``;``)
+    slugifies to ``""``, a degenerate-but-real anchor row. A ref targeting it *resolves* (the
+    heading exists) — filtering empty slugs out would mis-flag it as severed. (The empty slug itself
+    is a separate `normalize` slug-fallback quality issue, not a severed cross-ref.)"""
+    return {str(a["slug"]) for a in (refs.get("anchors") or []) if "slug" in a}
 
 
 def resolve_refs(refs: dict) -> list[RefFinding]:
