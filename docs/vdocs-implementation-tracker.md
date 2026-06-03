@@ -42,7 +42,7 @@ clean). **Next: Phase 5 `fidelity`.**
 | 2 | Inventory medallion + doc-bronze | ✅ | 4/4 |
 | 3 | Silver — document text (convert·discover·enrich·normalize) | ✅ | 4/4 |
 | 4 | Gold derive (consolidate·index·relate·manifest) | ✅ | 4/4 |
-| 5 | Gold deliver (fidelity·publish·validate·push·analyze) | ☐ | 0/5 |
+| 5 | Gold deliver (fidelity·publish·validate·push·analyze) | ◐ | validate sidecar-slice ◐ |
 | 6 | Machine interface (embed·serve-mcp) | ☐ | 0/2 |
 | 7 | Harden (property·--verify·gc·docs-gen·replay·refresh) | ◐ | 2◐·1⬚·3☐ |
 
@@ -88,13 +88,13 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
 | relate | 🥇 DOC | ✅ | §8 | index.db → relations (graph) |
 | manifest | 🥇 DOC | ✅ | §14 | → corpus-manifest + discovery |
 
-**Phase 5 — Gold deliver** ☐ 0/5
+**Phase 5 — Gold deliver** ◐ 0✅·1◐·4☐
 
 | Stage | Layer | St | Ref | Goal |
 |---|:--:|:--:|---|---|
-| fidelity | 🥇 DOC | ☐ | FF | → reports/fidelity (S→T) |
+| fidelity | 🥇 DOC | ☐ | FF | → reports/fidelity (S→T) — full axes still TODO |
 | publish | 🥇 DOC | ☐ | §8 | → publish (md tree + INDEX) |
-| validate | 🥇 DOC | ☐ | §7.3 | → **HARD GATE** (schema·IDs) |
+| validate | 🥇 DOC | ◐ | §7.3 | **HARD GATE** — sidecar-verification slice ✅ (typed-absence · count-reconcile · ref-resolution); schema · IDs · fidelity-verdict TODO |
 | push | 🚀 DOC | ☐ | §6.6 | publish → git (+ lineage) |
 | analyze | ⬩ DOC | ☐ | §8 | → reports (off path) |
 
@@ -272,6 +272,23 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-03** — **Phase 5 STEP 0 (doc-first): sidecar-verification design folded into the source of
+  truth.** Implements the [`doc-sidecar-design.md`](doc-sidecar-design.md) §5 recommendations §5.1/§5.2/
+  §5.5 (the typed-absence / count-reconciliation / ref-resolution gap, §4 of that note). **Mechanism
+  decided: a new per-bundle `capture.yaml`** (not an extension of `flags.yaml`) — `flags.yaml` is the
+  *sparse* attention signal (present ⇒ needs attention), `capture.yaml` is the *dense* always-written
+  completeness manifest (every capture attempt + a typed outcome `captured`/`failed`/`absent-expected`/
+  `absent-unexpected`, plus an independent residue re-scan). Conflating them would destroy the sparse
+  property §2 of the note relies on; `capture.yaml` is also the seed of the §5.3 signed bundle manifest.
+  **Design edits:** `vdocs-design.md` §5.2 (bundle parts), §6.4 (the typed capture-attempt subsection),
+  §8 (`normalize` writes `capture.yaml`; `consolidate` propagates the latest member's; the `validate`
+  row now specifies the **sidecar-verification slice** — typed-absence gate + count reconciliation +
+  ref-resolution gate — built ahead of full `fidelity`), §8 notes, §17 Phase 5. `fidelity-framework.md`
+  C2 (sidecar completeness / count reconciliation), C5 (ref-resolution gate generalising the TOC
+  round-trip to all cross-refs), §6 provenance (capture completeness as part of "provable, not
+  asserted"). **Scope:** `validate` is built as the single verification consumer (the §8 HARD GATE);
+  the broader `fidelity` S→T axes (C1/C3/C4…) and the full `validate` schema/ID/vector gate remain
+  TODO and feed the same gate later. Code (Steps 1–3) lands in the following commits.
 - **2026-06-02** — **Phase 4 Increment 4: `manifest` ✅ — Phase 4 COMPLETE (§14.4, D3).** Final
   gold-derive stage: the agent front door. Pure assembler `manifest_pure` builds `corpus-manifest.json`
   (counts, lineage `tool_ver`/`generated_at`, the stable-ID scheme, the MCP capability manifest) +

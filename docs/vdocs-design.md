@@ -367,6 +367,7 @@ while separating *by lifecycle/type*:
     field-listing.csv
     file-attributes.csv
   refs.yaml          # anchor/alias map + outbound link map (machine-owned)
+  capture.yaml       # typed capture-attempt records — every sidecar attempt + its outcome (always written; §6.4)
   # images referenced by sha256 into the shared asset store — NOT copied here
   # computed metadata (word_count, quality_score, entities…) lives in index.db — NOT here
 ```
@@ -670,11 +671,57 @@ then replaced by a **standardized block** built from frontmatter (`title`, `vers
 corpus and no provenance is lost. **Gate:** title-page removal is blocked until `published` is
 captured.
 
+**Typed capture-attempt records (`capture.yaml`) — absence is a verdict, not a missing file.**
+Conditional sidecar emission (a sidecar is written *iff* its structure was present and captured) is
+correct, but a *missing* sidecar is **ambiguous**: "nothing to capture" and "a detector silently
+failed" look identical on disk. The `flags.yaml` fail-safe only fires when a strip step *fires but
+cannot parse* — it never fires when a **detector never fires** on a structure that was actually
+present. To close that gap, `normalize` writes one **`capture.yaml` per bundle, always** (unlike the
+conditional sidecars), enumerating every capture *attempt* and its typed outcome — the
+"explicit-null vs. missing" discipline of data-quality frameworks applied to sidecars. Four
+outcomes:
+
+- **`captured`** — the detector ran, the structure was present, and its sidecar was written (with the
+  row/file count).
+- **`failed`** — the structure was *recognised* but could not be parsed (the existing
+  capture-before-strip cases: an unparseable revision apparatus, unresolved legacy-TOC anchors).
+  These remain in `flags.yaml` too — `flags.yaml` stays the **sparse** attention signal,
+  `capture.yaml` is the **dense** completeness manifest. The two are deliberately separate files with
+  opposite lifecycles (`flags` = exceptions, present only when something needs attention; `capture` =
+  a completeness record, present on every bundle).
+- **`absent-expected`** — the detector ran, found nothing, **and** an independent residue re-scan of
+  the normalized body agrees there is nothing left to capture. The benign absence, now made *explicit*.
+- **`absent-unexpected`** — the detector found nothing **but** the independent residue re-scan still
+  sees the structure in the body (e.g. pipe-table rows remain though the table detector captured none;
+  a revision-history heading variant survives though no `revisions.yaml` was written and no parse flag
+  was raised). A per-document silent-detector-miss, caught at the document grain and recorded loudly.
+
+The **residue re-scan** is `normalize` taking a *second, detector-independent* look at its own output
+(the fidelity framework's "independent reference" principle, `fidelity-framework.md` §2.2) with cheap
+pure predicates — a leftover pipe-table row count, the presence of a revision-history or
+legacy-contents heading text. It catches a *single* document whose structure was missed even when the
+corpus-wide counts look plausible — the case corpus aggregates cannot see. The complementary
+corpus-level net is the `validate` **reconciliation gate** (§8): a whole detector reporting
+`absent-expected` across the entire corpus is itself implausible and is re-classified there. Together
+they make a missing sidecar unambiguous — benign absence and silent loss become distinct, typed
+states a verifier gates on. `capture.yaml` is also the seed of the eventual signed bundle manifest
+(each part + hash + outcome) the fidelity framework's "provable, not asserted" bar calls for.
+
 ### 6.5 The "don't over-decompose" guardrail
 
 Test for any proposed seam: *can a contributor still open one thing, read it, change it, and
 see a sensible diff?* If a change requires editing five fragments, the decomposition has
 gone too far. We cut exactly the seams in §6.4 and stop.
+
+The same guardrail has a *retrieval* edge: condensation (boilerplate→reference, phrases→delete,
+scaffold→strip, data→sidecar) raises a chunk's signal-to-noise only up to an optimum — strip past it
+and a chunk loses the context that lets it stand alone in isolation, embedding as an unanchored
+fragment that *hurts* recall. So "subtract more" is not monotonically better; the curve peaks then
+falls. This optimum is enforced, not assumed: the `fidelity` stage scores an **over-strip rate**
+(hollow content chunks ÷ content chunks) over `text@normalized` and flags documents stripped past the
+self-sufficiency floor (`fidelity-framework.md` §10.5). A chunk reduced to a *referent* (content
+relocated, recoverable) is by-design and not penalized; a chunk stripped to a bare heading is the
+defect the check catches.
 
 ### 6.6 Version lineage: one anchor document, patch history captured for later git replay
 
@@ -1001,15 +1048,15 @@ plane), **DOC** = the document medallion (data plane) (§4). The inventory track
 | 🥈 DOC | **convert** | `raw`, `raw/index.json` | `text@converted`, `assets` (CAS) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **discover** | `text@converted` (corpus-global) + `catalog.enriched` (for `doc_code` only — the authoritative doc_type for `(doc_type, era)` template induction; classification stays a `catalog` decision, not re-derived) | `reports/patterns` (candidate boilerplate / `(doc_type, era)` templates [`doc_type`←catalog `doc_code`, `era`←title-page publication date bucketed by decade] / dead phrases / glossary terms / structural patterns + evidence + proposed disposition) → proposes `registries/` updates (§9.6) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **enrich** | `text@converted`, `catalog.enriched` | `text@enriched` (identity FM baked), `index.db:doc_meta_staged` | SKIP_IF_UNCHANGED |
-| 🥈 DOC | **normalize** | `text@enriched`, `raw/index.json` (for source_sha256 — metadata only, not the binary tree), `registries` (curated patterns) | `text@normalized` — `revisions.yaml` + `tables/*.csv` + `refs.yaml` + `toc.yaml` + `flags.yaml` sidecars; **title-page publication date captured into the `published` identity FM before any strip** (§6.4 capture-before-strip), then the per-document **title-area logo image removed** (noise — a different VA seal/banner per doc; one small standard logo to be added at publish) and the legacy cover replaced by a standardized block; revision apparatus lifted to `revisions.yaml` (capture-gated; unparseable → retained + flagged); dead phrases deleted; boilerplate referenced (REFERENCE to `gold/_shared`); heading levels inferred; per-`(doc_type, era)` template scaffold stripped + `template_id` stamped (§9.8); the legacy in-body TOC's **original entries (title + printed page number + anchor) captured verbatim into `toc.yaml`** before it is stripped via `registries/structures` (CANONICALIZE `toc`) + correlated to the derived tree (role-1; misses → `flags.yaml`) then **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** (§6.7). Capture-before-strip fidelity signals (uncaptured date · unparseable revision apparatus · unresolved legacy-TOC anchors) are recorded in the `flags.yaml` sidecar. (Glossary **PROMOTE** to the single `gold/glossary.md` is a gold-phase output — §9.7 lists `normalize` as a consumer of `registries/glossary`, but the shared artifact is materialised downstream, not in this silver body transform.) | SKIP_IF_UNCHANGED |
-| 🥇 DOC | **consolidate** | `text@normalized` (incl. each version's `revisions.yaml` + `published` FM + `flags.yaml`), `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage [folds each member's `revisions.yaml`, §6.4; `official_date` = revision-newest **else the title-page `published` date**] + retained prior bodies captured as travel-with sidecars; the latest member's `flags.yaml` + `toc.yaml` (original paper TOC, §6.7) travel with the anchor; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
+| 🥈 DOC | **normalize** | `text@enriched`, `raw/index.json` (for source_sha256 — metadata only, not the binary tree), `registries` (curated patterns) | `text@normalized` — `revisions.yaml` + `tables/*.csv` + `refs.yaml` + `toc.yaml` + `flags.yaml` sidecars; **title-page publication date captured into the `published` identity FM before any strip** (§6.4 capture-before-strip), then the per-document **title-area logo image removed** (noise — a different VA seal/banner per doc; one small standard logo to be added at publish) and the legacy cover replaced by a standardized block; revision apparatus lifted to `revisions.yaml` (capture-gated; unparseable → retained + flagged); dead phrases deleted; boilerplate referenced (REFERENCE to `gold/_shared`); heading levels inferred; per-`(doc_type, era)` template scaffold stripped + `template_id` stamped (§9.8); the legacy in-body TOC's **original entries (title + printed page number + anchor) captured verbatim into `toc.yaml`** before it is stripped via `registries/structures` (CANONICALIZE `toc`) + correlated to the derived tree (role-1; misses → `flags.yaml`) then **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** (§6.7). Capture-before-strip fidelity signals (uncaptured date · unparseable revision apparatus · unresolved legacy-TOC anchors) are recorded in the `flags.yaml` sidecar. A **`capture.yaml` is written for *every* bundle** (not conditional) recording each capture attempt's typed outcome (`captured`/`failed`/`absent-expected`/`absent-unexpected`) plus an independent residue re-scan, so absence is never ambiguous (§6.4). (Glossary **PROMOTE** to the single `gold/glossary.md` is a gold-phase output — §9.7 lists `normalize` as a consumer of `registries/glossary`, but the shared artifact is materialised downstream, not in this silver body transform.) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **consolidate** | `text@normalized` (incl. each version's `revisions.yaml` + `published` FM + `flags.yaml`), `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage [folds each member's `revisions.yaml`, §6.4; `official_date` = revision-newest **else the title-page `published` date**] + retained prior bodies captured as travel-with sidecars; the latest member's `flags.yaml` + `toc.yaml` (original paper TOC, §6.7) + `capture.yaml` (typed capture-attempt records, §6.4) travel with the anchor; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **index** | `text@normalized`, `consolidated` (grouping → `is_latest`), `index.db:doc_meta_staged` (the staged identity `enrich` writes — an explicit input, not a hidden read; the build **carries it forward** so a fresh rebuild stays self-contained) | `index.db` (documents [keyed by URL-safe `doc_key`, with the inventory `doc_id` alongside — §5.5], doc_sections [all, with `is_latest`, section id = `refs.yaml`'s `<doc_key>/<slug>`] **+ FTS5 over `is_latest` only — the search surface**, entities + entity_mentions [registry-driven extraction, anchor-only], quality view; **stable IDs**) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **relate** | `index.db` (documents, entities, sections) | `index.db:relations` (doc↔entity, doc↔doc xref, entity↔entity — the knowledge graph) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **embed** | `index.db:doc_sections` (**`is_latest` only**) | `vectors.db` (per-chunk embeddings + ANN index over anchor/current sections; prior-version chunks excluded — §14.6) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **fidelity** | `text@normalized`, `raw` (bronze `S`), `index.db` (structure/sections/template schema), `registries` (to dereference single-sourced content) | `reports/fidelity` (per-document migration-fidelity records — content/provenance/history axes, template compliance, TOC integrity — + corpus report; `fidelity-framework.md`) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **manifest** | `consolidated`, `index.db` (documents/entities + **`relations`**, so the graph capability + counts are honest), `vectors.db` (**optional** — produced by `embed` in Phase 6; absent ⇒ embedding/vector fields omitted, **semantic capability off** [D3]) | `corpus-manifest.json` + `discovery.json` (counts · stable-ID scheme · MCP capabilities; lineage `tool_ver`+`generated_at`) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **publish** | `corpus-manifest.json`, `text@normalized`, `consolidated`, `assets`, `catalog.enriched`, `glossary` | `publish` (markdown-only human tree + INDEX) | SKIP_IF_UNCHANGED |
-| 🥇 DOC | **validate** | `publish`, `text@normalized`, `index.db`, `vectors.db`, `reports/fidelity` | (HARD GATE — schema + lineage + dead-anchor + ID/vector integrity + **fidelity verdict** [PASS / REVIEW-with-sign-off only; QUARANTINE blocks]; sets its own `ok`) | ALWAYS_RERUN |
+| 🥇 DOC | **validate** | `text@normalized` (`capture.yaml` + `refs.yaml`) **[sidecar-verification slice — active now]**; `publish`, `index.db`, `vectors.db`, `reports/fidelity` **[deferred, arrive with publish/index/fidelity]**; reads the prior `stage_runs[normalize].counts` (out-of-contract historical baseline for cross-run drop detection, like `fetch`↔`acquisitions`) | `reports/validation` (the verification findings) + (HARD GATE — sets its own `ok`). **Sidecar-verification slice (built first):** (1) **typed-absence gate** — any per-bundle `capture.yaml` outcome of `absent-unexpected` or `failed` blocks; (2) **count reconciliation** — a sidecar class going `absent-expected` corpus-wide, or a count dropping vs. the prior run with no matching source change, is re-classified `absent-unexpected` and blocks; (3) **ref-resolution gate** — every outbound ref in each `refs.yaml` must resolve to a live anchor in that bundle (zero dead cross-ref anchors — the C5 TOC round-trip generalised to all cross-refs, §6.7). **Deferred (full gate):** schema + lineage + ID/vector integrity + the per-document **fidelity verdict** [PASS / REVIEW-with-sign-off only; QUARANTINE blocks], landing with `publish`/`index`/`fidelity`. | ALWAYS_RERUN |
 | 🚀 DOC | **push** | `publish` (+ validate `ok`) | `git:vistadocs/vdl` (one anchor file per version group + travel-with lineage sidecars; **commit-replay deferred behind opt-in `--replay-history`**, §6.6) | FORCE_ONLY |
 | ⬩ DOC | **analyze** (off critical path) | `text@normalized` | `reports/` (survey, headings, lexicon) | SKIP_IF_UNCHANGED |
 
@@ -1092,6 +1139,16 @@ Notes:
   hard gate (a doc may publish as faithful only if PASS, or REVIEW with recorded sign-off;
   QUARANTINE blocks). Currency (§7.5) and retrieval-quality (§10.5 there) are the corpus-level
   companions to this per-document verdict.
+- **Sidecar verification is `validate`'s first slice (built ahead of full `fidelity`).** The typed
+  capture-attempt records (`capture.yaml`, §6.4) close the silent-loss gap directly: `validate`
+  reads them and the `refs.yaml` outbound maps and **fails loudly** on (1) any `absent-unexpected`/
+  `failed` capture outcome, (2) an implausible corpus-wide sidecar aggregate or a count that dropped
+  since the prior run with no matching source change (the reconciliation that the emitted
+  `stage_runs[counts]` finally consume), and (3) any dead cross-ref anchor in a `refs.yaml`. This is
+  the smallest stage that makes a missing sidecar unambiguous — it consumes the signals `normalize`
+  already records but nothing read. The broader `fidelity` S→T measurement (content/tables/images
+  axes, the per-document PASS/REVIEW/QUARANTINE verdict) lands later and feeds the *same* `validate`
+  gate; the pure reconciliation/ref-resolution cores are written to be reused by it.
 - The frontmatter **schema gate** lives in `validate` and is **non-optional before
   `push`** — it is impossible to push a corpus with broken frontmatter.
 
@@ -1761,7 +1818,10 @@ Each phase ends with a runnable, tested increment. Build the spine before the st
    template compliance + TOC integrity, `fidelity-framework.md`) → publish (markdown-only +
    materialized assets) → validate (hard gate, **consumes the fidelity verdict** — QUARANTINE blocks)
    → push (anchor files + captured lineage sidecars; **commit-replay deferred**, §6.6). Plus analyze
-   (off critical path).
+   (off critical path). **Built first within this phase: `validate`'s sidecar-verification slice** —
+   typed-absence (`capture.yaml`) + count reconciliation + `refs.yaml` ref-resolution — which closes
+   the silent-sidecar-loss gap by consuming the capture records and counts `normalize` already emits,
+   ahead of the full `fidelity` S→T measurement (§6.4, §8 validate row).
 6. **Machine interface (§14):** **embed** (chunk → `vectors.db`) → the **MCP server**
    (`serve-mcp`) with hybrid search (semantic + lexical + structured + graph, RRF). This is
    the headline machine output.

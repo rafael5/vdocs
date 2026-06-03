@@ -136,8 +136,15 @@ to mark which member of each group is `is_latest` (design §14.6).
 
 ## 4. Verification status — honest audit (the open gap)
 
-The caveat that motivated this note is real and currently **unmitigated**. Verification of
-sidecars is specified but **not yet implemented**, and a missing sidecar is therefore ambiguous
+> **Status (2026-06-03): being closed.** The recommendations in §5.1/§5.2/§5.5 are now folded into
+> the architectural source of truth (`vdocs-design.md` §6.4 typed `capture.yaml`; §8 `validate`
+> sidecar-verification slice) and `fidelity-framework.md` (C2 count reconciliation, C5 ref-resolution
+> gate). The chosen typed-absence mechanism is a **new per-bundle `capture.yaml`** (not an extension
+> of `flags.yaml`) — see §5.1 for the decision rationale. The section below describes the gap **as it
+> stood before** that work, and remains the reference for *why* each change exists.
+
+The caveat that motivated this note is real and was, until this work, **unmitigated**. Verification of
+sidecars was specified but **not implemented**, and a missing sidecar was therefore ambiguous
 in the running code.
 
 **What exists:**
@@ -200,6 +207,21 @@ reads as `absent_unexpected`). A cheap implementation: extend `flags.yaml` (or a
 `capture.yaml` manifest) to log every capture *attempt* and its outcome, so absence always has a
 provenance record. This is the single highest-value change.
 
+> **Decision (2026-06-03): a new per-bundle `capture.yaml`, not an extension of `flags.yaml`.**
+> The two files have opposite lifecycles. `flags.yaml` is **sparse** — written only when a strip step
+> fired-but-failed, and its load-bearing property (§2.1, §2.2) is exactly that *a present flags file
+> means attention is needed*. A typed-absence manifest is **dense and always present** (every bundle
+> has the same capture attempts, mostly benign `absent-expected`). Folding it into `flags.yaml` would
+> force that file to be written for every bundle and dominated by benign records — destroying the
+> sparse-signal property §2 relies on. `capture.yaml` keeps the two concerns separate (exceptions vs.
+> completeness manifest), matches the *explicit-null vs. missing* distinction directly, and is the
+> natural seed for the §5.3 signed bundle manifest (parts + hashes + outcomes) — which `flags.yaml`
+> could never become. Four outcomes are recorded: `captured`, `failed` (recognised-but-unparseable),
+> `absent-expected` (detector ran, residue re-scan agrees), and `absent-unexpected` (detector found
+> nothing but an independent residue re-scan still sees the structure — a per-document silent miss).
+> The residue re-scan is what catches a *single* doc's silent miss; corpus count reconciliation (§5.2)
+> catches whole-detector failures. Both are gated by `validate`. See `vdocs-design.md` §6.4 / §8.
+
 ### 5.2 Add the expected-vs-actual reconciliation the counts already enable
 
 `normalize` already emits per-sidecar counts; nothing consumes them. The data-quality norm is a
@@ -249,9 +271,13 @@ cross-refs, not just TOC entries.
 ### 5.6 Priority order
 
 1. **§5.1** — record capture-attempt outcomes so absence is never ambiguous (fixes the core gap).
+   **— specified + implemented** (per-bundle `capture.yaml`, `normalize`; vdocs-design §6.4).
 2. **§5.2** — reconcile emitted counts in a verification step (catches whole-detector failures).
+   **— specified + implemented** (`validate` count-reconciliation gate; vdocs-design §8, FF C2).
 3. **§5.5** — resolve `refs.yaml` outbound links in the `validate` gate (catches the fragile-ref class).
-4. **§5.3 / §5.4** — bundle manifest + per-stage attestation (raises the proof from "flagged" to "verifiable").
+   **— specified + implemented** (`validate` ref-resolution gate; vdocs-design §8, FF C5).
+4. **§5.3 / §5.4** — bundle manifest + per-stage attestation (raises the proof from "flagged" to
+   "verifiable"). **— deferred** (stretch; `capture.yaml` is the seed but the signed manifest is not built).
 
 ---
 
