@@ -50,6 +50,9 @@ class ConsolidateStage(Stage):
         body_files = sorted(normalized_root.rglob("body.md"))
         members: list[cp.Member] = []
         body_bytes: dict[str, bytes] = {}  # doc_id → the bundle's body.md bytes (the anchor body)
+        flag_bytes: dict[str, bytes] = {}  # doc_id → the member's flags.yaml (fidelity signals)
+        toc_bytes: dict[str, bytes] = {}  # doc_id → the member's toc.yaml (original paper TOC)
+        capture_bytes: dict[str, bytes] = {}  # doc_id → the member's capture.yaml (§6.4)
         n_errors = 0
         for body_path in body_files:
             rel = body_path.parent.relative_to(normalized_root)  # <app>/<slug>
@@ -61,6 +64,15 @@ class ConsolidateStage(Stage):
                 member = _member_from(meta, rel.parts[1], raw, bodies, body_path.parent)
                 members.append(member)
                 body_bytes[member.doc_id] = raw
+                flags_path = body_path.parent / "flags.yaml"
+                if flags_path.is_file():
+                    flag_bytes[member.doc_id] = flags_path.read_bytes()
+                toc_path = body_path.parent / "toc.yaml"
+                if toc_path.is_file():
+                    toc_bytes[member.doc_id] = toc_path.read_bytes()
+                capture_path = body_path.parent / "capture.yaml"
+                if capture_path.is_file():
+                    capture_bytes[member.doc_id] = capture_path.read_bytes()
             except Exception as exc:  # noqa: BLE001 — isolate one bad doc, never abort the batch
                 n_errors += 1
                 log.warning("consolidate-doc-failed", doc=str(rel), error=str(exc))
@@ -77,6 +89,18 @@ class ConsolidateStage(Stage):
             anchor = consolidated_root / relpath
             # promote the latest body unchanged (content-skip keeps the fingerprint honest)
             cas.atomic_write(anchor / "body.md", body_bytes[latest.doc_id])
+            # the latest member's fidelity flags (capture-before-strip signals, §6.4/§6.7) travel
+            # with the anchor so a retained/flagged residue is visible at the gold grain too
+            if latest.doc_id in flag_bytes:
+                cas.atomic_write(anchor / "flags.yaml", flag_bytes[latest.doc_id])
+            # the original paper-era TOC (toc.yaml) travels with the anchor too — the backwards-
+            # compatibility reference from the derived `## Contents` to the printed pages (§6.7)
+            if latest.doc_id in toc_bytes:
+                cas.atomic_write(anchor / "toc.yaml", toc_bytes[latest.doc_id])
+            # the latest member's typed capture-attempt records (capture.yaml, §6.4) travel with the
+            # anchor too, so the completeness manifest is visible at the gold grain
+            if latest.doc_id in capture_bytes:
+                cas.atomic_write(anchor / "capture.yaml", capture_bytes[latest.doc_id])
             # append-only lineage: fold the fresh chain into any prior history.yaml (§6.6)
             existing = _read_history(anchor / "history.yaml")
             merged = cp.merge_history(existing, cp.build_history(latest.anchor_key, ordered))
@@ -110,7 +134,10 @@ def _member_from(meta, doc_slug, raw, bodies, bundle_dir):  # type: ignore[no-un
     pkg_ns = str(meta.get("pkg_ns", ""))
     doc_code = str(meta.get("doc_type", ""))
     patch_id = str(meta.get("patch_id", ""))
-    revisions, official_date = _fold_revisions(bundle_dir / "revisions.yaml")
+    revisions, revision_newest = _fold_revisions(bundle_dir / "revisions.yaml")
+    # official_date: the revision table's newest date when captured, else the title-page `published`
+    # date baked into identity FM (§6.4) — so it populates even where no revision table exists.
+    official_date = cp.official_date(revision_newest, str(meta.get("published", "")))
     return cp.Member(
         anchor_key=kids.anchor_key(app_code, pkg_ns, doc_code),
         app_code=app_code,

@@ -51,6 +51,7 @@ class NormalizeStage(Stage):
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.kernel.text import decade_bucket
         from vdocs.stages.normalize import anchors_pure as anchors
+        from vdocs.stages.normalize import capture_pure as capture
         from vdocs.stages.normalize import normalize_pure as nz
         from vdocs.stages.normalize import revision_pure as rev
         from vdocs.stages.normalize import tables_pure as tbl
@@ -71,6 +72,8 @@ class NormalizeStage(Stage):
         enriched_root = ctx.cfg.silver_enriched
         normalized_root = ctx.cfg.silver_normalized
         n_docs = n_revision = n_tables = n_refs = n_boiler = n_template = n_errors = 0
+        n_published = n_titlepage = n_titleimg = n_flags = n_toc = 0
+        n_capture = n_absent_unexpected = 0
         body_files = sorted(enriched_root.rglob("body.md"))
         kept = {p.parent.relative_to(enriched_root).as_posix() for p in body_files}
         for body_path in body_files:
@@ -83,12 +86,32 @@ class NormalizeStage(Stage):
                 sha = sha_by_path.get((rel.parts[0], rel.parts[1]))
                 if sha:
                     meta["source_sha256"] = sha
-                # strip the version apparatus → revisions.yaml (§6.4); then lift qualifying tables
-                # → tables/*.csv (§6.4/§6.5) — *after* revision extraction so it never grabs the
-                # revision table; then run the body F-steps.
+                doc_flags: list[str] = []
+                # CAPTURE-BEFORE-STRIP (§6.4): lift the title-page publication date into the
+                # identity `published` field *before* any title-page/revision strip — sole copy of
+                # the date for ~97% of the corpus and the capture-gate for title-page removal.
+                published = tmpl.extract_published(body)
+                if published:
+                    meta["published"] = published
+                    n_published += 1
+                else:
+                    doc_flags.append("title-page-uncaptured-date")  # no date → cover retained below
+                # Remove the per-document title-area logo image (§6.4) — pure noise (a different VA
+                # seal/banner per doc), replaceable by one standard logo at publish time. Ungated;
+                # only images inside the title area go, a content figure below it stays.
+                deimaged = tmpl.strip_title_image(body)
+                if deimaged != body:
+                    n_titleimg += 1
+                body = deimaged
+                # strip the version apparatus → revisions.yaml (§6.4, capture-gated); a revision
+                # heading with no parseable table is retained + flagged, never deleted blind. Then
+                # lift qualifying tables → tables/*.csv (§6.4/§6.5) — *after* revision extraction so
+                # it never grabs the revision table; then run the body F-steps.
                 # TEMPLATE SEAM: toc_depth defaults to the H2–H3 fallback; the template F-step will
                 # resolve it per (doc_type, era) and pass it to normalize_body (§6.7).
-                body, revisions = rev.extract_revision_history(body)
+                body, revisions, rev_flag = rev.extract_revision_history(body)
+                if rev_flag:
+                    doc_flags.append(rev_flag)
                 body, tables = tbl.extract_tables(body)
                 # STRIP the matched (doc_type, era) template scaffold + stamp template_id (§9.8).
                 # era is the title-page-date decade bucket (kernel.decade_bucket); doc_type is the
@@ -100,9 +123,27 @@ class NormalizeStage(Stage):
                 if template_id:
                     meta["template_id"] = template_id
                     n_template += 1
+                # STANDARDIZE the title page (§6.4): replace the raw legacy cover with a block built
+                # from frontmatter — gated on `published` (capture-before-strip). Within the
+                # template/scaffold F-step seam (the title page is part of the scaffold).
+                standardized = tmpl.standardize_title_page(
+                    body,
+                    tmpl.TitlePageFields(
+                        title=str(meta.get("title", "")),
+                        version=str(meta.get("version", "")),
+                        patch_id=str(meta.get("patch_id", "")),
+                        published=published or "",
+                        source_url=str(meta.get("source_url", "")),
+                    ),
+                )
+                if standardized != body:
+                    n_titlepage += 1
+                body = standardized
                 body, anchor_map = nz.normalize_body(
                     body, phrases, doc_id=str(rel), boilerplate=boilerplate, toc_titles=toc_titles
                 )
+                if anchor_map.toc_unresolved:
+                    doc_flags.append(f"legacy-toc-unresolved:{len(anchor_map.toc_unresolved)}")
                 n_boiler += body.count("](_shared/boilerplate/")  # REFERENCE links inserted
                 out = frontmatter.emit(meta, body)
                 cas.atomic_write(normalized_root / rel / "body.md", out.encode("utf-8"))
@@ -127,6 +168,55 @@ class NormalizeStage(Stage):
                         ).encode("utf-8"),
                     )
                     n_refs += 1
+                # CAPTURE-BEFORE-STRIP (§6.7): the original page-numbered table of contents is
+                # copied verbatim into toc.yaml before the legacy TOC leaves the body, so the clean
+                # derived `## Contents` keeps a reference to the printed document's pagination.
+                if anchor_map.legacy_toc:
+                    cas.atomic_write(
+                        normalized_root / rel / "toc.yaml",
+                        yaml.safe_dump(
+                            anchors.legacy_toc_sidecar(anchor_map),
+                            sort_keys=False,
+                            allow_unicode=True,
+                        ).encode("utf-8"),
+                    )
+                    n_toc += 1
+                # FIDELITY FLAGS (§6.4/§6.7): record the capture-before-strip signals — a retained
+                # unparseable revision apparatus, an uncaptured title-page date (cover left in
+                # place), unresolved legacy-TOC anchors — so nothing is dropped without a trace.
+                if doc_flags:
+                    cas.atomic_write(
+                        normalized_root / rel / "flags.yaml",
+                        yaml.safe_dump(
+                            {"doc_id": str(rel), "flags": doc_flags},
+                            sort_keys=False,
+                            allow_unicode=True,
+                        ).encode("utf-8"),
+                    )
+                    n_flags += 1
+                # TYPED CAPTURE-ATTEMPT RECORDS (§6.4): write capture.yaml for *every* bundle
+                # (unlike the conditional sidecars) so a missing sidecar is never ambiguous. Each
+                # attempt's outcome (captured/failed/absent-expected/absent-unexpected) plus an
+                # independent residue re-scan of the final body is recorded; an absent-unexpected is
+                # a per-document silent detector miss the validate gate trips on (§8).
+                manifest = capture.build_manifest(
+                    str(rel),
+                    body,
+                    toc_titles,
+                    revisions_count=len(revisions),
+                    revision_failed=bool(rev_flag),
+                    tables_count=len(tables),
+                    refs_count=len(anchor_map.rows),
+                    toc_count=len(anchor_map.legacy_toc),
+                    title_date_captured=bool(published),
+                )
+                cas.atomic_write(
+                    normalized_root / rel / "capture.yaml",
+                    yaml.safe_dump(manifest, sort_keys=False, allow_unicode=True).encode("utf-8"),
+                )
+                n_capture += 1
+                if capture.has_unexpected_absence(manifest):
+                    n_absent_unexpected += 1
                 n_docs += 1
             except Exception as exc:
                 n_errors += 1
@@ -142,6 +232,13 @@ class NormalizeStage(Stage):
                 "refs_sidecars": n_refs,
                 "boilerplate_refs": n_boiler,
                 "templates_stamped": n_template,
+                "published_captured": n_published,
+                "titlepages_standardized": n_titlepage,
+                "title_images_removed": n_titleimg,
+                "toc_sidecars": n_toc,
+                "flag_sidecars": n_flags,
+                "capture_sidecars": n_capture,
+                "absent_unexpected": n_absent_unexpected,
                 "phrases": len(phrases),
                 "errors": n_errors,
                 "pruned": n_pruned,

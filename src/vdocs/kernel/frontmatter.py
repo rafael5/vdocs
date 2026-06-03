@@ -24,6 +24,7 @@ _IDENTITY_ORDER = (
     "section",
     "pkg_ns",
     "version",
+    "published",
     "source_url",
     "source_sha256",
     "converter",

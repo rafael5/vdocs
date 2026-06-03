@@ -1,10 +1,8 @@
-# registries/boilerplate — meaningful-but-duplicated blocks → REFERENCE (§9.6/§9.7).
-#
-# Curated from `discover`'s near-dup boilerplate candidates over the real 469-doc corpus
-# (P1.b). `normalize` subtracts any body block whose whitespace-collapsed `key` matches an
-# entry here and replaces it with a reference link to the canonical copy (destined for
-# gold/_shared/boilerplate/<id>.md) — REFERENCE, not DELETE: the content is kept once,
-# de-duplicated. `text` is the canonical copy; `key` is the match identity (kernel block_key).
+# registries/boilerplate — meaningful-but-duplicated blocks -> REFERENCE (§9.6/§9.7).
+# Curated from discover's near-dup boilerplate candidates over the real 469-doc corpus.
+# normalize subtracts any body block whose whitespace-collapsed `key` matches an entry and
+# replaces it with a link to gold/_shared/boilerplate/<id>.md. The first block of entries is
+# the corpus-global head; entries with `doc_types` were mined per doc_type (Task 5).
 
 boilerplate:
 - id: bp-9ea93a696b
@@ -55,3 +53,159 @@ boilerplate:
     and to whom CAPRI will be deployed and installed, as well as how it is to be backed out and rolled
     back, if necessary. The plan also identifies resources, communications plan, and rollout schedule.
     Specific instructions for installation, back-out, and rollback are included in this document.
+- id: bp-2ad3d5c7fa
+  label: 3.  When prompted 'Want to DISABLE Scheduled Options, M
+  key: 3. when prompted 'want to disable scheduled options, menu options, and protocols? no//', answer
+    **no**.
+  text: 3.  When prompted 'Want to DISABLE Scheduled Options, Menu Options, and Protocols? NO//', answer
+    **NO**.
+  evidence_docs: 46
+  doc_types:
+  - DIBR
+  status: approved
+- id: bp-88a2ada273
+  label: 1.  If prompted 'Want KIDS to Rebuild Menu Trees Upon C
+  key: 1. if prompted 'want kids to rebuild menu trees upon completion of install? no//', answer no.
+  text: 1.  If prompted 'Want KIDS to Rebuild Menu Trees Upon Completion of Install? NO//', answer NO.
+  evidence_docs: 38
+  doc_types:
+  - DIBR
+  status: approved
+- id: bp-6bdeb2ef07
+  label: Per the Veteran-focused Integrated Process (VIP) Guide,
+  key: per the veteran-focused integrated process (vip) guide, the deployment, installation, back-out,
+    and rollback plan is required to be completed prior to critical decision point \#2 (cd \#2), with
+    the expectation that it will be updated throughout the lifecycle of the project for each build, as
+    needed.
+  text: Per the Veteran-focused Integrated Process (VIP) Guide, the Deployment, Installation, Back-out,
+    and Rollback Plan is required to be completed prior to Critical Decision Point \#2 (CD \#2), with
+    the expectation that it will be updated throughout the lifecycle of the project for each build, as
+    needed.
+  evidence_docs: 36
+  doc_types:
+  - DIBR
+  status: approved
+- id: bp-a4065fa41f
+  label: '**Table 1: Deployment, Installation, Back-out, and Roll'
+  key: '**table 1: deployment, installation, back-out, and rollback roles and responsibilities**'
+  text: '**Table 1: Deployment, Installation, Back-out, and Rollback Roles and Responsibilities**'
+  evidence_docs: 30
+  doc_types:
+  - DIBR
+  status: approved
+- id: bp-294076c0d5
+  label: You can queue the install by enter a 'Q' at the device
+  key: you can queue the install by enter a 'q' at the device prompt.
+  text: You can queue the install by enter a 'Q' at the device prompt.
+  evidence_docs: 34
+  doc_types:
+  - IG
+  status: approved
+- id: bp-b50cc3d394
+  label: Want KIDS to Rebuild Menu Trees Upon Completion of Inst
+  key: want kids to rebuild menu trees upon completion of install? no//
+  text: Want KIDS to Rebuild Menu Trees Upon Completion of Install? NO//
+  evidence_docs: 28
+  doc_types:
+  - IG
+  status: approved
+- id: bp-ff237c8e9e
+  label: This Distribution contains Transport Globals for the fo
+  key: 'this distribution contains transport globals for the following package(s):'
+  text: 'This Distribution contains Transport Globals for the following Package(s):'
+  evidence_docs: 19
+  doc_types:
+  - IG
+  status: approved
+- id: bp-9645ac8497
+  label: Select Kernel Installation & Distribution System Option
+  key: 'select kernel installation & distribution system option: installation'
+  text: 'Select Kernel Installation & Distribution System Option: INSTALLation'
+  evidence_docs: 15
+  doc_types:
+  - IG
+  status: approved
+- id: bp-3212643351
+  label: The “Global Map” format of this option generates an out
+  key: the “global map” format of this option generates an output that lists all cross-references for
+    the file selected, global location of each field in the file, input templates, print templates, and
+    sort templates.
+  text: The “Global Map” format of this option generates an output that lists all cross-references for
+    the file selected, global location of each field in the file, input templates, print templates, and
+    sort templates.
+  evidence_docs: 9
+  doc_types:
+  - TM
+  status: approved
+- id: bp-473cd4d03f
+  label: '- Descriptive text is presented in a proportional font'
+  key: '- descriptive text is presented in a proportional font (as represented by this font).'
+  text: '- Descriptive text is presented in a proportional font (as represented by this font).'
+  evidence_docs: 8
+  doc_types:
+  - TM
+  status: approved
+- id: bp-b4e7c49640
+  label: This manual uses several methods to highlight different
+  key: 'this manual uses several methods to highlight different aspects of the material:'
+  text: 'This manual uses several methods to highlight different aspects of the material:'
+  evidence_docs: 8
+  doc_types:
+  - TM
+  status: approved
+- id: bp-6c13cc2cc2
+  label: '- Conventions for displaying TEST data in this document'
+  key: '- conventions for displaying test data in this document are as follows:'
+  text: '- Conventions for displaying TEST data in this document are as follows:'
+  evidence_docs: 7
+  doc_types:
+  - TM
+  status: approved
+- id: bp-31f094a77c
+  label: '- Author’s comments are displayed in italics or as “cal'
+  key: '- author’s comments are displayed in italics or as “callout” boxes.'
+  text: '- Author’s comments are displayed in italics or as “callout” boxes.'
+  evidence_docs: 6
+  doc_types:
+  - DG
+  status: approved
+- id: bp-49e2c3bfa7
+  label: '- Information Security Officers (ISOs)—Personnel at VA'
+  key: '- information security officers (isos)—personnel at va sites responsible for system security.'
+  text: '- Information Security Officers (ISOs)—Personnel at VA sites responsible for system security.'
+  evidence_docs: 6
+  doc_types:
+  - DG
+  status: approved
+- id: bp-c3469fef28
+  label: '- This manual refers to the M programming language. Und'
+  key: '- this manual refers to the m programming language. under the 1995 american national standards
+    institute (ansi) standard, m is the primary name of the mumps programming language, and mumps is considered
+    an alternate name. this manual uses the name m.'
+  text: '- This manual refers to the M programming language. Under the 1995 American National Standards
+    Institute (ANSI) standard, M is the primary name of the MUMPS programming language, and MUMPS is considered
+    an alternate name. This manual uses the name M.'
+  evidence_docs: 6
+  doc_types:
+  - DG
+  status: approved
+- id: bp-38cf7cc51e
+  label: This software was developed at the Department of Vetera
+  key: this software was developed at the department of veterans affairs (va) by employees of the federal
+    government in the course of their official duties. pursuant to title 17 section 105 of the united
+    states code this software is *not* subject to copyright protection and is in the public domain. va
+    assumes no responsibility whatsoever for its use by other parties, and makes no guarantees, expressed
+    or implied, about its quality, reliability, or any other characteristic. we would appreciate acknowledgement
+    if the software is used. this software can be redistributed freely provided that any derivative works
+    bear some notice that they are derived from it.
+  text: This software was developed at the Department of Veterans Affairs (VA) by employees of the Federal
+    Government in the course of their official duties. Pursuant to Title 17 Section 105 of the United
+    States Code this software is *not* subject to copyright protection and is in the public domain. VA
+    assumes no responsibility whatsoever for its use by other parties, and makes no guarantees, expressed
+    or implied, about its quality, reliability, or any other characteristic. We would appreciate acknowledgement
+    if the software is used. This software can be redistributed freely provided that any derivative works
+    bear some notice that they are derived from it.
+  evidence_docs: 6
+  doc_types:
+  - DG
+  status: approved

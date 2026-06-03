@@ -97,3 +97,21 @@ def test_duplicate_header_columns_are_uniquified_in_csv():
     body = "# Doc\n\n<table><tr><th>Name</th><th>Name</th><th>Type</th></tr>" + rows + "</table>\n"
     _, tables = tp.extract_tables(body)
     assert tables[0].csv_text.splitlines()[0] == "Name,Name_1,Type"  # dupe header suffixed
+
+
+def test_count_qualifying_tables_residue_check():
+    # the §6.4 capture.yaml residue post-condition: a qualifying table still in the body is counted
+    body = f"# Doc\n\n{_html_table(12)}\n\n{_pipe_table(11)}\n"
+    assert tp.count_qualifying_tables(body) == 2  # both tall tables qualify
+
+
+def test_count_qualifying_tables_ignores_small_tables():
+    body = f"# Doc\n\n{_html_table(2)}\n\nprose\n"  # short + narrow → does not qualify
+    assert tp.count_qualifying_tables(body) == 0
+
+
+def test_count_qualifying_tables_zero_after_extraction():
+    # after extract_tables lifts the qualifying table, the residue scan sees none (post-condition)
+    body = f"# Doc\n\n{_html_table(12)}\n\nOutro.\n"
+    cleaned, _ = tp.extract_tables(body)
+    assert tp.count_qualifying_tables(cleaned) == 0

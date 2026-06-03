@@ -153,6 +153,26 @@ targets** (§9), not arbitrary — they are confirmed/adjusted against the golde
       backlog item), **not** a migration defect. Keeping the two apart is the point: *fails its own
       template* ⇒ pipeline bug; *conforms to era but not canonical* ⇒ faithful migration of a
       divergent original.
+  - **Sidecar completeness — typed absence + count reconciliation (a build-health hard gate).**
+    Structure also includes the **machine-owned sidecars** `normalize` lifts out of the body
+    (`revisions.yaml`, `tables/*.csv`, `refs.yaml`, `toc.yaml`). A *missing* sidecar is ambiguous —
+    "nothing to capture" vs. "a detector silently failed" look identical — so every bundle carries a
+    **`capture.yaml`** recording each capture attempt's typed outcome (`captured` / `failed` /
+    `absent-expected` / `absent-unexpected`) plus an independent residue re-scan of the normalized
+    body (vdocs-design §6.4). Two reconciliation checks turn that into a gate, enforced by `validate`:
+    - **Per-document typed absence.** Any `absent-unexpected` (detector found nothing but the residue
+      scan still sees the structure) or `failed` (recognised-but-unparseable) outcome is a
+      structural-extraction defect → blocks, exactly like a missing required section. This is the one
+      check that catches a *single* document's silently-missed table/revision-table — the failure mode
+      the `S`→`T` recall metric and the corpus aggregates both miss when the rest of the corpus parses
+      cleanly.
+    - **Corpus count reconciliation.** The per-sidecar emission counts `normalize` records to
+      `state.db:stage_runs[counts]` are checked against expectation: a class going `absent-expected`
+      across the *entire* corpus (e.g. zero `tables/*.csv` over hundreds of table-bearing manuals), or
+      a count that **drops** versus the prior run with no matching source change, is an implausible
+      aggregate → a whole-detector failure, re-classified `absent-unexpected` and blocked. This is the
+      completeness dimension (produced vs. expected) standard in data-quality validation, applied at
+      corpus scale to catch failures no per-document score can.
 - **C3 Tables.** Greedy best-match each source table to a target table or its CSV sidecar;
   per-pair cell-text recall + dimension match; aggregate weighted by source cell count.
   Specifically detects the v1 failure modes: tables exploded into bare list markers (precision
@@ -164,6 +184,23 @@ targets** (§9), not arbitrary — they are confirmed/adjusted against the golde
   markdown links/anchors; **resolvability** = internal links pointing at a real anchor ÷ all
   internal links (the dead-anchor rate, tied to the stable-ID system). Zero dead anchors is the
   publish target.
+  - **Ref-resolution gate (the severed-conref check — generalised from TOC to all cross-refs).** The
+    `refs.yaml` sidecar records, per bundle, the live anchor set (one row per heading: `slug` +
+    `stable_id`) **and** the outbound cross-ref map (each original Word `_Toc…`/`_Ref…` bookmark →
+    its resolved slug, or `UNRESOLVED`). DITA migrations report that the most common silent-loss mode
+    is a **severed cross-reference** — a link whose target id changed, broken silently. `validate`
+    therefore resolves **every** outbound ref against that bundle's live anchor set and classifies
+    each, keeping two failure modes apart:
+    - **severed** — the resolved target slug matches **no** live anchor row. A ref that *was* good
+      now points nowhere — a true dead anchor and a silent regression. This is the same round-trip
+      the **TOC integrity** check below specifies (every TOC entry → a real heading), generalised to
+      *all* cross-references. **Hard floor: zero severed cross-refs** — any one blocks.
+    - **unmapped** — the `UNRESOLVED` marker `normalize` already wrote for a Word bookmark it could
+      not map to any heading. This never resolved (it is not a *new* loss) and is already a recorded
+      fidelity signal, so it is the **measured** class: it blocks only above the C5 cross-ref
+      dead-anchor rate (≤ 0.02), not on every occurrence.
+    Keeping them apart is the point — failing on every pre-existing `UNRESOLVED` would re-flag known
+    issues rather than catch the silent severance this check exists for.
   - **TOC integrity (the highest-value navigation check).** Because the TOC is the primary
     navigational *and* semantic structure (vdocs-design §6.7) and is *derived from the heading tree*,
     it is scored explicitly: **accuracy** (TOC entries match the heading tree), **completeness**
@@ -200,6 +237,15 @@ Not a recall score — a **completeness checklist plus one cryptographic hard ga
 This axis is the most reassuring to the institution and the most fully achievable: the chain of
 authority becomes *stronger* than a Word file in a folder, because every claim is cryptographically
 traceable.
+
+**Capture completeness is part of "provable, not asserted."** Provenance proves the body came from
+the source; it must also be provable that **nothing was silently dropped on the way out of the body**.
+The per-bundle `capture.yaml` (vdocs-design §6.4) makes that auditable: every structure `normalize`
+lifts to a sidecar leaves a typed record (`captured` / `failed` / `absent-expected` /
+`absent-unexpected`), so a reviewer can confirm each absent sidecar is *explained* rather than merely
+missing. `history.yaml` already carries `source_sha256` + `body_sha256`; `capture.yaml` is the
+forward path to the **signed bundle manifest** (each part + its hash + its capture outcome), turning
+the whole bundle — body *and* sidecars — into a single verifiable, untampered unit.
 
 ---
 
@@ -393,6 +439,20 @@ themselves trustworthy.
 - **precision@k / recall@k / nDCG / MRR** against the judged-relevant set.
 - **redundancy@k** — share of top-k that are near-duplicates of a higher-ranked hit; the direct
   payoff of single-sourcing + anchor-only indexing (target ≈ 0).
+- **over-strip rate (chunk self-sufficiency — the condensation guardrail).** Condensation raises
+  signal-to-noise only up to a point: strip past it and a chunk loses the context that lets it stand
+  alone, embedding as an unanchored fragment that *hurts* recall (vdocs-design §6.5 — the
+  don't-over-decompose optimum; the curve peaks then falls). This metric is the precision counterpart
+  to `redundancy@k`: over each section-chunk of the condensed body, the share that are **hollow** —
+  a content heading whose retained body falls below a substantive-token floor **and** carries no
+  resolvable referent (no `_shared/` boilerplate link, `tables/*.csv` stub, or asset reference that
+  would re-supply the meaning). A chunk reduced to a *referent* (content relocated, not lost) is **not**
+  counted — that is by-design decomposition, dereferenced before scoring (§4); only a chunk stripped to
+  a bare heading is a defect. Container headings (those whose substance lives in subsections) are
+  excluded. Target ≈ 0; any hollow content chunk drops the document below PASS (never silently faithful),
+  and a body that is mostly hollow QUARANTINEs. Computed at the `fidelity` stage from `text@normalized`
+  chunk segmentation — no source needed, so it is a pure, deterministic, T-only check (the
+  `overstrip_pure` kernel), and it is the search-corpus enforcement of the §6.5 guardrail.
 - **version-correctness** — share of hits that are `is_latest`; with anchor-only indexing this should
   be ~100%, and any stale hit is a defect.
 - **answer-correctness** — for RAG-style use, whether the retrieved context supports the correct
@@ -444,6 +504,7 @@ is itself a versioned, signed artifact.
     "C5_xref": {"recall": 0.98, "dead_anchor_rate": 0.0,
                 "toc": {"accuracy": 1.0, "completeness": 1.0, "dead_anchors": 0, "round_trip": 1.0}},
     "C6_lists": {"recall": 0.99},
+    "over_strip": {"content_chunks": 41, "over_strip_rate": 0.0, "hollow": [], "verdict": "PASS"},
     "C7_constructs": [{"type": "text_box", "count": 2, "disposition": "sidecar"}],
     "composite": 0.985
   },

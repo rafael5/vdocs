@@ -31,7 +31,13 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from vdocs.kernel.markdown import HEADING_RE, MULTI_BLANK, iter_headings, strip_tags
+from vdocs.kernel.markdown import (
+    HEADING_RE,
+    MULTI_BLANK,
+    is_legacy_toc_entry,
+    iter_headings,
+    strip_tags,
+)
 from vdocs.kernel.text import block_key
 from vdocs.stages.normalize.anchors_pure import (
     DEFAULT_TOC_DEPTH,
@@ -56,8 +62,14 @@ __all__ = [
     "subtract_boilerplate",
     "block_key",
     "strip_legacy_toc",
+    "LegacyTocEntry",
+    "parse_legacy_toc_entry",
+    "legacy_toc_entries",
+    "legacy_toc_targets",
+    "correlate_legacy_toc",
     "strip_existing_toc",
     "build_toc",
+    "effective_toc_depth",
     "regenerate_toc",
     "normalize_body",
 ]
@@ -127,13 +139,34 @@ def strip_artifacts(body: str) -> str:
     return MULTI_BLANK.sub("\n\n", "\n".join(kept)).strip("\n") + "\n"
 
 
+def _furniture_core(text: str) -> str:
+    """A block's alphanumeric core — emphasis markers (``*``/``_``/`` ` ``), punctuation, and
+    whitespace runs all flattened away — so a curated dead phrase matches the paper-era variant
+    the corpus actually emits (``*This page intentionally left blank for double-sided printing.*``
+    vs the phrase ``This page intentionally left blank``)."""
+    return " ".join(re.sub(r"[^a-z0-9 ]", " ", text.lower()).split())
+
+
 def subtract_phrases(body: str, phrases: frozenset[str]) -> str:
-    """F-phrases: delete whole blocks matching a curated dead phrase (case-insensitive)."""
+    """F-phrases: delete whole blocks matching a curated dead phrase (§9.6, DELETE).
+
+    A block is dead text when its alphanumeric core (emphasis/punctuation flattened by
+    :func:`_furniture_core`) **equals** a phrase's core, **or** — for a sufficiently specific
+    phrase (≥4 words) — **begins with** it (so an emphasis-wrapped blank-page line with a trailing
+    "for double-sided printing." clause is still removed). The ≥4-word guard keeps short phrases
+    (``End of document``) exact-only, so real prose that merely opens with the words is never eaten.
+    """
     if not phrases:
         return body
-    lowered = {p.strip().lower() for p in phrases}
+    cores = [c for c in (_furniture_core(p) for p in phrases) if c]
+    long_cores = [c for c in cores if len(c.split()) >= 4]
     blocks = re.split(r"\n\s*\n", body)
-    kept = [b for b in blocks if b.strip().lower() not in lowered]
+    kept = []
+    for b in blocks:
+        bc = _furniture_core(b)
+        if bc in cores or any(bc.startswith(c + " ") or bc == c for c in long_cores):
+            continue
+        kept.append(b)
     return "\n\n".join(kept)
 
 
@@ -181,35 +214,217 @@ def subtract_boilerplate(body: str, registry: Sequence[Boilerplate]) -> str:
     return "\n\n".join(out)
 
 
-def strip_legacy_toc(body: str, titles: frozenset[str], max_level: int = 3) -> str:
-    """F-toc-dedup (§6.7; ``registries/structures`` CANONICALIZE ``toc``, §9.6): remove the source's
-    legacy in-body table of contents so the derived ``## Contents`` (F-toc) never duplicates it.
+# A *loose* legacy-TOC entry, used **only inside a confirmed TOC block** (after a recognised
+# header). Covers the three page-number placements the corpus emits, with an optional leading
+# ``N.`` ordered-list marker:
+#   * double-bracket  ``[Title [12](#a)](#a)``
+#   * single-bracket  ``Introduction [1](#a)``          (inner ``[page]`` bracket)
+#   * page-in-text    ``1.  [Introduction 14](#a)``      (page appended to the link text)
+# Kept distinct from the kernel ``is_legacy_toc_entry`` (strict double-bracket): these looser shapes
+# are ambiguous with an ordinary in-prose link, so they are trusted only within the bounded TOC
+# block, never globally (the header-less catch-all uses the strict form).
+_PAGE = r"[0-9ivxlcdm][0-9ivxlcdm.\-]*"  # int / roman / chapter-dash page number (case-insensitive)
+_LOOSE_TOC_ENTRY_RE = re.compile(
+    r"(?i)^[ \t]*(?:[>*+\-][ \t]+|\d+\.[ \t]+)*\[?[^\]\n]*?"
+    r"(?:\[" + _PAGE + r"\]|[ \t]" + _PAGE + r")"
+    r"\]?\(#[^)]*\)(?:\]\(#[^)]*\))?[ \t]*$"
+)
+_TOC_TARGET_RE = re.compile(r"\]\((#[^)]*)\)")
 
-    A legacy contents section is a heading whose text matches one of the curated ``titles``
-    (case-insensitive — e.g. ``Table of Contents`` / ``Contents``) and whose level is either
-    ≤ ``max_level`` (a normal H1–H3 TOC heading) **or** > 6 (an invalid-GFM oversized heading the
-    upstream mangled — its hash count is an artifact, so the text match is trusted; the real corpus
-    emits ``########### Table of Contents``). The heading and every following line up to the next
-    markdown heading (its page-numbered entries) are dropped. Registry-driven (``titles`` come from
-    ``registries/structures``); empty ``titles`` → no-op. Idempotent: a prior run's generated
-    ``## Contents`` matches too, so it is rebuilt."""
-    if not titles:
-        return body
+
+_TOC_PREFIX_RE = re.compile(r"^[ \t]*(?:[>*+\-][ \t]+|\d+\.[ \t]+)*")
+_INNER_PAGE_RE = re.compile(r"\[(" + _PAGE + r")\]\(#[^)]*\)", re.IGNORECASE)
+_LINK_TEXT_RE = re.compile(r"\[([^\]]*)\]\(#[^)]*\)")
+_TRAILING_PAGE_RE = re.compile(r"\s(" + _PAGE + r")$", re.IGNORECASE)
+
+
+@dataclass(frozen=True)
+class LegacyTocEntry:
+    """One original (paper-era) table-of-contents entry — its title, the **original page number**,
+    and the anchor it pointed at — captured verbatim into ``toc.yaml`` before the legacy TOC leaves
+    the body (§6.7), so the derived link-based ``## Contents`` keeps a reference back to the printed
+    document's pagination."""
+
+    title: str
+    page: str
+    anchor: str
+
+
+def parse_legacy_toc_entry(line: str) -> LegacyTocEntry | None:
+    """Parse a legacy TOC entry line into ``(title, page, anchor)`` across every corpus dialect, or
+    ``None`` when the line is not an entry. The page is the inner ``[n]`` bracket when present
+    (``[Title [12](#a)](#a)``), else the trailing number in the link text (``[Title 12](#a)``); the
+    anchor is the outer (last) ``](#…)`` target; leading bullet/blockquote/ordered markers are
+    stripped first."""
+    s = _TOC_PREFIX_RE.sub("", line.strip())
+    anchors = _TOC_TARGET_RE.findall(s)
+    if not anchors:
+        return None
+    anchor = anchors[-1]
+    if (inner := _INNER_PAGE_RE.search(s)) is not None:
+        page = inner.group(1)
+        title = s[: inner.start()].strip().lstrip("[").strip()
+    else:
+        link = _LINK_TEXT_RE.search(s)
+        text = link.group(1).strip() if link else ""
+        if (m := _TRAILING_PAGE_RE.search(text)) is not None:
+            page, title = m.group(1), text[: m.start()].strip()
+        else:
+            page, title = "", text
+    return LegacyTocEntry(title.strip("*_ ").strip(), page, anchor)
+
+
+def _is_loose_toc_entry(line: str) -> bool:
+    return _LOOSE_TOC_ENTRY_RE.match(line) is not None
+
+
+def _norm_toc_title(line: str) -> str:
+    """A legacy-TOC heading line's bare title — HTML tags (the ``<span id="_Toc…">`` bookmark
+    old-gen headers carry), emphasis (``*``/``_``/`` ` ``), ATX/blockquote markers, and whitespace
+    runs all flattened — so a curated title matches every markup variant the corpus emits
+    (``# **Table of Contents**``, ``<span id="_Toc1"></span>List of Figures``, ``## Contents``)."""
+    return " ".join(re.sub(r"[*_`>#]", " ", strip_tags(line)).split()).lower()
+
+
+def _followed_by_toc_entry(lines: list[str], i: int, lookahead: int = 2) -> bool:
+    """True when a legacy page-numbered TOC entry appears within the next ``lookahead`` non-blank
+    lines after ``i`` — the guard that a *plain-text* ``Table of Contents`` line really heads a
+    legacy TOC (not a stray mention of the words)."""
+    seen = 0
+    for j in range(i + 1, len(lines)):
+        if not lines[j].strip():
+            continue
+        if _is_loose_toc_entry(lines[j]):
+            return True
+        seen += 1
+        if seen >= lookahead:
+            return False
+    return False
+
+
+def _scan_legacy_toc(
+    body: str, titles: frozenset[str], max_level: int
+) -> tuple[set[int], list[LegacyTocEntry]]:
+    """The single legacy-TOC scanner (§6.7): returns the line indices to drop **and** the parsed
+    ``LegacyTocEntry`` (title + original page + anchor) of every dropped page-numbered entry — for
+    both the role-1 correlation and the ``toc.yaml`` capture.
+
+    Two corpus forms are recognised:
+      * **ATX heading** — a ``Table of Contents`` / ``Contents`` heading at H1–H3 (or the oversized
+        >6-``#`` form upstream mangles); drop the heading + every line up to the next markdown
+        heading (its dotted/tab/double-bracket page entries).
+      * **plain text** — a bare ``Table of Contents`` line (no ``#``) **immediately followed by**
+        the page-numbered ``[Title [n](#anchor)](#anchor)`` entry block; drop the header + that
+        contiguous entry/blank run (stopping before the next real content line)."""
     wanted = {t.strip().lower() for t in titles}
     lines = body.split("\n")
-    out: list[str] = []
+    drop: set[int] = set()
+    entries: list[LegacyTocEntry] = []
+    n = len(lines)
     i = 0
-    while i < len(lines):
-        m = HEADING_RE.match(lines[i])
-        level = len(m.group(1)) if m else 0
-        if m and (level <= max_level or level > 6) and m.group(2).strip().lower() in wanted:
+    while i < n:
+        if i in drop:
             i += 1
-            while i < len(lines) and not HEADING_RE.match(lines[i]):
-                i += 1
             continue
-        out.append(lines[i])
+        m = HEADING_RE.match(lines[i])
+        # A heading whose *full* text is exactly a curated legacy-TOC title is legacy at **any**
+        # level — H1–H3, the H4–H6 the old `max_level=3` gate missed, and the oversized >6-`#`
+        # form upstream mangles. The exact title match (not a substring) keeps it safe.
+        if m and _norm_toc_title(lines[i]) in wanted:
+            drop.add(i)
+            j = i + 1
+            while j < n and not HEADING_RE.match(lines[j]):
+                drop.add(j)
+                if _is_loose_toc_entry(lines[j]) and (e := parse_legacy_toc_entry(lines[j])):
+                    entries.append(e)
+                j += 1
+            i = j
+            continue
+        if not m and lines[i].strip() and _norm_toc_title(lines[i]) in wanted:
+            if not _followed_by_toc_entry(lines, i):
+                # a bare legacy header whose entries degraded to plain text / page-numbered
+                # headings (no `(#anchor)` links left to consume): drop just the stale header label
+                # so it does not linger above the derived `## Contents`.
+                drop.add(i)
+                i += 1
+                continue
+            drop.add(i)
+            j = i + 1
+            while j < n:
+                if not lines[j].strip():  # blanks: only swallow them if more entries follow
+                    k = j
+                    while k < n and not lines[k].strip():
+                        k += 1
+                    if k < n and _is_loose_toc_entry(lines[k]):
+                        drop.update(range(j, k))
+                        j = k
+                        continue
+                    break
+                if _is_loose_toc_entry(lines[j]):
+                    drop.add(j)
+                    if (e := parse_legacy_toc_entry(lines[j])) is not None:
+                        entries.append(e)
+                    j += 1
+                    continue
+                break
+            i = j
+            continue
+        # Orphaned strict legacy entry (a figure/table list or a header-less block whose header
+        # text isn't curated): the double-bracket page-numbered form is unambiguous — only ever
+        # legacy navigation — so it is stripped wherever it appears, and its target captured for the
+        # role-1 correlation. (Single-bracket entries stay trusted only under a header, above.)
+        if is_legacy_toc_entry(lines[i]):
+            drop.add(i)
+            if (e := parse_legacy_toc_entry(lines[i])) is not None:
+                entries.append(e)
         i += 1
-    return "\n".join(out)
+    return drop, entries
+
+
+def strip_legacy_toc(body: str, titles: frozenset[str], max_level: int = 3) -> str:
+    """F-toc-dedup (§6.7; ``registries/structures`` CANONICALIZE ``toc``, §9.6): remove the source's
+    legacy in-body table of contents — in **both** the ATX-heading and plain-text forms (see
+    :func:`_scan_legacy_toc`) — so the derived ``## Contents`` (F-toc) never duplicates it.
+
+    Registry-driven for the *header* line (``titles`` come from ``registries/structures``), but the
+    unambiguous double-bracket page-numbered **entries** are stripped even with no curated title.
+    Idempotent: a prior run's generated ``## Contents`` is an ATX ``contents`` heading, so it is
+    itself stripped and rebuilt identically."""
+    drop, _ = _scan_legacy_toc(body, titles, max_level)
+    return "\n".join(line for i, line in enumerate(body.split("\n")) if i not in drop)
+
+
+def legacy_toc_entries(
+    body: str, titles: frozenset[str], max_level: int = 3
+) -> list[LegacyTocEntry]:
+    """The original legacy-TOC entries (title + page + anchor), captured **before** the TOC is
+    stripped (§6.7) — the input to both the role-1 correlation and the ``toc.yaml`` sidecar. No
+    legacy TOC ⇒ ``[]``."""
+    _, entries = _scan_legacy_toc(body, titles, max_level)
+    return entries
+
+
+def legacy_toc_targets(body: str, titles: frozenset[str], max_level: int = 3) -> list[str]:
+    """The outer ``#anchor`` targets of the legacy TOC's page-numbered entries (§6.7) — the role-1
+    completeness oracle's input. Thin view over :func:`legacy_toc_entries`."""
+    return [e.anchor for e in legacy_toc_entries(body, titles, max_level)]
+
+
+def correlate_legacy_toc(targets: list[str], headings: list[Heading]) -> list[str]:
+    """Role-1 cross-check (§6.7): the legacy-TOC entry ``targets`` whose ``#anchor`` has **no**
+    counterpart heading in the derived tree — preserving document order, de-duplicated.
+
+    A resolved target's anchor equals a derived heading's GitHub slug; an unresolved one is either
+    (a) a Word bookmark (``#_Toc…``/``#_Ref…``) that never matched a heading or (b) an intended
+    section that lost its heading level in conversion. Both are **heading-recovery inputs + fidelity
+    flags**, never silent losses — so the legacy TOC is only safe to drop once they are recorded."""
+    slugs = {h.slug for h in headings}
+    unresolved: list[str] = []
+    for t in targets:
+        if t.lstrip("#") in slugs or t in unresolved:
+            continue
+        unresolved.append(t)
+    return unresolved
 
 
 def strip_existing_toc(body: str) -> str:
@@ -228,6 +443,24 @@ def strip_existing_toc(body: str) -> str:
     return "\n".join(out)
 
 
+def effective_toc_depth(
+    headings: list[Heading], default: tuple[int, int] = DEFAULT_TOC_DEPTH
+) -> tuple[int, int]:
+    """The TOC depth to actually use for a document (§6.7). A **lone** leading top-level heading is
+    the document title, so the navigable structure is the two levels below it (the ``H2–H3``
+    default). But when the shallowest level has **several** headings, those are sections, not a
+    title — include that level so multi-``H1`` docs (release notes, flat manuals) still get a
+    ``## Contents`` instead of an empty one. No headings → the default."""
+    levels = sorted({h.level for h in headings})
+    if not levels:
+        return default
+    base = levels[0]
+    base_count = sum(1 for h in headings if h.level == base)
+    if base_count <= 1 and len(levels) > 1:  # a single title heading above deeper sections
+        return (base + 1, base + 2)
+    return (base, base + 1)
+
+
 def build_toc(headings: list[Heading], toc_depth: tuple[int, int] = DEFAULT_TOC_DEPTH) -> str:
     """A ``## Contents`` GFM list linking each in-depth heading to its slug anchor (nested by
     level). Only headings within ``toc_depth`` are listed — H1 is the doc title, never a TOC
@@ -242,23 +475,47 @@ def build_toc(headings: list[Heading], toc_depth: tuple[int, int] = DEFAULT_TOC_
     return "\n".join(lines)
 
 
+_BOLD_LINE_RE = re.compile(r"^\*\*.+\*\*$")
+_ITALIC_LINE_RE = re.compile(r"^_.+_$")
+_SOURCE_LINE_RE = re.compile(r"^Source: ")
+
+
+def _is_title_block_line(line: str) -> bool:
+    """A line belonging to the leading title block: a legacy leading H1, or a line of the
+    standardized cover (§6.4) — a bold title, its italic version/published meta, or the
+    ``Source:`` line. These sit above the TOC; everything else opens the document body."""
+    if HEADING_RE.match(line) and line.startswith("# "):
+        return True
+    s = line.strip()
+    return bool(_BOLD_LINE_RE.match(s) or _ITALIC_LINE_RE.match(s) or _SOURCE_LINE_RE.match(s))
+
+
+def _title_block_end(lines: list[str]) -> int:
+    """Insert offset just past the leading title block — the standardized cover (bold title +
+    italic meta + ``Source:`` line) or a legacy leading H1, skipping the blanks between them.
+    0 when the body opens straight into content, so the TOC then prepends."""
+    last = -1
+    for idx, ln in enumerate(lines):
+        if not ln.strip():
+            continue
+        if _is_title_block_line(ln):
+            last = idx
+            continue
+        break
+    return last + 1
+
+
 def regenerate_toc(body: str, toc_depth: tuple[int, int] = DEFAULT_TOC_DEPTH) -> str:
     """F-toc: replace any stale ``## Contents`` with a fresh TOC derived from the heading tree.
 
-    Inserted after a leading top-level title heading if present, else at the top of the body."""
+    Inserted after the leading title block (the standardized cover or a legacy top-level title
+    heading) if present, else at the top of the body — so the title always sits above the TOC."""
     body = strip_existing_toc(body)
     toc = build_toc(parse_headings(body), toc_depth)
     if not toc:
         return body
     lines = body.split("\n")
-    # find a leading H1 (skipping blanks) → place Contents just after it; else prepend
-    insert_at = 0
-    for idx, ln in enumerate(lines):
-        if not ln.strip():
-            continue
-        if HEADING_RE.match(ln) and ln.startswith("# "):
-            insert_at = idx + 1
-        break
+    insert_at = _title_block_end(lines)
     head, tail = lines[:insert_at], lines[insert_at:]
     return "\n".join([*head, "", toc, "", *tail]).strip("\n") + "\n"
 
@@ -285,11 +542,28 @@ def normalize_body(
     ``(doc_type, era)`` and pass it in (the template seam lives in ``anchors_pure``)."""
     body = subtract_phrases(strip_artifacts(recover_headings(body)), phrases)
     body = subtract_boilerplate(body, boilerplate)
+    # CORRELATE-BEFORE-DROPPING (§6.7 role-1): capture the legacy TOC's original entries (title +
+    # page + anchor) *before* it leaves the body, then strip it (ATX-heading + plain-text forms).
+    toc_entries = legacy_toc_entries(body, toc_titles)
     body = strip_legacy_toc(body, toc_titles)
     body = infer_heading_levels(body)
     headings = parse_headings(body, doc_id)
+    # Resolve the TOC depth: an explicit non-default override (the template seam) wins; otherwise
+    # adapt to the heading tree so multi-H1 docs still get a `## Contents` (§6.7).
+    depth = toc_depth if toc_depth != DEFAULT_TOC_DEPTH else effective_toc_depth(headings)
+    toc_unresolved = correlate_legacy_toc([e.anchor for e in toc_entries], headings)
+    slugs = {h.slug for h in headings}
+    legacy_toc = [
+        {
+            "title": e.title,
+            "page": e.page,
+            "anchor": e.anchor,
+            "resolved": e.anchor.lstrip("#") in slugs,
+        }
+        for e in toc_entries
+    ]
     bookmark_to_slug = {h.bookmark: h.slug for h in headings if h.bookmark}
     body, outbound = rewrite_link_targets(body, bookmark_to_slug)
-    body = regenerate_toc(body, toc_depth)
-    body = insert_back_links(body, headings, toc_depth)
-    return body, build_anchor_map(headings, doc_id, toc_depth, outbound)
+    body = regenerate_toc(body, depth)
+    body = insert_back_links(body, headings, depth)
+    return body, build_anchor_map(headings, doc_id, depth, outbound, toc_unresolved, legacy_toc)

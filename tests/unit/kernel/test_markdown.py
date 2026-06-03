@@ -58,3 +58,68 @@ def test_iter_headings_yields_raw_text_with_inline_markup():
     (_, level, text) = next(iter(md.iter_headings(body)))
     assert level == 2
     assert text == '<span id="_Toc1"></span>Intro'  # raw — bookmark span retained for callers
+
+
+def test_is_markdown_artifact_matches_structural_only_lines():
+    # the dominant boilerplate *noise* is structural markdown, not prose (vdocs-spike §Task 1):
+    # nav links, secondary plain-text TOC lines, figure images, table-CSV markers — all entirely
+    # structure, with optional `_`/`*`/`↑` wrappers
+    assert md.is_markdown_artifact("[↑ Back to Contents](#contents)")
+    assert md.is_markdown_artifact("[1 Introduction [1](#introduction)](#introduction)")
+    assert md.is_markdown_artifact('<img src="media/image1.png" width="200" />')
+    assert md.is_markdown_artifact("_[Table 1 (extracted to CSV)](tables/table-01.csv)_")
+    assert md.is_markdown_artifact("  *[Figure 2](assets/fig-02.png)*  ")  # wrapped + indented
+    assert md.is_markdown_artifact("![](27daafb0.png)")  # markdown image syntax (CAS asset ref)
+    assert md.is_markdown_artifact("![alt caption](assets/a0e627.jpeg)")
+
+
+def test_is_markdown_artifact_keeps_prose_with_inline_link():
+    # a real sentence that merely *contains* an inline link is prose, never an artifact
+    assert not md.is_markdown_artifact("See [the install guide](#install) for the procedure.")
+    assert not md.is_markdown_artifact("Plain prose paragraph with no links at all.")
+    assert not md.is_markdown_artifact("## Introduction")  # a heading is structure, not an artifact
+    assert not md.is_markdown_artifact("")  # a blank line is not, by itself, an artifact
+
+
+def test_is_revision_heading_matches_every_corpus_form():
+    # the broadened §6.4 detector: ATX, bold, blockquote-bold, plain, caps, the longer dialects
+    for line in (
+        "# Revision History",
+        "## Revision History",
+        "### Template Revision History",
+        "**Revision History**",
+        "> **Revision History**",
+        "> Revision History",
+        "Revision History",
+        "REVISION HISTORY**",
+        "Documentation Revisions",
+        "> **Documentation Revisions**",
+        "Documentation Revision History",
+        "Revisions",
+    ):
+        assert md.is_revision_heading(line), line
+
+
+def test_is_revision_heading_rejects_prose_and_other_headings():
+    assert not md.is_revision_heading("# Introduction")
+    assert not md.is_revision_heading("Table of Contents")
+    # a descriptive sentence that merely starts with the words is not a section header
+    assert not md.is_revision_heading(
+        "Revision History showing date artifact was created or revised, version, description."
+    )
+    assert not md.is_revision_heading("")
+
+
+def test_is_legacy_toc_entry_matches_double_bracket_page_numbered_lines():
+    assert md.is_legacy_toc_entry("[Introduction [1](#introduction)](#introduction)")
+    assert md.is_legacy_toc_entry("  [Routines [8](#routines-1)](#routines-1)  ")
+    assert not md.is_legacy_toc_entry("- [Introduction](#introduction)")  # modern Contents entry
+    assert not md.is_legacy_toc_entry("See [the guide [1](#g)](#g) now.")  # prose, not anchored
+    assert not md.is_legacy_toc_entry("plain prose")
+
+
+def test_legacy_toc_target_returns_outer_anchor():
+    # the outer link is the real target; the inner `[12](#…)` is the page number
+    assert md.legacy_toc_target("[Intro [1](#intro)](#intro)") == "#intro"
+    assert md.legacy_toc_target("[X [9](#_Toc55)](#_Toc55)") == "#_Toc55"
+    assert md.legacy_toc_target("not an entry") is None

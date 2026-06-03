@@ -20,7 +20,7 @@ Pure: plain values in, records + rewritten body out; the stage writes the sideca
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from vdocs.kernel.markdown import MULTI_BLANK, iter_headings, strip_tags
 from vdocs.kernel.text import github_slug_base
@@ -76,6 +76,12 @@ class AnchorMap:
     toc_depth: tuple[int, int]
     rows: list[AnchorRow]
     outbound: dict[str, str]  # bookmark → resolved slug, or UNRESOLVED
+    # legacy-TOC entry anchors with no derived-heading counterpart (§6.7 role-1) — heading-recovery
+    # inputs + fidelity flags, recorded so the legacy TOC is dropped without silent loss.
+    toc_unresolved: list[str] = field(default_factory=list)
+    # the original paper-era TOC entries (title + page + anchor + resolved) for ``toc.yaml``: a
+    # backwards-compat reference from the derived ``## Contents`` to the printed pagination.
+    legacy_toc: list[dict] = field(default_factory=list)
 
 
 def github_slug(text: str, seen: dict[str, int]) -> str:
@@ -144,6 +150,8 @@ def build_anchor_map(
     doc_id: str,
     toc_depth: tuple[int, int] = DEFAULT_TOC_DEPTH,
     outbound: dict[str, str] | None = None,
+    toc_unresolved: list[str] | None = None,
+    legacy_toc: list[dict] | None = None,
 ) -> AnchorMap:
     """The pure ``refs.yaml`` record: one row per heading carrying
     ``(stable_section_id, github_slug, original_bookmark, level, title, toc_level)`` plus the
@@ -163,7 +171,14 @@ def build_anchor_map(
         )
         for h in headings
     ]
-    return AnchorMap(doc_id, (lo, hi), rows, dict(outbound or {}))
+    return AnchorMap(
+        doc_id,
+        (lo, hi),
+        rows,
+        dict(outbound or {}),
+        list(toc_unresolved or []),
+        list(legacy_toc or []),
+    )
 
 
 def strip_back_links(body: str) -> str:
@@ -217,4 +232,16 @@ def anchor_sidecar(amap: AnchorMap) -> dict:
             for r in amap.rows
         ],
         "outbound": dict(amap.outbound),
+        "toc_unresolved": list(amap.toc_unresolved),
+    }
+
+
+def legacy_toc_sidecar(amap: AnchorMap) -> dict:
+    """The ``toc.yaml`` mapping (§6.7): the document's **original** table of contents — each entry's
+    title, the printed page number, the anchor it pointed at, and whether that anchor resolved to a
+    derived heading. Captured verbatim before the legacy TOC leaves the body, so the clean linked
+    ``## Contents`` keeps a backwards-compatible reference to the paper document's pagination."""
+    return {
+        "doc_id": amap.doc_id,
+        "entries": [dict(e) for e in amap.legacy_toc],
     }

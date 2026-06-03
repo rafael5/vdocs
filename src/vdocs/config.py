@@ -210,3 +210,9 @@ class Settings(BaseSettings):
     def patterns_report(self) -> Path:
         """``discover`` output: candidate patterns (pre-curation); proposes registries (§9.6)."""
         return self.reports / "patterns" / "patterns.json"
+
+    @property
+    def validation_report(self) -> Path:
+        """``validate`` output: the sidecar-verification findings (typed-absence + count
+        reconciliation + ref-resolution) — the gate's record + the cross-run count baseline (§8)."""
+        return self.reports / "validation" / "verification.json"

@@ -276,6 +276,8 @@ def test_normalize_stamps_template_id_and_strips_scaffold(ctx, tmp_path):
     assert meta["template_id"] == "DIBR:2020s:deadbeef"  # stamped into identity FM (§6.3)
     assert "Real purpose text." in body  # filled scaffold section retained
     assert "## Rollback" not in body  # the empty scaffold section was stripped
+    # the title sits at the top, above the derived TOC (title → Contents → body)
+    assert body.index("# DG Deploy") < body.index("## Contents") < body.index("Real purpose")
 
 
 def test_normalize_strips_legacy_toc_no_duplicate(ctx):
@@ -469,3 +471,58 @@ def test_normalize_fails_the_stage_when_error_rate_is_systemic(ctx, monkeypatch)
     monkeypatch.setattr(nz, "normalize_body", boom)  # every doc fails → systemic → stage fails
     with pytest.raises(PostflightError):
         Orchestrator([NormalizeStage()]).run(ctx)
+
+
+def test_normalize_writes_capture_manifest_for_every_bundle(ctx):
+    # §6.4: capture.yaml is ALWAYS written (unlike the conditional sidecars), recording each
+    # capture attempt's typed outcome so absence is never ambiguous.
+    import yaml
+
+    _seed(ctx)
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["capture_sidecars"] == 1  # one per bundle, always
+
+    manifest = yaml.safe_load(
+        (ctx.cfg.silver_normalized / "ADT" / "ig_doc" / "capture.yaml").read_text()
+    )
+    assert manifest["doc_id"] == "ADT/ig_doc"
+    assert set(manifest["captures"]) == {"revisions", "tables", "refs", "toc", "title_date"}
+    # the seeded doc has headings → refs captured; no revision table → revisions benignly absent
+    assert manifest["captures"]["refs"]["outcome"] == "captured"
+    assert manifest["captures"]["revisions"]["outcome"] == "absent-expected"
+    assert result.counts["absent_unexpected"] == 0
+
+
+def test_normalize_capture_flags_silent_detector_miss(ctx):
+    # the gap flags.yaml cannot catch: a revision heading variant the strict detector misses
+    # ("Change History" is not in the curated vocabulary) but the residue re-scan still sees —
+    # so the bundle's capture.yaml records `absent-unexpected`, not a silent benign absence.
+    import yaml
+
+    enriched = frontmatter.emit(
+        {"title": "Tech Manual", "app_code": "ADT", "tool_ver": "0.1.0"},
+        "# Tech Manual\n\n## Change History\n\nNotes about versions, no parseable table.\n\n"
+        "## Body\n\ncontent\n",
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "ch_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(
+        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "ch_doc", "ext": "docx"}})
+    )
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["absent_unexpected"] == 1
+
+    manifest = yaml.safe_load(
+        (ctx.cfg.silver_normalized / "ADT" / "ch_doc" / "capture.yaml").read_text()
+    )
+    assert manifest["captures"]["revisions"]["outcome"] == "absent-unexpected"
+    assert manifest["residue"]["revision_heading_present"] is True

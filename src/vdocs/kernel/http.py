@@ -88,14 +88,15 @@ class PoliteClient:
         return page
 
     def get_bytes(self, url: str) -> bytes | None:
-        """GET ``url`` as bytes; ``None`` on 404 (a missing format) **or** a persistent transport
-        error (the skippable-WARN sentinel the fetch driver records as failed), raise on other
-        errors."""
+        """GET ``url`` as bytes, or ``None`` on **any** failure — a missing format (404), a
+        persistent transport error, or a non-2xx status that survives the retry loop (a VA 500,
+        a 403, …). ``None`` is the skippable-WARN sentinel the fetch driver records as a failed
+        acquisition and moves past; per the module's "skip a bad page, never abort" rule one bad
+        document can never raise out and kill the whole batch (§3.6)."""
         resp = self._request(url, timeout=_BYTES_TIMEOUT)
         self._sleep(self._delay)
-        if resp is None or resp.status_code == 404:
+        if resp is None or not resp.is_success:
             return None
-        resp.raise_for_status()
         return resp.content
 
     def _request(self, url: str, *, timeout: float | None = None) -> httpx.Response | None:

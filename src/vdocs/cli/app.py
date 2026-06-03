@@ -25,6 +25,7 @@ from vdocs.stages.manifest.stage import ManifestStage
 from vdocs.stages.normalize.stage import NormalizeStage
 from vdocs.stages.relate.stage import RelateStage
 from vdocs.stages.serve_inventory.stage import ServeInventoryStage
+from vdocs.stages.validate.stage import ValidateStage
 
 app = typer.Typer(
     help="vdocs — VistA Document Library modernization pipeline", no_args_is_help=True
@@ -46,6 +47,7 @@ def build_stages() -> list[Stage]:
         IndexStage(),
         RelateStage(),
         ManifestStage(),
+        ValidateStage(),
     ]
 
 
@@ -222,6 +224,14 @@ def relate(force: bool = typer.Option(False, "--force", "-f")) -> None:
 def manifest(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Assemble corpus-manifest.json + discovery.json — the MCP front door (semantic off now)."""
     _drive(only="manifest", force=force)
+
+
+@app.command()
+def validate(force: bool = typer.Option(False, "--force", "-f")) -> None:
+    """Sidecar-verification HARD GATE: typed absence (capture.yaml) + count reconciliation +
+    refs.yaml ref-resolution. Fails loudly on a silent detector miss, an implausible corpus
+    aggregate, or a severed cross-ref; writes reports/validation/verification.json (§8)."""
+    _drive(only="validate", force=force)
 
 
 @app.command()

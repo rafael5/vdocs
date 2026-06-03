@@ -57,6 +57,17 @@ conventions:
     match:
       - table of contents
       - contents
+      # the figure/table lists are the same legacy page-numbered navigation (§6.7) — their page
+      # numbers are meaningless in markdown and their `[Title [n](#anchor)](#anchor)` entries point
+      # at figures/bookmarks, not headings; derive nav from structure instead, so they leave too.
+      - list of figures
+      - list of tables
+      - table of figures
+      - table of tables
+      - figures and tables
+      - tables and figures
+      - figures
+      - tables
     status: approved
     evidence_docs: 55
   - key: revision-table

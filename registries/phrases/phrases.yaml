@@ -13,3 +13,8 @@ phrases:
   - "This page intentionally left blank"
   - "Continued on next page"
   - "End of document"
+  # descriptive filler around the revision history (§6.6) — dead text, no unique fact. Standalone
+  # single-sentence blocks are deleted here; table-adjacent variants (incl. trailing sentences) are
+  # caught capture-gated by revision_pure's caption strip.
+  - "The following table displays the revision history for this document."
+  - "The following table displays the revision history for this manual."
