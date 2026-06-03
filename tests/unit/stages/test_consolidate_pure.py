@@ -57,6 +57,12 @@ def test_anchor_key_empty_without_doc_code():
     assert anchor_key("CPRS", "OR", "") == ""
 
 
+def test_official_date_prefers_revision_then_published():
+    assert cp.official_date("2018-02", "2010-03") == "2018-02"  # revision table wins
+    assert cp.official_date("", "2010-03") == "2010-03"  # no revision table → cover date fallback
+    assert cp.official_date("", "") == ""  # neither → empty (genuinely undated)
+
+
 # --- anchor_relpath (the version-free output path) ---
 
 

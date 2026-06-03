@@ -40,6 +40,14 @@ class Member:
     revisions: list[dict[str, Any]] = field(default_factory=list)  # folded revisions.yaml entries
 
 
+def official_date(revision_newest: str, published: str) -> str:
+    """The document's official date: the newest revision-table date when one was captured, else the
+    title-page ``published`` date (§6.4). The fallback is what lets ``official_date`` populate for
+    docs whose only date is on the cover (no revision table) — ``consolidate`` no longer depends
+    *solely* on the revision table, closing the P1 gap where ~280 docs had an empty date."""
+    return revision_newest or published
+
+
 def parse_patch_num(patch_id: str) -> int | None:
     """The integer patch number from a ``NS*ver*num`` patch id, or ``None`` when absent.
 

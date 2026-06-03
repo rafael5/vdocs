@@ -71,6 +71,7 @@ class NormalizeStage(Stage):
         enriched_root = ctx.cfg.silver_enriched
         normalized_root = ctx.cfg.silver_normalized
         n_docs = n_revision = n_tables = n_refs = n_boiler = n_template = n_errors = 0
+        n_published = n_titlepage = n_flags = 0
         body_files = sorted(enriched_root.rglob("body.md"))
         kept = {p.parent.relative_to(enriched_root).as_posix() for p in body_files}
         for body_path in body_files:
@@ -83,12 +84,25 @@ class NormalizeStage(Stage):
                 sha = sha_by_path.get((rel.parts[0], rel.parts[1]))
                 if sha:
                     meta["source_sha256"] = sha
-                # strip the version apparatus → revisions.yaml (§6.4); then lift qualifying tables
-                # → tables/*.csv (§6.4/§6.5) — *after* revision extraction so it never grabs the
-                # revision table; then run the body F-steps.
+                doc_flags: list[str] = []
+                # CAPTURE-BEFORE-STRIP (§6.4): lift the title-page publication date into the
+                # identity `published` field *before* any title-page/revision strip — sole copy of
+                # the date for ~97% of the corpus and the capture-gate for title-page removal.
+                published = tmpl.extract_published(body)
+                if published:
+                    meta["published"] = published
+                    n_published += 1
+                else:
+                    doc_flags.append("title-page-uncaptured-date")  # no date → cover retained below
+                # strip the version apparatus → revisions.yaml (§6.4, capture-gated); a revision
+                # heading with no parseable table is retained + flagged, never deleted blind. Then
+                # lift qualifying tables → tables/*.csv (§6.4/§6.5) — *after* revision extraction so
+                # it never grabs the revision table; then run the body F-steps.
                 # TEMPLATE SEAM: toc_depth defaults to the H2–H3 fallback; the template F-step will
                 # resolve it per (doc_type, era) and pass it to normalize_body (§6.7).
-                body, revisions = rev.extract_revision_history(body)
+                body, revisions, rev_flag = rev.extract_revision_history(body)
+                if rev_flag:
+                    doc_flags.append(rev_flag)
                 body, tables = tbl.extract_tables(body)
                 # STRIP the matched (doc_type, era) template scaffold + stamp template_id (§9.8).
                 # era is the title-page-date decade bucket (kernel.decade_bucket); doc_type is the
@@ -100,9 +114,27 @@ class NormalizeStage(Stage):
                 if template_id:
                     meta["template_id"] = template_id
                     n_template += 1
+                # STANDARDIZE the title page (§6.4): replace the raw legacy cover with a block built
+                # from frontmatter — gated on `published` (capture-before-strip). Within the
+                # template/scaffold F-step seam (the title page is part of the scaffold).
+                standardized = tmpl.standardize_title_page(
+                    body,
+                    tmpl.TitlePageFields(
+                        title=str(meta.get("title", "")),
+                        version=str(meta.get("version", "")),
+                        patch_id=str(meta.get("patch_id", "")),
+                        published=published or "",
+                        source_url=str(meta.get("source_url", "")),
+                    ),
+                )
+                if standardized != body:
+                    n_titlepage += 1
+                body = standardized
                 body, anchor_map = nz.normalize_body(
                     body, phrases, doc_id=str(rel), boilerplate=boilerplate, toc_titles=toc_titles
                 )
+                if anchor_map.toc_unresolved:
+                    doc_flags.append(f"legacy-toc-unresolved:{len(anchor_map.toc_unresolved)}")
                 n_boiler += body.count("](_shared/boilerplate/")  # REFERENCE links inserted
                 out = frontmatter.emit(meta, body)
                 cas.atomic_write(normalized_root / rel / "body.md", out.encode("utf-8"))
@@ -127,6 +159,19 @@ class NormalizeStage(Stage):
                         ).encode("utf-8"),
                     )
                     n_refs += 1
+                # FIDELITY FLAGS (§6.4/§6.7): record the capture-before-strip signals — a retained
+                # unparseable revision apparatus, an uncaptured title-page date (cover left in
+                # place), unresolved legacy-TOC anchors — so nothing is dropped without a trace.
+                if doc_flags:
+                    cas.atomic_write(
+                        normalized_root / rel / "flags.yaml",
+                        yaml.safe_dump(
+                            {"doc_id": str(rel), "flags": doc_flags},
+                            sort_keys=False,
+                            allow_unicode=True,
+                        ).encode("utf-8"),
+                    )
+                    n_flags += 1
                 n_docs += 1
             except Exception as exc:
                 n_errors += 1
@@ -142,6 +187,9 @@ class NormalizeStage(Stage):
                 "refs_sidecars": n_refs,
                 "boilerplate_refs": n_boiler,
                 "templates_stamped": n_template,
+                "published_captured": n_published,
+                "titlepages_standardized": n_titlepage,
+                "flag_sidecars": n_flags,
                 "phrases": len(phrases),
                 "errors": n_errors,
                 "pruned": n_pruned,
