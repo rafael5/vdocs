@@ -475,23 +475,47 @@ def build_toc(headings: list[Heading], toc_depth: tuple[int, int] = DEFAULT_TOC_
     return "\n".join(lines)
 
 
+_BOLD_LINE_RE = re.compile(r"^\*\*.+\*\*$")
+_ITALIC_LINE_RE = re.compile(r"^_.+_$")
+_SOURCE_LINE_RE = re.compile(r"^Source: ")
+
+
+def _is_title_block_line(line: str) -> bool:
+    """A line belonging to the leading title block: a legacy leading H1, or a line of the
+    standardized cover (§6.4) — a bold title, its italic version/published meta, or the
+    ``Source:`` line. These sit above the TOC; everything else opens the document body."""
+    if HEADING_RE.match(line) and line.startswith("# "):
+        return True
+    s = line.strip()
+    return bool(_BOLD_LINE_RE.match(s) or _ITALIC_LINE_RE.match(s) or _SOURCE_LINE_RE.match(s))
+
+
+def _title_block_end(lines: list[str]) -> int:
+    """Insert offset just past the leading title block — the standardized cover (bold title +
+    italic meta + ``Source:`` line) or a legacy leading H1, skipping the blanks between them.
+    0 when the body opens straight into content, so the TOC then prepends."""
+    last = -1
+    for idx, ln in enumerate(lines):
+        if not ln.strip():
+            continue
+        if _is_title_block_line(ln):
+            last = idx
+            continue
+        break
+    return last + 1
+
+
 def regenerate_toc(body: str, toc_depth: tuple[int, int] = DEFAULT_TOC_DEPTH) -> str:
     """F-toc: replace any stale ``## Contents`` with a fresh TOC derived from the heading tree.
 
-    Inserted after a leading top-level title heading if present, else at the top of the body."""
+    Inserted after the leading title block (the standardized cover or a legacy top-level title
+    heading) if present, else at the top of the body — so the title always sits above the TOC."""
     body = strip_existing_toc(body)
     toc = build_toc(parse_headings(body), toc_depth)
     if not toc:
         return body
     lines = body.split("\n")
-    # find a leading H1 (skipping blanks) → place Contents just after it; else prepend
-    insert_at = 0
-    for idx, ln in enumerate(lines):
-        if not ln.strip():
-            continue
-        if HEADING_RE.match(ln) and ln.startswith("# "):
-            insert_at = idx + 1
-        break
+    insert_at = _title_block_end(lines)
     head, tail = lines[:insert_at], lines[insert_at:]
     return "\n".join([*head, "", toc, "", *tail]).strip("\n") + "\n"
 

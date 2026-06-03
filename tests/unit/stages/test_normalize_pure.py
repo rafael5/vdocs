@@ -141,6 +141,18 @@ def test_regenerate_toc_places_after_title_despite_leading_blanks():
     assert out.index("# Title") < out.index("## Contents") < out.index("## Section")
 
 
+def test_regenerate_toc_places_after_standardized_title_block():
+    # the standardized cover is a bold title + italic version/published meta + a Source line, not an
+    # H1 heading — the derived Contents must land *after* that whole block (title above TOC), §6.4.
+    body = (
+        "**Install Guide**\n\n_Version 1.0 · Published 2024-01-15_\n\n"
+        "Source: <https://example.com>\n\n## Setup\n\nsteps\n\n### Details\n\nx\n"
+    )
+    out = nz.regenerate_toc(body)
+    assert out.index("Source: <https://example.com>") < out.index("## Contents")
+    assert out.index("**Install Guide**") < out.index("## Contents") < out.index("## Setup")
+
+
 def test_normalize_body_applies_all_steps_in_order():
     body = (
         "# Guide\n\n<!-- -->\n\n## Overview\n\nThis page intentionally left blank.\n\nReal text.\n"

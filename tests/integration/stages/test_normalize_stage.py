@@ -276,6 +276,8 @@ def test_normalize_stamps_template_id_and_strips_scaffold(ctx, tmp_path):
     assert meta["template_id"] == "DIBR:2020s:deadbeef"  # stamped into identity FM (§6.3)
     assert "Real purpose text." in body  # filled scaffold section retained
     assert "## Rollback" not in body  # the empty scaffold section was stripped
+    # the title sits at the top, above the derived TOC (title → Contents → body)
+    assert body.index("# DG Deploy") < body.index("## Contents") < body.index("Real purpose")
 
 
 def test_normalize_strips_legacy_toc_no_duplicate(ctx):
