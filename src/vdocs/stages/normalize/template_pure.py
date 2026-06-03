@@ -84,10 +84,29 @@ def extract_published(body: str) -> str | None:
     return month_year_iso(body, max_lines=TITLE_PAGE_LINES)
 
 
+_DVA_CORE = "department of veterans affairs"
+
+
+def _is_furniture_text(line: str) -> bool:
+    """A cover-furniture line by its *text* (tags stripped): the VA imprint (possibly with an office
+    suffix) or a short standalone ``Month YYYY`` cover date. Recognised even when authored as an ATX
+    heading — late-gen docs put the imprint/date in ``# …`` headings, which would otherwise become
+    ``## Contents`` entries — so the cover boundary skips past them rather than stopping there."""
+    visible = strip_tags(line)
+    core = " ".join(re.sub(r"[^a-z0-9 ]", " ", visible.lower()).split())
+    if core.startswith(_DVA_CORE):
+        return True
+    return len(visible.strip()) < 50 and month_year_iso(visible) is not None
+
+
 def _cover_end(lines: list[str]) -> int:
     """Index of the first line that ends the title-page cover — the first real ATX heading, legacy
-    revision/Table-of-Contents marker, or legacy TOC entry. The furniture above it is the cover."""
+    revision/Table-of-Contents marker, or legacy TOC entry. Cover-furniture lines (incl. an imprint
+    or cover-date *heading*) are skipped, not treated as the boundary. The furniture above the
+    returned index is the cover."""
     for i, ln in enumerate(lines):
+        if _is_furniture_text(ln):
+            continue  # cover furniture (even as a heading) is part of the cover, not the boundary
         if HEADING_RE.match(ln):
             return i
         if is_revision_heading(ln) or is_legacy_toc_entry(ln):
@@ -119,24 +138,16 @@ def _title_block(fields: TitlePageFields) -> list[str]:
     return block
 
 
-_DVA_CORE = "department of veterans affairs"
-
-
 def _strip_cover_furniture(lines: list[str]) -> str:
     """Fallback when no clean cover boundary exists (an all-bold flat cover with no ATX/TOC marker):
-    surgically drop just the audit-visible cover furniture — the VA imprint line and a short
-    ``Month YYYY`` cover-date line — from the title-page window, leaving the real title/body lines
+    surgically drop just the cover furniture — the VA imprint and a short ``Month YYYY`` cover-date
+    line (:func:`_is_furniture_text`) — from the title-page window, keeping the real title/body
     in place. Safe because the date has already been captured into ``published`` (the caller gate)
     and the removals are confined to the first ``TITLE_PAGE_LINES``."""
     out: list[str] = []
     for idx, ln in enumerate(lines):
-        if idx < TITLE_PAGE_LINES:
-            visible = strip_tags(ln)  # drop `<span id="_Toc…">` so anchor-wrapped cover lines match
-            core = " ".join(re.sub(r"[^a-z0-9 ]", " ", visible.lower()).split())
-            if core.startswith(_DVA_CORE):  # the VA imprint line (possibly with an office suffix)
-                continue
-            if len(visible.strip()) < 50 and month_year_iso(visible) is not None:
-                continue
+        if idx < TITLE_PAGE_LINES and _is_furniture_text(ln):
+            continue
         out.append(ln)
     return "\n".join(out)
 

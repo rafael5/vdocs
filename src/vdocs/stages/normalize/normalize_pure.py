@@ -287,8 +287,10 @@ def _scan_legacy_toc(
             i += 1
             continue
         m = HEADING_RE.match(lines[i])
-        level = len(m.group(1)) if m else 0
-        if m and (level <= max_level or level > 6) and _norm_toc_title(lines[i]) in wanted:
+        # A heading whose *full* text is exactly a curated legacy-TOC title is legacy at **any**
+        # level — H1–H3, the H4–H6 the old `max_level=3` gate missed, and the oversized >6-`#`
+        # form upstream mangles. The exact title match (not a substring) keeps it safe.
+        if m and _norm_toc_title(lines[i]) in wanted:
             drop.add(i)
             j = i + 1
             while j < n and not HEADING_RE.match(lines[j]):

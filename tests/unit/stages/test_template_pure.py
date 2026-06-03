@@ -160,6 +160,21 @@ def test_standardize_title_page_surgically_strips_all_bold_flat_cover():
     assert "**Introduction**" in out and "Real body content here." in out  # content kept
 
 
+def test_standardize_title_page_strips_va_imprint_authored_as_heading():
+    # the late-gen shape: the VA imprint + cover date are authored as ATX headings (so they would
+    # otherwise become `## Contents` entries). Treat them as cover furniture, not a boundary.
+    body = (
+        '<img src="seal.png" />\n\n'
+        "# Department of Veterans Affairs Office of Information and Technology\n\n"
+        "# January 1998\n\n"
+        "# Introduction\n\nReal content.\n"
+    )
+    out = tp.standardize_title_page(body, _FIELDS)
+    assert "Department of Veterans Affairs" not in out
+    assert "January 1998" not in out
+    assert "# Introduction" in out and "Real content." in out
+
+
 def test_strip_cover_furniture_idempotent_and_window_bounded():
     # a Month YYYY *deep* in the body (past the title-page window) is real content — never touched
     body = "**Cover**\n\n**March 2010**\n\n" + "x\n" * 80 + "Released June 2011 in the field.\n"

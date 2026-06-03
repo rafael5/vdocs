@@ -331,6 +331,15 @@ def test_strip_legacy_toc_removes_plain_text_header_and_double_bracket_entries()
     assert "# Introduction" in out and "real text" in out  # real content kept
 
 
+def test_strip_legacy_toc_strips_toc_heading_at_any_level():
+    # the old `max_level=3` gate missed an H4–H6 `Table of Contents` heading (VPFS shape); an exact
+    # curated-title match is legacy at any level
+    body = "# Doc\n\n##### Table of Contents\n\nIntro [1](#intro)\n\n## Real\n\nkept\n"
+    out = nz.strip_legacy_toc(body, _TOC_TITLES)
+    assert "Table of Contents" not in out
+    assert "## Real" in out and "kept" in out
+
+
 def test_strip_legacy_toc_drops_bare_header_with_degraded_entries():
     # a legacy `Table of Contents` whose entries degraded to plain text / page-numbered headings
     # (no `(#anchor)` links left): the stale header label is dropped on its own

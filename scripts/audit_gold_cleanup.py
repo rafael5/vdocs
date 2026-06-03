@@ -114,8 +114,11 @@ def audit_body(text: str) -> dict:
     # --- P1: legacy title page in the (bounded) cover region — visible text only --------------
     dva = any(_is_dva_imprint(ln) for ln in region)
     blank_page = sum("intentionally left blank" in _visible(ln).lower() for ln in lines)
-    # a cover date is a short standalone Month-YYYY line, not a date inside an HTML table cell/tag
-    cover_date = any("<" not in ln and _MONTH_YEAR_RE.search(ln) and len(ln) < 80 for ln in region)
+    # a cover date is a *short standalone* Month-YYYY line — not a date inside an HTML table cell
+    # (`<`), nor one embedded in a long page running-header ("June 1996 … Version 1.0 1")
+    cover_date = any(
+        "<" not in ln and _MONTH_YEAR_RE.search(ln) and len(ln.strip()) < 40 for ln in region
+    )
     p1 = dva or cover_date or blank_page > 0
 
     # --- P2: revision history in any form ----------------------------------------------------
