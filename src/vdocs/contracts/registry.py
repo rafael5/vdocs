@@ -162,6 +162,19 @@ TEXT_NORMALIZED = ArtifactContract(
 )
 
 
+# --- document gold (§4, §5.5, §6.6, §8) ---
+# `consolidate`: one anchor document per version group at a stable, version-free path, with the
+# ordered `history.yaml` lineage + retained prior bodies (content-addressed under gold/_shared/
+# history). A TREE_TEXT over the whole gold anchor bundle — the sidecars need no separate contract.
+CONSOLIDATED = ArtifactContract(
+    key="gold/consolidated",
+    kind=Kind.TREE_TEXT,
+    storage_class=StorageClass.TEXT_VERSIONED,
+    produced_by="consolidate",
+    relpath="documents/gold/consolidated",
+)
+
+
 def foundational_registry() -> ArtifactRegistry:
     """Build a registry seeded with the artifacts that exist before any stage runs."""
     reg = ArtifactRegistry()
@@ -186,6 +199,7 @@ def default_registry() -> ArtifactRegistry:
         TEXT_ENRICHED,
         DOC_META_STAGED,
         TEXT_NORMALIZED,
+        CONSOLIDATED,
     ):
         reg.register(contract)
     return reg

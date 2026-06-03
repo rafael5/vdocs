@@ -20,6 +20,7 @@ from collections import Counter, defaultdict
 from pathlib import PurePosixPath
 from urllib.parse import urlparse
 
+from vdocs.kernel.ids import anchor_key
 from vdocs.kernel.text import repair_mojibake
 from vdocs.stages.catalog.registries import (
     AppSpecificMap,
@@ -420,9 +421,7 @@ def enrich_rows(rows: list[dict], reg: Registries) -> list[dict]:
             row["doc_code"], row["doc_label"], reg.doc_labels
         )
         row["doc_labelling"] = "manual" if row["doc_slug"] in reg.manual_slugs else "code"
-        row["anchor_key"] = (
-            f"{row['app_name_abbrev']}:{row['pkg_ns']}:{row['doc_code']}" if row["doc_code"] else ""
-        )
+        row["anchor_key"] = anchor_key(row["app_name_abbrev"], row["pkg_ns"], row["doc_code"])
         row["system_type"], row["cots_dependent"] = classify_system(row["app_name_abbrev"], reg)
 
     return enriched

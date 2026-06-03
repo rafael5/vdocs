@@ -670,7 +670,28 @@ self-describing and a later replay needs nothing else:
 This is the "appropriate sidecar files that travel with the anchor document": everything required
 to reconstruct history is captured next to the living doc, at document grain. Capture is
 **append-only** — a later run in which a new VDL patch becomes the latest body appends one entry to
-`history.yaml` and retains the previous body; nothing already captured is rewritten.
+`history.yaml` and retains the previous body; nothing already captured is rewritten (only the
+derived `is_latest` flag re-points to the new newest member).
+
+**Concrete layout (the `consolidated` artifact).** `consolidate` reconstructs each member's
+version-group key from its normalized bundle's identity frontmatter — `anchor_key =
+app_code:pkg_ns:doc_code` via `kernel.ids.anchor_key`, exactly as `catalog` computed it, so a doc
+groups identically end-to-end and no extra input is needed (the §8 `requires` is just
+`text@normalized` + `assets`). Members are ordered by `(patch_num, official_date, doc_slug)` —
+parsed patch number first, official revision date (from each member's `revisions.yaml`) then the
+stable id as tiebreaks. The output tree is:
+
+- `documents/gold/consolidated/<app>/<anchor-slug>/` — one **anchor bundle** per version group at a
+  stable, **version-free** path (`<anchor-slug>` = `pkg_ns_doc_code`, slugified), holding `body.md`
+  (the latest member's normalized body, promoted unchanged) and `history.yaml`.
+- `documents/gold/_shared/history/<sha256>.md` — the **content-addressed store of retained bodies**:
+  every member's normalized body kept once (write-once, via `kernel.cas`), referenced by
+  `body_sha256` from `history.yaml`. The newest member's body is *also* the anchor `body.md`.
+
+`history.yaml` is `{anchor_key, member_count, members:[…]}`, each member entry carrying `doc_id`,
+`doc_slug`, `version`, `patch_id`, `official_date`, `source_sha256` (bronze provenance),
+`body_sha256` (CAS ref to the retained normalized body), `is_latest`, and the member's folded
+`revisions` (its own `revisions.yaml` entries, §6.4).
 
 **Deferred git replay (designed-for, not run now).** Because the lineage and every prior body are
 captured, a later, opt-in **`push --replay-history`** (§13) can reconstruct each group's history as

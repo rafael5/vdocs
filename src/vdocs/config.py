@@ -167,6 +167,13 @@ class Settings(BaseSettings):
         return self.gold / "_shared"
 
     @property
+    def history_bodies(self) -> Path:
+        """The content-addressed store of retained prior normalized bodies (§6.6): every version's
+        body kept once at ``<sha>.md`` and referenced by hash from each group's ``history.yaml`` —
+        the immutable evidence a later ``push --replay-history`` reconstructs commits from."""
+        return self.gold_shared / "history"
+
+    @property
     def publish(self) -> Path:
         return self.gold / "publish"
 

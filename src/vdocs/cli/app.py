@@ -14,6 +14,7 @@ from vdocs.orchestrator.engine import Orchestrator, StageFailed
 from vdocs.orchestrator.stage import Stage, StageContext
 from vdocs.orchestrator.state import StateStore
 from vdocs.stages.catalog.stage import CatalogStage
+from vdocs.stages.consolidate.stage import ConsolidateStage
 from vdocs.stages.convert.stage import ConvertStage
 from vdocs.stages.crawl.stage import CrawlStage
 from vdocs.stages.discover.stage import DiscoverStage
@@ -38,6 +39,7 @@ def build_stages() -> list[Stage]:
         DiscoverStage(),
         EnrichStage(),
         NormalizeStage(),
+        ConsolidateStage(),
     ]
 
 
@@ -189,6 +191,13 @@ def enrich(force: bool = typer.Option(False, "--force", "-f")) -> None:
 def normalize(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Normalize enriched bodies (strip artifacts, subtract phrases, regen TOC)."""
     _drive(only="normalize", force=force)
+
+
+@app.command()
+def consolidate(force: bool = typer.Option(False, "--force", "-f")) -> None:
+    """Collapse each version group to one anchor document + capture its append-only lineage
+    (history.yaml + retained prior bodies); the deferred git replay is push --replay-history."""
+    _drive(only="consolidate", force=force)
 
 
 @app.command()

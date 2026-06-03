@@ -24,20 +24,21 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 
 ## Overall status
 
-**Pipeline stages (§8): 8 ✅ · 0 ◐ · 11 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
+**Pipeline stages (§8): 9 ✅ · 0 ◐ · 10 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
 counted separately below). Last updated **2026-06-02**. **Phases 1–3 complete and merged to `master`**
 (PRs #3/#4/#5) — inventory medallion + gated bronze + the full document-silver pipeline, run
-end-to-end on a real 469-doc VA corpus; `make check` green (**458 tests, branch cov 99.7% / gate ≥95%**,
-ruff+mypy clean) after the pre-Phase-4 hardening pass (reliability R1–R9 [R4 split out], redundancy
-D1–D5, the `revisions.yaml` rename, drift-doc reconciliation, a 7-invariant property suite + branch
-coverage). **Next: Phase 4 `consolidate`.**
+end-to-end on a real 469-doc VA corpus; the pre-Phase-4 hardening pass (reliability R1–R9 [R4 split
+out], redundancy D1–D5, the `revisions.yaml` rename, drift-doc reconciliation, a 7-invariant property
+suite + branch coverage) is **fast-forwarded onto `master`** (`e725f5a`). **Phase 4 in progress:**
+`consolidate` ✅ landed (§6.6 version rollup) on branch `feat/phase-4-gold-derive`; `make check` green
+(**484 tests, branch cov 99.7% / gate ≥95%**, ruff+mypy clean). **Next: Phase 4 `index`.**
 
 | Phase | Title | Status | Progress |
 |---|---|:--:|:--:|
 | 1 | Spine (kernel·config·models·contracts·orchestrator) | ✅ | 4/4 |
 | 2 | Inventory medallion + doc-bronze | ✅ | 4/4 |
 | 3 | Silver — document text (convert·discover·enrich·normalize) | ✅ | 4/4 |
-| 4 | Gold derive (consolidate·index·relate·manifest) | ☐ | 0/4 |
+| 4 | Gold derive (consolidate·index·relate·manifest) | ◐ | 1/4 |
 | 5 | Gold deliver (fidelity·publish·validate·push·analyze) | ☐ | 0/5 |
 | 6 | Machine interface (embed·serve-mcp) | ☐ | 0/2 |
 | 7 | Harden (property·--verify·gc·docs-gen·replay·refresh) | ◐ | 2◐·1⬚·3☐ |
@@ -75,11 +76,11 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
 | enrich | 🥈 DOC | ✅ | §8 | converted → enriched (FM) |
 | normalize | 🥈 DOC | ✅ | §6.7 | enriched → normalized (+TOC/refs) |
 
-**Phase 4 — Gold derive** ☐ 0/4
+**Phase 4 — Gold derive** ◐ 1/4
 
 | Stage | Layer | St | Ref | Goal |
 |---|:--:|:--:|---|---|
-| consolidate | 🥇 DOC | ☐ | §6.6 | normalized → consolidated (lineage) |
+| consolidate | 🥇 DOC | ✅ | §6.6 | normalized → consolidated (lineage) |
 | index | 🥇 DOC | ☐ | §8 | → index.db (FTS5, IDs) |
 | relate | 🥇 DOC | ☐ | §8 | index.db → relations (graph) |
 | manifest | 🥇 DOC | ☐ | §14 | → corpus-manifest + discovery |
@@ -160,6 +161,21 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 *Append implementation lessons as they accrue (newest first). Inventory-track lessons live in
 [`vdl-crawl-tracker.md`](vdl-crawl-tracker.md); cross-phase / architectural lessons go here.*
 
+- **2026-06-02 — The grouping key a downstream stage needs may already be reconstructible from the
+  artifact it already requires.** `consolidate` (§8) `requires` only `text@normalized` + `assets`,
+  yet must group members by `anchor_key` and order by patch number — data `catalog` computes and that
+  lives in `catalog.enriched` / `index.db:doc_meta_staged`, neither of which is a `consolidate` input.
+  The reflex is to add an input (doc-first §8 change). But `anchor_key = app:pkg:doc_code` and the
+  normalized bundle's **identity frontmatter already carries `app_code` + `pkg_ns` + `doc_type`
+  (=`doc_code`)** — and `enrich` bakes the *final, post-inference* `doc_code` as `doc_type`, so a
+  reconstructed `anchor_key` equals catalog's value **byte-for-byte** (verified on the 469-doc lake:
+  290 groups, all non-empty). So the right move was to **promote the formula to `kernel.ids.anchor_key`
+  (now shared by `catalog` + `consolidate`, §9.2)** and reconstruct from the FM — no new input, no
+  silver re-run, the §8 `requires` honoured literally. Lesson: before widening a contract, check
+  whether the required artifact's frontmatter/path already determines the missing key; a faithful
+  reconstruction beats a new dependency. (Ordering needs a stable final tiebreak: the real corpus has
+  groups whose members share one `patch_id` — e.g. `CPRS:CPRS:TM` ×4 all `CPRS*3.0` — so sort on
+  `(patch_num, official_date, doc_slug)`, not patch number alone, or the order is non-deterministic.)
 - **2026-06-02 — A curated registry with no consumer is a silent deviation.** `discover` mined the
   structural conventions (P2.2a) and they were curated into `registries/structures` (7 entries:
   callouts, `toc:contents`, `revision-table`), and the design names `normalize` as their consumer
@@ -235,6 +251,30 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-02** — **Phase 4 Increment 1: `consolidate` ✅ (gold version rollup, §6.6).** First
+  gold-derive stage, on branch `feat/phase-4-gold-derive` (off the fast-forwarded `master` tip
+  `e725f5a` = the full hardening pass; no PR existed, so the branch was FF-merged, not reviewed).
+  TDD RED→green: pure core `stages/consolidate/consolidate_pure.py` (`parse_patch_num`,
+  `group_by_anchor_key` [standalone docs with empty `anchor_key` stay separate via a `doc_id`
+  fallback], `order_members` [`(patch_num, official_date, doc_slug)`], `anchor_relpath` [version-free
+  `<app>/<pkg_doc_code>`], `build_history`, **append-only** `merge_history`) + thin driver
+  `stage.py` (`requires=[text@normalized, assets]`, `produces=[consolidated]`, SKIP_IF_UNCHANGED).
+  It reconstructs each member's `anchor_key` from the bundle's identity FM (`app_code:pkg_ns:doc_type`)
+  — **the formula promoted to `kernel.ids.anchor_key`** and shared with `catalog` (§9.2), so no new
+  input and no silver re-run (see Lessons). Output: one anchor bundle per version group at a stable
+  version-free path (`documents/gold/consolidated/<app>/<pkg_doc_code>/{body.md=latest, history.yaml}`),
+  every member's normalized body retained write-once in the body CAS
+  (`documents/gold/_shared/history/<sha>.md`, `kernel.cas`) and referenced by `body_sha256` from the
+  ordered `history.yaml` (which folds each member's `revisions.yaml`); the deferred git replay is
+  **not** built. Reused the hardened `cas.atomic_write` content-skip + `cas.prune_bundles` + the
+  `doc_error_gate` per-document isolation. **Contract** `CONSOLIDATED` (TREE_TEXT) + config
+  `history_bodies` + the `consolidate` CLI command + DAG wiring (topo order `…normalize → consolidate`
+  verified). **Doc-first:** §6.6 gained the concrete consolidated layout + body-CAS path +
+  `history.yaml` schema (was under-specified); §8 `requires` already matched (no change). Tests:
+  17 unit (`test_consolidate_pure`) + 7 integration (`test_consolidate_stage` — ordered lineage, CAS
+  retention, skip, force-idempotent byte-identical, append-only on a later patch, no-revisions bundle,
+  per-doc isolation, systemic-gate) + 3 property (`order_members` determinism, `merge_history`
+  idempotent + append-only). **484 tests, branch cov 99.7%** (gate ≥95%), ruff+mypy clean.
 - **2026-06-02** — **Pre-Phase-4 hardening pass (reliability · non-redundancy · doc reconciliation).**
   A multi-increment TDD pass on the built scope (Phases 1–3), each increment its own commit. Running
   detail (newest sub-item first):

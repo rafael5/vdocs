@@ -25,4 +25,15 @@ def doc_id(record: HasIdentity) -> str:
     return f"{record.app_name_abbrev}:{record.doc_slug}"
 
 
-__all__ = ["HasIdentity", "doc_id"]
+def anchor_key(app_code: str, pkg_ns: str, doc_code: str) -> str:
+    """The **version-group key** — ``app:pkg:doc_code``, version-free (§6.6/§9.4).
+
+    The one place the formula lives (§9.2): ``catalog`` computes it over an enriched row, and
+    ``consolidate`` reconstructs it from a normalized bundle's identity frontmatter
+    (``app_code``/``pkg_ns``/``doc_type``); both must agree exactly so the group a doc lands in is
+    stable end-to-end. Empty ``doc_code`` ⇒ no version group (``""``): the document is a standalone
+    anchor of one."""
+    return f"{app_code}:{pkg_ns}:{doc_code}" if doc_code else ""
+
+
+__all__ = ["HasIdentity", "anchor_key", "doc_id"]
