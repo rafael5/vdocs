@@ -8,7 +8,6 @@ final-URL exposure, and inter-request delay deterministically.
 from __future__ import annotations
 
 import httpx
-import pytest
 
 from vdocs.kernel import http
 
@@ -125,13 +124,23 @@ def test_get_bytes_returns_content_on_200():
     assert client.get_bytes("https://vdl.test/doc.docx") == b"PK\x03\x04"
 
 
-def test_get_bytes_raises_on_persistent_5xx():
+def test_get_bytes_returns_none_on_persistent_5xx():
+    # A 5xx that survives the retry loop is the skippable-WARN sentinel, NOT an abort: the fetch
+    # driver records a failed acquisition and moves on, so one bad VA 500 can't kill the batch.
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500)
 
     client, _ = _client(handler, max_retries=1)
-    with pytest.raises(httpx.HTTPStatusError):
-        client.get_bytes("https://vdl.test/doc.docx")
+    assert client.get_bytes("https://vdl.test/doc.docx") is None
+
+
+def test_get_bytes_returns_none_on_4xx():
+    # Any non-404 4xx (e.g. a 403) is likewise a skip sentinel, never an exception.
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403)
+
+    client, _ = _client(handler)
+    assert client.get_bytes("https://vdl.test/forbidden.docx") is None
 
 
 def test_retries_on_transport_error_then_succeeds():
