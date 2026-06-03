@@ -71,7 +71,7 @@ class NormalizeStage(Stage):
         enriched_root = ctx.cfg.silver_enriched
         normalized_root = ctx.cfg.silver_normalized
         n_docs = n_revision = n_tables = n_refs = n_boiler = n_template = n_errors = 0
-        n_published = n_titlepage = n_flags = 0
+        n_published = n_titlepage = n_titleimg = n_flags = n_toc = 0
         body_files = sorted(enriched_root.rglob("body.md"))
         kept = {p.parent.relative_to(enriched_root).as_posix() for p in body_files}
         for body_path in body_files:
@@ -94,6 +94,13 @@ class NormalizeStage(Stage):
                     n_published += 1
                 else:
                     doc_flags.append("title-page-uncaptured-date")  # no date → cover retained below
+                # Remove the per-document title-area logo image (§6.4) — pure noise (a different VA
+                # seal/banner per doc), replaceable by one standard logo at publish time. Ungated;
+                # only images inside the title area go, a content figure below it stays.
+                deimaged = tmpl.strip_title_image(body)
+                if deimaged != body:
+                    n_titleimg += 1
+                body = deimaged
                 # strip the version apparatus → revisions.yaml (§6.4, capture-gated); a revision
                 # heading with no parseable table is retained + flagged, never deleted blind. Then
                 # lift qualifying tables → tables/*.csv (§6.4/§6.5) — *after* revision extraction so
@@ -159,6 +166,19 @@ class NormalizeStage(Stage):
                         ).encode("utf-8"),
                     )
                     n_refs += 1
+                # CAPTURE-BEFORE-STRIP (§6.7): the original page-numbered table of contents is
+                # copied verbatim into toc.yaml before the legacy TOC leaves the body, so the clean
+                # derived `## Contents` keeps a reference to the printed document's pagination.
+                if anchor_map.legacy_toc:
+                    cas.atomic_write(
+                        normalized_root / rel / "toc.yaml",
+                        yaml.safe_dump(
+                            anchors.legacy_toc_sidecar(anchor_map),
+                            sort_keys=False,
+                            allow_unicode=True,
+                        ).encode("utf-8"),
+                    )
+                    n_toc += 1
                 # FIDELITY FLAGS (§6.4/§6.7): record the capture-before-strip signals — a retained
                 # unparseable revision apparatus, an uncaptured title-page date (cover left in
                 # place), unresolved legacy-TOC anchors — so nothing is dropped without a trace.
@@ -189,6 +209,8 @@ class NormalizeStage(Stage):
                 "templates_stamped": n_template,
                 "published_captured": n_published,
                 "titlepages_standardized": n_titlepage,
+                "title_images_removed": n_titleimg,
+                "toc_sidecars": n_toc,
                 "flag_sidecars": n_flags,
                 "phrases": len(phrases),
                 "errors": n_errors,

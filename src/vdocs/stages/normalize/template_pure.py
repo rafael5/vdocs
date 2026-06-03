@@ -152,6 +152,45 @@ def _strip_cover_furniture(lines: list[str]) -> str:
     return "\n".join(out)
 
 
+# A line that is *entirely* a figure: an HTML `<img>` tag or a markdown `![alt](src)` image.
+_IMAGE_LINE_RE = re.compile(r"^[ \t]*(?:<img\b[^>]*>|!\[[^\]]*\]\([^)]*\))[ \t]*$")
+
+
+def _is_image_line(line: str) -> bool:
+    return _IMAGE_LINE_RE.match(line) is not None
+
+
+def _title_area_end(lines: list[str]) -> int:
+    """The exclusive end index of the document's **title area** (cover). When a real content
+    boundary (heading / legacy revision or TOC marker) sits within ``_MAX_COVER_LINES`` that is the
+    end; otherwise (an old-gen flat doc with no early boundary) the title area is just the leading
+    run of blank / image / cover-furniture lines — so a deep content figure is never inside it."""
+    end = _cover_end(lines)
+    if 0 < end < len(lines) and end <= _MAX_COVER_LINES:
+        return end  # a real content boundary bounds the title area
+    # no clean boundary (a flat doc, or no boundary at all): the title area is just the leading run
+    # of blank / image / cover-furniture lines, so a deep content figure is never inside it.
+    i = 0
+    while i < min(len(lines), TITLE_PAGE_LINES) and (
+        not lines[i].strip() or _is_image_line(lines[i]) or _is_furniture_text(lines[i])
+    ):
+        i += 1
+    return i
+
+
+def strip_title_image(body: str) -> str:
+    """Remove the per-document title-area logo image(s) (§6.4) — pure noise: a different VA
+    seal/banner per document, replaceable by one standard logo at publish time. Only images inside
+    the **title area** (:func:`_title_area_end`) are removed; a content figure below it — or a
+    document with no title-area image at all — is left untouched. Ungated (the image carries no
+    unique fact), so it runs even when the title-page strip itself is gated off."""
+    lines = body.split("\n")
+    end = _title_area_end(lines)
+    if end <= 0:
+        return body
+    return "\n".join(ln for i, ln in enumerate(lines) if not (i < end and _is_image_line(ln)))
+
+
 def standardize_title_page(body: str, fields: TitlePageFields) -> str:
     """Replace the raw legacy cover with the standardized :func:`_title_block` (§6.4).
 

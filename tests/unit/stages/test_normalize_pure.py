@@ -392,6 +392,50 @@ def test_strip_legacy_toc_removes_orphaned_double_bracket_entries():
     assert "Some intro paragraph." in out and "## Real Section" in out and "kept" in out
 
 
+def test_parse_legacy_toc_entry_extracts_title_page_anchor():
+    p = nz.parse_legacy_toc_entry
+    # double-bracket (page in inner bracket)
+    e = p("[Introduction [1](#introduction)](#introduction)")
+    assert (e.title, e.page, e.anchor) == ("Introduction", "1", "#introduction")
+    # single-bracket inner page
+    e = p("Routines [8](#routines-1)")
+    assert (e.title, e.page, e.anchor) == ("Routines", "8", "#routines-1")
+    # page-in-text with an ordered-list marker
+    e = p("1.  [Overview 14](#overview)")
+    assert (e.title, e.page, e.anchor) == ("Overview", "14", "#overview")
+    # roman page (front matter)
+    e = p("[Orientation iii](#orientation)")
+    assert (e.title, e.page, e.anchor) == ("Orientation", "iii", "#orientation")
+    # blockquote-prefixed double-bracket; the outer anchor is the target
+    e = p("> [3.2 Site Info [4](#site-info)](#site-info)")
+    assert (e.title, e.page, e.anchor) == ("3.2 Site Info", "4", "#site-info")
+    assert p("plain prose, not a toc entry") is None
+
+
+def test_legacy_toc_entries_capture_original_toc_with_pages():
+    body = (
+        "Table of Contents\n\n"
+        "[Introduction [1](#introduction)](#introduction)\n\n"
+        "[Setup [7](#setup)](#setup)\n\n"
+        "# Introduction\n\nx\n\n## Setup\n\ny\n"
+    )
+    entries = nz.legacy_toc_entries(body, _TOC_TITLES)
+    assert [(e.title, e.page) for e in entries] == [("Introduction", "1"), ("Setup", "7")]
+
+
+def test_normalize_body_exposes_legacy_toc_with_resolved_flags():
+    body = (
+        "Table of Contents\n\n"
+        "[Introduction [1](#introduction)](#introduction)\n\n"
+        "[Gone [9](#_Toc99)](#_Toc99)\n\n"
+        "# Introduction\n\nreal\n"
+    )
+    _, amap = nz.normalize_body(body, frozenset(), toc_titles=_TOC_TITLES)
+    by_title = {e["title"]: e for e in amap.legacy_toc}
+    assert by_title["Introduction"]["page"] == "1" and by_title["Introduction"]["resolved"] is True
+    assert by_title["Gone"]["resolved"] is False  # the unresolved bookmark, captured for reference
+
+
 def test_legacy_toc_targets_collects_outer_anchors():
     body = (
         "Table of Contents\n\n"

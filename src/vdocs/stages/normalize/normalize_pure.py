@@ -36,7 +36,6 @@ from vdocs.kernel.markdown import (
     MULTI_BLANK,
     is_legacy_toc_entry,
     iter_headings,
-    legacy_toc_target,
     strip_tags,
 )
 from vdocs.kernel.text import block_key
@@ -63,6 +62,9 @@ __all__ = [
     "subtract_boilerplate",
     "block_key",
     "strip_legacy_toc",
+    "LegacyTocEntry",
+    "parse_legacy_toc_entry",
+    "legacy_toc_entries",
     "legacy_toc_targets",
     "correlate_legacy_toc",
     "strip_existing_toc",
@@ -230,13 +232,50 @@ _LOOSE_TOC_ENTRY_RE = re.compile(
 _TOC_TARGET_RE = re.compile(r"\]\((#[^)]*)\)")
 
 
+_TOC_PREFIX_RE = re.compile(r"^[ \t]*(?:[>*+\-][ \t]+|\d+\.[ \t]+)*")
+_INNER_PAGE_RE = re.compile(r"\[(" + _PAGE + r")\]\(#[^)]*\)", re.IGNORECASE)
+_LINK_TEXT_RE = re.compile(r"\[([^\]]*)\]\(#[^)]*\)")
+_TRAILING_PAGE_RE = re.compile(r"\s(" + _PAGE + r")$", re.IGNORECASE)
+
+
+@dataclass(frozen=True)
+class LegacyTocEntry:
+    """One original (paper-era) table-of-contents entry — its title, the **original page number**,
+    and the anchor it pointed at — captured verbatim into ``toc.yaml`` before the legacy TOC leaves
+    the body (§6.7), so the derived link-based ``## Contents`` keeps a reference back to the printed
+    document's pagination."""
+
+    title: str
+    page: str
+    anchor: str
+
+
+def parse_legacy_toc_entry(line: str) -> LegacyTocEntry | None:
+    """Parse a legacy TOC entry line into ``(title, page, anchor)`` across every corpus dialect, or
+    ``None`` when the line is not an entry. The page is the inner ``[n]`` bracket when present
+    (``[Title [12](#a)](#a)``), else the trailing number in the link text (``[Title 12](#a)``); the
+    anchor is the outer (last) ``](#…)`` target; leading bullet/blockquote/ordered markers are
+    stripped first."""
+    s = _TOC_PREFIX_RE.sub("", line.strip())
+    anchors = _TOC_TARGET_RE.findall(s)
+    if not anchors:
+        return None
+    anchor = anchors[-1]
+    if (inner := _INNER_PAGE_RE.search(s)) is not None:
+        page = inner.group(1)
+        title = s[: inner.start()].strip().lstrip("[").strip()
+    else:
+        link = _LINK_TEXT_RE.search(s)
+        text = link.group(1).strip() if link else ""
+        if (m := _TRAILING_PAGE_RE.search(text)) is not None:
+            page, title = m.group(1), text[: m.start()].strip()
+        else:
+            page, title = "", text
+    return LegacyTocEntry(title.strip("*_ ").strip(), page, anchor)
+
+
 def _is_loose_toc_entry(line: str) -> bool:
     return _LOOSE_TOC_ENTRY_RE.match(line) is not None
-
-
-def _loose_toc_target(line: str) -> str | None:
-    targets = _TOC_TARGET_RE.findall(line)
-    return targets[-1] if targets else None
 
 
 def _norm_toc_title(line: str) -> str:
@@ -265,9 +304,10 @@ def _followed_by_toc_entry(lines: list[str], i: int, lookahead: int = 2) -> bool
 
 def _scan_legacy_toc(
     body: str, titles: frozenset[str], max_level: int
-) -> tuple[set[int], list[str]]:
-    """The single legacy-TOC scanner (§6.7): returns the line indices to drop **and** the outer
-    ``#anchor`` target of every dropped page-numbered entry (for the role-1 correlation).
+) -> tuple[set[int], list[LegacyTocEntry]]:
+    """The single legacy-TOC scanner (§6.7): returns the line indices to drop **and** the parsed
+    ``LegacyTocEntry`` (title + original page + anchor) of every dropped page-numbered entry — for
+    both the role-1 correlation and the ``toc.yaml`` capture.
 
     Two corpus forms are recognised:
       * **ATX heading** — a ``Table of Contents`` / ``Contents`` heading at H1–H3 (or the oversized
@@ -279,7 +319,7 @@ def _scan_legacy_toc(
     wanted = {t.strip().lower() for t in titles}
     lines = body.split("\n")
     drop: set[int] = set()
-    targets: list[str] = []
+    entries: list[LegacyTocEntry] = []
     n = len(lines)
     i = 0
     while i < n:
@@ -295,8 +335,8 @@ def _scan_legacy_toc(
             j = i + 1
             while j < n and not HEADING_RE.match(lines[j]):
                 drop.add(j)
-                if _is_loose_toc_entry(lines[j]) and (t := _loose_toc_target(lines[j])) is not None:
-                    targets.append(t)
+                if _is_loose_toc_entry(lines[j]) and (e := parse_legacy_toc_entry(lines[j])):
+                    entries.append(e)
                 j += 1
             i = j
             continue
@@ -322,8 +362,8 @@ def _scan_legacy_toc(
                     break
                 if _is_loose_toc_entry(lines[j]):
                     drop.add(j)
-                    if (t := _loose_toc_target(lines[j])) is not None:
-                        targets.append(t)
+                    if (e := parse_legacy_toc_entry(lines[j])) is not None:
+                        entries.append(e)
                     j += 1
                     continue
                 break
@@ -335,10 +375,10 @@ def _scan_legacy_toc(
         # role-1 correlation. (Single-bracket entries stay trusted only under a header, above.)
         if is_legacy_toc_entry(lines[i]):
             drop.add(i)
-            if (t := legacy_toc_target(lines[i])) is not None:
-                targets.append(t)
+            if (e := parse_legacy_toc_entry(lines[i])) is not None:
+                entries.append(e)
         i += 1
-    return drop, targets
+    return drop, entries
 
 
 def strip_legacy_toc(body: str, titles: frozenset[str], max_level: int = 3) -> str:
@@ -354,11 +394,20 @@ def strip_legacy_toc(body: str, titles: frozenset[str], max_level: int = 3) -> s
     return "\n".join(line for i, line in enumerate(body.split("\n")) if i not in drop)
 
 
+def legacy_toc_entries(
+    body: str, titles: frozenset[str], max_level: int = 3
+) -> list[LegacyTocEntry]:
+    """The original legacy-TOC entries (title + page + anchor), captured **before** the TOC is
+    stripped (§6.7) — the input to both the role-1 correlation and the ``toc.yaml`` sidecar. No
+    legacy TOC ⇒ ``[]``."""
+    _, entries = _scan_legacy_toc(body, titles, max_level)
+    return entries
+
+
 def legacy_toc_targets(body: str, titles: frozenset[str], max_level: int = 3) -> list[str]:
-    """The outer ``#anchor`` targets of the legacy TOC's page-numbered entries (§6.7), captured
-    **before** the TOC is stripped — the role-1 completeness oracle's input. No TOC ⇒ ``[]``."""
-    _, targets = _scan_legacy_toc(body, titles, max_level)
-    return targets
+    """The outer ``#anchor`` targets of the legacy TOC's page-numbered entries (§6.7) — the role-1
+    completeness oracle's input. Thin view over :func:`legacy_toc_entries`."""
+    return [e.anchor for e in legacy_toc_entries(body, titles, max_level)]
 
 
 def correlate_legacy_toc(targets: list[str], headings: list[Heading]) -> list[str]:
@@ -469,18 +518,28 @@ def normalize_body(
     ``(doc_type, era)`` and pass it in (the template seam lives in ``anchors_pure``)."""
     body = subtract_phrases(strip_artifacts(recover_headings(body)), phrases)
     body = subtract_boilerplate(body, boilerplate)
-    # CORRELATE-BEFORE-DROPPING (§6.7 role-1): capture the legacy TOC's entry anchors *before* it
-    # leaves the body, then strip it (both the ATX-heading and plain-text forms).
-    toc_targets = legacy_toc_targets(body, toc_titles)
+    # CORRELATE-BEFORE-DROPPING (§6.7 role-1): capture the legacy TOC's original entries (title +
+    # page + anchor) *before* it leaves the body, then strip it (ATX-heading + plain-text forms).
+    toc_entries = legacy_toc_entries(body, toc_titles)
     body = strip_legacy_toc(body, toc_titles)
     body = infer_heading_levels(body)
     headings = parse_headings(body, doc_id)
     # Resolve the TOC depth: an explicit non-default override (the template seam) wins; otherwise
     # adapt to the heading tree so multi-H1 docs still get a `## Contents` (§6.7).
     depth = toc_depth if toc_depth != DEFAULT_TOC_DEPTH else effective_toc_depth(headings)
-    toc_unresolved = correlate_legacy_toc(toc_targets, headings)  # misses → flags, not loss
+    toc_unresolved = correlate_legacy_toc([e.anchor for e in toc_entries], headings)
+    slugs = {h.slug for h in headings}
+    legacy_toc = [
+        {
+            "title": e.title,
+            "page": e.page,
+            "anchor": e.anchor,
+            "resolved": e.anchor.lstrip("#") in slugs,
+        }
+        for e in toc_entries
+    ]
     bookmark_to_slug = {h.bookmark: h.slug for h in headings if h.bookmark}
     body, outbound = rewrite_link_targets(body, bookmark_to_slug)
     body = regenerate_toc(body, depth)
     body = insert_back_links(body, headings, depth)
-    return body, build_anchor_map(headings, doc_id, depth, outbound, toc_unresolved)
+    return body, build_anchor_map(headings, doc_id, depth, outbound, toc_unresolved, legacy_toc)

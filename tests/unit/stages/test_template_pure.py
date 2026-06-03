@@ -160,6 +160,46 @@ def test_standardize_title_page_surgically_strips_all_bold_flat_cover():
     assert "**Introduction**" in out and "Real body content here." in out  # content kept
 
 
+def test_strip_title_image_removes_logo_in_title_area_only():
+    # the per-doc VA logo at the top (before the first heading/TOC) is noise → removed
+    body = (
+        '<img src="seal.png" style="width:2in" />\n\n'
+        "**Some Manual**\n\n"
+        "March 2010\n\n"
+        "# Introduction\n\nText with a real figure:\n\n"
+        "![screenshot](shot.png)\n\nmore text.\n"
+    )
+    out = tp.strip_title_image(body)
+    assert "seal.png" not in out  # title-area logo gone
+    assert "![screenshot](shot.png)" in out  # content figure (below the title area) kept
+    assert "# Introduction" in out and "**Some Manual**" in out
+
+
+def test_strip_title_image_markdown_and_html_forms_and_multiple():
+    body = '![](a.jpeg)\n\n<img src="b.png" />\n\n# Heading\n\nbody\n'
+    out = tp.strip_title_image(body)
+    assert "a.jpeg" not in out and "b.png" not in out  # both title-area images removed
+
+
+def test_strip_title_image_noop_when_no_title_area_image():
+    # a doc whose first image is a content figure well below the title area is untouched
+    body = "# Doc\n\nlots of prose here.\n\n## Section\n\n![fig](f.png)\n\ntail.\n"
+    assert tp.strip_title_image(body) == body
+    # a doc that opens straight into content (no leading image) is untouched
+    assert tp.strip_title_image("# Intro\n\nplain text\n") == "# Intro\n\nplain text\n"
+
+
+def test_strip_title_image_flat_doc_leading_logo():
+    # an old-gen flat doc (no heading boundary): a leading logo before the title text is removed,
+    # but a deep content image is not
+    body = (
+        '<img src="logo.gif" />\n\nPlain Title Manual\n\n' + "body line\n" * 50 + "![deep](d.png)\n"
+    )
+    out = tp.strip_title_image(body)
+    assert "logo.gif" not in out
+    assert "![deep](d.png)" in out
+
+
 def test_standardize_title_page_strips_va_imprint_authored_as_heading():
     # the late-gen shape: the VA imprint + cover date are authored as ATX headings (so they would
     # otherwise become `## Contents` entries). Treat them as cover furniture, not a boundary.
