@@ -358,11 +358,19 @@ def test_curated_templates_registry_is_well_formed():
     assert templates, "curated templates starter set is empty"
     for t in templates:
         assert t["disposition"] == "STRIP"
-        assert t["status"] == "approved"
+        # graded curation gate (§9.6): high-confidence promotions are `approved`; the era-axis
+        # candidates pending human review are `candidate` (the review queue, in version control)
+        assert t["status"] in ("approved", "candidate")
         assert t["template_id"].startswith(f"{t['doc_type']}:{t['era']}:")
         assert t["sections"], "a curated template must retain a non-trivial schema"
         for s in t["sections"]:
-            assert {"section_id", "title", "level", "required", "toc_level"} <= set(s)
+            # the completed §9.8 computable schema (Task 2): title_pattern + repeatable +
+            # semantic_role alongside the original section_id/title/level/required/toc_level
+            assert {
+                "section_id", "title", "title_pattern", "level",
+                "required", "repeatable", "semantic_role", "toc_level",
+            } <= set(s)  # fmt: skip
+            assert isinstance(s["title_pattern"], str) and s["title_pattern"]
 
 
 def test_induce_title_pattern_aligns_numbered_variants():
