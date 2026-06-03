@@ -272,6 +272,20 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-03** — **Phase 5 Step 4: signed bundle manifest (§5.3) + per-stage attestation note
+  (§5.4), TDD.** Raises the proof from "flagged" to "verifiable." New pure `kernel/bundle.py`
+  (`build_manifest` — part list + per-part `sha256`/bytes + folded capture outcomes + `source_sha256`
+  roots + `bundle_digest` = sha256 over sorted `path:sha256`; `verify_manifest` — recompute vs disk →
+  typed integrity findings: missing/extra part, hash mismatch, digest mismatch). `consolidate` writes
+  `bundle.yaml` into each anchor bundle **last** (it manifests every *other* part, never itself).
+  `validate` gains a 4th gate behavior — **bundle integrity**: for each `consolidated` anchor bundle,
+  recompute every part hash, confirm the part set matches `bundle.yaml` exactly, recompute the digest;
+  any mismatch (tamper/incompleteness) blocks. `validate.requires` += `CONSOLIDATED` (§8). **"Signed" =
+  a verifiable content digest** (key-free, tamper-evident); a keyed GPG/cosign signature over
+  `bundle_digest` is a future increment. **§5.4 (partial):** per-stage consumed/produced artifact
+  hashes already live in `state.db:stage_runs` (`inputs_fp`/`outputs_fp`); the manifest anchors each
+  bundle to its `source_sha256` roots + `tool_ver`; a formal exportable in-toto/SLSA chain is deferred.
+  Doc-first: `vdocs-design.md` §6.6/§8, `fidelity-framework.md` §6, `doc-sidecar-design.md` §4/§5.6.
 - **2026-06-03** — **Phase 5 STEP 0 (doc-first): sidecar-verification design folded into the source of
   truth.** Implements the [`doc-sidecar-design.md`](doc-sidecar-design.md) §5 recommendations §5.1/§5.2/
   §5.5 (the typed-absence / count-reconciliation / ref-resolution gap, §4 of that note). **Mechanism

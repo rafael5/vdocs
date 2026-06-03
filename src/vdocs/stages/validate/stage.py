@@ -15,6 +15,9 @@ already records but nothing read — the per-bundle ``capture.yaml`` typed captu
      are **reported as a C5 metric, not gated**: on the real corpus ~92% of Word ``_Toc``/``_Ref``
      cross-refs point at non-heading anchors (page numbers, figures, spans), so a high unmapped rate
      is expected, not a defect — the dead-anchor hard floor is for TOC entries + the heading tree.
+  4. **bundle integrity** (Step 4, §5.3/§6.6) — each gold anchor bundle must carry a ``bundle.yaml``
+     signed manifest whose recorded part hashes + ``bundle_digest`` match the parts on disk; a
+     tamper, a missing/extra part, or a bundle with no manifest blocks (a *verifiable* unit).
 
 It always (re)writes ``reports/validation/verification.json`` (the findings + the count baseline)
 and sets its own ``ok`` via the deep gate. ``ALWAYS_RERUN`` — a gate re-checks every time. Pure
@@ -29,7 +32,8 @@ import json
 import structlog
 import yaml
 
-from vdocs.contracts.registry import TEXT_NORMALIZED, VALIDATION_REPORT
+from vdocs.contracts.registry import CONSOLIDATED, TEXT_NORMALIZED, VALIDATION_REPORT
+from vdocs.kernel import bundle as kbundle
 from vdocs.kernel import cas
 from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -52,8 +56,10 @@ UNMAPPED_RATE_TARGET = 0.02
 
 class ValidateStage(Stage):
     name = "validate"
-    description = "sidecar-verification hard gate: typed absence + count reconcile + ref resolution"
-    requires = [TEXT_NORMALIZED]
+    description = (
+        "sidecar-verification gate: typed absence + count reconcile + refs + bundle integrity"
+    )
+    requires = [TEXT_NORMALIZED, CONSOLIDATED]
     produces = [VALIDATION_REPORT]
     idempotency = Idempotency.ALWAYS_RERUN
 
@@ -80,6 +86,11 @@ class ValidateStage(Stage):
                 outbound_total += len(refs.get("outbound") or {})
                 ref_findings.extend(rp.resolve_refs(refs))
 
+        # BUNDLE-INTEGRITY GATE (§5.3/§6.6): each gold anchor bundle must carry a bundle.yaml signed
+        # manifest whose recorded part hashes + digest match the parts on disk — so the bundle is a
+        # verifiable unit, not asserted. A bundle with no manifest can't be verified (unmanifested).
+        bundle_findings = _verify_bundles(ctx.cfg.gold_consolidated)
+
         reconcile_findings = rc.reconcile(
             manifests=manifests,
             current_counts=current_counts,
@@ -98,6 +109,8 @@ class ValidateStage(Stage):
             blocked_by.append(f"{len(reconcile_findings)} reconciliation finding(s)")
         if severed:
             blocked_by.append(f"{len(severed)} severed cross-ref(s)")
+        if bundle_findings:
+            blocked_by.append(f"{len(bundle_findings)} bundle-integrity finding(s)")
         self._blocking = bool(blocked_by)
         self._reason = "; ".join(blocked_by)
 
@@ -118,6 +131,7 @@ class ValidateStage(Stage):
                 "unmapped_rate": round(unmapped_rate, 4),
                 "unmapped_above_c5_target": unmapped_rate > UNMAPPED_RATE_TARGET,
             },
+            "bundle_findings": bundle_findings,
         }
         cas.atomic_write(
             ctx.cfg.validation_report,
@@ -131,6 +145,7 @@ class ValidateStage(Stage):
                 "reconcile_findings": len(reconcile_findings),
                 "severed_refs": len(severed),
                 "unmapped_refs": len(unmapped),
+                "bundle_findings": len(bundle_findings),
                 "blocking": int(self._blocking),
             }
         )
@@ -144,6 +159,42 @@ class ValidateStage(Stage):
 
 def _ref_dict(f: rp.RefFinding) -> dict:
     return {"doc_id": f.doc_id, "bookmark": f.bookmark, "target": f.target, "kind": f.kind}
+
+
+def _verify_bundles(consolidated_root) -> list[dict]:  # type: ignore[no-untyped-def]
+    """Verify every gold anchor bundle against its ``bundle.yaml`` signed manifest (§6.6).
+
+    For each bundle: read the manifest, read its on-disk parts (excluding the manifest itself), and
+    recompute hashes + digest. A bundle with no ``bundle.yaml`` is ``unmanifested`` — it cannot be
+    verified, so it is itself a finding. Returns flat finding dicts (empty ⇒ all verified)."""
+    findings: list[dict] = []
+    if not consolidated_root.is_dir():
+        return findings
+    for body_path in sorted(consolidated_root.rglob("body.md")):
+        bdir = body_path.parent
+        rel = bdir.relative_to(consolidated_root).as_posix()
+        on_disk = {
+            p.name: p.read_bytes()
+            for p in bdir.iterdir()
+            if p.is_file() and p.name != kbundle.MANIFEST_NAME
+        }
+        manifest_path = bdir / kbundle.MANIFEST_NAME
+        if not manifest_path.is_file():
+            findings.append(
+                {
+                    "kind": kbundle.UNMANIFESTED,
+                    "bundle": rel,
+                    "path": "",
+                    "detail": "no bundle.yaml",
+                }
+            )
+            continue
+        manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+        findings.extend(
+            {"kind": f.kind, "bundle": rel, "path": f.path, "detail": f.detail}
+            for f in kbundle.verify_manifest(manifest, on_disk)
+        )
+    return findings
 
 
 def _load_yaml(path):  # type: ignore[no-untyped-def]

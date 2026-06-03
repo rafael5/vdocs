@@ -14,7 +14,8 @@ import json
 import pytest
 import yaml
 
-from vdocs.contracts.registry import TEXT_NORMALIZED
+from vdocs.contracts.registry import CONSOLIDATED, TEXT_NORMALIZED
+from vdocs.kernel import bundle as kbundle
 from vdocs.kernel import cas, frontmatter
 from vdocs.models.stage import StageRun
 from vdocs.orchestrator.engine import Orchestrator
@@ -22,21 +23,40 @@ from vdocs.orchestrator.stage import PostflightError
 from vdocs.stages.validate.stage import ValidateStage
 
 
-def _bless_normalize(ctx, counts):
+def _bless(ctx, stage, art, counts=None):
     ctx.state.record(
         StageRun(
-            stage="normalize",
+            stage=stage,
             scope="",
             status="ok",
             started_at="t",
             finished_at="t",
             inputs_fp={},
-            outputs_fp={TEXT_NORMALIZED.key: TEXT_NORMALIZED.fingerprint(ctx.cfg)},
-            counts=counts,
+            outputs_fp={art.key: art.fingerprint(ctx.cfg)},
+            counts=counts or {},
             contract_ver=1,
             tool_ver=ctx.cfg.tool_ver,
         )  # fmt: skip
     )
+
+
+def _seed_consolidated_ok(ctx):
+    """One valid gold anchor bundle (body.md + a correct bundle.yaml) so validate's CONSOLIDATED
+    requirement + bundle-integrity gate pass by default; bundle-gate tests tamper it instead."""
+    anchor = ctx.cfg.gold_consolidated / "ADT" / "doc"
+    cas.atomic_write(anchor / "body.md", b"# Anchor\n")
+    manifest = kbundle.build_manifest(
+        {"body.md": b"# Anchor\n"}, doc_id="ADT/doc", anchor_key="ADT:ADT:DOC",
+        tool_ver=ctx.cfg.tool_ver, source_sha256=["abc"],
+    )  # fmt: skip
+    cas.atomic_write(anchor / "bundle.yaml", yaml.safe_dump(manifest).encode())
+    _bless(ctx, "consolidate", CONSOLIDATED)
+
+
+def _bless_normalize(ctx, counts):
+    """Bless both upstreams validate now requires: normalize (with counts) + a clean consolidate."""
+    _bless(ctx, "normalize", TEXT_NORMALIZED, counts)
+    _seed_consolidated_ok(ctx)
 
 
 def _seed_bundle(ctx, slug, *, captures, anchors=("intro",), outbound=None):
@@ -172,3 +192,39 @@ def test_validate_tolerates_corrupt_prior_report(ctx):
     _bless_normalize(ctx, {"documents": 1, "refs_sidecars": 1})
     (result,) = Orchestrator([ValidateStage()]).run(ctx)
     assert result.status == "ok"
+
+
+def test_validate_blocks_on_tampered_bundle(ctx):
+    # Step 4: a gold bundle whose body.md no longer matches its bundle.yaml manifest hash → the
+    # bundle-integrity gate catches the tamper (recompute-to-verify).
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _bless(ctx, "normalize", TEXT_NORMALIZED, {"documents": 1})
+    anchor = ctx.cfg.gold_consolidated / "ADT" / "doc"
+    cas.atomic_write(anchor / "body.md", b"# Real body\n")
+    bad = kbundle.build_manifest(
+        {"body.md": b"# Different bytes\n"}, doc_id="ADT/doc", anchor_key="ADT:ADT:DOC",
+        tool_ver=ctx.cfg.tool_ver, source_sha256=["abc"],
+    )  # fmt: skip
+    cas.atomic_write(anchor / "bundle.yaml", yaml.safe_dump(bad).encode())
+    _bless(ctx, "consolidate", CONSOLIDATED)
+
+    with pytest.raises(PostflightError):
+        Orchestrator([ValidateStage()]).run(ctx)
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    assert any(
+        f["kind"] == "hash-mismatch" and f["path"] == "body.md" for f in report["bundle_findings"]
+    )
+
+
+def test_validate_blocks_on_unmanifested_bundle(ctx):
+    # a gold bundle with no bundle.yaml cannot be verified → blocks (not silently skipped)
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _bless(ctx, "normalize", TEXT_NORMALIZED, {"documents": 1})
+    anchor = ctx.cfg.gold_consolidated / "ADT" / "doc"
+    cas.atomic_write(anchor / "body.md", b"# No manifest\n")  # no bundle.yaml
+    _bless(ctx, "consolidate", CONSOLIDATED)
+
+    with pytest.raises(PostflightError):
+        Orchestrator([ValidateStage()]).run(ctx)
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    assert any(f["kind"] == "unmanifested" for f in report["bundle_findings"])

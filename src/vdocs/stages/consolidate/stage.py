@@ -22,7 +22,7 @@ import structlog
 import yaml
 
 from vdocs.contracts.registry import ASSETS, CONSOLIDATED, TEXT_NORMALIZED
-from vdocs.kernel import cas, frontmatter
+from vdocs.kernel import bundle, cas, frontmatter
 from vdocs.kernel import ids as kids
 from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -87,27 +87,47 @@ class ConsolidateStage(Stage):
             )
             kept.add(relpath)
             anchor = consolidated_root / relpath
-            # promote the latest body unchanged (content-skip keeps the fingerprint honest)
-            cas.atomic_write(anchor / "body.md", body_bytes[latest.doc_id])
-            # the latest member's fidelity flags (capture-before-strip signals, §6.4/§6.7) travel
-            # with the anchor so a retained/flagged residue is visible at the gold grain too
+            # Assemble the anchor bundle's parts in memory, then write them + the signed manifest.
+            parts: dict[str, bytes] = {"body.md": body_bytes[latest.doc_id]}
+            # the latest member's fidelity flags / paper TOC / capture manifest travel with the
+            # anchor so a flagged residue, the printed pagination, and the completeness manifest are
+            # all visible at the gold grain too (§6.4/§6.7)
             if latest.doc_id in flag_bytes:
-                cas.atomic_write(anchor / "flags.yaml", flag_bytes[latest.doc_id])
-            # the original paper-era TOC (toc.yaml) travels with the anchor too — the backwards-
-            # compatibility reference from the derived `## Contents` to the printed pages (§6.7)
+                parts["flags.yaml"] = flag_bytes[latest.doc_id]
             if latest.doc_id in toc_bytes:
-                cas.atomic_write(anchor / "toc.yaml", toc_bytes[latest.doc_id])
-            # the latest member's typed capture-attempt records (capture.yaml, §6.4) travel with the
-            # anchor too, so the completeness manifest is visible at the gold grain
+                parts["toc.yaml"] = toc_bytes[latest.doc_id]
             if latest.doc_id in capture_bytes:
-                cas.atomic_write(anchor / "capture.yaml", capture_bytes[latest.doc_id])
+                parts["capture.yaml"] = capture_bytes[latest.doc_id]
             # append-only lineage: fold the fresh chain into any prior history.yaml (§6.6)
             existing = _read_history(anchor / "history.yaml")
             merged = cp.merge_history(existing, cp.build_history(latest.anchor_key, ordered))
-            cas.atomic_write(
-                anchor / "history.yaml",
-                yaml.safe_dump(merged, sort_keys=False, allow_unicode=True).encode("utf-8"),
+            parts["history.yaml"] = yaml.safe_dump(
+                merged, sort_keys=False, allow_unicode=True
+            ).encode("utf-8")
+            for name, data in parts.items():
+                cas.atomic_write(anchor / name, data)
+            # SIGNED BUNDLE MANIFEST (§5.3/§6.6): write bundle.yaml LAST — every other part + its
+            # sha256 + folded capture outcomes + member source provenance + a bundle_digest, so the
+            # bundle is a verifiable unit the validate gate recomputes from disk (tamper-evident).
+            manifest = bundle.build_manifest(
+                parts,
+                doc_id=latest.doc_id,
+                anchor_key=latest.anchor_key,
+                tool_ver=ctx.cfg.tool_ver,
+                source_sha256=[m.source_sha256 for m in ordered],
+                captures=_folded_captures(parts.get("capture.yaml")),
             )
+            cas.atomic_write(
+                anchor / bundle.MANIFEST_NAME,
+                yaml.safe_dump(manifest, sort_keys=False, allow_unicode=True).encode("utf-8"),
+            )
+            # Prune any stale sidecar a prior run left in this (kept) bundle — e.g. a flags.yaml/
+            # toc.yaml whose current latest member no longer has one — so the on-disk part set
+            # matches bundle.yaml exactly (the R4 intra-bundle staleness the integrity gate flags).
+            expected = set(parts) | {bundle.MANIFEST_NAME}
+            for stale in anchor.iterdir():
+                if stale.is_file() and stale.name not in expected:
+                    stale.unlink()
 
         n_pruned = cas.prune_bundles(consolidated_root, kept)
         self._errors, self._total = n_errors, len(body_files)
@@ -169,3 +189,12 @@ def _read_history(path):  # type: ignore[no-untyped-def]
     if not path.is_file():
         return None
     return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+def _folded_captures(capture_yaml: bytes | None) -> dict:
+    """The latest member's ``capture.yaml`` outcome summary folded into ``bundle.yaml`` (§6.6) — so
+    the signed manifest self-describes each capture attempt's outcome, not only the part hashes."""
+    if not capture_yaml:
+        return {}
+    data = yaml.safe_load(capture_yaml.decode("utf-8")) or {}
+    return data.get("captures") or {}

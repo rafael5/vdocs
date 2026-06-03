@@ -245,9 +245,21 @@ the source; it must also be provable that **nothing was silently dropped on the 
 The per-bundle `capture.yaml` (vdocs-design §6.4) makes that auditable: every structure `normalize`
 lifts to a sidecar leaves a typed record (`captured` / `failed` / `absent-expected` /
 `absent-unexpected`), so a reviewer can confirm each absent sidecar is *explained* rather than merely
-missing. `history.yaml` already carries `source_sha256` + `body_sha256`; `capture.yaml` is the
-forward path to the **signed bundle manifest** (each part + its hash + its capture outcome), turning
-the whole bundle — body *and* sidecars — into a single verifiable, untampered unit.
+missing.
+
+This is realised by the **signed bundle manifest** (`bundle.yaml`, vdocs-design §6.6): `consolidate`
+writes, into each gold anchor bundle, the complete part list with each part's `sha256` + byte length,
+the folded `capture.yaml` outcomes, the member `source_sha256` provenance roots, and a `bundle_digest`
+(sha256 over the sorted `path:sha256` lines). The `validate` gate **recomputes** every part hash from
+disk, confirms the on-disk part set equals the manifest exactly, and recomputes the digest — so the
+whole bundle (body *and* sidecars) is a **verifiable, untampered unit**, not asserted: a skeptic
+re-runs the hashes and gets the same answer (the §6/§11 reproducibility-is-auditability principle
+applied to bundle completeness). "Signed" here is a verifiable **content digest** (recompute to
+verify, key-free); a *keyed* signature over `bundle_digest` is a future increment once key management
+exists. Per-stage provenance (which stage produced which artifact, by hash) is already recorded in
+`state.db:stage_runs` (`inputs_fp`/`outputs_fp`); a formal exportable in-toto/SLSA chain over it is
+deferred. `history.yaml` (`source_sha256` + `body_sha256`) remains the body↔source link; the manifest
+extends that guarantee to the bundle as a whole.
 
 ---
 
