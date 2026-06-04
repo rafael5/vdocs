@@ -188,6 +188,16 @@ These are non-negotiable. Every later section is an application of one of these.
     transform. The pipeline adapts to a newly-found pattern by gaining a registry *entry*, not a
     code edit. The inductive discovery step is kept strictly separate from the deterministic
     application step; the registry is the seam between them. (Mechanism: §9.6.)
+14. **Discoverability is built upstream of the gate, then measured — a gate cannot create it.**
+    (Earned from the v1 real-corpus run; see [`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md).)
+    Retrieval and navigation quality are *produced* by good chunking, recovered structure, and rich
+    typed entities (§14.6, §5.5) — **before** any verification stage runs. The `validate` HARD GATE and
+    the `fidelity` axes **certify** that quality; they never substitute for it. Therefore the build
+    order is **substrate → measure → gate**: fix the chunker / heading recovery / entity coverage first,
+    make the retrieval-quality harness (`fidelity-framework.md` §10.5) the throughline that turns each
+    fix into a *measured* lift, and only then gate on the measurement. Building the certification
+    machinery ahead of the substrate it certifies (the v1 sequencing error) is the anti-pattern this
+    tenet exists to prevent.
 
 - Not a general document-management system or CCMS. Not DITA/S1000D authoring (§5.4).
 - Not multi-tenant; single-node, single-maintainer scale (≈3–4 GB raw, ≈3k documents).
@@ -1145,6 +1155,17 @@ Notes:
   extraction pass in `index` (`entities_pure.py`) recognizes them over the normalized bodies and writes
   `index.db:entities` keyed by the `(type, canonical-name)` stable ID (§5.5). No entity patterns are
   hard-coded in stage code.
+  - **Type coverage is a build requirement, not aspirational (added 2026-06-04 from real-corpus
+    measurement).** The live `index.db` extracts only **4** of the listed types — `global` (2,041,
+    ubiquitous/low-signal), `fileman_file` (292), `build` (193), `package_namespace` (19) — and the
+    discovery-rich types an agent or engineer actually searches the VistA corpus *for* — **RPCs,
+    options, routines, protocols, HL7 segments, mail groups** — are **absent**. Seeding the full
+    `registries/entities` set is therefore a load-bearing discoverability task (priority **A3** in
+    [`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md)), not a nicety: it is the
+    largest available lift for the **structured + graph** retrieval modes. Conversely, raw **globals
+    are ubiquitous and low-signal** (the design already excludes them from `xref` edges for that
+    reason): they must be **de-weighted / demoted** from the primary discovery surface — retained as
+    evidence, not surfaced as headline entities — so the entity layer is rich *and* selective.
 - **`relate`** materializes the knowledge graph from already-extracted entities and
   cross-references — it adds no new extraction, only edges, so it is cheap and re-runnable.
 - **`analyze`** is diagnostic and parallel; nothing depends on it.
@@ -1770,6 +1791,26 @@ strip the repetition and keep the signal; the **structured pre-filter** (§14.2)
 `semantic_role`s are reliable, chunks align to **meaningful units** (a whole "Options" section), not
 arbitrary windows. Good boundaries matter as much as dedup — a clean corpus chunked badly still
 retrieves badly.
+
+> **Concrete chunking contract (added 2026-06-04 from real-corpus measurement; the highest-leverage
+> substrate fix).** The shipped `index_pure.shred_sections` does **not** yet honour this: it spans each
+> heading to the next, so on the live 1299-doc lake **14.2% of `is_latest` chunks are hollow**
+> (a *container* heading whose substance lives in its subsections indexes as a bare heading +
+> back-link), **40.8% are thin** (<400 chars), and a few exceed 140 KB. That hurts both human
+> navigation and — once `embed` lands — semantic recall (hollow chunks pollute the ANN neighbourhood).
+> `shred_sections` MUST be rebuilt to:
+> 1. **Never emit a hollow content chunk.** A heading whose own body (to its first child) is below a
+>    substantive-token floor is a *container*: fold its lead-in into its first content unit, or attach a
+>    one-line synthesized child-summary, so the chunk stands alone. (Container headings are *expected* to
+>    have no own-body; the fix is that they must not be indexed as standalone empty chunks.)
+> 2. **Bound chunk size.** Split oversized leaf sections (the >140 KB cases) on sub-structure /
+>    paragraph windows with small overlap, keyed so the split parts keep a stable `section_id` suffix.
+> 3. **Carry context as metadata, not prose** — `section_id`, section-path, `app_code`/`doc_type`/
+>    `version`, `semantic_role` — per the paragraph above.
+>
+> This is enforced by the `fidelity` over-strip / hollow-chunk metric (`overstrip_pure`,
+> fidelity-framework §10.5), whose target is ≈ 0 hollow content chunks **before** `embed` runs. It is
+> priority **A1** in the substrate-first plan (see [`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md)).
 
 **Keep the canonical boilerplate indexed once.** Occasionally the boilerplate *is* the answer (a
 compliance/legal query). The single-sourced copy in `gold/_shared/` is indexed **once** — so it is
