@@ -33,7 +33,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from vdocs.kernel.markdown import heading_furniture_text, iter_headings
+from vdocs.kernel.markdown import heading_furniture_text, iter_headings, strip_tags
 from vdocs.stages.normalize import tables_pure
 
 CAPTURED = "captured"
@@ -103,6 +103,12 @@ def scan_residue(body: str, toc_titles: frozenset[str]) -> Residue:
     qualifying-table detector as a post-condition (a qualifying table left in the body = a miss)."""
     revision = legacy_toc = heading = False
     for _idx, _level, text in iter_headings(body):
+        if not strip_tags(text).strip():
+            # An empty ``# `` title or a bookmark-only heading (``## <span id="_Toc…"></span>``)
+            # mints no anchor — ``parse_headings`` skips it identically — so it is NOT heading
+            # structure that should have produced a ``refs.yaml``. Counting it makes refs a false
+            # ``absent-unexpected`` that blocks the validate gate (§6.4/§6.7).
+            continue
         heading = True
         bare = heading_furniture_text(text)
         if _is_revision_heading_residue(bare):

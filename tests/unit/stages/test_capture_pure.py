@@ -73,6 +73,19 @@ def test_scan_residue_reports_heading_present():
     assert cp.scan_residue("# Doc\n\n## Setup\n\nx\n", _TOC_TITLES).heading_present is True
 
 
+def test_scan_residue_ignores_empty_and_bookmark_only_headings():
+    # An empty `# ` title or a bookmark-only heading (`## <span id="_Toc…"></span>`) mints no
+    # anchor: parse_headings skips it (text empty after strip_tags), so refs.yaml is legitimately
+    # absent. The residue scan must mirror that — else refs is a false absent-unexpected that blocks
+    # the validate gate. Real-corpus case: RMPR/rmpr_3_nppdum, whose sole ATX heading is an empty
+    # `# ` title (everything else is bold text).
+    assert cp.scan_residue("# \n\nprose, no real headings\n", _TOC_TITLES).heading_present is False
+    bookmark_only = '## <span id="_Toc1"></span>\n\nprose\n'
+    assert cp.scan_residue(bookmark_only, _TOC_TITLES).heading_present is False
+    # a real heading alongside an empty one still reports present
+    assert cp.scan_residue("# \n\n## Setup\n\nx\n", _TOC_TITLES).heading_present is True
+
+
 def test_scan_residue_counts_qualifying_table():
     rows = "".join(f"<tr><td>a{i}</td><td>b{i}</td></tr>" for i in range(12))
     body = "# Doc\n\n<table><tr><th>A</th><th>B</th></tr>" + rows + "</table>\n"
