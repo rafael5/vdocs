@@ -134,15 +134,24 @@ def test_index_builds_documents_sections_entities(ctx):
         ids = {r[0] for r in conn.execute("SELECT section_id FROM doc_sections")}
         assert "CPRS/or_3_566_ig/usage" in ids and "CPRS/or_3_190_ig/setup" in ids
 
-        # FTS5 is anchor-only: a term unique to the OLD body returns nothing; the NEW body matches
+        # FTS5 (over chunks) is anchor-only: a term unique to the OLD body returns nothing; NEW hits
         fts_old = conn.execute(
-            "SELECT count(*) FROM doc_sections_fts WHERE doc_sections_fts MATCH 'Old'"
+            "SELECT count(*) FROM chunks_fts WHERE chunks_fts MATCH 'Old'"
         ).fetchone()[0]
         fts_new = conn.execute(
-            "SELECT doc_key FROM doc_sections_fts WHERE doc_sections_fts MATCH 'install'"
+            "SELECT doc_key FROM chunks_fts WHERE chunks_fts MATCH 'install'"
         ).fetchall()
         assert fts_old == 0  # superseded section excluded from the search surface (§14.6)
         assert all(r[0] == "CPRS/or_3_566_ig" for r in fts_new) and fts_new
+        # chunks are the retrieval units: every searchable is_latest section yields a chunk row,
+        # each citing a real section_id anchor
+        n_chunks = conn.execute("SELECT count(*) FROM chunks").fetchone()[0]
+        assert n_chunks > 0
+        orphan = conn.execute(
+            "SELECT count(*) FROM chunks c "
+            "WHERE c.section_id NOT IN (SELECT section_id FROM doc_sections)"
+        ).fetchone()[0]
+        assert orphan == 0  # every chunk resolves to an anchor section
 
         # entities keyed by (type, canonical), extracted from the anchor only
         ents = {(t, c) for t, c in conn.execute("SELECT type, canonical_name FROM entities")}

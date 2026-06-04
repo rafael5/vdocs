@@ -77,7 +77,8 @@ def _gather_counts(index_db):  # type: ignore[no-untyped-def]
             # each version group has exactly one is_latest anchor → latest count == group count
             "version_groups": one("SELECT count(*) FROM documents WHERE is_latest=1"),
             "sections": one("SELECT count(*) FROM doc_sections"),
-            "sections_searchable": one("SELECT count(*) FROM doc_sections WHERE is_latest=1"),
+            # the search surface is the chunks table (containers + hollow excluded, oversized split)
+            "sections_searchable": one("SELECT count(*) FROM chunks"),
             "entities": one("SELECT count(*) FROM entities"),
             "entities_by_type": dict(
                 conn.execute("SELECT type, count(*) FROM entities GROUP BY type").fetchall()

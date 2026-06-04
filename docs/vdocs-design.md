@@ -456,8 +456,8 @@ as a **derived artifact** (`index.db` §6.4), never as the storage format.
 | Store | Role | Owner | Rebuildable? | Key contents |
 |---|---|---|---|---|
 | `state.db` | Orchestration + lineage + acquisition status | the orchestrator + `fetch` | no (it *is* the history) | `stage_runs`, artifact fingerprints, run lineage, **`acquisitions`** (per-document fetch status) |
-| `index.db` | Derived corpus index + knowledge graph | `index` + `relate` | **yes** (from silver) | `documents`, `doc_sections`+FTS5, entity tables, `relations` (graph edges), quality/is_latest, views; **stable IDs** on every unit |
-| `vectors.db` | Semantic index | `embed` | **yes** (from `index.db` chunks) | per-chunk embeddings + ANN index (sqlite-vec), keyed by section stable ID; records embedding-model id+version |
+| `index.db` | Derived corpus index + knowledge graph | `index` + `relate` | **yes** (from silver) | `documents`, `doc_sections` (heading anchors), `chunks`+FTS5 (the search/retrieval units derived from sections — §5.5), entity tables, `relations` (graph edges), quality/is_latest, views; **stable IDs** on every unit |
+| `vectors.db` | Semantic index | `embed` | **yes** (from `index.db:chunks`) | per-chunk embeddings + ANN index (sqlite-vec), keyed by `chunk_id` (→ `section_id` for citation); records embedding-model id+version |
 
 The provenance JSON produced by `manifest` is `corpus-manifest.json` (plus the machine
 **discovery descriptor** `discovery.json`, §14). Distinct things, distinct unambiguous names
@@ -525,6 +525,23 @@ uses as its `doc_id`/`stable_id` base (`anchors_pure` "Decision 1"). So `index.d
 `doc_id` (the inventory colon id, for join-back) — and the **section id is `refs.yaml`'s
 `<doc_key>/<slug>`** verbatim. The two forms coincide for all but the `/`-bearing apps; `doc_key` is
 the one the published anchors, FTS rows, graph nodes, and (later) vector keys share.
+
+**Sections are anchors; chunks are the retrieval unit (added 2026-06-04, A1 — see
+[`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md), §14.6).** A heading-anchored
+**section** and a **search chunk** are not 1:1, so they are now distinct tables. `index.db:doc_sections`
+holds **one row per heading** — the addressable, structure-complete map (every heading, `is_latest`,
+`toc_level`, the `<doc_key>/<slug>` stable id the published anchors, the graph, and MCP
+`vdocs://section/{id}` URIs all cite). The **search corpus** (`index.db:chunks` → FTS5, and `embed`'s
+`vectors.db`) is derived *from* sections but deliberately differs: **container** sections (substance
+lives in subsections) and **hollow** ones (a bare heading stripped past the substantive-token floor,
+§6.5/§14.6) are **excluded** — indexing them pollutes the search space — and an **oversized** leaf is
+**split** into windowed chunks. `chunks` carries `chunk_id` (= the section's `<doc_key>/<slug>`, or
+`…#pN` for a split part), a `section_id` foreign key back to the anchor, the chunk `text`, `searchable`,
+`section_path` (ancestor-title context as metadata), and `is_latest`. A retrieval hit returns a
+`chunk_id`; its `section_id` is the citation/anchor it resolves to. Keeping the two apart is the point:
+`doc_sections` stays the pristine stable-ID **anchor** contract while `chunks` is the retrieval-optimised
+unit. (The earlier "FTS5 over `doc_sections`" framing conflated them; the real corpus forced the split —
+14.2% of one-chunk-per-heading rows were hollow containers, an over-strip the search surface must drop.)
 
 ### 5.6 The fetch selection surface (deciding *what* to download)
 
@@ -1079,9 +1096,9 @@ plane), **DOC** = the document medallion (data plane) (§4). The inventory track
 | 🥈 DOC | **enrich** | `text@converted`, `catalog.enriched` | `text@enriched` (identity FM baked), `index.db:doc_meta_staged` | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **normalize** | `text@enriched`, `raw/index.json` (for source_sha256 — metadata only, not the binary tree), `registries` (curated patterns) | `text@normalized` — `revisions.yaml` + `tables/*.csv` + `refs.yaml` + `toc.yaml` + `flags.yaml` sidecars; **title-page publication date captured into the `published` identity FM before any strip** (§6.4 capture-before-strip), then the per-document **title-area logo image removed** (noise — a different VA seal/banner per doc; one small standard logo to be added at publish) and the legacy cover replaced by a standardized block; revision apparatus lifted to `revisions.yaml` (capture-gated; unparseable → retained + flagged); dead phrases deleted; boilerplate referenced (REFERENCE to `gold/_shared`); heading levels inferred; per-`(doc_type, era)` template scaffold stripped + `template_id` stamped (§9.8); the legacy in-body TOC's **original entries (title + printed page number + anchor) captured verbatim into `toc.yaml`** before it is stripped via `registries/structures` (CANONICALIZE `toc`) + correlated to the derived tree (role-1; misses → `flags.yaml`) then **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** (§6.7). Capture-before-strip fidelity signals (uncaptured date · unparseable revision apparatus · unresolved legacy-TOC anchors) are recorded in the `flags.yaml` sidecar. A **`capture.yaml` is written for *every* bundle** (not conditional) recording each capture attempt's typed outcome (`captured`/`failed`/`absent-expected`/`absent-unexpected`) plus an independent residue re-scan, so absence is never ambiguous (§6.4). (Glossary **PROMOTE** to the single `gold/glossary.md` is a gold-phase output — §9.7 lists `normalize` as a consumer of `registries/glossary`, but the shared artifact is materialised downstream, not in this silver body transform.) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **consolidate** | `text@normalized` (incl. each version's `revisions.yaml` + `published` FM + `flags.yaml`), `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage [folds each member's `revisions.yaml`, §6.4; `official_date` = revision-newest **else the title-page `published` date**] + retained prior bodies captured as travel-with sidecars; the latest member's `flags.yaml` + `toc.yaml` (original paper TOC, §6.7) + `capture.yaml` (typed capture-attempt records, §6.4) travel with the anchor; a **`bundle.yaml` signed manifest** (every part + `sha256` + folded capture outcomes + `bundle_digest`, §6.6) is written last so the bundle is a verifiable unit; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
-| 🥇 DOC | **index** | `text@normalized`, `consolidated` (grouping → `is_latest`), `index.db:doc_meta_staged` (the staged identity `enrich` writes — an explicit input, not a hidden read; the build **carries it forward** so a fresh rebuild stays self-contained) | `index.db` (documents [keyed by URL-safe `doc_key`, with the inventory `doc_id` alongside — §5.5], doc_sections [all, with `is_latest`, section id = `refs.yaml`'s `<doc_key>/<slug>`] **+ FTS5 over `is_latest` only — the search surface**, entities + entity_mentions [registry-driven extraction, anchor-only], quality view; **stable IDs**) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **index** | `text@normalized`, `consolidated` (grouping → `is_latest`), `index.db:doc_meta_staged` (the staged identity `enrich` writes — an explicit input, not a hidden read; the build **carries it forward** so a fresh rebuild stays self-contained) | `index.db` (documents [keyed by URL-safe `doc_key`, with the inventory `doc_id` alongside — §5.5], doc_sections [**all headings = the anchor map**, with `is_latest`/`toc_level`, section id = `refs.yaml`'s `<doc_key>/<slug>`], **chunks [the retrieval units derived from sections (§5.5): containers + hollow excluded, oversized split into `#pN`; `chunk_id`→`section_id` FK, `searchable`, `section_path`] + FTS5 over `searchable AND is_latest` chunks — the search surface**, entities + entity_mentions [registry-driven extraction, anchor-only], quality view; **stable IDs**) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **relate** | `index.db` (documents, entities, sections) | `index.db:relations` (doc↔entity, doc↔doc xref, entity↔entity — the knowledge graph) | SKIP_IF_UNCHANGED |
-| 🥇 DOC | **embed** | `index.db:doc_sections` (**`is_latest` only**) | `vectors.db` (per-chunk embeddings + ANN index over anchor/current sections; prior-version chunks excluded — §14.6) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **embed** | `index.db:chunks` (**`searchable AND is_latest` only** — §5.5) | `vectors.db` (per-chunk embeddings + ANN index over the searchable current chunks, keyed by `chunk_id`; containers/hollow + prior-version chunks excluded — §14.6) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **fidelity** | `text@normalized`, `raw` (bronze `S`), `index.db` (structure/sections/template schema), `registries` (to dereference single-sourced content) | `reports/fidelity` (per-document migration-fidelity records — content/provenance/history axes, template compliance, TOC integrity — + corpus report; `fidelity-framework.md`) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **manifest** | `consolidated`, `index.db` (documents/entities + **`relations`**, so the graph capability + counts are honest), `vectors.db` (**optional** — produced by `embed` in Phase 6; absent ⇒ embedding/vector fields omitted, **semantic capability off** [D3]) | `corpus-manifest.json` + `discovery.json` (counts · stable-ID scheme · MCP capabilities; lineage `tool_ver`+`generated_at`) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **publish** | `corpus-manifest.json`, `text@normalized`, `consolidated`, `assets`, `catalog.enriched`, `glossary` | `publish` (markdown-only human tree + INDEX) | SKIP_IF_UNCHANGED |
@@ -1139,9 +1156,10 @@ Notes:
 - **`index` / `relate` / `embed` are the derived machine views** (atomic index, knowledge
   graph, semantic index). They are rebuildable and *not* on the human-publish critical path,
   so re-deriving them never blocks a docs push.
-- **The search corpus is anchor-only.** FTS5 and `vectors.db` cover `is_latest` sections only
-  (§14.6); prior-version bodies stay queryable via lineage/graph but never pollute the default vector
-  neighborhood. The dedup/condensation work (anchor docs §6.6, registries §9.6) exists largely to
+- **The search corpus is anchor-only and chunk-shaped.** FTS5 and `vectors.db` cover the
+  `searchable AND is_latest` **chunks** (§5.5: containers + hollow excluded, oversized split), not raw
+  heading sections (§14.6); prior-version bodies stay queryable via lineage/graph but never pollute the
+  default vector neighborhood. The dedup/condensation work (anchor docs §6.6, registries §9.6) exists largely to
   keep this search surface clean — it is what maximizes retrieval fidelity (ADR-021), proven by
   `fidelity-framework.md` §10.5.
 - **`embed` is idempotent on the embedding-model id+version** (carried in `contract_ver`): a

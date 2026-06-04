@@ -124,7 +124,7 @@ fix + spec/plan reframe `f6e4767`→ this commit.*
 
 | ID | St | Where | Task |
 |---|:--:|---|---|
-| **A1** | ☐ | `index/index_pure.shred_sections` | **Structure-aware chunking** (§14.6 concrete contract): never emit a hollow content chunk (fold a container heading's lead-in into its first child / synthesized summary), bound oversized leaf chunks (split w/ overlap, stable `section_id` suffix), carry context as metadata. **Target: ≈0% hollow** (baseline 14.2%). Re-index + re-measure. |
+| **A1** | ✅ | `index` + `kernel/markdown` | **Structure-aware chunking** — DONE (§5.5/§14.6, Option B chunks table, doc-first). Sections classified `container/ok/stub/hollow`+`searchable` (shared kernel `classify_section`/`substantive_tokens`, also adopted by `overstrip_pure`); `section_path` metadata; oversized leaves split (`#pN`, overlap); NEW `index.db:chunks` + `chunks_fts` = the search surface (containers/hollow excluded, is_latest only). **Real lake (1444 docs): 28.8% of is_latest headings excluded as container/hollow (0 leaked), 2,502 split parts, 24.2k-chunk surface; `validate` still green.** Commits `352c48a`/`8bb77d6`/`3c5f6aa`/`27fe7e5`. |
 | **A2** | ☐ | `normalize/recover_headings` | **Heading recovery v2**: promote `**bold**`+`_Toc`/`_Ref`-span pseudo-headings to real `##` **even when the doc already has headings** (the disproven-`_Toc` finding); give the 24 structureless `is_latest` docs a tree. Side effect: recovers the genuinely-recoverable cross-ref subset + improves the human TOC. |
 | **A3** | ☐ | `registries/entities` + `entities_pure` | **Entity depth + denoise**: seed the missing high-value VistA types (RPCs, options, routines, protocols, HL7 segments, mail groups, build/patch); **de-weight/demote ubiquitous raw globals** from the primary discovery surface (keep as evidence). Largest lift for structured+graph discovery. |
 
@@ -336,6 +336,20 @@ gate, but it now **certifies** the substrate A/B produce — it does not stand i
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-04** — **A1 structure-aware chunking COMPLETE (the first substrate fix, branch
+  `feat/a1-structure-aware-chunking`, TDD).** Four increments + a doc-first design change (Option B):
+  (1) classify sections `container/ok/stub/hollow`+`searchable` via a new shared kernel primitive
+  (`kernel.markdown.classify_section`/`substantive_tokens`/`MIN_SUBSTANTIVE_TOKENS`), with
+  `overstrip_pure` refactored onto it so the chunker and the fidelity gate agree on "hollow"; (2)
+  `section_path` ancestor-title metadata; (3) `split_oversized` (fence-aware paragraph windowing +
+  overlap for the >140 KB monsters); (4) doc-first §5.5/§14.6 amendment introducing the **sections
+  (anchors) vs chunks (retrieval units)** split, then the `index.db:chunks` + `chunks_fts` schema
+  (FTS over is_latest searchable chunks; containers/hollow excluded, oversized split into `#pN`;
+  entity mentions still cite section anchors; `manifest` searchable count repointed). **Real lake
+  (1444 docs, `run --from index --to manifest --force`): of 30,510 is_latest headings, 8,792 (28.8%)
+  excluded as container/hollow with 0 leakage; 2,502 split parts; a 24,220-chunk search surface;
+  `validate` green (severed 0).** The 14.2%-hollow / 145 KB-monster defects are gone. `make check`:
+  699 tests, 98.68%. Commits `352c48a`→`27fe7e5`. **Next: A3 entities or D1 embed over the clean chunks.**
 - **2026-06-04** — **Phases 5–6 REPLANNED substrate-first + doc-first spec amendments (the v1→v2
   reframe).** After the real-corpus audit + the disproven C5 hypothesis, decided (with the maintainer)
   *not* to rewrite the sound spec but to **amend it surgically + rewrite the build plan + keep the

@@ -59,3 +59,126 @@ def test_shred_skips_generated_contents():
     body = "# Doc\n\n## Contents\n\n- [Setup](#setup)\n\n## Setup\n\nbody\n"
     slugs = [s.slug for s in ip.shred_sections(body, "ADT/x")]
     assert "contents" not in slugs and slugs == ["doc", "setup"]
+
+
+# --- A1 increment 1: structure-aware classification (container/ok/stub/hollow + searchable) ---
+
+
+def test_shred_classifies_container_vs_leaf_and_marks_searchable():
+    # "Pre-installation Considerations" has only deeper subsections + no own prose → a CONTAINER:
+    # it must NOT be a searchable chunk (its substance lives in its children), but it stays a row.
+    body = (
+        "## Pre-installation Considerations\n\n"
+        "[↑ Back to Contents](#contents)\n\n"
+        "### Client Requirements\n\nInstall the v32 client on each workstation before upgrade.\n\n"
+        "## Overview\n\nThis manual describes the scheduling package and all its options.\n"
+    )
+    secs = {s.slug: s for s in ip.shred_sections(body, "SD/sd_ig")}
+    assert secs["pre-installation-considerations"].kind == "container"
+    assert secs["pre-installation-considerations"].searchable is False
+    assert secs["client-requirements"].kind == "ok"  # a substantive leaf
+    assert secs["client-requirements"].searchable is True
+    assert secs["overview"].kind == "ok" and secs["overview"].searchable is True
+
+
+def test_shred_marks_hollow_leaf_not_searchable():
+    # a leaf reduced to a bare heading + back-link, no children, no referent → HOLLOW (the defect):
+    # excluded from the search surface, but still emitted as a row (anchor/nav map stays complete).
+    body = (
+        "## Empty Section\n\n[↑ Back to Contents](#contents)\n\n"
+        "## Real Section\n\nThis section has plenty of real prose to stand alone when retrieved.\n"
+    )
+    secs = {s.slug: s for s in ip.shred_sections(body, "SD/x")}
+    assert secs["empty-section"].kind == "hollow" and secs["empty-section"].searchable is False
+    assert secs["real-section"].kind == "ok" and secs["real-section"].searchable is True
+    assert "empty-section" in {s.slug for s in ip.shred_sections(body, "SD/x")}  # row still present
+
+
+def _section(text, *, kind="ok", searchable=True, sid="SD/x/s", path=""):
+    return ip.Section(
+        section_id=sid,
+        slug="s",
+        title="S",
+        level=2,
+        text=text,
+        toc_level=True,
+        kind=kind,
+        searchable=searchable,
+        section_path=path,
+    )
+
+
+def test_search_chunks_single_for_small_searchable_section():
+    chunks = ip.search_chunks(_section("## S\n\nshort body", sid="SD/x/s"))
+    assert len(chunks) == 1
+    assert chunks[0].chunk_id == "SD/x/s" and chunks[0].section_id == "SD/x/s"
+    assert chunks[0].part == 0 and "short body" in chunks[0].text
+
+
+def test_search_chunks_empty_for_non_searchable_section():
+    assert ip.search_chunks(_section("## C\n", kind="container", searchable=False)) == []
+    assert ip.search_chunks(_section("## H\n", kind="hollow", searchable=False)) == []
+
+
+def test_search_chunks_splits_oversized_with_pN_suffix_part0_bare():
+    big = "## S\n\n" + "\n\n".join(f"Paragraph {i}: " + "word " * 80 for i in range(40))
+    chunks = ip.search_chunks(_section(big, sid="SD/x/big"))
+    assert len(chunks) > 1
+    assert chunks[0].chunk_id == "SD/x/big" and chunks[0].part == 0  # part 0 keeps the bare id
+    assert chunks[1].chunk_id == "SD/x/big#p2" and chunks[1].part == 1
+    assert all(c.section_id == "SD/x/big" for c in chunks)  # every part cites the same anchor
+
+
+def test_split_oversized_returns_single_window_when_under_threshold():
+    assert ip.split_oversized("short body\n\nanother para") == ["short body\n\nanother para"]
+
+
+def test_split_oversized_windows_large_body_preserving_all_paragraphs():
+    paras = [f"Paragraph {i}: " + "word " * 80 for i in range(40)]  # ~17 KB, over the threshold
+    text = "\n\n".join(paras)
+    windows = ip.split_oversized(text)
+    assert len(windows) > 1
+    for p in paras:  # no content dropped — every source paragraph survives in some window
+        assert any(p in w for w in windows)
+    # consecutive windows overlap by a shared block (context continuity across the boundary)
+    assert any(set(a.split("\n\n")) & set(b.split("\n\n")) for a, b in zip(windows, windows[1:]))
+    # part windows stay within a sane bound (atomic blocks aside — none here)
+    assert all(len(w) <= ip.OVERSIZED_CHUNK_CHARS for w in windows)
+
+
+def test_split_oversized_never_splits_inside_a_fence():
+    fence = "```\n" + "\n".join(f"code line {i}" for i in range(300)) + "\n```"  # one atomic block
+    text = "intro para\n\n" + fence + "\n\n" + ("word " * 2000)  # > threshold, forces a split
+    windows = ip.split_oversized(text)
+    assert len(windows) > 1
+    assert any(fence in w for w in windows)  # the whole fence lives intact in exactly one window
+
+
+def test_shred_sets_section_path_to_ancestor_chain():
+    # section_path = the ancestor-title chain (context as metadata, §14.6) — so a condensed chunk is
+    # self-interpretable. Real ancestors only (the doc-title H1 is a real heading, not fabricated).
+    secs = {s.slug: s for s in ip.shred_sections(_BODY, "ADT/ig_doc")}
+    assert secs["title"].section_path == ""  # top-level heading: no ancestors
+    assert secs["setup"].section_path == "Title"
+    assert secs["sub-step"].section_path == "Title > Setup"
+    assert secs["usage"].section_path == "Title"  # H3 closed; back to a child of the H1
+
+
+def test_shred_section_path_carries_container_title():
+    body = (
+        "## Pre-installation Considerations\n\n"
+        "### Client Requirements\n\nInstall the v32 client on each workstation before upgrade.\n"
+    )
+    secs = {s.slug: s for s in ip.shred_sections(body, "SD/x")}
+    assert secs["client-requirements"].section_path == "Pre-installation Considerations"
+
+
+def test_shred_marks_stub_leaf_searchable():
+    # a thin leaf whose content was relocated to a referent (shared boilerplate / CSV) is a STUB,
+    # not hollow — content isn't lost, so it stays searchable (reported, never penalised).
+    body = (
+        "## Standard Notice\n\n_[VA notice — shared boilerplate](_shared/boilerplate/va.md)_\n\n"
+        "## Data\n\nSee [the table](tables/table-01.csv) for the full field list.\n"
+    )
+    secs = {s.slug: s for s in ip.shred_sections(body, "SD/x")}
+    assert secs["standard-notice"].kind == "stub" and secs["standard-notice"].searchable is True
