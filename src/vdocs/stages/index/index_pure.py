@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from vdocs.kernel.markdown import (
+    FENCE_RE,
     classify_section,
     iter_headings,
     strip_tags,
@@ -20,6 +21,12 @@ from vdocs.kernel.markdown import (
 from vdocs.stages.normalize.anchors_pure import github_slug
 
 DEFAULT_TOC_DEPTH = (2, 3)
+
+# Oversized-leaf splitting (§14.6, A1 increment 3). Calibration targets (tune against the B3 golden
+# set), not magic constants: only a leaf body larger than OVERSIZED_CHUNK_CHARS is split; each
+# window aims for ~CHUNK_TARGET_CHARS, with a one-block overlap so a cross-boundary passage holds.
+OVERSIZED_CHUNK_CHARS = 8000
+CHUNK_TARGET_CHARS = 4000
 
 
 @dataclass(frozen=True)
@@ -34,6 +41,7 @@ class Section:
     toc_level: bool  # whether the heading is in-TOC at the chosen depth
     kind: str  # "container" | "ok" | "stub" | "hollow" (kernel.markdown.classify_section, §14.6)
     searchable: bool  # belongs on the search surface (FTS/embed) — containers + hollow chunks don't
+    section_path: str  # " > "-joined ancestor heading titles — context as metadata (§14.6)
 
 
 def _unique(slug: str, used: set[str]) -> str:
@@ -56,6 +64,56 @@ def _unique(slug: str, used: set[str]) -> str:
     return unique
 
 
+def _blocks(text: str) -> list[str]:
+    """Split ``text`` into paragraph blocks separated by blank lines, keeping a fenced code block
+    (``` / ~~~) atomic — its inner blank lines never break it (so a split never lands mid-fence)."""
+    blocks: list[str] = []
+    cur: list[str] = []
+    in_fence = False
+    for line in text.split("\n"):
+        if FENCE_RE.match(line):
+            in_fence = not in_fence
+            cur.append(line)
+            continue
+        if not in_fence and line.strip() == "":
+            if cur:
+                blocks.append("\n".join(cur))
+                cur = []
+            continue
+        cur.append(line)
+    if cur:
+        blocks.append("\n".join(cur))
+    return blocks
+
+
+def split_oversized(
+    text: str, *, target: int = CHUNK_TARGET_CHARS, hard: int = OVERSIZED_CHUNK_CHARS
+) -> list[str]:
+    """Split an oversized leaf body into structure-aligned windows (§14.6, A1).
+
+    Bodies ``<= hard`` are returned unchanged (``[text]``). Larger bodies are windowed on paragraph
+    boundaries — never inside a fenced code block (``_blocks`` keeps fences atomic) — each window
+    aiming for ~``target`` chars, with a **one-block overlap**: the last block of each window is
+    repeated at the start of the next so a passage spanning the boundary is not lost. No content is
+    dropped (every source block appears in some window). A single block larger than ``target`` (e.g.
+    a big table or fence) can't be split structurally, so it forms its own (over-target) window."""
+    if len(text) <= hard:
+        return [text]
+    windows: list[str] = []
+    cur: list[str] = []
+    cur_len = 0
+    for b in _blocks(text):
+        if cur and cur_len + len(b) > target:
+            windows.append("\n\n".join(cur))
+            cur = [cur[-1]]  # overlap: carry the last block into the next window
+            cur_len = len(cur[0])
+        cur.append(b)
+        cur_len += len(b)
+    if cur:
+        windows.append("\n\n".join(cur))
+    return windows
+
+
 def shred_sections(
     body: str, doc_key: str, toc_depth: tuple[int, int] = DEFAULT_TOC_DEPTH
 ) -> list[Section]:
@@ -68,10 +126,17 @@ def shred_sections(
     seen: dict[str, int] = {}
     used: set[str] = set()
     sections: list[Section] = []
+    path_stack: list[tuple[int, str]] = []  # (level, title) of the current heading's open ancestors
     for i, (idx, level, title) in enumerate(heads):
         slug = _unique(github_slug(title, seen), used)
         end = heads[i + 1][0] if i + 1 < len(heads) else len(lines)
         text = "\n".join(lines[idx:end]).strip()
+        # Ancestor-title path (same stack discipline as normalize_pure.infer_heading_levels, so the
+        # two stages agree on the tree): pop ancestors at this level or deeper, join what remains.
+        while path_stack and path_stack[-1][0] >= level:
+            path_stack.pop()
+        section_path = " > ".join(t for _, t in path_stack)
+        path_stack.append((level, title))
         # Structure-aware classification (§14.6, A1): a heading whose next heading is strictly
         # deeper is a *container* (substance lives in subsections); otherwise judge its own body
         # (the lines after the heading) by the shared substantive-token floor. Containers + hollow
@@ -89,6 +154,7 @@ def shred_sections(
                 toc_level=lo <= level <= hi,
                 kind=kind,
                 searchable=kind in ("ok", "stub"),
+                section_path=section_path,
             )
         )
     return sections
