@@ -64,6 +64,39 @@ def _unique(slug: str, used: set[str]) -> str:
     return unique
 
 
+@dataclass(frozen=True)
+class Chunk:
+    """One retrieval unit (the search/embed surface, §5.5): a searchable section's body, split if
+    oversized. ``part`` 0 keeps the bare ``section_id``; later parts get a ``#pN`` suffix. Every
+    part cites the same ``section_id`` — the anchor a hit resolves to."""
+
+    chunk_id: str
+    section_id: str
+    part: int
+    text: str
+
+
+def search_chunks(section: Section) -> list[Chunk]:
+    """Expand a section into retrieval chunks (§5.5/§14.6). A non-searchable section (container or
+    hollow) yields **none** — it is kept off the search surface. A searchable leaf yields one chunk
+    (``chunk_id == section_id``), or several windowed parts if oversized: part 0 keeps the bare
+    ``section_id`` (id stability), parts ≥1 get a ``#p{n+1}`` suffix, all citing the same anchor."""
+    if not section.searchable:
+        return []
+    windows = split_oversized(section.text)
+    if len(windows) == 1:
+        return [Chunk(section.section_id, section.section_id, 0, windows[0])]
+    return [
+        Chunk(
+            section.section_id if i == 0 else f"{section.section_id}#p{i + 1}",
+            section.section_id,
+            i,
+            w,
+        )
+        for i, w in enumerate(windows)
+    ]
+
+
 def _blocks(text: str) -> list[str]:
     """Split ``text`` into paragraph blocks separated by blank lines, keeping a fenced code block
     (``` / ~~~) atomic — its inner blank lines never break it (so a split never lands mid-fence)."""

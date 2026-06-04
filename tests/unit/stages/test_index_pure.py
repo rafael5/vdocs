@@ -94,6 +94,41 @@ def test_shred_marks_hollow_leaf_not_searchable():
     assert "empty-section" in {s.slug for s in ip.shred_sections(body, "SD/x")}  # row still present
 
 
+def _section(text, *, kind="ok", searchable=True, sid="SD/x/s", path=""):
+    return ip.Section(
+        section_id=sid,
+        slug="s",
+        title="S",
+        level=2,
+        text=text,
+        toc_level=True,
+        kind=kind,
+        searchable=searchable,
+        section_path=path,
+    )
+
+
+def test_search_chunks_single_for_small_searchable_section():
+    chunks = ip.search_chunks(_section("## S\n\nshort body", sid="SD/x/s"))
+    assert len(chunks) == 1
+    assert chunks[0].chunk_id == "SD/x/s" and chunks[0].section_id == "SD/x/s"
+    assert chunks[0].part == 0 and "short body" in chunks[0].text
+
+
+def test_search_chunks_empty_for_non_searchable_section():
+    assert ip.search_chunks(_section("## C\n", kind="container", searchable=False)) == []
+    assert ip.search_chunks(_section("## H\n", kind="hollow", searchable=False)) == []
+
+
+def test_search_chunks_splits_oversized_with_pN_suffix_part0_bare():
+    big = "## S\n\n" + "\n\n".join(f"Paragraph {i}: " + "word " * 80 for i in range(40))
+    chunks = ip.search_chunks(_section(big, sid="SD/x/big"))
+    assert len(chunks) > 1
+    assert chunks[0].chunk_id == "SD/x/big" and chunks[0].part == 0  # part 0 keeps the bare id
+    assert chunks[1].chunk_id == "SD/x/big#p2" and chunks[1].part == 1
+    assert all(c.section_id == "SD/x/big" for c in chunks)  # every part cites the same anchor
+
+
 def test_split_oversized_returns_single_window_when_under_threshold():
     assert ip.split_oversized("short body\n\nanother para") == ["short body\n\nanother para"]
 

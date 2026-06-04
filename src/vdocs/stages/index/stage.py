@@ -1,7 +1,9 @@
 """The `index` stage — text@normalized (+ consolidated grouping) → index.db (§5.5, §14.6).
 
-Builds the derived corpus index: `documents`, `doc_sections` (ALL sections, each carrying
-`is_latest`) **+ FTS5 over `is_latest` sections only — the search surface** (§14.6), and the
+Builds the derived corpus index: `documents`, `doc_sections` (ALL headings = the anchor/structure
+map, each carrying `is_latest`/`kind`/`searchable`/`section_path`), `chunks` (the retrieval units
+derived from sections — containers + hollow excluded, oversized split into `#pN`; §5.5/§14.6)
+**+ FTS5 over the `is_latest` searchable chunks — the search surface**, and the
 `entities` / `entity_mentions` tables from a generic, registry-driven recognition pass
 (`entities_pure`, no patterns in code). Every unit is keyed by a **stable id**: the section id is
 `refs.yaml`'s `<doc_key>/<slug>` (the URL-safe bundle-path form `normalize` already emits and MCP
@@ -56,10 +58,19 @@ CREATE TABLE documents (
 CREATE TABLE doc_sections (
   section_id TEXT PRIMARY KEY,
   doc_key    TEXT NOT NULL REFERENCES documents(doc_key),
-  slug TEXT, title TEXT, level INTEGER, toc_level INTEGER, is_latest INTEGER NOT NULL
+  slug TEXT, title TEXT, level INTEGER, toc_level INTEGER, is_latest INTEGER NOT NULL,
+  kind TEXT NOT NULL, searchable INTEGER NOT NULL, section_path TEXT
 );
-CREATE VIRTUAL TABLE doc_sections_fts
-  USING fts5(section_id UNINDEXED, doc_key UNINDEXED, title, body);
+CREATE TABLE chunks (
+  chunk_id   TEXT PRIMARY KEY,
+  section_id TEXT NOT NULL REFERENCES doc_sections(section_id),
+  doc_key    TEXT NOT NULL REFERENCES documents(doc_key),
+  part       INTEGER NOT NULL,
+  text       TEXT NOT NULL
+);
+CREATE VIRTUAL TABLE chunks_fts USING fts5(
+  chunk_id UNINDEXED, section_id UNINDEXED, doc_key UNINDEXED, title, section_path, body
+);
 CREATE TABLE entities (
   entity_id TEXT PRIMARY KEY, type TEXT, canonical_name TEXT, mention_count INTEGER
 );
@@ -83,7 +94,7 @@ _DOC_COLUMNS = (
 
 class IndexStage(Stage):
     name = "index"
-    description = "build index.db: documents, sections+FTS5 (is_latest only), entities (stable IDs)"
+    description = "build index.db: documents, sections (anchors), chunks+FTS5 (search), entities"
     requires = [TEXT_NORMALIZED, CONSOLIDATED, DOC_META_STAGED]
     produces = [INDEX_DOCUMENTS, INDEX_SECTIONS, INDEX_ENTITIES]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
@@ -98,8 +109,9 @@ class IndexStage(Stage):
         )
 
         documents: list[tuple] = []
-        sections: list[tuple] = []  # (section, doc_key, is_latest)
-        fts: list[tuple] = []  # (section_id, doc_key, title, body) — is_latest only
+        sections: list[tuple] = []  # one row per heading — the anchor/structure map
+        chunks: list[tuple] = []  # (chunk_id, section_id, doc_key, part, text) — search units
+        fts: list[tuple] = []  # (chunk_id, section_id, doc_key, title, section_path, body)
         ent_count: Counter = Counter()  # (entity_id, type, canonical) → mentions
         mentions: list[tuple] = []
 
@@ -127,10 +139,19 @@ class IndexStage(Stage):
                         s.level,
                         int(s.toc_level),
                         int(is_latest),
+                        s.kind,
+                        int(s.searchable),
+                        s.section_path,
                     )
                 )
                 if is_latest:  # the search surface + entity graph are anchor-only (§14.6)
-                    fts.append((s.section_id, doc_key, s.title, s.text))
+                    # Chunks are the retrieval units: containers/hollow yield none; oversized split.
+                    for c in ip.search_chunks(s):
+                        chunks.append((c.chunk_id, c.section_id, doc_key, c.part, c.text))
+                        fts.append(
+                            (c.chunk_id, c.section_id, doc_key, s.title, s.section_path, c.text)
+                        )
+                    # entities stay a section-level signal (mentions cite the anchor section_id)
                     for etype, canon in ent.extract(s.text, rules):
                         eid = f"{etype}:{canon}"
                         ent_count[(eid, etype, canon)] += 1
@@ -146,13 +167,20 @@ class IndexStage(Stage):
             )
             conn.executemany(
                 "INSERT INTO doc_sections "
-                "(section_id, doc_key, slug, title, level, toc_level, is_latest) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "(section_id, doc_key, slug, title, level, toc_level, is_latest, "
+                "kind, searchable, section_path) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 sections,
             )
             conn.executemany(
-                "INSERT INTO doc_sections_fts (section_id, doc_key, title, body) "
-                "VALUES (?, ?, ?, ?)",
+                "INSERT INTO chunks (chunk_id, section_id, doc_key, part, text) "
+                "VALUES (?, ?, ?, ?, ?)",
+                chunks,
+            )
+            conn.executemany(
+                "INSERT INTO chunks_fts "
+                "(chunk_id, section_id, doc_key, title, section_path, body) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
                 fts,
             )
             conn.executemany(
@@ -170,7 +198,7 @@ class IndexStage(Stage):
             counts={
                 "documents": len(documents),
                 "sections": len(sections),
-                "fts_sections": len(fts),
+                "chunks": len(chunks),
                 "entities": len(ent_count),
                 "mentions": len(mentions),
             }

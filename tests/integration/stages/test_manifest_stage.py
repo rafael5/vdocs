@@ -26,6 +26,7 @@ def _seed(ctx):
         """
         CREATE TABLE documents (doc_key TEXT PRIMARY KEY, is_latest INTEGER);
         CREATE TABLE doc_sections (section_id TEXT PRIMARY KEY, is_latest INTEGER);
+        CREATE TABLE chunks (chunk_id TEXT PRIMARY KEY, section_id TEXT);
         CREATE TABLE entities (entity_id TEXT PRIMARY KEY, type TEXT);
         CREATE TABLE relations (src_id TEXT, rel TEXT, dst_id TEXT);
         """
@@ -34,6 +35,8 @@ def _seed(ctx):
     conn.executemany(
         "INSERT INTO doc_sections VALUES (?, ?)", [("d1/a", 1), ("d2/a", 0), ("d3/a", 1)]
     )
+    # the search surface = chunks (one per searchable is_latest section here)
+    conn.executemany("INSERT INTO chunks VALUES (?, ?)", [("d1/a", "d1/a"), ("d3/a", "d3/a")])
     conn.executemany(
         "INSERT INTO entities VALUES (?, ?)",
         [("build:X", "build"), ("global:G", "global"), ("global:H", "global")],
