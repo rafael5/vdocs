@@ -125,7 +125,7 @@ targets** (§9), not arbitrary — they are confirmed/adjusted against the golde
 | C2 | **Structure** | heading tree preserved | heading-set recall + level accuracy + order (sequence similarity) | ≥ 0.90 | ≥ 0.97 |
 | C3 | **Tables** | the highest-risk content (data dictionaries) | table-count recall + per-table cell-text recall + row/col dimension match (incl. CSV sidecars) | ≥ 0.95 | ≥ 0.99 |
 | C4 | **Images/figures** | images and captions survive | image-count recall + caption recall + EMF/WMF→PNG success | ≥ 0.98 | 1.00 |
-| C5 | **Cross-refs & links** | references resolve | internal-ref count recall + **resolvability** (dead-anchor rate) + hyperlink recall + **TOC integrity** (accuracy / completeness / round-trip) | recall ≥ 0.90, dead-anchor ≤ 0.02, **TOC dead-anchor = 0** | ≥ 0.98, 0.00 |
+| C5 | **Cross-refs & links** | references resolve | internal-ref count recall + **resolvability** (severed-anchor rate) + hyperlink recall + **TOC integrity** (accuracy / completeness / round-trip) | recall ≥ 0.90, **severed = 0**, **TOC dead-anchor = 0** (unmapped Word-bookmark rate reported, not gated — §C5 recalibration 2026-06-04) | ≥ 0.98, 0.00 |
 | C6 | **Lists** | procedures/steps intact | list-item recall + nesting-depth preservation | ≥ 0.95 | ≥ 0.99 |
 | C7 | **Lossy-construct inventory** | constructs markdown can't natively hold | *inventory + disposition*, not a score (§13) | no `flagged-lost` | — |
 
@@ -196,11 +196,28 @@ targets** (§9), not arbitrary — they are confirmed/adjusted against the golde
       the **TOC integrity** check below specifies (every TOC entry → a real heading), generalised to
       *all* cross-references. **Hard floor: zero severed cross-refs** — any one blocks.
     - **unmapped** — the `UNRESOLVED` marker `normalize` already wrote for a Word bookmark it could
-      not map to any heading. This never resolved (it is not a *new* loss) and is already a recorded
-      fidelity signal, so it is the **measured** class: it blocks only above the C5 cross-ref
-      dead-anchor rate (≤ 0.02), not on every occurrence.
-    Keeping them apart is the point — failing on every pre-existing `UNRESOLVED` would re-flag known
-    issues rather than catch the silent severance this check exists for.
+      not map to any heading. **Recalibrated 2026-06-04 against the real 1299-doc lake** (superseding
+      the 2026-06-03 `_Toc`/`_Ref` triage, which was an unproven proxy): the bookmark *kind* does
+      **not** predict heading-resolvability the way the earlier triage assumed. Direct measurement of
+      the 533 unmapped `_Toc` refs found **480 are in-body cross-refs (not TOC entries at all), 53 are
+      TOC entries to stripped/headingless front matter, and of the 336 whose target span survives
+      conversion, 0 sit on a heading line** — they point at bold-text pseudo-headings Pandoc never
+      styled as `##`, table/figure captions, and stripped sections. So `_Toc` cross-refs are
+      **overwhelmingly non-heading targets**, exactly like `_Ref` — and a legacy-TOC title-correlation
+      fix (built, fixture-proven) recovers only ~1 of 534 on the real corpus. The earlier "≤ 0.02
+      recoverable `_Toc` rate" target is therefore **withdrawn**: it measured a class that is not, in
+      fact, recoverable from the legacy TOC.
+      - **The honest model.** `unmapped` (both `_Toc` and `_Ref`) is a single **navigation-completeness
+        metric over largely non-heading targets** — reported, never gated. The one genuinely
+        recoverable subset is the **bold pseudo-heading** (`**Bold**` carrying a `_Toc`/`_Ref` span):
+        recovered not by TOC correlation but by **heading recovery** (`normalize.recover_headings`
+        extended to fire when a doc already has headings — vdocs-design §6.7), which promotes them to
+        real `##` headings and *thereby* mints the anchor the cross-ref resolves to. That lift is
+        measured here as it lands, but it is a substrate fix, not a gate.
+    The C5 **hard floor is `severed = 0`** — a ref that *was* good now points at no live anchor (a
+    silent regression). That is the real, achievable gate (the corpus holds it today, corpus-wide).
+    `unmapped` is the reported navigation-completeness signal; it is driven down by improving heading
+    recovery + chunking (the substrate), not by chasing by-construction non-heading targets.
   - **TOC integrity (the highest-value navigation check).** Because the TOC is the primary
     navigational *and* semantic structure (vdocs-design §6.7) and is *derived from the heading tree*,
     it is scored explicitly: **accuracy** (TOC entries match the heading tree), **completeness**
@@ -243,9 +260,21 @@ the source; it must also be provable that **nothing was silently dropped on the 
 The per-bundle `capture.yaml` (vdocs-design §6.4) makes that auditable: every structure `normalize`
 lifts to a sidecar leaves a typed record (`captured` / `failed` / `absent-expected` /
 `absent-unexpected`), so a reviewer can confirm each absent sidecar is *explained* rather than merely
-missing. `history.yaml` already carries `source_sha256` + `body_sha256`; `capture.yaml` is the
-forward path to the **signed bundle manifest** (each part + its hash + its capture outcome), turning
-the whole bundle — body *and* sidecars — into a single verifiable, untampered unit.
+missing.
+
+This is realised by the **signed bundle manifest** (`bundle.yaml`, vdocs-design §6.6): `consolidate`
+writes, into each gold anchor bundle, the complete part list with each part's `sha256` + byte length,
+the folded `capture.yaml` outcomes, the member `source_sha256` provenance roots, and a `bundle_digest`
+(sha256 over the sorted `path:sha256` lines). The `validate` gate **recomputes** every part hash from
+disk, confirms the on-disk part set equals the manifest exactly, and recomputes the digest — so the
+whole bundle (body *and* sidecars) is a **verifiable, untampered unit**, not asserted: a skeptic
+re-runs the hashes and gets the same answer (the §6/§11 reproducibility-is-auditability principle
+applied to bundle completeness). "Signed" here is a verifiable **content digest** (recompute to
+verify, key-free); a *keyed* signature over `bundle_digest` is a future increment once key management
+exists. Per-stage provenance (which stage produced which artifact, by hash) is already recorded in
+`state.db:stage_runs` (`inputs_fp`/`outputs_fp`); a formal exportable in-toto/SLSA chain over it is
+deferred. `history.yaml` (`source_sha256` + `body_sha256`) remains the body↔source link; the manifest
+extends that guarantee to the bundle as a whole.
 
 ---
 
@@ -453,6 +482,17 @@ themselves trustworthy.
   and a body that is mostly hollow QUARANTINEs. Computed at the `fidelity` stage from `text@normalized`
   chunk segmentation — no source needed, so it is a pure, deterministic, T-only check (the
   `overstrip_pure` kernel), and it is the search-corpus enforcement of the §6.5 guardrail.
+  - **Calibrated baseline + the chunker dependency (2026-06-04, real 1299-doc lake).** Measured on the
+    live `index.db`: **14.2% of `is_latest` section chunks are hollow** (<80-char body — a bare heading
+    + back-link), **40.8% are thin** (<400 chars), and a few exceed 140 KB. This is **not** an
+    over-strip-of-prose defect — it is a **chunking defect**: `index_pure.shred_sections` spans each
+    heading to the next, so a *container* heading whose substance lives in subsections indexes as an
+    empty chunk. The substantive-token floor is therefore calibrated at **<80 chars of non-structural
+    body**, and the metric is only meaningful **once `shred_sections` chunks on structure**
+    (vdocs-design §14.6): merge a container heading's lead-in into its first content unit (or attach a
+    synthesized child-summary) so no *content* chunk is hollow, and split oversized leaf sections.
+    Until then `over_strip_rate` reports the chunker's hollow-container rate, which the A1 substrate fix
+    must drive to ≈ 0 **before** `embed` runs (embedding hollow chunks pollutes the ANN neighbourhood).
 - **version-correctness** — share of hits that are `is_latest`; with anchor-only indexing this should
   be ~100%, and any stale hit is a defect.
 - **answer-correctness** — for RAG-style use, whether the retrieved context supports the correct

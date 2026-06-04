@@ -136,12 +136,14 @@ to mark which member of each group is `is_latest` (design §14.6).
 
 ## 4. Verification status — honest audit (the open gap)
 
-> **Status (2026-06-03): being closed.** The recommendations in §5.1/§5.2/§5.5 are now folded into
-> the architectural source of truth (`vdocs-design.md` §6.4 typed `capture.yaml`; §8 `validate`
-> sidecar-verification slice) and `fidelity-framework.md` (C2 count reconciliation, C5 ref-resolution
-> gate). The chosen typed-absence mechanism is a **new per-bundle `capture.yaml`** (not an extension
-> of `flags.yaml`) — see §5.1 for the decision rationale. The section below describes the gap **as it
-> stood before** that work, and remains the reference for *why* each change exists.
+> **Status (2026-06-03): closed.** The recommendations in §5.1/§5.2/§5.5 **and §5.3** are folded into
+> the architectural source of truth and implemented: `vdocs-design.md` §6.4 typed `capture.yaml`, §6.6
+> signed `bundle.yaml` manifest, §8 `validate` sidecar-verification slice (typed absence + count
+> reconciliation + ref resolution + bundle integrity); `fidelity-framework.md` C2/C5/§6. The chosen
+> typed-absence mechanism is a **new per-bundle `capture.yaml`** (not an extension of `flags.yaml`) —
+> see §5.1. Only §5.4's *exportable* in-toto/SLSA attestation remains deferred (its substance — per-
+> stage artifact hashing — already lives in `state.db:stage_runs`). The section below describes the
+> gap **as it stood before** this work, and remains the reference for *why* each change exists.
 
 The caveat that motivated this note is real and was, until this work, **unmitigated**. Verification of
 sidecars was specified but **not implemented**, and a missing sidecar was therefore ambiguous
@@ -277,7 +279,13 @@ cross-refs, not just TOC entries.
 3. **§5.5** — resolve `refs.yaml` outbound links in the `validate` gate (catches the fragile-ref class).
    **— specified + implemented** (`validate` ref-resolution gate; vdocs-design §8, FF C5).
 4. **§5.3 / §5.4** — bundle manifest + per-stage attestation (raises the proof from "flagged" to
-   "verifiable"). **— deferred** (stretch; `capture.yaml` is the seed but the signed manifest is not built).
+   "verifiable"). **§5.3 — implemented:** `consolidate` writes a per-bundle `bundle.yaml` signed
+   manifest (every part + `sha256` + folded capture outcomes + `bundle_digest`); the `validate` gate
+   recomputes-to-verify (vdocs-design §6.6, §8). "Signed" = a verifiable content digest (key-free,
+   tamper-evident); keyed signing is a future increment. **§5.4 — partial:** per-stage consumed/
+   produced artifacts are already recorded by hash in `state.db:stage_runs` (`inputs_fp`/
+   `outputs_fp`) and the manifest anchors each bundle to its `source_sha256` roots + `tool_ver`; a
+   formal exportable in-toto/SLSA statement over the whole chain is **deferred**.
 
 ---
 

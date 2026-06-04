@@ -21,7 +21,7 @@ from pathlib import PurePosixPath
 from urllib.parse import urlparse
 
 from vdocs.kernel.ids import anchor_key
-from vdocs.kernel.text import repair_mojibake
+from vdocs.kernel.text import month_year_iso, repair_mojibake
 from vdocs.stages.catalog.registries import (
     AppSpecificMap,
     DocTypePattern,
@@ -51,11 +51,10 @@ ABBR_RE = re.compile(r"\s*\(([A-Z0-9/+\-]{1,10})\)\s*$")
 _SLUG_SUFFIX_RE = re.compile(r"[_\-]([a-z]{2,8})$", re.IGNORECASE)
 _SLUG_NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
-_MONTH = {
-    "JAN": "01", "FEB": "02", "MAR": "03", "APR": "04", "MAY": "05", "JUN": "06",
-    "JUL": "07", "AUG": "08", "SEP": "09", "OCT": "10", "NOV": "11", "DEC": "12",
-}  # fmt: skip
-_DATE_RE = re.compile(r"^([A-Za-z]{3})\s+(\d{4})$")
+# Catalog dates are a strict ``MON YYYY`` *field* (not free text), so the recognised shape is
+# anchored to exactly three month-letters + a year; the month→number mapping itself is the shared
+# kernel table (§9.2 — one month table for the corpus), applied via ``month_year_iso``.
+_DATE_RE = re.compile(r"^[A-Za-z]{3}\s+\d{4}$")
 
 # doc_subject cleaning artifacts
 _BARE_YEAR_RE = re.compile(r"^\d{4}$")
@@ -96,12 +95,12 @@ def apply_typo_corrections(
 
 # --- small derivations (§4.2) ----------------------------------------------
 def normalize_date(raw: str) -> str:
-    """'DEC 2019' → '2019-12'; unchanged if unrecognised."""
+    """'DEC 2019' → '2019-12'; unchanged if unrecognised. The strict ``MON YYYY`` field shape is
+    catalog-local; the month→number conversion is the shared ``month_year_iso`` (§9.2)."""
     if not raw:
         return ""
-    m = _DATE_RE.match(raw.strip())
-    if m and (mon := _MONTH.get(m.group(1).upper())):
-        return f"{m.group(2)}-{mon}"
+    if _DATE_RE.match(raw.strip()) and (iso := month_year_iso(raw.strip())):
+        return iso
     return raw
 
 

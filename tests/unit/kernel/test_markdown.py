@@ -96,6 +96,11 @@ def test_is_revision_heading_matches_every_corpus_form():
         "> **Documentation Revisions**",
         "Documentation Revision History",
         "Revisions",
+        # old-gen flat docs: the section heading is a bookmark-span line (no ATX level), the
+        # §6.7 recovery-seed shape — the detector must see through the tags (real corpus:
+        # CPRS/or_30_280ig, TIU/tiu_1_250rn) so the revision apparatus isn't silently missed.
+        '<span id="_Toc283725428" class="anchor"></span>Revision History',
+        '<span id="_Ref123"></span>Documentation Revisions',
     ):
         assert md.is_revision_heading(line), line
 

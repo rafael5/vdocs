@@ -13,9 +13,10 @@ Pure except for reading the artifacts it is asked to sign.
 from __future__ import annotations
 
 import hashlib
-import sqlite3
 from collections.abc import Iterator
 from pathlib import Path
+
+from vdocs.kernel import db
 
 _CHUNK = 1 << 16
 
@@ -60,7 +61,7 @@ def tree_fingerprint(path: Path, *, verify: bool = False) -> str:
 
 def sqlite_fingerprint(db_path: Path, table: str, *, verify: bool = False) -> str:
     """Signature of a SQLite table. Cheap = row count; strong = sha256 of all rows."""
-    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    conn = db.connect(db_path, read_only=True)
     try:
         if not verify:
             (count,) = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()

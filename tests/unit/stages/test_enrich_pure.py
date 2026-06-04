@@ -137,6 +137,24 @@ def test_normalize_date_and_split_ver():
     assert ep.split_patch_ver("") == ("", "")
 
 
+def test_normalize_date_uses_shared_kernel_month_table():
+    """§9.2: ``normalize_date`` must derive its month→number mapping from the shared
+    ``kernel.text.month_year_iso`` (one month table for the corpus), not a private copy — while
+    keeping catalog's strict ``MON YYYY`` anchoring (a date *field*, not a free-text search)."""
+    from vdocs.kernel.text import month_year_iso
+
+    # every recognised three-letter month agrees with the kernel primitive
+    for raw in ("JAN 2001", "Jun 2018", "dec 2019", "MAY 2020"):
+        assert ep.normalize_date(raw) == month_year_iso(raw)
+    # anchored-only: a month embedded in a longer string is NOT a date field → unchanged
+    assert ep.normalize_date("Released DEC 2019 build") == "Released DEC 2019 build"
+    # a 4+ letter spelling is not the strict MON-YYYY field shape → unchanged
+    assert ep.normalize_date("March 2019") == "March 2019"
+    # anchored shape but not a real month → unchanged (not coerced)
+    assert ep.normalize_date("ABC 2019") == "ABC 2019"
+    assert ep.normalize_date("") == ""
+
+
 def test_classify_noise(reg):
     assert ep.classify_noise("https://www.vba.va.gov/forms/x.pdf", reg.vba_form_hosts) == "vba_form"
     assert (

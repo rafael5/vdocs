@@ -107,10 +107,14 @@ def heading_furniture_text(line: str) -> str:
 
 def is_revision_heading(line: str) -> bool:
     """True when ``line`` is a revision-history section header in **any** corpus form — ATX, bold,
-    blockquote-bold, or a bare plain line (§6.4). A descriptive sentence that merely opens with the
-    words is rejected (its normalised text isn't one of the curated headings), so the proximity
-    guard never mistakes prose for a section header."""
-    return heading_furniture_text(line) in REVISION_HEADING_TEXTS
+    blockquote-bold, a bare plain line, or the **old-gen bookmark-span** line
+    (``<span id="_Toc…"></span>Revision History``) that flat Pandoc output emits for an unstyled
+    heading (§6.4/§6.7 recovery-seed shape). HTML tags are stripped first, so the section is
+    recognised at *extraction* time — before heading recovery promotes it to an ATX heading — and
+    the revision apparatus is captured or flagged, never silently left in the body. A descriptive
+    sentence that merely opens with the words is still rejected (its normalised text isn't one of
+    the curated headings), so the proximity guard never mistakes prose for a section header."""
+    return heading_furniture_text(strip_tags(line)) in REVISION_HEADING_TEXTS
 
 
 def is_legacy_toc_entry(line: str) -> bool:

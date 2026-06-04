@@ -1,10 +1,12 @@
-"""Curated-registry YAML loader — the single shared reader (§9.2/§11).
+"""YAML-mapping loader — the single shared reader for any curated/sidecar mapping (§9.2/§11).
 
-Every stage that consumes a ``registries/*.yaml`` config (``catalog`` vocabularies,
-``convert`` routing, ``normalize`` phrases/boilerplate/templates/structures) read it with
-the same ``exists?→read_text→yaml.safe_load or {}`` dance. A primitive used by ≥2 stages
-lives in the kernel, not copy-pasted per stage — so the open/guard/parse boilerplate lives
-here once. Each stage keeps only its own *shape* extraction over the returned mapping.
+Every stage that reads a YAML *mapping* off disk — a ``registries/*.yaml`` config (``catalog``
+vocabularies, ``convert`` routing, ``normalize`` phrases/boilerplate/templates/structures/entities)
+**or** a per-bundle sidecar (``history.yaml``, ``refs.yaml``, ``bundle.yaml`` …) — does the same
+``exists?→read_text→yaml.safe_load or {}`` dance. A primitive used by ≥2 stages lives in the kernel,
+not copy-pasted per stage — so the open/guard/parse boilerplate lives here once. Each caller keeps
+only its own *shape* extraction over the returned mapping (and composes ``or None`` itself when it
+needs to distinguish an empty/absent file from a populated one).
 
 Pure-ish I/O boundary: it reads one file and returns a plain ``dict``. ``missing_ok=True``
 turns an absent file into an empty mapping (a curated registry not yet populated → a no-op);

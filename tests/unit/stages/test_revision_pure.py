@@ -249,3 +249,31 @@ def test_revision_sidecar_summary_and_records():
     assert side["revision_count"] == 2
     assert side["revision_newest"] == "2024-03" and side["revision_oldest"] == "2020-01"
     assert side["revisions"][0]["change"] == "Updated install steps"
+
+
+def test_old_gen_bookmark_span_revision_heading_is_captured():
+    # Real-corpus bug (CPRS/or_30_280ig, TIU/tiu_1_250rn): flat Pandoc output where the revision
+    # section is an unstyled bookmark-span line, NOT an ATX heading. The detector must recognise it
+    # (tags stripped) at extraction time so the apparatus is captured, not left in the body.
+    body = (
+        '<span id="_Toc283725428" class="anchor"></span>Revision History\n\n'
+        "<table><tr><th>Date</th><th>Version</th><th>Description</th></tr>"
+        "<tr><td>09/2009</td><td>28</td><td>Initial CPRS GUI v28 release</td></tr></table>\n\n"
+        '<span id="_Toc283725429" class="anchor"></span>Introduction\n\nbody text\n'
+    )
+    cleaned, records, flag = rev.extract_revision_history(body)
+    assert flag is None and len(records) == 1
+    assert records[0].change == "Initial CPRS GUI v28 release"
+    assert "<table" not in cleaned and "Revision History" not in cleaned  # apparatus stripped
+    assert "Introduction" in cleaned  # the rest of the flat doc is untouched
+
+
+def test_old_gen_revision_heading_without_table_is_flagged_not_silent():
+    # the fail-safe must also see the bookmark-span heading: a revision section with no parseable
+    # table is retained + flagged, never silently dropped (§6.4 capture-before-strip).
+    body = (
+        '<span id="_Toc1" class="anchor"></span>Revision History\n\n'
+        "Some prose about revisions, but no parseable table here.\n"
+    )
+    cleaned, records, flag = rev.extract_revision_history(body)
+    assert records == [] and flag == rev.REVISION_UNPARSED_FLAG

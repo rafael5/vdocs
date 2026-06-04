@@ -466,6 +466,39 @@ def test_correlate_legacy_toc_flags_unresolved_entries():
     assert unresolved == ["#_Toc55", "#missing"]  # #introduction resolves; the others don't
 
 
+def test_correlate_bookmarks_by_title_recovers_dropped_span():
+    # Pandoc dropped the heading's `_Toc` span, so `parse_headings` captured the heading with no
+    # bookmark; the legacy TOC still records `_Toc200 ↔ "Configuration"`. Composing it with the
+    # derived `title → slug` recovers `_Toc200 → configuration` (§6.7). `_Toc99` ("Ghost") has no
+    # heading counterpart, so it stays unrecovered; a direct-slug anchor is skipped (not a bookmark)
+    headings = nz.parse_headings("# Manual\n\n## Configuration\n\nsettings\n")
+    entries = [
+        nz.LegacyTocEntry("Configuration", "5", "#_Toc200"),
+        nz.LegacyTocEntry("Ghost", "9", "#_Toc99"),
+        nz.LegacyTocEntry("Manual", "1", "#manual"),  # already a direct slug, not a bookmark
+    ]
+    assert nz.correlate_bookmarks_by_title(entries, headings) == {"_Toc200": "configuration"}
+
+
+def test_normalize_body_recovers_dropped_bookmark_via_legacy_toc():
+    # The end-to-end win: an in-body cross-ref `](#_Toc200)` whose heading lost its bookmark span
+    # must now resolve to the heading slug by legacy-TOC title correlation — not stay UNRESOLVED
+    # (the recoverable, C5-bounded class; §6.7, FF C5).
+    body = (
+        "Table of Contents\n\n"
+        "[Configuration [5](#_Toc200)](#_Toc200)\n\n"
+        "# Manual\n\n"
+        "See [the config section](#_Toc200) for details.\n\n"
+        "## Configuration\n\nsettings\n"
+    )
+    out, amap = nz.normalize_body(body, frozenset(), toc_titles=_TOC_TITLES)
+    assert amap.outbound["_Toc200"] == "configuration"  # recovered, not UNRESOLVED
+    assert "](#configuration)" in out  # the in-body cross-ref was rewritten to the slug
+    assert "#_Toc200" not in out  # no dangling Word bookmark left in the body
+    assert amap.toc_unresolved == []  # recovered ⇒ no longer flagged as a lost legacy anchor
+    assert {e["title"]: e["resolved"] for e in amap.legacy_toc}["Configuration"] is True
+
+
 def test_normalize_body_strips_plain_text_legacy_toc_and_records_unresolved():
     body = (
         "Table of Contents\n\n"

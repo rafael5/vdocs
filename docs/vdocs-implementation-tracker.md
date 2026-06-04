@@ -24,17 +24,33 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 
 ## Overall status
 
-**Pipeline stages (§8): 12 ✅ · 0 ◐ · 7 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
-counted separately below). Last updated **2026-06-02**. **Phases 1–3 complete and merged to `master`**
-(PRs #3/#4/#5) — inventory medallion + gated bronze + the full document-silver pipeline, run
-end-to-end on a real 469-doc VA corpus; the pre-Phase-4 hardening pass (reliability R1–R9 [R4 split
-out], redundancy D1–D5, the `revisions.yaml` rename, drift-doc reconciliation, a 7-invariant property
-suite + branch coverage) is **fast-forwarded onto `master`** (`e725f5a`). **Phase 4 COMPLETE** on
-branch `feat/phase-4-gold-derive` (not yet merged): the gold-derive layer `consolidate` ✅ (§6.6
-version rollup) → `index` ✅ (§5.5/§14.6 derived index) → `relate` ✅ (§8 knowledge graph) → `manifest`
-✅ (§14.4 MCP front door), regenerated on the real 469-doc lake (no re-fetch) and a no-`--force`
-re-run SKIPs all four. `make check` green (**524 tests, branch cov 99.7% / gate ≥95%**, ruff+mypy
-clean). **Next: Phase 5 `fidelity`.**
+**Pipeline stages (§8): 13 ✅ · 1 ◐ · 5 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
+counted separately below). Last updated **2026-06-04** (status audit). **Phases 1–4 complete; Phase 5
+in progress** on branch `feat/phase-5-sidecar-verification` (**not yet merged** to `master`; far ahead
+of it). Phases 1–3 merged to `master` (PRs #3/#4/#5); Phase 4 (`consolidate`→`index`→`relate`→
+`manifest`) ✅; Phase 5 so far = the **`validate` HARD GATE** ✅ (sidecar-verification slice — typed
+absence · count reconciliation · ref resolution · signed-bundle integrity) **plus a full gold-cleanup
+remediation pass** (title-page/revision-history/legacy-TOC strip-with-capture, §6.3/§6.4/§6.7).
+
+**The lake has been expanded and fully re-run since the prior update: 469 → 1299 docs / 290 → 409
+version groups.** The whole pipeline `crawl`→…→`validate` ran green on the 1299-doc lake on
+**2026-06-03** (convert 1301 docs/23 185 assets; normalize 1299; consolidate 409 groups; index 1299
+docs/70 613 sections/24 999 FTS; relate 46 263 edges; manifest 1299 docs/409 groups, semantic
+unavailable; **validate gate PASSES** — `blocking=false`, `severed=[]`, `reconcile_findings=[]`,
+`bundle_findings=[]`, the only soft signal is the known `_Toc` ref-resolution gap, unmapped_rate 0.76).
+Gold cleanup audit (290-doc baseline): legacy title page 256→5, revision-history 202→23, legacy TOC
+226→1, "clean on all three" 9→**263/290 (91%)**, every residual carries a `flags.yaml` (zero silent
+residue). `make check` green (**681 tests, coverage 98.71% / gate ≥95%**, ruff+mypy clean). Uncommitted
+WIP: the code-review Stage-4 §9.2 follow-ups (read-only-URI single-sourcing, `_MONTH`→kernel,
+`load_mapping` widening) + refs-metric refinements — all 681 tests green.
+**Next (REPLANNED 2026-06-04 → substrate-first; see [`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md)
++ the Phases 5–6 workstreams below).** The real-corpus run showed the validate gate passing over a
+*weak* search surface (14.2% hollow chunks, 4 entity types, no semantic mode), and disproved the C5
+`_Toc`-recovery hypothesis (the `_Toc` fix `f6e4767` recovers ~1/534; unmapped refs are non-heading by
+construction, `severed`=0 is the real floor). Spec amended doc-first (C5 · concrete chunking · entity
+coverage · tenet #14). **Build order is now substrate → measure → gate:** start **A1 structure-aware
+chunking + A2 heading-recovery-v2 + a B3 retrieval-quality baseline**, then A3 entities → B1 fidelity →
+D1 embed → C gate → publish. A gate certifies discoverability; it cannot create it.**
 
 | Phase | Title | Status | Progress |
 |---|---|:--:|:--:|
@@ -42,8 +58,7 @@ clean). **Next: Phase 5 `fidelity`.**
 | 2 | Inventory medallion + doc-bronze | ✅ | 4/4 |
 | 3 | Silver — document text (convert·discover·enrich·normalize) | ✅ | 4/4 |
 | 4 | Gold derive (consolidate·index·relate·manifest) | ✅ | 4/4 |
-| 5 | Gold deliver (fidelity·publish·validate·push·analyze) | ◐ | validate sidecar-slice ◐ |
-| 6 | Machine interface (embed·serve-mcp) | ☐ | 0/2 |
+| 5–6 | **Deliver + Machine interface — REPLANNED substrate-first** (A chunking/headings/entities → B measure → C gate → D embed/serve/publish) | ◐ | validate ✅ · fidelity ◐ · substrate A/B/C/D ☐ |
 | 7 | Harden (property·--verify·gc·docs-gen·replay·refresh) | ◐ | 2◐·1⬚·3☐ |
 
 ## Phase / stage summary
@@ -88,22 +103,59 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
 | relate | 🥇 DOC | ✅ | §8 | index.db → relations (graph) |
 | manifest | 🥇 DOC | ✅ | §14 | → corpus-manifest + discovery |
 
-**Phase 5 — Gold deliver** ◐ 0✅·1◐·4☐
+**Phases 5–6 — Deliver + Machine interface — REPLANNED 2026-06-04 (substrate-first).** The old
+linear order (`fidelity → publish → validate → push`, then `embed → serve-mcp`) is **superseded** by
+the **substrate-first** workstreams below, per **tenet #14** (discoverability is built upstream of the
+gate, then measured) and the real-corpus findings in
+[`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md). The stages still exist; what
+changed is the *order* and the addition of explicit substrate-fix + measurement work the linear plan
+assumed away. The validate gate already passing on 1299 docs is **not** the finish line — it certifies
+a search surface that is currently weak (14.2% hollow chunks, 4 entity types, no semantic mode).
 
-| Stage | Layer | St | Ref | Goal |
-|---|:--:|:--:|---|---|
-| fidelity | 🥇 DOC | ☐ | FF | → reports/fidelity (S→T) — full axes still TODO |
-| publish | 🥇 DOC | ☐ | §8 | → publish (md tree + INDEX) |
-| validate | 🥇 DOC | ◐ | §7.3 | **HARD GATE** — sidecar-verification slice ✅ (typed-absence · count-reconcile · ref-resolution); schema · IDs · fidelity-verdict TODO |
-| push | 🚀 DOC | ☐ | §6.6 | publish → git (+ lineage) |
-| analyze | ⬩ DOC | ☐ | §8 | → reports (off path) |
+*Stage status (inventory):* validate ✅ (gate built/wired/**passes**: typed-absence · count-reconcile ·
+ref-resolution · signed-bundle integrity; schema · ID · fidelity-verdict axes still to fold in) ·
+fidelity ◐ (pure oracles `compliance_pure`/`overstrip_pure` exist, **not DAG-wired**) · publish ☐
+(no `publish/` dir, no publish tree) · push ☐ · analyze ☐ · embed ☐ · serve-mcp ☐. *Built since the
+prior update (all on `feat/phase-5-sidecar-verification`, unmerged): the gold-cleanup remediation
+`01df238`→`8f3e6ed` and the validate gate + signed manifest `982046c`→`8f8cfc3`; the `_Toc`-correlation
+fix + spec/plan reframe `f6e4767`→ this commit.*
 
-**Phase 6 — Machine interface** ☐ 0/2
+**Workstream A — Fix the retrieval substrate (highest leverage; gates everything downstream).**
 
-| Stage | Layer | St | Ref | Goal |
-|---|:--:|:--:|---|---|
-| embed | 🥇 DOC | ☐ | §14.6 | doc_sections → vectors.db (ANN) |
-| serve-mcp | 🥇 DOC | ☐ | §14 | → MCP (sem+lex+struct+graph) |
+| ID | St | Where | Task |
+|---|:--:|---|---|
+| **A1** | ☐ | `index/index_pure.shred_sections` | **Structure-aware chunking** (§14.6 concrete contract): never emit a hollow content chunk (fold a container heading's lead-in into its first child / synthesized summary), bound oversized leaf chunks (split w/ overlap, stable `section_id` suffix), carry context as metadata. **Target: ≈0% hollow** (baseline 14.2%). Re-index + re-measure. |
+| **A2** | ☐ | `normalize/recover_headings` | **Heading recovery v2**: promote `**bold**`+`_Toc`/`_Ref`-span pseudo-headings to real `##` **even when the doc already has headings** (the disproven-`_Toc` finding); give the 24 structureless `is_latest` docs a tree. Side effect: recovers the genuinely-recoverable cross-ref subset + improves the human TOC. |
+| **A3** | ☐ | `registries/entities` + `entities_pure` | **Entity depth + denoise**: seed the missing high-value VistA types (RPCs, options, routines, protocols, HL7 segments, mail groups, build/patch); **de-weight/demote ubiquitous raw globals** from the primary discovery surface (keep as evidence). Largest lift for structured+graph discovery. |
+
+**Workstream B — Measure it (the throughline; prove the lift, don't assert it).**
+
+| ID | St | Where | Task |
+|---|:--:|---|---|
+| **B1** | ☐ | new `fidelity` stage (wire `overstrip_pure`/`compliance_pure`) | **T-only fidelity record first** (FF §12 shape): hollow/over-strip rate, heading-tree sanity, TOC integrity, template self-conformance, capture completeness — deterministic, no source needed. Cheap, immediate signal. |
+| **B2** | ☐ | new pipeline-independent DOCX extractor | **Source-anchored `S→T` recall** (FF C1/C3/C4 via `python-docx`): token / table-cell / image recall. The institutional proof. Heavier; after the substrate is good. |
+| **B3** | ☐ | new retrieval-quality harness (FF §10.5) | **Golden query set** (50–100 labeled: factual · entity/file-number · cross-doc · version-sensitive) → precision@k / nDCG / **redundancy@k** / **version-correctness**; **ablation** with/without condensation. Run after each A-fix to turn it into a measured number. |
+
+**Workstream C — Gate honestly (`validate`, extend the existing gate).**
+
+| ID | St | Where | Task |
+|---|:--:|---|---|
+| **C1** | ☐ | `validate/refs_pure` + FF (done doc-side) | **C5 recalibration** already amended in the spec (severed=0 floor; unmapped = reported navigation-completeness, not a recoverability target). Align the code's metric labels/report to match. |
+| **C2** | ☐ | `validate` + frontmatter schema | **Frontmatter schema gate + ID/anchor integrity** (design: non-optional before `push`); then **consume the B1 fidelity verdict** (PASS / REVIEW-w-signoff / QUARANTINE blocks). |
+
+**Workstream D — Semantic layer + serving (after A1, so we never embed hollow chunks).**
+
+| ID | St | Ref | Task |
+|---|:--:|---|---|
+| **D1 embed** | ☐ | §14.6 | `doc_sections` (`is_latest`) → `vectors.db` (ANN over anchor-only chunks); model id+version gates the DB. B3 then measures semantic vs lexical vs hybrid. |
+| **D2 serve-mcp** | ☐ | §14 | MCP server fusing semantic + lexical + structured + graph (RRF); resources/tools/prompts over the stable-ID scheme. |
+| **publish/push** | ☐ | §8/§6.6 | human GitHub tree + INDEX (resolves `_shared/` depth, §5.3) → git, **after** A1/A2 (publish bakes the navigation the substrate fixes produce). |
+
+**Sequence (critical path):** **A1 + A2 + B3-baseline first** (highest leverage, no external dep,
+improve human TOC *and* machine chunks together; B3 makes every later change a number) → **A3** →
+**B1** → **D1 embed** → **B3 semantic/ablation** → **C** gate → **publish/push**. **B2** (independent
+source recall) and the full FF §9 human-calibration are the institutional-grade tail — staged after the
+substrate is good, so calibration isn't run against a weak surface.
 
 **Phase 7 — Harden** ◐ 2◐·1⬚·3☐
 
@@ -134,6 +186,15 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
   `registries/structures` but **not yet applied** (the `toc` consumer shipped; these are their own increment).
 - `normalize` — template-governed **TOC depth** is still the **H2–H3 fallback** (§6.7) until
   `registries/templates` depth is consumed (seam marked in `anchors_pure`/`stage.py`).
+- `normalize` — **`_Toc`→heading legacy-TOC-correlation recovery** (the C5 resolvability gap; triage
+  2026-06-03). ~0.76 of `_Toc…` cross-refs are `UNRESOLVED` (534 of 705 on the 1299-doc lake)
+  because Pandoc drops some heading
+  bookmark spans, so `anchors_pure` can't capture a `_Toc…` span on the heading line. The mapping is
+  recoverable: the legacy TOC (already captured to `toc.yaml`) records `_Toc… ↔ heading-title`, and
+  the title → the github slug — so an `anchors_pure` pass could correlate bookmark→title→slug and
+  resolve these refs. Not built; `validate` now reports `_Toc` (C5-bounded) and `_Ref`
+  (expected-unmapped, non-heading) separately so the metric is honest. The `_Ref` class (~64% of
+  unmapped) is expected-by-construction (figures/tables/spans) and stays unmapped.
 - Phase 7 — extend **property tests** to `enrich` + remaining `normalize` transforms; exercise `--verify` e2e.
 - `normalize` — **`github_slug` global-uniqueness:** `anchors_pure.github_slug` uses GitHub's per-base
   `-N` rule, which can collide a repeated heading's suffixed slug with a literal same-named heading
@@ -158,9 +219,12 @@ anchor document + append-only `history.yaml` lineage — then `index`→`relate`
 [`docs/prompts/next-session-phase-4-kickoff.md`](prompts/next-session-phase-4-kickoff.md).
 
 **Dependency spine:** Phase 1 ⇒ Phase 2 (crawl→catalog→serve-inventory→**gate**→fetch) ⇒ Phase 3
-(convert→discover→enrich→normalize) ⇒ Phase 4 (consolidate→index→relate→manifest) ⇒ Phase 5
-(fidelity→publish→validate→push) ⇒ Phase 6 (embed→serve-mcp) ⇒ Phase 7 (harden). The `validate` hard
-gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
+(convert→discover→enrich→normalize) ⇒ Phase 4 (consolidate→index→relate→manifest) ⇒ **Phases 5–6
+(REPLANNED substrate-first, 2026-06-04):** A (chunking·heading-recovery·entities) → B (fidelity·source-recall·
+retrieval-harness) → C (gate) → D (embed·serve-mcp·publish/push) ⇒ Phase 7 (harden). The old linear
+`fidelity→publish→validate→push` then `embed→serve-mcp` order is superseded (tenet #14: substrate →
+measure → gate). The `validate` hard gate remains the deliver-side analogue of the `serve-inventory`
+gate, but it now **certifies** the substrate A/B produce — it does not stand in for them.
 
 ---
 
@@ -272,6 +336,98 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-04** — **Phases 5–6 REPLANNED substrate-first + doc-first spec amendments (the v1→v2
+  reframe).** After the real-corpus audit + the disproven C5 hypothesis, decided (with the maintainer)
+  *not* to rewrite the sound spec but to **amend it surgically + rewrite the build plan + keep the
+  code**. Landed, doc-only: (1) **[`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md)**
+  (`bc6a0bd`) — the synthesis/decision record (what real data confirmed vs corrected; the substrate-first
+  principle; the scope decision). (2) **Spec amendments** (`77accc4`): `fidelity-framework.md` C5
+  recalibrated (severed=0 floor; unmapped = reported navigation-completeness over non-heading targets;
+  the ≤0.02 `_Toc` target withdrawn) + §10.5 over-strip calibrated to the 14.2%-hollow baseline;
+  `vdocs-design.md` §14.6 concrete chunking contract + §8 entity-coverage build requirement + **tenet
+  #14** (discoverability is built upstream of the gate, then measured). (3) **This tracker**: Phases 5–6
+  rewritten into the substrate-first workstreams **A** (chunking·heading-recovery·entities) → **B**
+  (T-only fidelity·source-recall·retrieval-harness) → **C** (gate) → **D** (embed·serve-mcp·publish),
+  superseding the old linear `fidelity→publish→validate→push`/`embed→serve-mcp` order; summary table +
+  dependency spine + header recommendation updated. **Critical path:** A1 chunking + A2 heading-recovery
+  + B3 retrieval baseline first. No code changed in the reframe; `make check` still green at 683.
+- **2026-06-04** — **`_Toc` bookmark-correlation fix built + real-data finding that the C5 recovery
+  hypothesis is wrong (`f6e4767`, TDD).** Implemented the documented-but-unbuilt §6.7/FF-C5 remediation:
+  `normalize_pure.correlate_bookmarks_by_title` composes the legacy TOC's `bookmark ↔ title` (toc.yaml)
+  with the derived `title → slug` to recover heading bookmarks conversion dropped, threaded through
+  outbound resolution + the legacy-TOC resolved/unresolved views (refs.yaml stays consistent; inline
+  spans win via setdefault). +2 unit tests; `make check` green (**683 tests, 98.71%**). **Then validated
+  on the real 1299-doc lake (`run --from normalize --to validate --force`) — and it recovers only ~1 of
+  534 (unmapped 534→533).** Corpus analysis: of 533 unmapped `_Toc` refs, **480 are in-body cross-refs
+  (not TOC entries) and 53 are TOC entries to stripped/headingless front matter**; of the 336 whose target
+  span survives conversion, **0 are on a heading line** — they point at bold-text pseudo-headings Pandoc
+  rendered as `**bold**` (e.g. `**Reminder Location List Menu**`), table/figure captions, and stripped
+  sections (Revision History / List of Figures). None are GitHub heading anchors, so the C5 "unmapped"
+  rate (0.76) is measuring a largely-unrecoverable class. `severed` stays **0** (the real silent-loss
+  floor is sound). **Next remediation is A (recalibrate C5 doc-first → expected-unmapped) or B (extend
+  `recover_headings` to promote `**bold**`+`_Toc`-span paragraphs to headings).** The correlation fix is
+  kept — correct + harmless, recovers genuine cases where they exist; the finding is the deliverable.
+- **2026-06-04** — **Whole-pipeline status audit + corpus-quality assessment (tracker reconciliation).**
+  Audited the running lake vs. this tracker (which had drifted: it framed a 469-doc / 290-group / Phase-4
+  state and "524 tests"). **Reality on disk:** the lake was expanded to **1299 docs / 409 version groups**
+  and the full pipeline (`crawl`→`validate`) re-run green on **2026-06-03**; `feat/phase-5-sidecar-verification`
+  carries a complete **gold-cleanup remediation** (title/revhist/legacy-TOC) *and* the **`validate` HARD GATE**
+  beyond what the tracker recorded — none merged to `master`. `make check` green at **681 tests / 98.71%**.
+  Reconciled the Overall-status block, the Phase-5 detail table, and the phase summary above.
+  **Corpus state & quality:** silver 1299/1299 normalized; gold derive complete; the validate gate **passes**
+  (`severed=[]`, reconcile 0, bundle 0); gold-cleanup audit shows **91% of docs clean** on all three legacy
+  artifacts with zero silent residue (every residual flagged). **Coverage of the genuine in-scope DOCX
+  inventory (3 728 docx; pipeline is DOCX-only §1): 1299 docs = 35%, 409/764 version-groups = 53%, 140/175
+  apps = 80%** — by section: Clinical 1007/2544 (40%), Infrastructure 163/235 (69%), Financial-Admin 78/643
+  (12%), GUI-Hybrids 50/305 (16%), Monograph 1/1. The corpus is a deliberate, representative *selection*
+  (CPRS+clinical, pharmacy family, tier-2, 6-package — the `select-*.txt` sets), not full coverage; not a bug.
+  **Single biggest quality gap:** the known **`_Toc` cross-ref resolution** — 534/705 `_Toc…` refs UNRESOLVED
+  (unmapped_rate 0.76, above the C5 ≤0.02 target) because Pandoc drops heading bookmark spans; recoverable in
+  `normalize` via legacy-TOC title→slug correlation (`toc.yaml` already captures `_Toc↔title`). It degrades
+  in-corpus navigation but does **not** block the gate. **Recommendation: close the `_Toc` gap in `normalize`
+  before building `publish`** (publish bakes the navigation links into the human tree), then proceed
+  `publish`→`push`. Secondary: land the uncommitted code-review §9.2 WIP and merge the branch; widen the
+  `fidelity` oracles into a wired stage. No code changed in this audit; doc-only reconciliation.
+- **2026-06-03** — **Phase 5 ref-resolution recalibration: split the C5 unmapped metric (`_Toc`
+  recoverable vs `_Ref` expected), doc-first + TDD.** A real-lake triage of the validate gate's 88%
+  unmapped-ref rate (1378/1549 on the 1299-doc lake) found the old "~92% expected" framing
+  **miscalibrated**: it conflated two classes. `_Ref…` cross-refs (~64% of unmapped) target
+  **non-heading** objects (figures/tables/numbered items/page spans) — 0 of 844 ever resolve;
+  unmappable to a heading anchor by construction → now classified **expected-unmapped**, reported but
+  **outside** the C5 rate. `_Toc…` cross-refs (TOC fields → headings) are the **C5-bounded,
+  recoverable** class — ~0.76 unmapped today (534/705) because Pandoc drops some heading bookmark spans (so
+  `anchors_pure` captures nothing inline), but reconstructible from the legacy TOC (`_Toc… ↔ title`
+  in `toc.yaml`): logged as a `normalize` legacy-TOC-correlation follow-up. **Code (TDD):**
+  `refs_pure` gains `EXPECTED_UNMAPPED` + a `_Toc`-prefix split in `resolve_refs`; `validate`'s report
+  splits `unmapped_count` (the `_Toc` C5 class) from `expected_unmapped_count` and computes
+  `unmapped_rate` over the heading-targeting universe (`outbound_total − expected_unmapped`); **gate
+  blocking behaviour unchanged** (still severed + reconcile + bundle only). **Doc-first:**
+  `vdocs-design.md` §8 validate row + §8 notes, `fidelity-framework.md` C5. Tests: +1 refs_pure unit,
+  +1 validate integration, property test updated to exercise both UNRESOLVED branches. `severed: []`
+  confirmed corpus-wide (the hard floor is sound; only the aggregate metric was wrong).
+- **2026-06-03** — **Code-review Stage 4 + Theme-1 kernel-adoption cleanup (§9.2), TDD.** Full
+  six-reviewer compliance/quality/reliability/coherency pass (no CRITICAL/HIGH) captured in
+  [`docs/code-review-stage4.md`](code-review-stage4.md), with the follow-up plan in
+  [`docs/prompts/code-review-stage-4-plan.md`](prompts/code-review-stage-4-plan.md). Closed the §9.2
+  findings: read-only SQLite URI single-sourced through `kernel.db.connect` (`fingerprint.py`,
+  `models/artifact.py`; locked by an architectural guard test), catalog's private `_MONTH` table
+  folded onto `kernel.text.month_year_iso` (behaviour-preserving), and `kernel.registry.load_mapping`
+  widened to any YAML mapping with the six inline sidecar reads in
+  `consolidate`/`index`/`validate` repointed onto it.
+- **2026-06-03** — **Phase 5 Step 4: signed bundle manifest (§5.3) + per-stage attestation note
+  (§5.4), TDD.** Raises the proof from "flagged" to "verifiable." New pure `kernel/bundle.py`
+  (`build_manifest` — part list + per-part `sha256`/bytes + folded capture outcomes + `source_sha256`
+  roots + `bundle_digest` = sha256 over sorted `path:sha256`; `verify_manifest` — recompute vs disk →
+  typed integrity findings: missing/extra part, hash mismatch, digest mismatch). `consolidate` writes
+  `bundle.yaml` into each anchor bundle **last** (it manifests every *other* part, never itself).
+  `validate` gains a 4th gate behavior — **bundle integrity**: for each `consolidated` anchor bundle,
+  recompute every part hash, confirm the part set matches `bundle.yaml` exactly, recompute the digest;
+  any mismatch (tamper/incompleteness) blocks. `validate.requires` += `CONSOLIDATED` (§8). **"Signed" =
+  a verifiable content digest** (key-free, tamper-evident); a keyed GPG/cosign signature over
+  `bundle_digest` is a future increment. **§5.4 (partial):** per-stage consumed/produced artifact
+  hashes already live in `state.db:stage_runs` (`inputs_fp`/`outputs_fp`); the manifest anchors each
+  bundle to its `source_sha256` roots + `tool_ver`; a formal exportable in-toto/SLSA chain is deferred.
+  Doc-first: `vdocs-design.md` §6.6/§8, `fidelity-framework.md` §6, `doc-sidecar-design.md` §4/§5.6.
 - **2026-06-03** — **Phase 5 STEP 0 (doc-first): sidecar-verification design folded into the source of
   truth.** Implements the [`doc-sidecar-design.md`](doc-sidecar-design.md) §5 recommendations §5.1/§5.2/
   §5.5 (the typed-absence / count-reconciliation / ref-resolution gap, §4 of that note). **Mechanism

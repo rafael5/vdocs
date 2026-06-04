@@ -38,7 +38,7 @@ from vdocs.kernel.markdown import (
     iter_headings,
     strip_tags,
 )
-from vdocs.kernel.text import block_key
+from vdocs.kernel.text import block_key, github_slug_base
 from vdocs.stages.normalize.anchors_pure import (
     DEFAULT_TOC_DEPTH,
     Heading,
@@ -67,6 +67,7 @@ __all__ = [
     "legacy_toc_entries",
     "legacy_toc_targets",
     "correlate_legacy_toc",
+    "correlate_bookmarks_by_title",
     "strip_existing_toc",
     "build_toc",
     "effective_toc_depth",
@@ -427,6 +428,33 @@ def correlate_legacy_toc(targets: list[str], headings: list[Heading]) -> list[st
     return unresolved
 
 
+def correlate_bookmarks_by_title(
+    toc_entries: list[LegacyTocEntry], headings: list[Heading]
+) -> dict[str, str]:
+    """Recover the ``_Toc…``/``_Ref…`` bookmark → GitHub-slug mapping for headings whose inline
+    bookmark span conversion dropped — so ``parse_headings`` captured the heading but with
+    ``bookmark=None``, leaving the in-body ``](#_Toc…)`` cross-refs to it ``UNRESOLVED`` (§6.7).
+
+    Composes the two halves already in hand: the legacy TOC records ``bookmark ↔ title`` (captured
+    to ``toc.yaml`` before the TOC leaves the body) and the derived tree gives ``title → slug``.
+    For each legacy entry whose anchor is a Word bookmark, map that bookmark to the slug of the
+    heading whose title slugifies the same — first match in document order (a repeated title is
+    inherently ambiguous; the first heading is the deterministic best choice; the slug of a base's
+    first occurrence is the bare base, so the title's slug-base keys it directly). This is the
+    recoverable, C5-bounded resolvability class the validate gate measures (FF C5)."""
+    by_base: dict[str, str] = {}
+    for h in headings:
+        by_base.setdefault(github_slug_base(h.text), h.slug)
+    recovered: dict[str, str] = {}
+    for e in toc_entries:
+        bm = e.anchor.lstrip("#")
+        if not (bm.startswith("_Toc") or bm.startswith("_Ref")) or not e.title:
+            continue
+        if (slug := by_base.get(github_slug_base(e.title))) is not None:
+            recovered.setdefault(bm, slug)
+    return recovered
+
+
 def strip_existing_toc(body: str) -> str:
     """Remove a previously-generated ``## Contents`` block (its heading + list) for idempotency."""
     lines = body.split("\n")
@@ -551,18 +579,35 @@ def normalize_body(
     # Resolve the TOC depth: an explicit non-default override (the template seam) wins; otherwise
     # adapt to the heading tree so multi-H1 docs still get a `## Contents` (§6.7).
     depth = toc_depth if toc_depth != DEFAULT_TOC_DEPTH else effective_toc_depth(headings)
-    toc_unresolved = correlate_legacy_toc([e.anchor for e in toc_entries], headings)
+    # RECOVER-DROPPED-BOOKMARKS (§6.7, FF C5): a heading whose `_Toc…` span conversion dropped
+    # parses with no bookmark, so its in-body cross-refs would resolve UNRESOLVED. Reconstruct the
+    # bookmark→slug mapping from the legacy TOC's `bookmark ↔ title` × the derived `title → slug`,
+    # then thread it through outbound resolution AND the legacy-TOC resolved/unresolved views so
+    # refs.yaml stays internally consistent (a recovered anchor is no longer "lost").
+    recovered = correlate_bookmarks_by_title(toc_entries, headings)
     slugs = {h.slug for h in headings}
+
+    def _anchor_resolves(anchor: str) -> bool:
+        a = anchor.lstrip("#")
+        return a in slugs or a in recovered
+
+    toc_unresolved = [
+        a
+        for a in correlate_legacy_toc([e.anchor for e in toc_entries], headings)
+        if a.lstrip("#") not in recovered
+    ]
     legacy_toc = [
         {
             "title": e.title,
             "page": e.page,
             "anchor": e.anchor,
-            "resolved": e.anchor.lstrip("#") in slugs,
+            "resolved": _anchor_resolves(e.anchor),
         }
         for e in toc_entries
     ]
     bookmark_to_slug = {h.bookmark: h.slug for h in headings if h.bookmark}
+    for bm, slug in recovered.items():  # inline-captured spans (more authoritative) already win
+        bookmark_to_slug.setdefault(bm, slug)
     body, outbound = rewrite_link_targets(body, bookmark_to_slug)
     body = regenerate_toc(body, depth)
     body = insert_back_links(body, headings, depth)

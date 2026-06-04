@@ -28,10 +28,32 @@ def _residue(**kw):
 
 # --- scan_residue: the independent second-signal re-scan -------------------------------------
 def test_scan_residue_detects_loose_revision_heading():
-    # deliberately broader than kernel.is_revision_heading: "Change History" is NOT in the curated
-    # vocabulary, so the strict detector misses it — the residue scan must still see it.
+    # broader than kernel.is_revision_heading (which keys on the exact curated vocabulary): a real
+    # missed variant like "Change History" must still trip the residue scan.
     body = "# Doc\n\n## Change History\n\nstuff\n"
     assert cp.scan_residue(body, _TOC_TITLES).revision_heading_present is True
+
+
+def test_scan_residue_detects_revision_history_variants():
+    for h in ("## Revision History", "## Documentation Revisions", "## Revision Log",
+              "### 3. Revision History", "## Version History"):  # fmt: skip
+        r = cp.scan_residue(f"# Doc\n\n{h}\n\nx\n", _TOC_TITLES)
+        assert r.revision_heading_present is True, h
+
+
+def test_scan_residue_ignores_revision_substring_false_positives():
+    # real-corpus false positives the old loose substring regex tripped on: a revision heading is a
+    # SECTION TITLE ending in a revision-history phrase, not any heading containing "revision".
+    for h in (
+        "## Package Revision Data",  # a routine/data section — not revision history
+        "### IOC VistA Sites Change Logical Links",  # "change log" inside "change logical"
+        "# Appendix A—Revision History Archive",  # an archive appendix, not the revision table
+        # a prose paragraph promoted to a heading (length guard excludes it):
+        "##### On January 16, 2009, CMS released ICD-9, Ninth Revision, "
+        "Clinical Modification rules for dates of service on or after activation.",
+    ):
+        r = cp.scan_residue(f"# Doc\n\n{h}\n\nx\n", _TOC_TITLES)
+        assert r.revision_heading_present is False, h
 
 
 def test_scan_residue_ignores_generated_contents_heading():
@@ -49,6 +71,19 @@ def test_scan_residue_detects_legacy_toc_heading():
 
 def test_scan_residue_reports_heading_present():
     assert cp.scan_residue("# Doc\n\n## Setup\n\nx\n", _TOC_TITLES).heading_present is True
+
+
+def test_scan_residue_ignores_empty_and_bookmark_only_headings():
+    # An empty `# ` title or a bookmark-only heading (`## <span id="_Toc…"></span>`) mints no
+    # anchor: parse_headings skips it (text empty after strip_tags), so refs.yaml is legitimately
+    # absent. The residue scan must mirror that — else refs is a false absent-unexpected that blocks
+    # the validate gate. Real-corpus case: RMPR/rmpr_3_nppdum, whose sole ATX heading is an empty
+    # `# ` title (everything else is bold text).
+    assert cp.scan_residue("# \n\nprose, no real headings\n", _TOC_TITLES).heading_present is False
+    bookmark_only = '## <span id="_Toc1"></span>\n\nprose\n'
+    assert cp.scan_residue(bookmark_only, _TOC_TITLES).heading_present is False
+    # a real heading alongside an empty one still reports present
+    assert cp.scan_residue("# \n\n## Setup\n\nx\n", _TOC_TITLES).heading_present is True
 
 
 def test_scan_residue_counts_qualifying_table():

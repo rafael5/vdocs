@@ -188,6 +188,16 @@ These are non-negotiable. Every later section is an application of one of these.
     transform. The pipeline adapts to a newly-found pattern by gaining a registry *entry*, not a
     code edit. The inductive discovery step is kept strictly separate from the deterministic
     application step; the registry is the seam between them. (Mechanism: §9.6.)
+14. **Discoverability is built upstream of the gate, then measured — a gate cannot create it.**
+    (Earned from the v1 real-corpus run; see [`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md).)
+    Retrieval and navigation quality are *produced* by good chunking, recovered structure, and rich
+    typed entities (§14.6, §5.5) — **before** any verification stage runs. The `validate` HARD GATE and
+    the `fidelity` axes **certify** that quality; they never substitute for it. Therefore the build
+    order is **substrate → measure → gate**: fix the chunker / heading recovery / entity coverage first,
+    make the retrieval-quality harness (`fidelity-framework.md` §10.5) the throughline that turns each
+    fix into a *measured* lift, and only then gate on the measurement. Building the certification
+    machinery ahead of the substrate it certifies (the v1 sequencing error) is the anti-pattern this
+    tenet exists to prevent.
 
 - Not a general document-management system or CCMS. Not DITA/S1000D authoring (§5.4).
 - Not multi-tenant; single-node, single-maintainer scale (≈3–4 GB raw, ≈3k documents).
@@ -784,6 +794,25 @@ stable id as tiebreaks. The output tree is:
 `body_sha256` (CAS ref to the retained normalized body), `is_latest`, and the member's folded
 `revisions` (its own `revisions.yaml` entries, §6.4).
 
+**Signed bundle manifest (`bundle.yaml`) — the bundle is a verifiable unit, not asserted.** Provenance
+proves the body came from the source (`history.source_sha256`) and Step-1 `capture.yaml` records that
+nothing was silently dropped; the manifest makes the **whole bundle** independently checkable.
+`consolidate` writes a `bundle.yaml` into each anchor bundle (last, after every other part) listing
+**every part with its `sha256` + byte length**, the **folded `capture.yaml` outcome summary**, the
+member `source_sha256` provenance roots, the producing `tool_ver`, and a **`bundle_digest`** = the
+`sha256` over the sorted `path:sha256` lines. `bundle.yaml` lists every *other* part (never itself —
+it is the manifest *of* the others), so a verifier (the `validate` gate) recomputes each part hash
+from disk, confirms the on-disk part set equals the manifest exactly (no extra, no missing), and
+recomputes `bundle_digest` — any drift is tamper or incompleteness and **blocks**. This is the C2PA
+"sidecar manifest alongside the asset" pattern and the fidelity framework's "provable, not asserted"
+bar applied to the bundle as a whole. **"Signed" here = a verifiable content digest** (recompute to
+verify — tamper-*evident*, key-free): a *keyed* signature (GPG/cosign over `bundle_digest`) is a
+clean future increment once key management exists, and changes nothing about the manifest's shape.
+*Per-stage attestation (§5.4):* the DAG already records each stage's consumed/produced artifacts by
+fingerprint in `state.db:stage_runs` (`inputs_fp`/`outputs_fp`), and `bundle.yaml` anchors the bundle
+to its `source_sha256` roots + `tool_ver`; a formal exportable in-toto/SLSA statement over the whole
+chain builds on those two and is deferred.
+
 **Deferred git replay (designed-for, not run now).** Because the lineage and every prior body are
 captured, a later, opt-in **`push --replay-history`** (§13) can reconstruct each group's history as
 a sequence of commits against its one file — oldest body first, then each patch as a commit whose
@@ -1049,14 +1078,14 @@ plane), **DOC** = the document medallion (data plane) (§4). The inventory track
 | 🥈 DOC | **discover** | `text@converted` (corpus-global) + `catalog.enriched` (for `doc_code` only — the authoritative doc_type for `(doc_type, era)` template induction; classification stays a `catalog` decision, not re-derived) | `reports/patterns` (candidate boilerplate / `(doc_type, era)` templates [`doc_type`←catalog `doc_code`, `era`←title-page publication date bucketed by decade] / dead phrases / glossary terms / structural patterns + evidence + proposed disposition) → proposes `registries/` updates (§9.6) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **enrich** | `text@converted`, `catalog.enriched` | `text@enriched` (identity FM baked), `index.db:doc_meta_staged` | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **normalize** | `text@enriched`, `raw/index.json` (for source_sha256 — metadata only, not the binary tree), `registries` (curated patterns) | `text@normalized` — `revisions.yaml` + `tables/*.csv` + `refs.yaml` + `toc.yaml` + `flags.yaml` sidecars; **title-page publication date captured into the `published` identity FM before any strip** (§6.4 capture-before-strip), then the per-document **title-area logo image removed** (noise — a different VA seal/banner per doc; one small standard logo to be added at publish) and the legacy cover replaced by a standardized block; revision apparatus lifted to `revisions.yaml` (capture-gated; unparseable → retained + flagged); dead phrases deleted; boilerplate referenced (REFERENCE to `gold/_shared`); heading levels inferred; per-`(doc_type, era)` template scaffold stripped + `template_id` stamped (§9.8); the legacy in-body TOC's **original entries (title + printed page number + anchor) captured verbatim into `toc.yaml`** before it is stripped via `registries/structures` (CANONICALIZE `toc`) + correlated to the derived tree (role-1; misses → `flags.yaml`) then **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** (§6.7). Capture-before-strip fidelity signals (uncaptured date · unparseable revision apparatus · unresolved legacy-TOC anchors) are recorded in the `flags.yaml` sidecar. A **`capture.yaml` is written for *every* bundle** (not conditional) recording each capture attempt's typed outcome (`captured`/`failed`/`absent-expected`/`absent-unexpected`) plus an independent residue re-scan, so absence is never ambiguous (§6.4). (Glossary **PROMOTE** to the single `gold/glossary.md` is a gold-phase output — §9.7 lists `normalize` as a consumer of `registries/glossary`, but the shared artifact is materialised downstream, not in this silver body transform.) | SKIP_IF_UNCHANGED |
-| 🥇 DOC | **consolidate** | `text@normalized` (incl. each version's `revisions.yaml` + `published` FM + `flags.yaml`), `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage [folds each member's `revisions.yaml`, §6.4; `official_date` = revision-newest **else the title-page `published` date**] + retained prior bodies captured as travel-with sidecars; the latest member's `flags.yaml` + `toc.yaml` (original paper TOC, §6.7) + `capture.yaml` (typed capture-attempt records, §6.4) travel with the anchor; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **consolidate** | `text@normalized` (incl. each version's `revisions.yaml` + `published` FM + `flags.yaml`), `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage [folds each member's `revisions.yaml`, §6.4; `official_date` = revision-newest **else the title-page `published` date**] + retained prior bodies captured as travel-with sidecars; the latest member's `flags.yaml` + `toc.yaml` (original paper TOC, §6.7) + `capture.yaml` (typed capture-attempt records, §6.4) travel with the anchor; a **`bundle.yaml` signed manifest** (every part + `sha256` + folded capture outcomes + `bundle_digest`, §6.6) is written last so the bundle is a verifiable unit; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **index** | `text@normalized`, `consolidated` (grouping → `is_latest`), `index.db:doc_meta_staged` (the staged identity `enrich` writes — an explicit input, not a hidden read; the build **carries it forward** so a fresh rebuild stays self-contained) | `index.db` (documents [keyed by URL-safe `doc_key`, with the inventory `doc_id` alongside — §5.5], doc_sections [all, with `is_latest`, section id = `refs.yaml`'s `<doc_key>/<slug>`] **+ FTS5 over `is_latest` only — the search surface**, entities + entity_mentions [registry-driven extraction, anchor-only], quality view; **stable IDs**) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **relate** | `index.db` (documents, entities, sections) | `index.db:relations` (doc↔entity, doc↔doc xref, entity↔entity — the knowledge graph) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **embed** | `index.db:doc_sections` (**`is_latest` only**) | `vectors.db` (per-chunk embeddings + ANN index over anchor/current sections; prior-version chunks excluded — §14.6) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **fidelity** | `text@normalized`, `raw` (bronze `S`), `index.db` (structure/sections/template schema), `registries` (to dereference single-sourced content) | `reports/fidelity` (per-document migration-fidelity records — content/provenance/history axes, template compliance, TOC integrity — + corpus report; `fidelity-framework.md`) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **manifest** | `consolidated`, `index.db` (documents/entities + **`relations`**, so the graph capability + counts are honest), `vectors.db` (**optional** — produced by `embed` in Phase 6; absent ⇒ embedding/vector fields omitted, **semantic capability off** [D3]) | `corpus-manifest.json` + `discovery.json` (counts · stable-ID scheme · MCP capabilities; lineage `tool_ver`+`generated_at`) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **publish** | `corpus-manifest.json`, `text@normalized`, `consolidated`, `assets`, `catalog.enriched`, `glossary` | `publish` (markdown-only human tree + INDEX) | SKIP_IF_UNCHANGED |
-| 🥇 DOC | **validate** | `text@normalized` (`capture.yaml` + `refs.yaml`) **[sidecar-verification slice — active now]**; `publish`, `index.db`, `vectors.db`, `reports/fidelity` **[deferred, arrive with publish/index/fidelity]**; reads the prior `stage_runs[normalize].counts` (out-of-contract historical baseline for cross-run drop detection, like `fetch`↔`acquisitions`) | `reports/validation` (the verification findings) + (HARD GATE — sets its own `ok`). **Sidecar-verification slice (built first):** (1) **typed-absence gate** — any per-bundle `capture.yaml` outcome of `absent-unexpected` or `failed` blocks; (2) **count reconciliation** — a sidecar class going `absent-expected` corpus-wide, or a count dropping vs. the prior run with no matching source change, is re-classified `absent-unexpected` and blocks; (3) **ref-resolution gate** — every outbound ref in each `refs.yaml` is resolved against that bundle's live anchor set: a **severed** ref (resolved slug matches no live anchor — a true dead anchor) blocks at a hard floor of zero (the C5 TOC round-trip generalised to all cross-refs, §6.7); an **unmapped** ref (`UNRESOLVED` — a Word bookmark `normalize` never mapped, already a flagged signal) is the measured class, blocking only above the C5 cross-ref dead-anchor rate (≤ 0.02). **Deferred (full gate):** schema + lineage + ID/vector integrity + the per-document **fidelity verdict** [PASS / REVIEW-with-sign-off only; QUARANTINE blocks], landing with `publish`/`index`/`fidelity`. | ALWAYS_RERUN |
+| 🥇 DOC | **validate** | `text@normalized` (`capture.yaml` + `refs.yaml`) + `consolidated` (each anchor bundle's `bundle.yaml` + parts) **[sidecar-verification slice — active now]**; `publish`, `index.db`, `vectors.db`, `reports/fidelity` **[deferred, arrive with publish/index/fidelity]**; reads the prior `stage_runs[normalize].counts` (out-of-contract historical baseline for cross-run drop detection, like `fetch`↔`acquisitions`) | `reports/validation` (the verification findings) + (HARD GATE — sets its own `ok`). **Sidecar-verification slice (built first):** (1) **typed-absence gate** — any per-bundle `capture.yaml` outcome of `absent-unexpected` or `failed` blocks; (2) **count reconciliation** — a sidecar class going `absent-expected` corpus-wide, or a count dropping vs. the prior run with no matching source change, is re-classified `absent-unexpected` and blocks; (3) **ref-resolution gate** — every outbound ref in each `refs.yaml` is resolved against that bundle's live anchor set: a **severed** ref (resolved slug matches no live anchor — a true dead anchor) blocks at a hard floor of zero (the C5 TOC round-trip generalised to all cross-refs, §6.7); an **unmapped** ref (`UNRESOLVED` — a Word bookmark `normalize` never mapped) is **reported as a metric, not gated**, split into two classes (triage 2026-06-03): a `_Toc…` bookmark is a TOC field targeting a **heading** → the **C5-bounded, recoverable** resolvability class (mapping lost because Pandoc drops some heading bookmark spans, but reconstructible from the legacy TOC — a tracked `normalize` follow-up — so the C5 ≤0.02 applies to **`_Toc`→heading** resolution, ~0.76 today (534 of 705 on the 1299-doc lake): a known gap, not a regression); a `_Ref…`/other bookmark is a cross-reference to a **non-heading** target (figure/table/numbered item/page span), unmappable to a heading anchor by construction → reported as **expected-unmapped**, **outside** the C5 rate (the `_Ref` class is ~64% of unmapped and resolves 0%, so conflating it miscalibrated the old "~92% expected" framing); (4) **bundle-integrity gate** — for each `consolidated` anchor bundle, recompute every part's `sha256` from disk against its `bundle.yaml`, confirm the on-disk part set matches the manifest exactly (no extra/missing), and recompute `bundle_digest`; any mismatch (tamper / incompleteness) blocks (§6.6 signed manifest). **Deferred (full gate):** schema + lineage + ID/vector integrity + the per-document **fidelity verdict** [PASS / REVIEW-with-sign-off only; QUARANTINE blocks], landing with `publish`/`index`/`fidelity`. | ALWAYS_RERUN |
 | 🚀 DOC | **push** | `publish` (+ validate `ok`) | `git:vistadocs/vdl` (one anchor file per version group + travel-with lineage sidecars; **commit-replay deferred behind opt-in `--replay-history`**, §6.6) | FORCE_ONLY |
 | ⬩ DOC | **analyze** (off critical path) | `text@normalized` | `reports/` (survey, headings, lexicon) | SKIP_IF_UNCHANGED |
 
@@ -1126,6 +1155,17 @@ Notes:
   extraction pass in `index` (`entities_pure.py`) recognizes them over the normalized bodies and writes
   `index.db:entities` keyed by the `(type, canonical-name)` stable ID (§5.5). No entity patterns are
   hard-coded in stage code.
+  - **Type coverage is a build requirement, not aspirational (added 2026-06-04 from real-corpus
+    measurement).** The live `index.db` extracts only **4** of the listed types — `global` (2,041,
+    ubiquitous/low-signal), `fileman_file` (292), `build` (193), `package_namespace` (19) — and the
+    discovery-rich types an agent or engineer actually searches the VistA corpus *for* — **RPCs,
+    options, routines, protocols, HL7 segments, mail groups** — are **absent**. Seeding the full
+    `registries/entities` set is therefore a load-bearing discoverability task (priority **A3** in
+    [`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md)), not a nicety: it is the
+    largest available lift for the **structured + graph** retrieval modes. Conversely, raw **globals
+    are ubiquitous and low-signal** (the design already excludes them from `xref` edges for that
+    reason): they must be **de-weighted / demoted** from the primary discovery surface — retained as
+    evidence, not surfaced as headline entities — so the entity layer is rich *and* selective.
 - **`relate`** materializes the knowledge graph from already-extracted entities and
   cross-references — it adds no new extraction, only edges, so it is cheap and re-runnable.
 - **`analyze`** is diagnostic and parallel; nothing depends on it.
@@ -1144,8 +1184,14 @@ Notes:
   reads them and the `refs.yaml` outbound maps and **fails loudly** on (1) any `absent-unexpected`/
   `failed` capture outcome, (2) an implausible corpus-wide sidecar aggregate or a count that dropped
   since the prior run with no matching source change (the reconciliation that the emitted
-  `stage_runs[counts]` finally consume), and (3) any **severed** cross-ref anchor in a `refs.yaml`
-  (an `UNRESOLVED` Word bookmark is the already-flagged measured class, bounded by the C5 rate). This is
+  `stage_runs[counts]` finally consume), (3) any **severed** cross-ref anchor in a `refs.yaml`
+  (an `UNRESOLVED` Word bookmark is a reported metric, not gated — and split into a `_Toc`→heading
+  *unmapped* class [C5-bounded, recoverable] vs a `_Ref`-to-non-heading *expected-unmapped* class
+  [outside C5], so a high aggregate rate is mostly expected-by-construction, not a defect), and (4)
+  any **bundle-integrity**
+  mismatch — a gold anchor bundle whose on-disk parts do not match its `bundle.yaml` signed manifest
+  (recomputed hashes, the exact part set, the `bundle_digest`), so the bundle is a verifiable unit
+  (§6.6, the §5.3 manifest). This is
   the smallest stage that makes a missing sidecar unambiguous — it consumes the signals `normalize`
   already records but nothing read. The broader `fidelity` S→T measurement (content/tables/images
   axes, the per-document PASS/REVIEW/QUARANTINE verdict) lands later and feeds the *same* `validate`
@@ -1745,6 +1791,26 @@ strip the repetition and keep the signal; the **structured pre-filter** (§14.2)
 `semantic_role`s are reliable, chunks align to **meaningful units** (a whole "Options" section), not
 arbitrary windows. Good boundaries matter as much as dedup — a clean corpus chunked badly still
 retrieves badly.
+
+> **Concrete chunking contract (added 2026-06-04 from real-corpus measurement; the highest-leverage
+> substrate fix).** The shipped `index_pure.shred_sections` does **not** yet honour this: it spans each
+> heading to the next, so on the live 1299-doc lake **14.2% of `is_latest` chunks are hollow**
+> (a *container* heading whose substance lives in its subsections indexes as a bare heading +
+> back-link), **40.8% are thin** (<400 chars), and a few exceed 140 KB. That hurts both human
+> navigation and — once `embed` lands — semantic recall (hollow chunks pollute the ANN neighbourhood).
+> `shred_sections` MUST be rebuilt to:
+> 1. **Never emit a hollow content chunk.** A heading whose own body (to its first child) is below a
+>    substantive-token floor is a *container*: fold its lead-in into its first content unit, or attach a
+>    one-line synthesized child-summary, so the chunk stands alone. (Container headings are *expected* to
+>    have no own-body; the fix is that they must not be indexed as standalone empty chunks.)
+> 2. **Bound chunk size.** Split oversized leaf sections (the >140 KB cases) on sub-structure /
+>    paragraph windows with small overlap, keyed so the split parts keep a stable `section_id` suffix.
+> 3. **Carry context as metadata, not prose** — `section_id`, section-path, `app_code`/`doc_type`/
+>    `version`, `semantic_role` — per the paragraph above.
+>
+> This is enforced by the `fidelity` over-strip / hollow-chunk metric (`overstrip_pure`,
+> fidelity-framework §10.5), whose target is ≈ 0 hollow content chunks **before** `embed` runs. It is
+> priority **A1** in the substrate-first plan (see [`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md)).
 
 **Keep the canonical boilerplate indexed once.** Occasionally the boilerplate *is* the answer (a
 compliance/legal query). The single-sourced copy in `gold/_shared/` is indexed **once** — so it is

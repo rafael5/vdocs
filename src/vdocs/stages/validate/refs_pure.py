@@ -8,13 +8,22 @@ every outbound ref against that bundle's *own* live anchor set and classifies ea
   * resolved — the target slug is a live anchor (no finding);
   * **severed** — the target slug is **absent** from the live set (a true dead anchor — the
     generalised C5 TOC round-trip applied to all cross-refs; the validate hard floor is **zero**);
-  * **unmapped** — the ``UNRESOLVED`` marker ``anchors_pure`` wrote for a Word bookmark it never
-    mapped to a heading (an already-flagged class, bounded by the C5 cross-ref dead-anchor rate, not
-    a silent regression).
+  * **unmapped** — an ``UNRESOLVED`` marker on a ``_Toc…`` bookmark: a Word **TOC-field** bookmark,
+    which targets a *heading*, that ``normalize`` did not map to a slug. This is the recoverable,
+    C5-bounded resolvability class — the mapping is lost (Pandoc drops some heading bookmark spans)
+    but reconstructible from the legacy TOC (a tracked ``normalize`` follow-up), so it is the rate
+    C5 should bound.
+  * **expected-unmapped** — an ``UNRESOLVED`` marker on any other bookmark (a ``_Ref…`` Word
+    cross-reference, etc.): these target **non-heading** objects (figures, tables, numbered items,
+    page spans), so they are unmappable to a GitHub heading anchor *by construction*. They are
+    reported but sit **outside** the C5 heading-resolvability rate (corpus triage 2026-06-03: 0 of
+    844 ``_Ref`` refs ever resolve, vs ``_Toc`` which resolves 27% — conflating them miscalibrated
+    the C5 target; §6.7/§8, FF C5).
 
-Keeping the two apart is the point: *severed* is a ref that **was** good and now points nowhere (a
-silent loss → hard zero); *unmapped* never resolved and is already recorded by `normalize` (a
-measured rate, not a new silent loss). Pure: plain dicts in, findings out.
+Keeping these apart is the point: *severed* was good and now points nowhere (a silent loss → hard
+zero); *unmapped* is a recoverable ``_Toc``→heading miss (a measured, C5-bounded rate); and
+*expected-unmapped* can never resolve to a heading and is informational only. Pure: dicts in,
+findings out.
 """
 
 from __future__ import annotations
@@ -22,9 +31,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 UNRESOLVED = "UNRESOLVED"  # the marker anchors_pure writes for an unmappable Word bookmark
+TOC_BOOKMARK_PREFIX = "_Toc"  # Word TOC-field bookmarks target headings → C5-bounded resolvability
 
 SEVERED = "severed"
 UNMAPPED = "unmapped"
+EXPECTED_UNMAPPED = "expected-unmapped"
 
 
 @dataclass(frozen=True)
@@ -34,12 +45,17 @@ class RefFinding:
     doc_id: str
     bookmark: str
     target: str
-    kind: str  # SEVERED | UNMAPPED
+    kind: str  # SEVERED | UNMAPPED | EXPECTED_UNMAPPED
 
 
 def live_anchor_slugs(refs: dict) -> set[str]:
-    """The set of slugs a bundle's headings actually mint — the live anchor set (§6.7)."""
-    return {str(a["slug"]) for a in (refs.get("anchors") or []) if a.get("slug")}
+    """The set of slugs a bundle's headings actually mint — the live anchor set (§6.7).
+
+    Includes a slug recorded as the empty string: a punctuation-only heading (e.g. titled ``;``)
+    slugifies to ``""``, a degenerate-but-real anchor row. A ref targeting it *resolves* (the
+    heading exists) — filtering empty slugs out would mis-flag it as severed. (The empty slug itself
+    is a separate `normalize` slug-fallback quality issue, not a severed cross-ref.)"""
+    return {str(a["slug"]) for a in (refs.get("anchors") or []) if "slug" in a}
 
 
 def resolve_refs(refs: dict) -> list[RefFinding]:
@@ -52,8 +68,10 @@ def resolve_refs(refs: dict) -> list[RefFinding]:
     findings: list[RefFinding] = []
     for bookmark, target in (refs.get("outbound") or {}).items():
         t = str(target)
+        bm = str(bookmark)
         if t == UNRESOLVED:
-            findings.append(RefFinding(doc_id, str(bookmark), t, UNMAPPED))
+            kind = UNMAPPED if bm.startswith(TOC_BOOKMARK_PREFIX) else EXPECTED_UNMAPPED
+            findings.append(RefFinding(doc_id, bm, t, kind))
         elif t not in live:
-            findings.append(RefFinding(doc_id, str(bookmark), t, SEVERED))
+            findings.append(RefFinding(doc_id, bm, t, SEVERED))
     return findings

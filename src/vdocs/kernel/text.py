@@ -143,15 +143,31 @@ def strip_html(s: str) -> str:
     return _WS_RE.sub(" ", unescaped).strip()
 
 
+# clean() converges within this many passes; a fixpoint is reached well inside it (the pipeline is
+# monotonic — each pass only removes/normalises, never adds — so it cannot oscillate).
+_CLEAN_MAX_PASSES = 5
+
+
+def _clean_once(s: str) -> str:
+    """One repair pass: control scrub → mojibake → HTML strip → NFC."""
+    return unicodedata.normalize("NFC", strip_html(repair_mojibake(scrub_control_chars(s))))
+
+
 def clean(s: str) -> str:
     """The full repair pipeline: control scrub → mojibake → HTML strip → NFC.
 
-    Idempotent: ``clean(clean(x)) == clean(x)``. Control characters are scrubbed **before** the
-    mojibake repair: an interstitial control byte (e.g. a form feed between two mojibake bytes)
-    would otherwise hide adjacent mojibake from ftfy on the first pass and surface it on the
-    second, breaking idempotency. Scrubbing first makes adjacency stable.
-    """
-    s = scrub_control_chars(s)
-    s = repair_mojibake(s)
-    s = strip_html(s)
-    return unicodedata.normalize("NFC", s)
+    **Idempotent** (``clean(clean(x)) == clean(x)``) by applying the pass to a **fixpoint**. One
+    pass is not enough on its own: a step that changes character *adjacency* after the mojibake
+    repair can surface fresh mojibake to ``ftfy`` on the next pass — e.g. ``strip_html`` collapses a
+    tab to a space, turning ``"Â\\t0"`` into ``"Â 0"``, which ftfy then recognises as a mangled
+    non-breaking space (``"Â "``). Tab is preserved whitespace (not a scrubbed control char), so
+    ordering alone cannot prevent it; iterating to a stable point does. The pipeline is monotonic
+    (each pass only removes/normalises), so it converges quickly — the bound is a safety cap, not a
+    cutoff reached in practice."""
+    out = s
+    for _ in range(_CLEAN_MAX_PASSES):
+        nxt = _clean_once(out)
+        if nxt == out:
+            return out
+        out = nxt
+    return out

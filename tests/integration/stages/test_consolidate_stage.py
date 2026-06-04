@@ -262,3 +262,68 @@ def test_consolidate_propagates_latest_capture_manifest(ctx):
     anchor = ctx.cfg.gold_consolidated / "CPRS" / "or_ig"
     manifest = yaml.safe_load((anchor / "capture.yaml").read_text())
     assert manifest["doc_id"] == "CPRS/or_3_566_ig"  # the LATEST member's manifest, not the prior
+
+
+def test_consolidate_writes_verifiable_bundle_manifest(ctx):
+    # §5.3/§6.6: consolidate writes a bundle.yaml signed manifest enumerating every other part with
+    # its sha256 + a bundle_digest, so the anchor bundle is a verifiable unit (validate recomputes).
+    import hashlib
+
+    from vdocs.kernel import bundle as kbundle
+
+    _seed_two_patches(ctx)
+    Orchestrator([ConsolidateStage()]).run(ctx)
+
+    anchor = ctx.cfg.gold_consolidated / "CPRS" / "or_ig"
+    manifest = yaml.safe_load((anchor / "bundle.yaml").read_text())
+    assert manifest["anchor_key"] == "CPRS:OR:IG"
+    assert manifest["bundle_digest"] and manifest["source_sha256"]
+    listed = {e["path"]: e for e in manifest["parts"]}
+    assert "body.md" in listed and "history.yaml" in listed
+    assert "bundle.yaml" not in listed  # the manifest never lists itself
+    # every listed hash matches the file on disk
+    for path, entry in listed.items():
+        assert hashlib.sha256((anchor / path).read_bytes()).hexdigest() == entry["sha256"]
+    # the manifest verifies clean against the on-disk parts (the validate gate's check)
+    on_disk = {
+        p.name: p.read_bytes() for p in anchor.iterdir() if p.is_file() and p.name != "bundle.yaml"
+    }
+    assert kbundle.verify_manifest(manifest, on_disk) == []
+
+
+def test_consolidate_bundle_manifest_detects_tampering(ctx):
+    from vdocs.kernel import bundle as kbundle
+
+    _seed_two_patches(ctx)
+    Orchestrator([ConsolidateStage()]).run(ctx)
+    anchor = ctx.cfg.gold_consolidated / "CPRS" / "or_ig"
+    manifest = yaml.safe_load((anchor / "bundle.yaml").read_text())
+    # someone edits the published body after the fact → integrity check catches it
+    (anchor / "body.md").write_text("# Tampered\n")
+    on_disk = {
+        p.name: p.read_bytes() for p in anchor.iterdir() if p.is_file() and p.name != "bundle.yaml"
+    }
+    finds = kbundle.verify_manifest(manifest, on_disk)
+    assert any(f.kind == kbundle.HASH_MISMATCH and f.path == "body.md" for f in finds)
+
+
+def test_consolidate_prunes_stale_sidecar_within_a_kept_bundle(ctx):
+    # R4 hygiene caught by the bundle-integrity gate: a prior run's flags.yaml lingering in a still-
+    # kept bundle whose current latest member has none must be removed, so the bundle matches its
+    # bundle.yaml manifest exactly (no extra part).
+    from vdocs.kernel import bundle as kbundle
+
+    _seed_member(ctx, slug="or_3_1_ig", patch_id="OR*3*1", body="# IG\n\nv1\n", date="2020-01")
+    _seed_assets(ctx)
+    _bless(ctx, "normalize", TEXT_NORMALIZED)
+    anchor = ctx.cfg.gold_consolidated / "CPRS" / "or_ig"
+    cas.atomic_write(anchor / "flags.yaml", b"doc_id: stale\nflags: [stale]\n")  # prior-run residue
+
+    Orchestrator([ConsolidateStage()]).run(ctx)
+
+    assert not (anchor / "flags.yaml").exists()  # stale sidecar pruned
+    manifest = yaml.safe_load((anchor / "bundle.yaml").read_text())
+    on_disk = {
+        p.name: p.read_bytes() for p in anchor.iterdir() if p.is_file() and p.name != "bundle.yaml"
+    }
+    assert kbundle.verify_manifest(manifest, on_disk) == []  # bundle matches its manifest exactly
