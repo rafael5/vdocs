@@ -43,9 +43,16 @@ Gold cleanup audit (290-doc baseline): legacy title page 256→5, revision-histo
 residue). `make check` green (**681 tests, coverage 98.71% / gate ≥95%**, ruff+mypy clean). Uncommitted
 WIP: the code-review Stage-4 §9.2 follow-ups (read-only-URI single-sourcing, `_MONTH`→kernel,
 `load_mapping` widening) + refs-metric refinements — all 681 tests green.
-**Next decision (see Change Log 2026-06-04): land WIP + merge the branch, then either (a) close the
-`_Toc` legacy-TOC-correlation gap in `normalize` before `publish` bakes navigation, or (b) proceed to
-`publish`. Recommended: (a) — it is the single highest-value quality fix and `publish` is downstream of it.**
+**Next decision (UPDATED 2026-06-04 after real-data investigation): the `_Toc` legacy-TOC-correlation
+fix was built (`f6e4767`, TDD, green) but a real-lake re-run proved the design's C5 hypothesis WRONG —
+it recovers ~1 of 534 (unmapped 534→533). The unmapped `_Toc` refs overwhelmingly target NON-heading
+objects (mid-body bold pseudo-headings Pandoc never styled as `##`, table/figure captions, stripped
+front matter), not headings — so title correlation can't reach them and they are unmappable to a GitHub
+heading anchor by construction. `severed` stays 0 (no live-heading ref is broken). The genuine
+remediation is therefore one of: (A) recalibrate C5 doc-first — these are `expected-unmapped`, not the
+C5-bounded class; or (B) extend `recover_headings` to promote `**bold**`+`_Toc`-span paragraphs to real
+headings even when the doc already has headings (recovers the bold-pseudo-heading subset + improves
+structure/TOC/retrieval). Then proceed to `publish`. Awaiting the A-vs-B call.**
 
 | Phase | Title | Status | Progress |
 |---|---|:--:|:--:|
@@ -299,6 +306,22 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-04** — **`_Toc` bookmark-correlation fix built + real-data finding that the C5 recovery
+  hypothesis is wrong (`f6e4767`, TDD).** Implemented the documented-but-unbuilt §6.7/FF-C5 remediation:
+  `normalize_pure.correlate_bookmarks_by_title` composes the legacy TOC's `bookmark ↔ title` (toc.yaml)
+  with the derived `title → slug` to recover heading bookmarks conversion dropped, threaded through
+  outbound resolution + the legacy-TOC resolved/unresolved views (refs.yaml stays consistent; inline
+  spans win via setdefault). +2 unit tests; `make check` green (**683 tests, 98.71%**). **Then validated
+  on the real 1299-doc lake (`run --from normalize --to validate --force`) — and it recovers only ~1 of
+  534 (unmapped 534→533).** Corpus analysis: of 533 unmapped `_Toc` refs, **480 are in-body cross-refs
+  (not TOC entries) and 53 are TOC entries to stripped/headingless front matter**; of the 336 whose target
+  span survives conversion, **0 are on a heading line** — they point at bold-text pseudo-headings Pandoc
+  rendered as `**bold**` (e.g. `**Reminder Location List Menu**`), table/figure captions, and stripped
+  sections (Revision History / List of Figures). None are GitHub heading anchors, so the C5 "unmapped"
+  rate (0.76) is measuring a largely-unrecoverable class. `severed` stays **0** (the real silent-loss
+  floor is sound). **Next remediation is A (recalibrate C5 doc-first → expected-unmapped) or B (extend
+  `recover_headings` to promote `**bold**`+`_Toc`-span paragraphs to headings).** The correlation fix is
+  kept — correct + harmless, recovers genuine cases where they exist; the finding is the deliverable.
 - **2026-06-04** — **Whole-pipeline status audit + corpus-quality assessment (tracker reconciliation).**
   Audited the running lake vs. this tracker (which had drifted: it framed a 469-doc / 290-group / Phase-4
   state and "524 tests"). **Reality on disk:** the lake was expanded to **1299 docs / 409 version groups**
