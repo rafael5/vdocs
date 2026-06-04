@@ -134,6 +134,15 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
   `registries/structures` but **not yet applied** (the `toc` consumer shipped; these are their own increment).
 - `normalize` — template-governed **TOC depth** is still the **H2–H3 fallback** (§6.7) until
   `registries/templates` depth is consumed (seam marked in `anchors_pure`/`stage.py`).
+- `normalize` — **`_Toc`→heading legacy-TOC-correlation recovery** (the C5 resolvability gap; triage
+  2026-06-03). ~0.76 of `_Toc…` cross-refs are `UNRESOLVED` (534 of 705 on the 1299-doc lake)
+  because Pandoc drops some heading
+  bookmark spans, so `anchors_pure` can't capture a `_Toc…` span on the heading line. The mapping is
+  recoverable: the legacy TOC (already captured to `toc.yaml`) records `_Toc… ↔ heading-title`, and
+  the title → the github slug — so an `anchors_pure` pass could correlate bookmark→title→slug and
+  resolve these refs. Not built; `validate` now reports `_Toc` (C5-bounded) and `_Ref`
+  (expected-unmapped, non-heading) separately so the metric is honest. The `_Ref` class (~64% of
+  unmapped) is expected-by-construction (figures/tables/spans) and stays unmapped.
 - Phase 7 — extend **property tests** to `enrich` + remaining `normalize` transforms; exercise `--verify` e2e.
 - `normalize` — **`github_slug` global-uniqueness:** `anchors_pure.github_slug` uses GitHub's per-base
   `-N` rule, which can collide a repeated heading's suffixed slug with a literal same-named heading
@@ -272,6 +281,32 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-03** — **Phase 5 ref-resolution recalibration: split the C5 unmapped metric (`_Toc`
+  recoverable vs `_Ref` expected), doc-first + TDD.** A real-lake triage of the validate gate's 88%
+  unmapped-ref rate (1378/1549 on the 1299-doc lake) found the old "~92% expected" framing
+  **miscalibrated**: it conflated two classes. `_Ref…` cross-refs (~64% of unmapped) target
+  **non-heading** objects (figures/tables/numbered items/page spans) — 0 of 844 ever resolve;
+  unmappable to a heading anchor by construction → now classified **expected-unmapped**, reported but
+  **outside** the C5 rate. `_Toc…` cross-refs (TOC fields → headings) are the **C5-bounded,
+  recoverable** class — ~0.76 unmapped today (534/705) because Pandoc drops some heading bookmark spans (so
+  `anchors_pure` captures nothing inline), but reconstructible from the legacy TOC (`_Toc… ↔ title`
+  in `toc.yaml`): logged as a `normalize` legacy-TOC-correlation follow-up. **Code (TDD):**
+  `refs_pure` gains `EXPECTED_UNMAPPED` + a `_Toc`-prefix split in `resolve_refs`; `validate`'s report
+  splits `unmapped_count` (the `_Toc` C5 class) from `expected_unmapped_count` and computes
+  `unmapped_rate` over the heading-targeting universe (`outbound_total − expected_unmapped`); **gate
+  blocking behaviour unchanged** (still severed + reconcile + bundle only). **Doc-first:**
+  `vdocs-design.md` §8 validate row + §8 notes, `fidelity-framework.md` C5. Tests: +1 refs_pure unit,
+  +1 validate integration, property test updated to exercise both UNRESOLVED branches. `severed: []`
+  confirmed corpus-wide (the hard floor is sound; only the aggregate metric was wrong).
+- **2026-06-03** — **Code-review Stage 4 + Theme-1 kernel-adoption cleanup (§9.2), TDD.** Full
+  six-reviewer compliance/quality/reliability/coherency pass (no CRITICAL/HIGH) captured in
+  [`docs/code-review-stage4.md`](code-review-stage4.md), with the follow-up plan in
+  [`docs/prompts/code-review-stage-4-plan.md`](prompts/code-review-stage-4-plan.md). Closed the §9.2
+  findings: read-only SQLite URI single-sourced through `kernel.db.connect` (`fingerprint.py`,
+  `models/artifact.py`; locked by an architectural guard test), catalog's private `_MONTH` table
+  folded onto `kernel.text.month_year_iso` (behaviour-preserving), and `kernel.registry.load_mapping`
+  widened to any YAML mapping with the six inline sidecar reads in
+  `consolidate`/`index`/`validate` repointed onto it.
 - **2026-06-03** — **Phase 5 Step 4: signed bundle manifest (§5.3) + per-stage attestation note
   (§5.4), TDD.** Raises the proof from "flagged" to "verifiable." New pure `kernel/bundle.py`
   (`build_manifest` — part list + per-part `sha256`/bytes + folded capture outcomes + `source_sha256`

@@ -196,13 +196,24 @@ targets** (§9), not arbitrary — they are confirmed/adjusted against the golde
       the **TOC integrity** check below specifies (every TOC entry → a real heading), generalised to
       *all* cross-references. **Hard floor: zero severed cross-refs** — any one blocks.
     - **unmapped** — the `UNRESOLVED` marker `normalize` already wrote for a Word bookmark it could
-      not map to any heading. On the real corpus **~92%** of `_Toc`/`_Ref` cross-refs are unmapped —
-      they point at page numbers, figures, and spans, **not** headings — so a high unmapped rate is
-      **expected, not a defect**. It is therefore a **reported metric, never gated** (the ≤ 0.02
-      figure is an informational C5 target, not a gate). The dead-anchor hard floor applies to **TOC
-      entries + the heading tree** (the round-trip below), not to every inbound body cross-ref.
-    Keeping them apart is the point — *severed* is a silent regression to catch; *unmapped* is the
-    expected, already-flagged corpus baseline to measure, not block on.
+      not map to any heading. Triage (2026-06-03, 1.5k-bundle corpus) split this into two classes by
+      bookmark kind, because conflating them miscalibrated the C5 rate:
+      - **`_Toc…` (heading-targeting → the C5-bounded, recoverable class).** A TOC-field bookmark
+        targets a heading, so it *should* resolve. Today ~0.76 of `_Toc` refs are unmapped — not
+        because the target is absent but because Pandoc drops some heading bookmark spans, so
+        `anchors_pure` (which captures spans inline on heading lines) has nothing to capture. The
+        mapping is reconstructible from the legacy TOC (which records `_Toc… ↔ heading-title`, already
+        captured to `toc.yaml`): a tracked **`normalize` legacy-TOC-correlation follow-up**. The
+        C5 ≤ 0.02 resolvability target applies to **this** rate (over the heading-targeting universe).
+      - **`_Ref…`/other (non-heading → expected-unmapped, outside C5).** A Word cross-reference to a
+        figure / table / numbered item / page span — unmappable to a heading anchor by construction
+        (0 of 844 `_Ref` refs resolve on the real corpus; ~64% of all unmapped). Reported only;
+        **excluded** from the C5 rate's denominator.
+      Both are **reported metrics, never gated**. The dead-anchor hard floor applies to **severed**
+      refs + the **TOC entries + heading tree** round-trip (below), not to every inbound body cross-ref.
+    Keeping them apart is the point — *severed* is a silent regression to catch; *unmapped* `_Toc` is
+    the recoverable resolvability gap to drive down; *expected-unmapped* `_Ref` is the by-construction
+    baseline to measure, not block on.
   - **TOC integrity (the highest-value navigation check).** Because the TOC is the primary
     navigational *and* semantic structure (vdocs-design §6.7) and is *derived from the heading tree*,
     it is scored explicitly: **accuracy** (TOC entries match the heading tree), **completeness**

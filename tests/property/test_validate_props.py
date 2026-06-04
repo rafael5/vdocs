@@ -20,7 +20,10 @@ _targets = st.sampled_from(["a", "b", "c", "d", "gone", rp.UNRESOLVED])
 
 @given(
     anchors=_slugs,
-    outbound=st.dictionaries(st.sampled_from(["_T1", "_T2", "_T3", "_T4"]), _targets, max_size=4),
+    # mix _Toc… (heading) and _Ref… (non-heading) bookmarks so both UNRESOLVED branches fire
+    outbound=st.dictionaries(
+        st.sampled_from(["_Toc1", "_Toc2", "_Ref1", "_Ref2"]), _targets, max_size=4
+    ),
 )
 def test_resolve_refs_classifies_consistently(anchors, outbound):
     refs = {"doc_id": "x", "anchors": [{"slug": s} for s in anchors], "outbound": outbound}
@@ -33,7 +36,12 @@ def test_resolve_refs_classifies_consistently(anchors, outbound):
         if tgt != rp.UNRESOLVED and tgt in live:
             assert bm not in reported
     for f in findings:
-        expect = rp.UNMAPPED if f.target == rp.UNRESOLVED else rp.SEVERED
+        if f.target == rp.UNRESOLVED:
+            # _Toc… → recoverable UNMAPPED (C5 class); any other bookmark → EXPECTED_UNMAPPED
+            is_toc = f.bookmark.startswith(rp.TOC_BOOKMARK_PREFIX)
+            expect = rp.UNMAPPED if is_toc else rp.EXPECTED_UNMAPPED
+        else:
+            expect = rp.SEVERED
         assert f.kind == expect
 
 

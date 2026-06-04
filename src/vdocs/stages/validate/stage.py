@@ -30,11 +30,11 @@ from __future__ import annotations
 import json
 
 import structlog
-import yaml
 
 from vdocs.contracts.registry import CONSOLIDATED, TEXT_NORMALIZED, VALIDATION_REPORT
 from vdocs.kernel import bundle as kbundle
 from vdocs.kernel import cas
+from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
 from vdocs.stages.validate import reconcile_pure as rc
@@ -99,11 +99,18 @@ class ValidateStage(Stage):
         )
         severed = [f for f in ref_findings if f.kind == rp.SEVERED]
         unmapped = [f for f in ref_findings if f.kind == rp.UNMAPPED]
-        unmapped_rate = (len(unmapped) / outbound_total) if outbound_total else 0.0
+        expected_unmapped = [f for f in ref_findings if f.kind == rp.EXPECTED_UNMAPPED]
+        # The C5 heading-resolvability rate is measured over the *heading-targeting* universe only:
+        # expected-unmapped refs (_Ref… → figures/tables/spans) can never resolve to a heading
+        # anchor by construction, so they are reported but excluded from the rate (triage 2026-06-03
+        # — they were diluting the metric; §6.7/§8, FF C5). The residual unmapped (_Toc→heading
+        # misses) is the recoverable, C5-bounded class (a `normalize` legacy-TOC follow-up).
+        c5_universe = outbound_total - len(expected_unmapped)
+        unmapped_rate = (len(unmapped) / c5_universe) if c5_universe else 0.0
 
         # The gate blocks on reconciliation findings + SEVERED refs only. Unmapped (UNRESOLVED)
-        # cross-refs are reported as a C5 metric, never gated — a high unmapped rate is expected on
-        # the real corpus (~92%), not a defect (see UNMAPPED_RATE_TARGET).
+        # cross-refs are reported as a C5 metric, never gated — a high _Toc unmapped rate reflects
+        # the recoverable bookmark-capture gap, not a defect (see UNMAPPED_RATE_TARGET).
         blocked_by: list[str] = []
         if reconcile_findings:
             blocked_by.append(f"{len(reconcile_findings)} reconciliation finding(s)")
@@ -126,9 +133,10 @@ class ValidateStage(Stage):
             ],
             "ref_findings": {
                 "severed": [_ref_dict(f) for f in severed],  # gated: hard floor zero
-                "unmapped_count": len(unmapped),  # reported metric, not gated (expected ~92%)
+                "unmapped_count": len(unmapped),  # _Toc→heading misses (C5 class), reported
+                "expected_unmapped_count": len(expected_unmapped),  # _Ref… non-heading, not C5
                 "outbound_total": outbound_total,
-                "unmapped_rate": round(unmapped_rate, 4),
+                "unmapped_rate": round(unmapped_rate, 4),  # over the heading-targeting universe
                 "unmapped_above_c5_target": unmapped_rate > UNMAPPED_RATE_TARGET,
             },
             "bundle_findings": bundle_findings,
@@ -145,6 +153,7 @@ class ValidateStage(Stage):
                 "reconcile_findings": len(reconcile_findings),
                 "severed_refs": len(severed),
                 "unmapped_refs": len(unmapped),
+                "expected_unmapped_refs": len(expected_unmapped),
                 "bundle_findings": len(bundle_findings),
                 "blocking": int(self._blocking),
             }
@@ -189,7 +198,7 @@ def _verify_bundles(consolidated_root) -> list[dict]:  # type: ignore[no-untyped
                 }
             )
             continue
-        manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+        manifest = kregistry.load_mapping(manifest_path)
         findings.extend(
             {"kind": f.kind, "bundle": rel, "path": f.path, "detail": f.detail}
             for f in kbundle.verify_manifest(manifest, on_disk)
@@ -200,9 +209,7 @@ def _verify_bundles(consolidated_root) -> list[dict]:  # type: ignore[no-untyped
 def _load_yaml(path):  # type: ignore[no-untyped-def]
     """Load a sidecar YAML mapping, or ``None`` if absent/empty (defensive — a bad bundle is skipped
     by the count reconciliation rather than crashing the gate)."""
-    if not path.is_file():
-        return None
-    return yaml.safe_load(path.read_text(encoding="utf-8")) or None
+    return kregistry.load_mapping(path, missing_ok=True) or None
 
 
 def _read_prior_counts(path):  # type: ignore[no-untyped-def]

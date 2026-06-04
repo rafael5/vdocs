@@ -20,6 +20,7 @@ from vdocs.kernel import cas, frontmatter
 from vdocs.models.stage import StageRun
 from vdocs.orchestrator.engine import Orchestrator
 from vdocs.orchestrator.stage import PostflightError
+from vdocs.stages.normalize import capture_pure as cap
 from vdocs.stages.validate.stage import ValidateStage
 
 
@@ -170,6 +171,30 @@ def test_validate_does_not_block_on_high_unmapped_rate(ctx):
     assert not report["ref_findings"]["severed"]  # …but no severed refs, so not blocked
 
 
+def test_validate_reports_expected_unmapped_separately_from_c5_rate(ctx):
+    # Recalibration (triage 2026-06-03): _Ref… cross-refs target non-heading objects and can never
+    # resolve to a heading anchor → reported as expected-unmapped, OUTSIDE the C5 heading-
+    # resolvability rate. Only _Toc… (heading-targeting) bookmarks count toward unmapped_rate, whose
+    # denominator is the heading-targeting universe (outbound_total − expected_unmapped).
+    outbound = {
+        "_Ref1": "UNRESOLVED",  # expected-unmapped (non-heading target)
+        "_Ref2": "UNRESOLVED",  # expected-unmapped
+        "_Toc1": "UNRESOLVED",  # unmapped (recoverable _Toc→heading miss) — the C5 class
+        "_Toc2": "intro",  # resolved
+    }
+    _seed_bundle(ctx, "a", captures={"refs": "captured"}, anchors=("intro",), outbound=outbound)
+    _bless_normalize(ctx, {"documents": 1, "refs_sidecars": 1})
+
+    (result,) = Orchestrator([ValidateStage()]).run(ctx)
+    assert result.status == "ok" and result.counts["blocking"] == 0
+    rf = json.loads(ctx.cfg.validation_report.read_text())["ref_findings"]
+    assert rf["expected_unmapped_count"] == 2  # the two _Ref refs, not C5-counted
+    assert rf["unmapped_count"] == 1  # only the _Toc miss
+    assert rf["outbound_total"] == 4
+    # rate over the heading-targeting universe (4 − 2 expected = 2): 1 unmapped / 2 = 0.5
+    assert rf["unmapped_rate"] == 0.5
+
+
 def test_validate_handles_bundle_without_sidecars(ctx):
     # a bundle with only body.md (no capture.yaml / refs.yaml) is skipped, not crashed
     bundle = ctx.cfg.silver_normalized / "ADT" / "bare"
@@ -228,3 +253,71 @@ def test_validate_blocks_on_unmanifested_bundle(ctx):
         Orchestrator([ValidateStage()]).run(ctx)
     report = json.loads(ctx.cfg.validation_report.read_text())
     assert any(f["kind"] == "unmanifested" for f in report["bundle_findings"])
+
+
+# --- fault injection: prove the gate BITES on a planted silent detector miss (not just on a hand-
+# --- seeded capture.yaml). The capture.yaml here is the REAL capture_pure.build_manifest output,
+# --- so the chain residue-rescan → absent-unexpected → gate-block is exercised end-to-end.
+def _seed_bundle_real_capture(ctx, slug, body, manifest, *, anchors=("intro",), outbound=None):
+    bundle = ctx.cfg.silver_normalized / "ADT" / slug
+    cas.atomic_write(
+        bundle / "body.md",
+        frontmatter.emit({"title": slug, "app_code": "ADT", "tool_ver": "0.1.0"}, body).encode(),
+    )
+    cas.atomic_write(bundle / "capture.yaml", yaml.safe_dump(manifest).encode())
+    cas.atomic_write(
+        bundle / "refs.yaml",
+        yaml.safe_dump(
+            {
+                "doc_id": f"ADT/{slug}",
+                "anchors": [{"slug": s, "title": s} for s in anchors],
+                "outbound": outbound or {},
+            }
+        ).encode(),
+    )
+
+
+def test_validate_blocks_on_injected_silent_revision_miss(ctx):
+    # FAULT INJECTION: the normalized body still carries a revision-history section under a VARIANT
+    # heading ("Change History") that the strict detector (REVISION_HEADING_TEXTS) misses, and the
+    # detector reports a clean miss (count=0, no parse flag) — a *silent* per-document loss that
+    # corpus aggregates cannot see. The detector-INDEPENDENT residue rescan (broader tails set)
+    # must reclassify it absent-unexpected, and the gate must block — proving the second signal is
+    # genuinely independent for the revision class (the review's residue-independence concern).
+    body = "# Doc\n\n## Change History\n\n| Date | Note |\n| --- | --- |\n| 2020 | first |\n"
+    manifest = cap.build_manifest(
+        "ADT/rev", body, frozenset(),
+        revisions_count=0, revision_failed=False,  # silent miss: found nothing, not flagged
+        tables_count=1, refs_count=1, toc_count=0, title_date_captured=True,
+    )  # fmt: skip
+    assert manifest["captures"]["revisions"]["outcome"] == cap.ABSENT_UNEXPECTED
+    assert cap.has_unexpected_absence(manifest)
+
+    _seed_bundle_real_capture(ctx, "rev", body, manifest)
+    _bless_normalize(ctx, {"documents": 1, "refs_sidecars": 1, "absent_unexpected": 1})
+    with pytest.raises(PostflightError):
+        Orchestrator([ValidateStage()]).run(ctx)
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    assert report["blocking"] is True
+    assert any(f["kind"] == "absent-unexpected" for f in report["reconcile_findings"])
+
+
+def test_validate_blocks_on_injected_silent_table_miss(ctx):
+    # FAULT INJECTION: a qualifying (≥10-row) table remains in the body but the table detector
+    # reported zero extractions — the residue post-condition (count_qualifying_tables) catches the
+    # leftover → absent-unexpected → gate blocks. KNOWN BOUNDARY (tracked as code-review-stage-4
+    # increment 4): this residue shares the detector's `_qualifies` predicate, so a table the
+    # detector *rejects by threshold* is NOT caught here — only the corpus-zero reconciliation
+    # backstops that. This pins the post-condition the residue DOES provide.
+    rows = "\n".join(f"| {i} | row{i} |" for i in range(12))
+    body = f"# Doc\n\n| A | B |\n| --- | --- |\n{rows}\n"
+    manifest = cap.build_manifest(
+        "ADT/tbl", body, frozenset(),
+        revisions_count=0, revision_failed=False,
+        tables_count=0, refs_count=1, toc_count=0, title_date_captured=True,  # detector missed it
+    )  # fmt: skip
+    assert manifest["captures"]["tables"]["outcome"] == cap.ABSENT_UNEXPECTED
+    _seed_bundle_real_capture(ctx, "tbl", body, manifest)
+    _bless_normalize(ctx, {"documents": 1, "refs_sidecars": 1, "absent_unexpected": 1})
+    with pytest.raises(PostflightError):
+        Orchestrator([ValidateStage()]).run(ctx)

@@ -31,11 +31,22 @@ def test_severed_ref_when_target_slug_not_live():
     assert findings[0].bookmark == "_Toc9" and findings[0].target == "gone-section"
 
 
-def test_unresolved_marker_is_unmapped_not_severed():
+def test_unresolved_toc_bookmark_is_unmapped_not_severed():
+    # a _Toc… bookmark targets a heading → the C5-bounded, recoverable resolvability class
     refs = _refs(["intro"], {"_Toc1": "intro", "_Toc7": rp.UNRESOLVED})
     findings = rp.resolve_refs(refs)
     assert [f.kind for f in findings] == [rp.UNMAPPED]
     assert findings[0].bookmark == "_Toc7"
+
+
+def test_unresolved_ref_bookmark_is_expected_unmapped():
+    # a _Ref… bookmark is a Word cross-reference to a NON-heading target (figure/table/numbered
+    # item/page span) — unmappable to a heading anchor by construction. It must be classified
+    # EXPECTED_UNMAPPED (reported, outside the C5 heading-resolvability rate), not lumped with the
+    # recoverable _Toc class (corpus triage 2026-06-03: 0 of 844 _Ref refs ever resolve).
+    refs = _refs(["intro"], {"_Ref123": rp.UNRESOLVED, "_Toc7": rp.UNRESOLVED})
+    findings = {f.bookmark: f.kind for f in rp.resolve_refs(refs)}
+    assert findings == {"_Ref123": rp.EXPECTED_UNMAPPED, "_Toc7": rp.UNMAPPED}
 
 
 def test_live_anchor_slugs_extracted():
