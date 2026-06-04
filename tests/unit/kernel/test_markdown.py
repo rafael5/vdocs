@@ -18,6 +18,39 @@ def test_heading_re_requires_space_and_trims_trailing_ws():
     assert md.HEADING_RE.match("## Spaced   ").group(2) == "Spaced"
 
 
+def test_substantive_tokens_counts_visible_words_ignoring_nav_and_blank():
+    body = ["", "Configure the menu, then save.", "[↑ Back to Contents](#contents)", ""]
+    has_ref, n = md.substantive_tokens(body)
+    assert has_ref is False
+    assert n == 5  # "Configure the menu then save" — nav + blank lines never count
+
+
+def test_substantive_tokens_reduces_links_to_their_label():
+    has_ref, n = md.substantive_tokens(["See the [Install Guide](#install) for steps"])
+    assert has_ref is False
+    assert n == 6  # See the Install Guide for steps — link syntax reduced to its label
+
+
+def test_substantive_tokens_marks_referent_and_excludes_its_text():
+    # a relocation pointer (boilerplate/CSV/asset) is not substance — content lives in the referent
+    line = "_[Install notice — shared boilerplate](_shared/boilerplate/x.md)_"
+    has_ref, n = md.substantive_tokens([line])
+    assert has_ref is True and n == 0
+
+
+def test_classify_section():
+    def kind(*, container=False, referent=False, tokens=0):
+        return md.classify_section(is_container=container, has_referent=referent, tokens=tokens)
+
+    assert kind(container=True) == "container"
+    assert kind(tokens=20) == "ok"
+    assert kind(referent=True, tokens=0) == "stub"
+    assert kind(tokens=0) == "hollow"
+    # the floor is the boundary: exactly MIN tokens is substantive ("ok"), one below is hollow
+    assert kind(tokens=md.MIN_SUBSTANTIVE_TOKENS) == "ok"
+    assert kind(tokens=md.MIN_SUBSTANTIVE_TOKENS - 1) == "hollow"
+
+
 def test_fence_re_matches_backtick_and_tilde_fences():
     assert md.FENCE_RE.match("```python")
     assert md.FENCE_RE.match("   ~~~")

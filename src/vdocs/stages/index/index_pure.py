@@ -11,7 +11,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from vdocs.kernel.markdown import iter_headings, strip_tags
+from vdocs.kernel.markdown import (
+    classify_section,
+    iter_headings,
+    strip_tags,
+    substantive_tokens,
+)
 from vdocs.stages.normalize.anchors_pure import github_slug
 
 DEFAULT_TOC_DEPTH = (2, 3)
@@ -27,6 +32,8 @@ class Section:
     level: int
     text: str  # the heading line through the line before the next heading
     toc_level: bool  # whether the heading is in-TOC at the chosen depth
+    kind: str  # "container" | "ok" | "stub" | "hollow" (kernel.markdown.classify_section, §14.6)
+    searchable: bool  # belongs on the search surface (FTS/embed) — containers + hollow chunks don't
 
 
 def _unique(slug: str, used: set[str]) -> str:
@@ -65,6 +72,13 @@ def shred_sections(
         slug = _unique(github_slug(title, seen), used)
         end = heads[i + 1][0] if i + 1 < len(heads) else len(lines)
         text = "\n".join(lines[idx:end]).strip()
+        # Structure-aware classification (§14.6, A1): a heading whose next heading is strictly
+        # deeper is a *container* (substance lives in subsections); otherwise judge its own body
+        # (the lines after the heading) by the shared substantive-token floor. Containers + hollow
+        # chunks stay as rows (the anchor/nav map is complete) but are kept off the search surface.
+        is_container = i + 1 < len(heads) and heads[i + 1][1] > level
+        has_referent, tokens = substantive_tokens(lines[idx + 1 : end])
+        kind = classify_section(is_container=is_container, has_referent=has_referent, tokens=tokens)
         sections.append(
             Section(
                 section_id=f"{doc_key}/{slug}",
@@ -73,6 +87,8 @@ def shred_sections(
                 level=level,
                 text=text,
                 toc_level=lo <= level <= hi,
+                kind=kind,
+                searchable=kind in ("ok", "stub"),
             )
         )
     return sections

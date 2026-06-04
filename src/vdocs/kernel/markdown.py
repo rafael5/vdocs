@@ -14,7 +14,7 @@ uniform across all four call sites. Pure: strings in, plain values out.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 
 from vdocs.kernel.text import TAG_RE as TAG_RE  # the single tag matcher, re-exported (§9.2)
 from vdocs.kernel.text import strip_tags as strip_tags  # re-exported for the markdown call sites
@@ -95,7 +95,23 @@ __all__ = [
     "is_revision_heading",
     "is_legacy_toc_entry",
     "legacy_toc_target",
+    "MIN_SUBSTANTIVE_TOKENS",
+    "substantive_tokens",
+    "classify_section",
 ]
+
+# The substantive-content floor (§6.5/§10.5/§14.6 calibration target — tune against the golden set,
+# not a magic constant). A content section needs at least this many visible word tokens to stand
+# alone when retrieved. Shared so the `index` chunker (don't index a hollow chunk) and the
+# `fidelity` over-strip gate (flag it) agree on what "hollow" means (§9.2).
+MIN_SUBSTANTIVE_TOKENS = 8
+
+# A link/image target inside a single-sourced store ⇒ content was *relocated*, not lost (a
+# referent); the round-trip back-link is pure nav furniture; a link/image reduces to its label/alt.
+_REFERENT_RE = re.compile(r"\]\([^)]*(?:_shared/|tables/|assets/|\.csv)[^)]*\)")
+_NAV_RE = re.compile(r"↑\s*Back to Contents", re.IGNORECASE)
+_LINK_LABEL_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
+_WORD_RE = re.compile(r"\w+")
 
 
 def heading_furniture_text(line: str) -> str:
@@ -131,6 +147,46 @@ def legacy_toc_target(line: str) -> str | None:
         return None
     targets = _TOC_TARGET_RE.findall(line)
     return targets[-1] if targets else None
+
+
+def substantive_tokens(body_lines: Iterable[str]) -> tuple[bool, int]:
+    """``(has_referent, token_count)`` for a section body (the lines *after* its heading) — the
+    shared "does this chunk carry standalone substance" measure (§6.5/§10.5/§14.6, §9.2).
+
+    Blank and round-trip-nav lines never count; a line pointing at relocated content
+    (``_shared/`` boilerplate, ``tables/*.csv``, ``assets/``) sets ``has_referent`` and adds no
+    tokens (its substance lives in the referent); every other line contributes its visible word
+    tokens (link/image syntax reduced to its label/alt)."""
+    has_referent = False
+    tokens = 0
+    for line in body_lines:
+        s = line.strip()
+        if not s or _NAV_RE.search(s):
+            continue
+        if _REFERENT_RE.search(s):
+            has_referent = True
+            continue  # a relocation pointer is not substance — its content lives in the referent
+        tokens += len(_WORD_RE.findall(_LINK_LABEL_RE.sub(r"\1", s)))
+    return has_referent, tokens
+
+
+def classify_section(
+    *, is_container: bool, has_referent: bool, tokens: int, min_tokens: int = MIN_SUBSTANTIVE_TOKENS
+) -> str:
+    """Classify a section for chunking / over-strip scoring (§10.5/§14.6, §9.2):
+
+    * ``container`` — a deeper heading follows; its substance lives in subsections (judge the
+      children, not this);
+    * ``ok`` — stands alone (≥ ``min_tokens`` substantive word tokens);
+    * ``stub`` — thin, but content was relocated to a referent (boilerplate/CSV/asset) — reported,
+      never a defect (the search index holds the canonical copy once);
+    * ``hollow`` — a bare heading with no substance and no referent — the over-strip defect: it
+      embeds as essentially just its title and pollutes the search space."""
+    if is_container:
+        return "container"
+    if tokens >= min_tokens:
+        return "ok"
+    return "stub" if has_referent else "hollow"
 
 
 def is_markdown_artifact(line: str) -> bool:

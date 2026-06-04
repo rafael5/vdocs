@@ -59,3 +59,47 @@ def test_shred_skips_generated_contents():
     body = "# Doc\n\n## Contents\n\n- [Setup](#setup)\n\n## Setup\n\nbody\n"
     slugs = [s.slug for s in ip.shred_sections(body, "ADT/x")]
     assert "contents" not in slugs and slugs == ["doc", "setup"]
+
+
+# --- A1 increment 1: structure-aware classification (container/ok/stub/hollow + searchable) ---
+
+
+def test_shred_classifies_container_vs_leaf_and_marks_searchable():
+    # "Pre-installation Considerations" has only deeper subsections + no own prose → a CONTAINER:
+    # it must NOT be a searchable chunk (its substance lives in its children), but it stays a row.
+    body = (
+        "## Pre-installation Considerations\n\n"
+        "[↑ Back to Contents](#contents)\n\n"
+        "### Client Requirements\n\nInstall the v32 client on each workstation before upgrade.\n\n"
+        "## Overview\n\nThis manual describes the scheduling package and all its options.\n"
+    )
+    secs = {s.slug: s for s in ip.shred_sections(body, "SD/sd_ig")}
+    assert secs["pre-installation-considerations"].kind == "container"
+    assert secs["pre-installation-considerations"].searchable is False
+    assert secs["client-requirements"].kind == "ok"  # a substantive leaf
+    assert secs["client-requirements"].searchable is True
+    assert secs["overview"].kind == "ok" and secs["overview"].searchable is True
+
+
+def test_shred_marks_hollow_leaf_not_searchable():
+    # a leaf reduced to a bare heading + back-link, no children, no referent → HOLLOW (the defect):
+    # excluded from the search surface, but still emitted as a row (anchor/nav map stays complete).
+    body = (
+        "## Empty Section\n\n[↑ Back to Contents](#contents)\n\n"
+        "## Real Section\n\nThis section has plenty of real prose to stand alone when retrieved.\n"
+    )
+    secs = {s.slug: s for s in ip.shred_sections(body, "SD/x")}
+    assert secs["empty-section"].kind == "hollow" and secs["empty-section"].searchable is False
+    assert secs["real-section"].kind == "ok" and secs["real-section"].searchable is True
+    assert "empty-section" in {s.slug for s in ip.shred_sections(body, "SD/x")}  # row still present
+
+
+def test_shred_marks_stub_leaf_searchable():
+    # a thin leaf whose content was relocated to a referent (shared boilerplate / CSV) is a STUB,
+    # not hollow — content isn't lost, so it stays searchable (reported, never penalised).
+    body = (
+        "## Standard Notice\n\n_[VA notice — shared boilerplate](_shared/boilerplate/va.md)_\n\n"
+        "## Data\n\nSee [the table](tables/table-01.csv) for the full field list.\n"
+    )
+    secs = {s.slug: s for s in ip.shred_sections(body, "SD/x")}
+    assert secs["standard-notice"].kind == "stub" and secs["standard-notice"].searchable is True

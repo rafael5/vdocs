@@ -27,26 +27,24 @@ emits but are duplicated here deliberately, so the scorer never imports the stag
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 
-from vdocs.kernel.markdown import iter_headings
+from vdocs.kernel.markdown import (
+    MIN_SUBSTANTIVE_TOKENS,
+    classify_section,
+    iter_headings,
+    substantive_tokens,
+)
 
 PASS = "PASS"
 REVIEW = "REVIEW"
 QUARANTINE = "QUARANTINE"
 
-# A content section needs at least this many substantive word tokens to stand alone when retrieved.
-# A calibration target (fidelity-framework §9), not a magic constant — tune against the golden set.
-_MIN_TOKENS = 8
-
-# Recognition patterns (see module docstring for why they live here, not imported from `normalize`):
-# a link/image whose target points at a sidecar or single-sourced store ⇒ content was relocated,
-# not lost; the round-trip back-link is pure navigation furniture, never substance.
-_REFERENT_RE = re.compile(r"\]\([^)]*(?:_shared/|tables/|assets/|\.csv)[^)]*\)")
-_NAV_RE = re.compile(r"↑\s*Back to Contents", re.IGNORECASE)
-_LINK_LABEL_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")  # [label](t) -> label ; ![alt](t) -> alt
-_WORD_RE = re.compile(r"\w+")
+# The substantive-content floor + the "is this body substantive" measure are shared with the
+# `index` chunker via the kernel (§9.2), so the over-strip gate and the chunker agree on "hollow".
+# The scorer still never imports the stage it audits (`normalize`/`index`) — the kernel is neutral
+# infrastructure (independent-reference principle, FF §2.2). `_MIN_TOKENS` kept as a local alias.
+_MIN_TOKENS = MIN_SUBSTANTIVE_TOKENS
 
 
 @dataclass(frozen=True)
@@ -88,38 +86,16 @@ def _segments(body: str) -> list[tuple[int, str, list[str], bool]]:
     return out
 
 
-def _audit_body(body_lines: list[str]) -> tuple[bool, int]:
-    """``(has_referent, substantive_tokens)`` for one section body.
-
-    Blank and navigation lines never count; a line pointing at relocated content marks the chunk as
-    having a referent (and its short pointer label adds no substance); everything else contributes
-    its visible word tokens (link syntax reduced to its label)."""
-    has_referent = False
-    tokens = 0
-    for line in body_lines:
-        s = line.strip()
-        if not s or _NAV_RE.search(s):
-            continue
-        if _REFERENT_RE.search(s):
-            has_referent = True
-            continue  # a relocation pointer is not substance — its content lives in the referent
-        tokens += len(_WORD_RE.findall(_LINK_LABEL_RE.sub(r"\1", s)))
-    return has_referent, tokens
-
-
 def audit_chunks(body: str, *, min_tokens: int = _MIN_TOKENS) -> list[ChunkAudit]:
     """Audit every leaf content section of ``body`` (containers excluded)."""
     audits: list[ChunkAudit] = []
     for level, title, seg, is_container in _segments(body):
         if is_container:
             continue
-        has_referent, tokens = _audit_body(seg)
-        if tokens >= min_tokens:
-            classification = "ok"
-        elif has_referent:
-            classification = "stub"
-        else:
-            classification = "hollow"
+        has_referent, tokens = substantive_tokens(seg)
+        classification = classify_section(
+            is_container=False, has_referent=has_referent, tokens=tokens, min_tokens=min_tokens
+        )
         audits.append(ChunkAudit(title, level, tokens, has_referent, classification))
     return audits
 
