@@ -32,3 +32,15 @@ def test_load_mapping_missing_not_ok_raises(tmp_path):
     """A required inventory vocabulary that is absent is a loud failure, not a silent empty."""
     with pytest.raises(FileNotFoundError):
         registry.load_mapping(tmp_path / "absent.yaml")
+
+
+def test_load_mapping_sidecar_absent_and_empty_collapse_to_empty(tmp_path):
+    """Per-bundle sidecar use (history/refs/bundle.yaml): both an absent and an empty file with
+    ``missing_ok=True`` yield ``{}`` — so a caller can compose ``or None`` to treat "no base" and
+    "empty base" identically (the contract ``consolidate._read_history`` / ``validate._load_yaml``
+    rely on)."""
+    empty = tmp_path / "empty_sidecar.yaml"
+    empty.write_text("", encoding="utf-8")
+    assert registry.load_mapping(empty, missing_ok=True) == {}
+    assert registry.load_mapping(tmp_path / "absent_sidecar.yaml", missing_ok=True) == {}
+    assert (registry.load_mapping(empty, missing_ok=True) or None) is None

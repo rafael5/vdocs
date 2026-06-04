@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
+from vdocs.kernel import db
 from vdocs.kernel import fingerprint as fp
 
 if TYPE_CHECKING:
@@ -132,10 +133,8 @@ class ArtifactContract(BaseModel):
         return self._validate_sqlite(path)
 
     def _validate_sqlite(self, path: Path) -> CheckResult:
-        import sqlite3
-
         kind_filter = "view" if self.kind == Kind.SQLITE_VIEW else "table"
-        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        conn = db.connect(path, read_only=True)
         try:
             row = conn.execute(
                 "SELECT 1 FROM sqlite_master WHERE type = ? AND name = ?",

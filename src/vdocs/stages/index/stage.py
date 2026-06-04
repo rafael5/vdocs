@@ -24,7 +24,6 @@ import sqlite3
 from collections import Counter
 
 import structlog
-import yaml
 
 from vdocs.contracts.registry import (
     CONSOLIDATED,
@@ -237,7 +236,7 @@ def _latest_doc_ids(consolidated_root):  # type: ignore[no-untyped-def]
     """The `doc_id`s flagged `is_latest` across every group's `history.yaml` (the anchors)."""
     latest: set[str] = set()
     for hist_path in consolidated_root.rglob("history.yaml"):
-        data = yaml.safe_load(hist_path.read_text(encoding="utf-8")) or {}
+        data = kregistry.load_mapping(hist_path)
         for m in data.get("members") or []:
             if m.get("is_latest"):
                 latest.add(str(m["doc_id"]))
@@ -246,9 +245,7 @@ def _latest_doc_ids(consolidated_root):  # type: ignore[no-untyped-def]
 
 def _toc_depth(refs_path):  # type: ignore[no-untyped-def]
     """The doc's chosen TOC depth from `refs.yaml`, or the H2–H3 default (heading-less docs)."""
-    if not refs_path.is_file():
-        return ip.DEFAULT_TOC_DEPTH
-    data = yaml.safe_load(refs_path.read_text(encoding="utf-8")) or {}
+    data = kregistry.load_mapping(refs_path, missing_ok=True)
     depth = data.get("toc_depth")
     return (depth[0], depth[1]) if depth else ip.DEFAULT_TOC_DEPTH
 

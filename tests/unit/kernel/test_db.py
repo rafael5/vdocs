@@ -1,10 +1,28 @@
 """Unit tests for kernel.db — the one place that knows SQLite pragmas (§9.2)."""
 
 import sqlite3
+from pathlib import Path
 
 import pytest
 
 from vdocs.kernel import db
+
+_SRC_ROOT = Path(__file__).resolve().parents[3] / "src" / "vdocs"
+
+
+def test_readonly_uri_is_single_sourced_in_kernel_db():
+    """§9.2: the read-only ``file:...?mode=ro`` URI is a connection pragma — it must live in
+    exactly one place (``kernel.db.connect``). Any other module re-spelling it is a copy-paste of
+    the primitive that bypasses the single connection-pragma authority."""
+    offenders = {
+        p.relative_to(_SRC_ROOT).as_posix()
+        for p in _SRC_ROOT.rglob("*.py")
+        if "mode=ro" in p.read_text(encoding="utf-8")
+    }
+    assert offenders == {"kernel/db.py"}, (
+        f"read-only SQLite URI re-inlined outside kernel/db.py: {offenders - {'kernel/db.py'}} "
+        "— route through db.connect(path, read_only=True)"
+    )
 
 
 def test_connect_creates_file_and_sets_pragmas(tmp_path):

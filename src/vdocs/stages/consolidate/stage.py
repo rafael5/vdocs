@@ -24,6 +24,7 @@ import yaml
 from vdocs.contracts.registry import ASSETS, CONSOLIDATED, TEXT_NORMALIZED
 from vdocs.kernel import bundle, cas, frontmatter
 from vdocs.kernel import ids as kids
+from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
 from vdocs.stages.consolidate import consolidate_pure as cp
@@ -178,17 +179,14 @@ def _member_from(meta, doc_slug, raw, bodies, bundle_dir):  # type: ignore[no-un
 def _fold_revisions(path):  # type: ignore[no-untyped-def]
     """The member's own ``revisions.yaml`` (§6.4) folded into the lineage: the revision entries +
     the newest date (the order tiebreak). Absent sidecar → no entries, no date."""
-    if not path.is_file():
-        return [], ""
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    data = kregistry.load_mapping(path, missing_ok=True)
     return list(data.get("revisions") or []), str(data.get("revision_newest", ""))
 
 
 def _read_history(path):  # type: ignore[no-untyped-def]
-    """Load a prior ``history.yaml`` (the append-only base), or ``None`` on the first run."""
-    if not path.is_file():
-        return None
-    return yaml.safe_load(path.read_text(encoding="utf-8"))
+    """Load a prior ``history.yaml`` (the append-only base), or ``None`` on the first run (absent
+    or empty sidecar)."""
+    return kregistry.load_mapping(path, missing_ok=True) or None
 
 
 def _folded_captures(capture_yaml: bytes | None) -> dict:
