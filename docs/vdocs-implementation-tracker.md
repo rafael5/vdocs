@@ -24,17 +24,28 @@ never hard-coded), atomic writes (temp+rename), fail-loud preflight with remedia
 
 ## Overall status
 
-**Pipeline stages (§8): 12 ✅ · 0 ◐ · 7 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
-counted separately below). Last updated **2026-06-02**. **Phases 1–3 complete and merged to `master`**
-(PRs #3/#4/#5) — inventory medallion + gated bronze + the full document-silver pipeline, run
-end-to-end on a real 469-doc VA corpus; the pre-Phase-4 hardening pass (reliability R1–R9 [R4 split
-out], redundancy D1–D5, the `revisions.yaml` rename, drift-doc reconciliation, a 7-invariant property
-suite + branch coverage) is **fast-forwarded onto `master`** (`e725f5a`). **Phase 4 COMPLETE** on
-branch `feat/phase-4-gold-derive` (not yet merged): the gold-derive layer `consolidate` ✅ (§6.6
-version rollup) → `index` ✅ (§5.5/§14.6 derived index) → `relate` ✅ (§8 knowledge graph) → `manifest`
-✅ (§14.4 MCP front door), regenerated on the real 469-doc lake (no re-fetch) and a no-`--force`
-re-run SKIPs all four. `make check` green (**524 tests, branch cov 99.7% / gate ≥95%**, ruff+mypy
-clean). **Next: Phase 5 `fidelity`.**
+**Pipeline stages (§8): 13 ✅ · 1 ◐ · 5 ☐** (of 19 = 18 stages + the MCP server; the Phase‑1 spine is
+counted separately below). Last updated **2026-06-04** (status audit). **Phases 1–4 complete; Phase 5
+in progress** on branch `feat/phase-5-sidecar-verification` (**not yet merged** to `master`; far ahead
+of it). Phases 1–3 merged to `master` (PRs #3/#4/#5); Phase 4 (`consolidate`→`index`→`relate`→
+`manifest`) ✅; Phase 5 so far = the **`validate` HARD GATE** ✅ (sidecar-verification slice — typed
+absence · count reconciliation · ref resolution · signed-bundle integrity) **plus a full gold-cleanup
+remediation pass** (title-page/revision-history/legacy-TOC strip-with-capture, §6.3/§6.4/§6.7).
+
+**The lake has been expanded and fully re-run since the prior update: 469 → 1299 docs / 290 → 409
+version groups.** The whole pipeline `crawl`→…→`validate` ran green on the 1299-doc lake on
+**2026-06-03** (convert 1301 docs/23 185 assets; normalize 1299; consolidate 409 groups; index 1299
+docs/70 613 sections/24 999 FTS; relate 46 263 edges; manifest 1299 docs/409 groups, semantic
+unavailable; **validate gate PASSES** — `blocking=false`, `severed=[]`, `reconcile_findings=[]`,
+`bundle_findings=[]`, the only soft signal is the known `_Toc` ref-resolution gap, unmapped_rate 0.76).
+Gold cleanup audit (290-doc baseline): legacy title page 256→5, revision-history 202→23, legacy TOC
+226→1, "clean on all three" 9→**263/290 (91%)**, every residual carries a `flags.yaml` (zero silent
+residue). `make check` green (**681 tests, coverage 98.71% / gate ≥95%**, ruff+mypy clean). Uncommitted
+WIP: the code-review Stage-4 §9.2 follow-ups (read-only-URI single-sourcing, `_MONTH`→kernel,
+`load_mapping` widening) + refs-metric refinements — all 681 tests green.
+**Next decision (see Change Log 2026-06-04): land WIP + merge the branch, then either (a) close the
+`_Toc` legacy-TOC-correlation gap in `normalize` before `publish` bakes navigation, or (b) proceed to
+`publish`. Recommended: (a) — it is the single highest-value quality fix and `publish` is downstream of it.**
 
 | Phase | Title | Status | Progress |
 |---|---|:--:|:--:|
@@ -42,7 +53,7 @@ clean). **Next: Phase 5 `fidelity`.**
 | 2 | Inventory medallion + doc-bronze | ✅ | 4/4 |
 | 3 | Silver — document text (convert·discover·enrich·normalize) | ✅ | 4/4 |
 | 4 | Gold derive (consolidate·index·relate·manifest) | ✅ | 4/4 |
-| 5 | Gold deliver (fidelity·publish·validate·push·analyze) | ◐ | validate sidecar-slice ◐ |
+| 5 | Gold deliver (fidelity·publish·validate·push·analyze) | ◐ | validate ✅ · fidelity ◐ (oracles only) · publish/push/analyze ☐ |
 | 6 | Machine interface (embed·serve-mcp) | ☐ | 0/2 |
 | 7 | Harden (property·--verify·gc·docs-gen·replay·refresh) | ◐ | 2◐·1⬚·3☐ |
 
@@ -88,15 +99,22 @@ Layer: 🥉 bronze · 🥈 silver · 🥇 gold; INV = inventory medallion, DOC =
 | relate | 🥇 DOC | ✅ | §8 | index.db → relations (graph) |
 | manifest | 🥇 DOC | ✅ | §14 | → corpus-manifest + discovery |
 
-**Phase 5 — Gold deliver** ◐ 0✅·1◐·4☐
+**Phase 5 — Gold deliver** ◐ 1✅·1◐·3☐
 
 | Stage | Layer | St | Ref | Goal |
 |---|:--:|:--:|---|---|
-| fidelity | 🥇 DOC | ☐ | FF | → reports/fidelity (S→T) — full axes still TODO |
-| publish | 🥇 DOC | ☐ | §8 | → publish (md tree + INDEX) |
-| validate | 🥇 DOC | ◐ | §7.3 | **HARD GATE** — sidecar-verification slice ✅ (typed-absence · count-reconcile · ref-resolution); schema · IDs · fidelity-verdict TODO |
-| push | 🚀 DOC | ☐ | §6.6 | publish → git (+ lineage) |
-| analyze | ⬩ DOC | ☐ | §8 | → reports (off path) |
+| validate | 🥇 DOC | ✅ | §7.3 | **HARD GATE built & wired, gate PASSES on the 1299-doc lake** — typed-absence · count-reconcile · ref-resolution · signed-bundle integrity. Remaining for a *fuller* gate: schema · ID · fidelity-verdict axes (feed the same gate later) |
+| fidelity | 🥇 DOC | ◐ | FF | pure oracles only (`compliance_pure` template-compliance, `overstrip_pure` over-strip guardrail) — **not a DAG-wired stage**; full S→T axes (C1/C3/C4) + `reports/fidelity` stage TODO |
+| publish | 🥇 DOC | ☐ | §8 | → publish (md tree + INDEX) — **not started** (no `publish/` stage dir, no publish tree in the lake) |
+| push | 🚀 DOC | ☐ | §6.6 | publish → git (+ lineage) — not started |
+| analyze | ⬩ DOC | ☐ | §8 | → reports (off path) — not started |
+
+*Built since the prior tracker update (all on `feat/phase-5-sidecar-verification`, unmerged): the gold-cleanup
+remediation (commits `01df238`→`8f3e6ed`) — title-page logo removal + standardized cover, revision-history
+detection/capture/strip, legacy-TOC correlate-derive-strip, capture-before-strip flags — and the `validate`
+sidecar-verification gate + signed bundle manifest (`982046c`→`8f8cfc3`). The lake's `normalize` counts reflect
+these: titlepages_standardized 1169, title_images_removed 914, toc_sidecars 1070, capture_sidecars 1299,
+revision_sidecars 971, flag_sidecars 967.*
 
 **Phase 6 — Machine interface** ☐ 0/2
 
@@ -281,6 +299,27 @@ gate (Phase 5) is the deliver-side analogue of the `serve-inventory` gate.
 
 *Newest first. One entry per meaningful tracker/implementation change.*
 
+- **2026-06-04** — **Whole-pipeline status audit + corpus-quality assessment (tracker reconciliation).**
+  Audited the running lake vs. this tracker (which had drifted: it framed a 469-doc / 290-group / Phase-4
+  state and "524 tests"). **Reality on disk:** the lake was expanded to **1299 docs / 409 version groups**
+  and the full pipeline (`crawl`→`validate`) re-run green on **2026-06-03**; `feat/phase-5-sidecar-verification`
+  carries a complete **gold-cleanup remediation** (title/revhist/legacy-TOC) *and* the **`validate` HARD GATE**
+  beyond what the tracker recorded — none merged to `master`. `make check` green at **681 tests / 98.71%**.
+  Reconciled the Overall-status block, the Phase-5 detail table, and the phase summary above.
+  **Corpus state & quality:** silver 1299/1299 normalized; gold derive complete; the validate gate **passes**
+  (`severed=[]`, reconcile 0, bundle 0); gold-cleanup audit shows **91% of docs clean** on all three legacy
+  artifacts with zero silent residue (every residual flagged). **Coverage of the genuine in-scope DOCX
+  inventory (3 728 docx; pipeline is DOCX-only §1): 1299 docs = 35%, 409/764 version-groups = 53%, 140/175
+  apps = 80%** — by section: Clinical 1007/2544 (40%), Infrastructure 163/235 (69%), Financial-Admin 78/643
+  (12%), GUI-Hybrids 50/305 (16%), Monograph 1/1. The corpus is a deliberate, representative *selection*
+  (CPRS+clinical, pharmacy family, tier-2, 6-package — the `select-*.txt` sets), not full coverage; not a bug.
+  **Single biggest quality gap:** the known **`_Toc` cross-ref resolution** — 534/705 `_Toc…` refs UNRESOLVED
+  (unmapped_rate 0.76, above the C5 ≤0.02 target) because Pandoc drops heading bookmark spans; recoverable in
+  `normalize` via legacy-TOC title→slug correlation (`toc.yaml` already captures `_Toc↔title`). It degrades
+  in-corpus navigation but does **not** block the gate. **Recommendation: close the `_Toc` gap in `normalize`
+  before building `publish`** (publish bakes the navigation links into the human tree), then proceed
+  `publish`→`push`. Secondary: land the uncommitted code-review §9.2 WIP and merge the branch; widen the
+  `fidelity` oracles into a wired stage. No code changed in this audit; doc-only reconciliation.
 - **2026-06-03** — **Phase 5 ref-resolution recalibration: split the C5 unmapped metric (`_Toc`
   recoverable vs `_Ref` expected), doc-first + TDD.** A real-lake triage of the validate gate's 88%
   unmapped-ref rate (1378/1549 on the 1299-doc lake) found the old "~92% expected" framing
