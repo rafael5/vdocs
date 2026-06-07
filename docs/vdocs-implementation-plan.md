@@ -45,7 +45,7 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
 | **A — Substrate / chunking** | A1 | Pick embedder (**bge-m3**, 8k) + chunk budget gate | ✅ | |
 | | A2 | Context headers (active) + small-leaf merge (built, **gated off** → C) | ✅ | ⚠️ |
 | | A3 | `stub` chunks → lexical-only (exclude from semantic) | ✅ | |
-| **B — Denoising (full corpus)** | B1 | `discover` at scale; curate phrases + boilerplate; materialize `_shared/boilerplate/` | ⬜ | |
+| **B — Denoising (full corpus)** | B1 | `discover` at scale; curate phrases + boilerplate; materialize `_shared/boilerplate/` | ✅ | ⚠️ |
 | | B2 | Materialize `gold/glossary.md` (PROMOTE) | ⬜ | |
 | | B3 | De-weight globals; index extracted tables as data | ⬜ | |
 | **C — Semantic + hybrid** | C1 | Add embedder dep; run `embed`; `vectors.db`; manifest flips semantic on | ⬜ | |
@@ -241,19 +241,47 @@ Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.p
 
 | ID | Step | Detail | Gate | Status | Flag |
 |----|------|--------|------|--------|------|
-| B1 | Phrases + boilerplate | Run `discover` on full corpus; curate `phrases`/`boilerplate` registries; materialize `gold/_shared/boilerplate/`; `normalize` references | Boilerplate single-sourced; dead phrases removed | ⬜ | |
+| B1 | Phrases + boilerplate | Run `discover` on full corpus; curate `phrases`/`boilerplate` registries; materialize `gold/_shared/boilerplate/`; `normalize` references | Boilerplate single-sourced; dead phrases removed | ✅ | ⚠️ |
 | B2 | Glossary | Materialize `gold/glossary.md` (PROMOTE); drop per-doc copies | Glossary exists; per-doc dupes gone | ⬜ | |
 | B3 | Entity weighting + tables | De-weight globals in ranking; index extracted `tables/*.csv` as searchable structured chunks | Globals not ranking-dominant; tables findable | ⬜ | |
 
 ### Discoveries
-- *(none yet)*
+- ⚠️ **2026-06-07 — the golden-set lexical ablation does NOT capture boilerplate-denoising lift.**
+  Applied B1 on a measurement lake (`~/data/vdocs-bmeas`, a copy of the dev golden set): boilerplate
+  references **158 → 684**, **89 canonical copies materialized**, phrases 7 → 13 — all working. Yet the
+  golden-set baseline was **unchanged** (nDCG@10 0.3947, redundancy@10 0.017, identical to pre-B1).
+  Root cause: the golden set's redundancy was *already* ~0 (consolidate collapses version groups), and
+  boilerplate blocks are never the *hits* for the curated content queries — so the lexical metric is
+  blind to single-sourcing. **Implication for the gate:** "redundancy@k → ~0 on the golden set" is
+  trivially already-met and is the **wrong instrument** for boilerplate denoising. The real, measured
+  lift is **corpus-scale single-sourcing** (the 158→684 reference count) + cleaner published markdown +
+  (Phase C) sharper embeddings / lower *semantic* redundancy. *Plan change:* measure B-denoising by
+  corpus single-sourcing counts and a Phase-C semantic-redundancy ablation, not golden lexical nDCG.
+- **2026-06-07 — boilerplate candidate `doc_count` is inflated by version-group members.** A deep
+  version group (e.g. SD VS-GUI TM, 66 versions) makes one logical document's prose look like it
+  recurs in 60+ "docs". Curating it as boilerplate would REFERENCE-strip real content. *Mitigation
+  applied (B1b):* require **≥2 distinct apps** in the candidate's sample before promoting — plus an
+  explicit exclude of shared package-content (CPRS+PSJ order-checks, GMRA+PSJ allergy) and
+  patch-specific text. Kept the 89-entry registry safe/cross-corpus.
+- **2026-06-07 — phrase artifacts flatten to an empty furniture-core (DELETE footgun).** `#`, `...`,
+  `---`, `**  **` all normalize to `""` via `_furniture_core`, so adding any one as a `phrases` entry
+  would blanket-DELETE *every* punctuation-only block corpus-wide (incl. `<hr>`/table separators).
+  Deliberately avoided; B1c added only ≥4-word furniture (the "two-sided copying"/"blank page" family).
 
 ### Risks
 - **Over-aggressive deletion → silent content loss.** *Mitigation:* capture-before-strip is already enforced (`capture.yaml` typed outcomes) + the §10.5/fidelity gate; curate by PR, reversible.
 - **Boilerplate near-dup threshold (0.8 Jaccard) mis-clusters.** *Mitigation:* review graded candidates; keep canonical copy + reference, never delete boilerplate.
+- **Prod apply needs explicit authorization.** An in-place `--force` rebuild of `~/data/vdocs` was
+  auto-denied (correct). Phase B's corpus-wide apply (re-run prod with the enriched registries) is a
+  separate maintainer-approved step; the ablation was measured on a throwaway copy instead.
 
 ### Changelog
-- *(none yet)*
+- 2026-06-07 — **B1 complete** (commits `799414b` materialize, `f953e5b` registries). **B1a:**
+  `manifest_pure.shared_boilerplate_files` + manifest writes `gold/_shared/boilerplate/<id>.md`
+  (REGISTRIES added to `manifest.requires`) — the dangling REFERENCE links now resolve. **B1b:**
+  boilerplate registry **21 → 89** (multi-app-safe curation from the full-corpus `patterns.json`).
+  **B1c:** phrases **+6** (blank-page furniture family). Ablation on `~/data/vdocs-bmeas`: refs
+  158→684, 89 materialized, golden lexical flat (see ⚠️ Discovery). `make check` green (750).
 
 ### Notes
 - **Must run on the FULL corpus, not the golden set** — boilerplate/phrase/glossary are
