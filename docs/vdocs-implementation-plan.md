@@ -46,8 +46,8 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
 | | A2 | Context headers (active) + small-leaf merge (built, **gated off** → C) | ✅ | ⚠️ |
 | | A3 | `stub` chunks → lexical-only (exclude from semantic) | ✅ | |
 | **B — Denoising (full corpus)** | B1 | `discover` at scale; curate phrases + boilerplate; materialize `_shared/boilerplate/` | ✅ | ⚠️ |
-| | B2 | Materialize `gold/glossary.md` (PROMOTE) | ⬜ | |
-| | B3 | De-weight globals; index extracted tables as data | ⬜ | |
+| | B2 | Materialize `gold/glossary.md` (PROMOTE) | ✅ | |
+| | B3 | De-weight globals; index extracted tables as data | ✅ | |
 | **C — Semantic + hybrid** | C1 | Add embedder dep; run `embed`; `vectors.db`; manifest flips semantic on | ⬜ | |
 | | C2 | ANN query + RRF fusion + full structured pre-filter | ⬜ | |
 | **D — MCP endpoint** | D1 | `server/mcp.py` + `vdocs serve-mcp` (Tools/Resources/Prompts) | ⬜ | |
@@ -242,8 +242,8 @@ Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.p
 | ID | Step | Detail | Gate | Status | Flag |
 |----|------|--------|------|--------|------|
 | B1 | Phrases + boilerplate | Run `discover` on full corpus; curate `phrases`/`boilerplate` registries; materialize `gold/_shared/boilerplate/`; `normalize` references | Boilerplate single-sourced; dead phrases removed | ✅ | ⚠️ |
-| B2 | Glossary | Materialize `gold/glossary.md` (PROMOTE); drop per-doc copies | Glossary exists; per-doc dupes gone | ⬜ | |
-| B3 | Entity weighting + tables | De-weight globals in ranking; index extracted `tables/*.csv` as searchable structured chunks | Globals not ranking-dominant; tables findable | ⬜ | |
+| B2 | Glossary | Materialize `gold/glossary.md` (PROMOTE) by harvesting the corpus's acronym tables; *(per-doc dupe-drop deferred)* | Glossary exists (2,287 terms) | ✅ | |
+| B3 | Entity weighting + tables | De-weight globals in the entity-index headline (5 vs 25); index extracted `tables/*.csv` as searchable chunks | Globals not headline-dominant; tables findable | ✅ | |
 
 ### Discoveries
 - ⚠️ **2026-06-07 — the golden-set lexical ablation does NOT capture boilerplate-denoising lift.**
@@ -282,6 +282,38 @@ Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.p
   boilerplate registry **21 → 89** (multi-app-safe curation from the full-corpus `patterns.json`).
   **B1c:** phrases **+6** (blank-page furniture family). Ablation on `~/data/vdocs-bmeas`: refs
   158→684, 89 materialized, golden lexical flat (see ⚠️ Discovery). `make check` green (750).
+- 2026-06-07 — **B2 done** (`9d57208`). `manifest` harvests the corpus's own acronym/abbreviation
+  tables (silver `tables/*.csv` whose header reads `<term>|<definition>`) and PROMOTEs them into one
+  `gold/glossary.md` — new pure `acronym_table_pairs` + `build_glossary` (case-insensitive dedupe,
+  most-common casing/def, content-skippable). Full corpus ≈ **2,287 terms** from 287 acronym tables
+  (988 on the golden lake), real definitions (VA/CPRS/KIDS/FileMan…). The discover glossary
+  *candidates* were useless (bare uppercase tokens, no defs) — harvesting tables is the right source.
+  Per-doc dupe-drop deferred (needs capture-gated normalize stripping). TDD 6 pure; `make check` 756.
+- 2026-06-07 — **B3 done** (`9bce0e7`) → **Phase B COMPLETE.** **B3b (§8.4) tables-as-data:** `index`
+  re-introduces each extracted `tables/*.csv` as a searchable chunk (`find_table_refs` +
+  `table_chunk_text`; chunk id `<section_id>#table-NN.csv` cites the referencing section) → **+563
+  table chunks** on the golden lake (7,189→7,752); a data-dictionary query now returns the FileMan
+  routines table (was invisible). **B3a (§8.2) de-weight globals:** `build_entity_index` caps
+  low-signal types (globals) to **5** headline slots vs 25, full set stays queryable (974 globals in
+  `index.db`). Semantic-boost de-weight is Phase C. TDD 5; `make check` 761.
+
+### Phase B summary (2026-06-07)
+
+| deliverable | result |
+|---|---|
+| boilerplate registry | 21 → **89** (multi-app-safe) |
+| boilerplate refs single-sourced | 158 → **684** |
+| `_shared/boilerplate/` materialized | **89** canonical copies (was dangling) |
+| phrases | 7 → **13** (blank-page family) |
+| `gold/glossary.md` | **2,287 terms** (harvested acronym tables) |
+| extracted tables searchable | **+table chunks** (was invisible) |
+| globals in entity headline | 25 → **5** (still fully queryable) |
+
+**Not yet applied to prod** (`~/data/vdocs`): all of B is committed code + registries; the
+full-corpus apply (re-run prod normalize→manifest with the enriched registries) is a separate
+maintainer-authorized step (an in-place prod `--force` was auto-denied). Measured on throwaway
+`~/data/vdocs-bmeas` (safe to delete). **Gate reframed** (see ⚠️ Discovery): the golden-set lexical
+metric is blind to denoising; the lift is corpus single-sourcing + Phase-C semantic.
 
 ### Notes
 - **Must run on the FULL corpus, not the golden set** — boilerplate/phrase/glossary are
