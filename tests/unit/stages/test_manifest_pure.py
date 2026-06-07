@@ -177,6 +177,20 @@ def test_build_entity_index_groups_and_trims_by_mentions():
     assert idx["global"] == [{"name": "^DPT", "mentions": 99}]
 
 
+def test_build_entity_index_downweights_low_signal_globals():
+    # B3a (§8.2): globals dominate by count but are noise for the headline — capped to a smaller
+    # slot count than high-signal types (they stay fully queryable in index.db, untouched here).
+    rows = [
+        {"type": "global", "canonical_name": f"^G{i}", "mention_count": 100 - i} for i in range(9)
+    ]
+    rows += [
+        {"type": "routine", "canonical_name": f"R{i}", "mention_count": 50 - i} for i in range(9)
+    ]
+    idx = mp.build_entity_index(rows, top_n=8, low_signal_top_n=3)
+    assert len(idx["routine"]) == 8  # high-signal: full cap
+    assert len(idx["global"]) == 3  # low-signal globals down-weighted in the headline
+
+
 def test_ai_manifest_assembles_card_with_recipe_and_fingerprint():
     cat = mp.build_catalog(_DOCS)
     ents = mp.build_entity_index(_ENTS, top_n=25)

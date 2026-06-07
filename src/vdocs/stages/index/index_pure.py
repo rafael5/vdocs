@@ -9,6 +9,7 @@ rows, graph nodes, published anchors, and (later) vector keys all reference one 
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from vdocs.kernel.markdown import (
@@ -184,6 +185,28 @@ def chunks_for_unit(unit: ChunkUnit) -> list[Chunk]:
     """Window a chunk unit's merged text into retrieval chunks (oversized → ``#pN``), all citing the
     unit's representative ``section_id``."""
     return _windows_to_chunks(unit.section_id, unit.text)
+
+
+# B3b (§8.4): `normalize` lifts a complex table out of prose into a `tables/*.csv` sidecar, leaving
+# an in-body reference `_[<caption> (extracted to CSV)](tables/<name>.csv)_`. That makes the table
+# invisible to search. `index` re-introduces each table as a distinct **searchable** chunk (caption
+# + flattened rows) citing the section it came from, so data-dictionary lookups work again.
+TABLE_REF_RE = re.compile(
+    r"_\[(?P<caption>.+?) \(extracted to CSV\)\]\(tables/(?P<name>table-\d+\.csv)\)_"
+)
+
+
+def find_table_refs(text: str) -> list[tuple[str, str]]:
+    """The extracted-table references in a section body: ``[(csv_name, caption), …]`` (§8.4)."""
+    return [(m.group("name"), m.group("caption")) for m in TABLE_REF_RE.finditer(text)]
+
+
+def table_chunk_text(caption: str, rows: list[list[str]]) -> str:
+    """A flat, searchable text rendering of an extracted table: the caption then one line per row
+    (cells `` | ``-joined). Empty caption/rows are dropped — an empty table yields ``""``."""
+    lines = [caption.strip()] if caption.strip() else []
+    lines.extend(" | ".join(c.strip() for c in row) for row in rows if any(c.strip() for c in row))
+    return "\n".join(lines)
 
 
 def _blocks(text: str) -> list[str]:

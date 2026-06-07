@@ -180,15 +180,30 @@ def _body_path(row: dict[str, Any]) -> str:
     return ids.gold_body_relpath(row["app_code"], row["pkg_ns"], row["doc_type"], row["doc_key"])
 
 
+# B3a (§8.2): ubiquitous low-signal entity types — globals dominate by count (≈½ of all entities)
+# but are noise for the headline/ranking. They are kept fully queryable in `index.db`; only their
+# slot count in the agent-facing headline is down-weighted so high-signal types (routines, RPCs,
+# options, FileMan files) surface. Already excluded from `xref` edges; semantic-boost de-weight is
+# Phase C.
+LOW_SIGNAL_ENTITY_TYPES = frozenset({"global"})
+
+
 def build_entity_index(
-    rows: list[dict[str, Any]], *, top_n: int = 25
+    rows: list[dict[str, Any]],
+    *,
+    top_n: int = 25,
+    low_signal: frozenset[str] = LOW_SIGNAL_ENTITY_TYPES,
+    low_signal_top_n: int = 5,
 ) -> dict[str, list[dict[str, Any]]]:
     """Group `entities` rows by type, keeping the `top_n` per type by mention count — the
-    high-signal vocabulary an agent scans to know what the corpus actually talks about."""
+    high-signal vocabulary an agent scans to know what the corpus actually talks about. Low-signal
+    types (`low_signal`, e.g. globals) are capped to the smaller `low_signal_top_n` so they don't
+    crowd the headline (B3a, §8.2) — the full entity set stays queryable in `index.db`."""
     by_type: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for r in sorted(rows, key=lambda r: (r["type"], -r["mention_count"], r["canonical_name"])):
         bucket = by_type[r["type"]]
-        if len(bucket) < top_n:
+        cap = low_signal_top_n if r["type"] in low_signal else top_n
+        if len(bucket) < cap:
             bucket.append({"name": r["canonical_name"], "mentions": r["mention_count"]})
     return dict(by_type)
 

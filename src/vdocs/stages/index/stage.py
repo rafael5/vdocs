@@ -169,6 +169,18 @@ class IndexStage(Stage):
                                 c.text,
                             )
                         )
+                # B3b (§8.4): re-introduce each extracted `tables/*.csv` as a searchable chunk
+                # (caption + flattened rows) citing the section that referenced it, so a table
+                # lifted out of prose for fidelity is still findable.
+                tables_dir = body_path.parent / "tables"
+                for s in secs:
+                    for name, caption in ip.find_table_refs(s.text):
+                        text = ip.table_chunk_text(caption, _read_table_csv(tables_dir / name))
+                        if not text.strip():
+                            continue
+                        tid = f"{s.section_id}#{name}"
+                        chunks.append((tid, s.section_id, doc_key, 0, text))
+                        fts.append((tid, s.section_id, doc_key, caption, s.section_path, text))
 
         def build(conn: sqlite3.Connection) -> None:
             conn.executescript(_SCHEMA)
@@ -212,10 +224,24 @@ class IndexStage(Stage):
                 "documents": len(documents),
                 "sections": len(sections),
                 "chunks": len(chunks),
+                "table_chunks": sum(1 for c in chunks if "#table-" in c[0]),
                 "entities": len(ent_count),
                 "mentions": len(mentions),
             }
         )
+
+
+def _read_table_csv(path):  # type: ignore[no-untyped-def]
+    """Read an extracted `tables/*.csv` sidecar into rows (B3b); `[]` if missing/unreadable."""
+    import csv
+
+    if not path.is_file():
+        return []
+    try:
+        with path.open(newline="", encoding="utf-8") as fh:
+            return list(csv.reader(fh))
+    except (OSError, UnicodeDecodeError, csv.Error):
+        return []
 
 
 def _doc_row(doc_key, doc_id, meta, staged, is_latest, word_count, section_count):  # type: ignore[no-untyped-def]

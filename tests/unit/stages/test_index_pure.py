@@ -201,6 +201,37 @@ def test_chunk_units_skips_non_searchable_entirely():
     assert ip.chunk_units(secs, target=100, merge=True) == []
 
 
+# --- B3b: extracted tables as searchable data (§8.4) ---------------------------------------------
+
+
+def test_find_table_refs_extracts_filename_and_caption():
+    text = (
+        "## Routines\n\n"
+        "_[Table 5: VA FileMan Routines (extracted to CSV)](tables/table-02.csv)_\n\n"
+        "Some prose.\n"
+    )
+    assert ip.find_table_refs(text) == [("table-02.csv", "Table 5: VA FileMan Routines")]
+
+
+def test_find_table_refs_ignores_ordinary_links():
+    text = "See _[the manual](other.md)_ and [boilerplate](_shared/boilerplate/bp-x.md)."
+    assert ip.find_table_refs(text) == []
+
+
+def test_table_chunk_text_flattens_caption_header_rows():
+    rows = [["Term", "Description"], ["GUI", "Graphical UI"], ["DLL", "Dynamic Link Library"]]
+    out = ip.table_chunk_text("Table 1: Acronyms", rows)
+    assert out.startswith("Table 1: Acronyms")
+    assert "Term | Description" in out
+    assert "GUI | Graphical UI" in out
+    assert "DLL | Dynamic Link Library" in out
+
+
+def test_table_chunk_text_handles_empty_caption_and_rows():
+    assert ip.table_chunk_text("", []) == ""
+    assert ip.table_chunk_text("Cap", []) == "Cap"
+
+
 def test_chunk_units_default_is_one_unit_per_leaf_merge_gated_off():
     # MERGE_SMALL_LEAVES is off by default (Phase-C-gated): every searchable leaf stands alone,
     # identical to the pre-A2b per-leaf chunking — so the live lexical surface is unchanged.
