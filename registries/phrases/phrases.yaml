@@ -18,3 +18,13 @@ phrases:
   # caught capture-gated by revision_pure's caption strip.
   - "The following table displays the revision history for this document."
   - "The following table displays the revision history for this manual."
+  # B1c — the "blank page for two-sided copying" furniture family (the dominant blank-page variant,
+  # ~83 docs, that the original list missed). All ≥4 words → exact/begins-with matched (never eats
+  # real prose); `_furniture_core` folds the many emphasis/punctuation/blockquote variants
+  # (`*(This page included for two-sided copying.)*`, `> \<This page ...\>`, …) onto these cores.
+  - "This page included for two-sided copying."
+  - "This page left blank for two-sided copying."
+  - "This side left blank for two-sided copying."
+  - "This page is intentionally left blank."
+  - "This page left blank intentionally."
+  - "This page left intentionally blank."

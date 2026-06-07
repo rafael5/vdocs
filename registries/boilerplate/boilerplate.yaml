@@ -209,3 +209,414 @@ boilerplate:
   doc_types:
   - DG
   status: approved
+
+# --- B1b: corpus-wide boilerplate promoted from full-corpus discover candidates
+# (≥20 docs, ≥2 distinct apps in sample, strict prose filter, package-content/patch-specific excluded)
+- id: bp-b8e54125e9
+  label: This software was developed at VA by employees of the F
+  key: this software was developed at va by employees of the federal government in the course of their official duties. pursuant to title 17 section 105 of the united states code, this software is not subject to copyright protection and is in the public domain. va assumes no responsibility whatsoever for its use by other parties, and makes no guarantees, expressed or implied, about its quality, reliability, or any other characteristic. we would appreciate acknowledgement if the software is used. this software can be redistributed and/or modified freely, provided that any derivative works bear some notice that they are derived from it, and any modified versions bear some notice that they have been modified.
+  text: This software was developed at VA by employees of the Federal Government in the course of their official duties. Pursuant to title 17 Section 105 of the United States Code, this software is not subject to copyright protection and is in the public domain. VA assumes no responsibility whatsoever for its use by other parties, and makes no guarantees, expressed or implied, about its quality, reliability, or any other characteristic. We would appreciate acknowledgement if the software is used. This software can be redistributed and/or modified freely, provided that any derivative works bear some notice that they are derived from it, and any modified versions bear some notice that they have been modified.
+  evidence_docs: 211
+  status: approved
+- id: bp-6b3fa6ea3e
+  label: The appearance of external hyperlink references in this
+  key: the appearance of external hyperlink references in this manual does not constitute endorsement by the department of veterans affairs (va) of this web site or the information, products, or services contained therein. the va does not exercise any editorial control over the information you may find at these locations. such links are provided and are consistent with the stated purpose of the va.
+  text: The appearance of external hyperlink references in this manual does not constitute endorsement by the Department of Veterans Affairs (VA) of this Web site or the information, products, or services contained therein. The VA does not exercise any editorial control over the information you may find at these locations. Such links are provided and are consistent with the stated purpose of the VA.
+  evidence_docs: 174
+  status: approved
+- id: bp-f9f9cfab96
+  label: 3. When prompted 'Want to DISABLE Scheduled Options, Me
+  key: 3. when prompted 'want to disable scheduled options, menu options, and protocols? no//', answer 'no'.
+  text: 3.  When prompted 'Want to DISABLE Scheduled Options, Menu Options, and Protocols? NO//', answer 'NO'.
+  evidence_docs: 122
+  status: approved
+- id: bp-8f960d49dd
+  label: 2. Compare Transport Global to Current System - This op
+  key: 2. compare transport global to current system - this option will allow you to view all changes that will be made when this patch is installed. it compares all of the components of this patch, such as routines, dds, templates, etc.
+  text: 2.  Compare Transport Global to Current System - This option will allow you to view all changes that will be made when this patch is installed. It compares all of the components of this patch, such as routines, DDs, templates, etc.
+  evidence_docs: 114
+  status: approved
+- id: bp-f43680dc89
+  label: The purpose of this plan is to provide a single, common
+  key: the purpose of this plan is to provide a single, common document that describes how, when, where, and to whom the dst be deployed and installed, as well as how it is to be backed out and rolled back, if necessary. the plan also identifies resources, communications plan, and rollout schedule. specific instructions for installation, back-out, and rollback are included in this document.
+  text: The purpose of this plan is to provide a single, common document that describes how, when, where, and to whom the DST be deployed and installed, as well as how it is to be backed out and rolled back, if necessary. The plan also identifies resources, communications plan, and rollout schedule. Specific instructions for installation, back-out, and rollback are included in this document.
+  evidence_docs: 87
+  status: approved
+- id: bp-8d8efdac01
+  label: This manual is written with the assumption that the rea
+  key: 'this manual is written with the assumption that the reader is familiar with the following:'
+  text: 'This manual is written with the assumption that the reader is familiar with the following:'
+  evidence_docs: 66
+  status: approved
+- id: bp-8a9df27eed
+  label: '- All uppercase is reserved for the representation of M'
+  key: '- all uppercase is reserved for the representation of m code, variable names, or the formal name of options, field/file names, and security keys (e.g., the xuprogmode security key).'
+  text: '- All uppercase is reserved for the representation of M code, variable names, or the formal name of options, field/file names, and security keys (e.g., the XUPROGMODE security key).'
+  evidence_docs: 65
+  status: approved
+- id: bp-fcc98a7c64
+  label: All VistA users are required to observe VA rules of beh
+  key: all vista users are required to observe va rules of behavior regarding patient privacy and the security of patient information, va computers, and va networks.
+  text: All VistA users are required to observe VA rules of behavior regarding patient privacy and the security of patient information, VA computers, and VA networks.
+  evidence_docs: 65
+  status: approved
+- id: bp-98a046cc60
+  label: 'VistA M Server-based software provides online help and '
+  key: vista m server-based software provides online help and commonly used system default prompts. users are encouraged to enter question marks at any response prompt. at the end of the help display, you are immediately returned to the point from which you started. this is an easy way to learn about any aspect of vista m server-based software.
+  text: VistA M Server-based software provides online help and commonly used system default prompts. Users are encouraged to enter question marks at any response prompt. At the end of the help display, you are immediately returned to the point from which you started. This is an easy way to learn about any aspect of VistA M Server-based software.
+  evidence_docs: 63
+  status: approved
+- id: bp-aee80df380
+  label: For the current patch history related to this software,
+  key: for the current patch history related to this software, see the patch module on forum.
+  text: For the current patch history related to this software, see the Patch Module on FORUM.
+  evidence_docs: 55
+  status: approved
+- id: bp-acbd126881
+  label: 3. Verify Checksums in Transport Global - This option w
+  key: 3. verify checksums in transport global - this option will allow you to ensure the integrity of the routines that are in the transport global.
+  text: 3.  Verify Checksums in Transport Global - This option will allow you to ensure the integrity of the routines that are in the transport global.
+  evidence_docs: 50
+  status: approved
+- id: bp-ba8974f630
+  label: '- ?, ??, ??? One, two, or three question marks can be e'
+  key: '- **?**, **??**, **???** one, two, or three question marks can be entered at any of the prompts for on-line help. one question mark elicits a brief statement of what information is appropriate for the prompt. two question marks provide more help, plus the hidden actions and three question marks will provide more detailed help, including a list of possible answers, if appropriate.'
+  text: '- **?**, **??**, **???** One, two, or three question marks can be entered at any of the prompts for on-line help. One question mark elicits a brief statement of what information is appropriate for the prompt. Two question marks provide more help, plus the hidden actions and three question marks will provide more detailed help, including a list of possible answers, if appropriate.'
+  evidence_docs: 49
+  status: approved
+- id: bp-8e12d07a86
+  label: '1. Print Transport Global - This option will allow you '
+  key: 1. print transport global - this option will allow you to view the components of the kids build.
+  text: 1.  Print Transport Global - This option will allow you to view the components of the KIDS build.
+  evidence_docs: 49
+  status: approved
+- id: bp-5b8d6d0915
+  label: '4. Select the Install Package(s) option and choose the '
+  key: 4. select the install package(s) option and choose the patch to install.
+  text: 4.  Select the Install Package(s) option and choose the patch to install.
+  evidence_docs: 48
+  status: approved
+- id: bp-9dce3b5794
+  label: '- Various symbols are used throughout the documentation'
+  key: '- various symbols are used throughout the documentation to alert the reader to special information. the following table gives a description of each of these symbols:'
+  text: '- Various symbols are used throughout the documentation to alert the reader to special information. The following table gives a description of each of these symbols:'
+  evidence_docs: 47
+  status: approved
+- id: bp-58c17c6e72
+  label: 1. Choose the PackMan message containing this build. Th
+  key: 1. choose the packman message containing this build. then select the install/check message packman option to load the build.
+  text: 1.  Choose the PackMan message containing this build. Then select the INSTALL/CHECK MESSAGE PackMan option to load the build.
+  evidence_docs: 47
+  status: approved
+- id: bp-57fb1b5118
+  label: The following table describes software specifications r
+  key: the following table describes software specifications required at each site prior to deployment.
+  text: The following table describes software specifications required at each site prior to deployment.
+  evidence_docs: 46
+  status: approved
+- id: bp-3131cf8201
+  label: This section should be used to show all document revisi
+  key: this section should be used to show all document revision history prior to the current year.
+  text: This section should be used to show all document revision history prior to the current year.
+  evidence_docs: 46
+  status: approved
+- id: bp-55dc263504
+  label: 1. Select the Verify Checksums in Transport Global opti
+  key: 1. select the verify checksums in transport global option to confirm the integrity of the routines that are in the transport global. when prompted for the install name enter the patch or build name.
+  text: 1.  Select the Verify Checksums in Transport Global option to confirm the integrity of the routines that are in the transport global. When prompted for the INSTALL NAME enter the patch or build name.
+  evidence_docs: 44
+  status: approved
+- id: bp-eee52dd00a
+  label: Back-out pertains to a return to the last known good op
+  key: back-out pertains to a return to the last known good operational state of the software and appropriate platform settings.
+  text: Back-out pertains to a return to the last known good operational state of the software and appropriate platform settings.
+  evidence_docs: 41
+  status: approved
+- id: bp-ee6a973791
+  label: 1. At the Installation option menu, select Backup a Tra
+  key: 1. at the installation option menu, select backup a transport global.
+  text: 1.  At the Installation option menu, select Backup a Transport Global.
+  evidence_docs: 38
+  status: approved
+- id: bp-513bb5e71e
+  label: 2. From the Kernel Installation and Distribution System
+  key: 2. from the kernel installation and distribution system menu, select the installation menu. from this menu,
+  text: 2.  From the Kernel Installation and Distribution System Menu, select the Installation Menu. From this menu,
+  evidence_docs: 38
+  status: approved
+- id: bp-2f115a2123
+  label: '6. When prompted with "Select basket to send to: IN//",'
+  key: '6. when prompted with "select basket to send to: in//", press \<enter\> and take the default in mailbox or select a different mailbox.'
+  text: '6.  When prompted with "Select basket to send to: IN//", press \<enter\> and take the default IN mailbox or select a different mailbox.'
+  evidence_docs: 38
+  status: approved
+- id: bp-ce84a13dd9
+  label: 2. Select Customize Quick Access Toolbar from the secon
+  key: 2. select **customize quick access toolbar** from the secondary menu.
+  text: 2.  Select **Customize Quick Access Toolbar** from the secondary menu.
+  evidence_docs: 36
+  status: approved
+- id: bp-9062eebfc6
+  label: 2. Select the Backup a Transport Global option to creat
+  key: '2. select the backup a transport global option to create a backup message. you must use this option and specify what to backup: the entire build or just routines. the backup message can be used to restore the routines and components of the build to the pre-patch condition.'
+  text: '2.  Select the Backup a Transport Global option to create a backup message. You must use this option and specify what to backup: the entire Build or just Routines. The backup message can be used to restore the routines and components of the build to the pre-patch condition.'
+  evidence_docs: 36
+  status: approved
+- id: bp-8473bbce7c
+  label: '5. When prompted with, "Send mail to: Last name, First '
+  key: '5. when prompted with, "send mail to: last name, first name", press \<enter\> to take default recipient. add any additional recipients.'
+  text: '5.  When prompted with, "Send mail to: Last name, First Name", press \<enter\> to take default recipient. Add any additional recipients.'
+  evidence_docs: 36
+  status: approved
+- id: bp-2fda3b6e34
+  label: The following table describes preparation required by t
+  key: the following table describes preparation required by the site prior to deployment.
+  text: The following table describes preparation required by the site prior to deployment.
+  evidence_docs: 36
+  status: approved
+- id: bp-1518f2e0a3
+  label: '8. If prompted ''Delay Install (Minutes): (0 - 60): 0//'''
+  key: '8. if prompted ''delay install (minutes): (0 - 60): 0//'' respond 0.'
+  text: '8.  If prompted ''Delay Install (Minutes): (0 - 60): 0//'' respond 0.'
+  evidence_docs: 35
+  status: approved
+- id: bp-ee5985db0c
+  label: 'Enter ?? for more options, ??? for brief descriptions, '
+  key: enter ?? for more options, ??? for brief descriptions, ?option for help text.
+  text: Enter ?? for more options, ??? for brief descriptions, ?OPTION for help text.
+  evidence_docs: 34
+  status: approved
+- id: bp-f98345d902
+  label: The following table displays the revision history for t
+  key: the following table displays the revision history for this document. revisions to the documentation are based on patches and new versions released to the field.
+  text: The following table displays the revision history for this document. Revisions to the documentation are based on patches and new versions released to the field.
+  evidence_docs: 33
+  status: approved
+- id: bp-124ae9efd0
+  label: VistA documentation is made available online in Microso
+  key: 'vista documentation is made available online in microsoft word format and in adobe acrobat portable document format (pdf). the pdf documents *must* be read using the adobe acrobat reader (i.e., acroread.exe), which is freely distributed by adobe systems incorporated at the following web address:'
+  text: 'VistA documentation is made available online in Microsoft Word format and in Adobe Acrobat Portable Document Format (PDF). The PDF documents *must* be read using the Adobe Acrobat Reader (i.e., ACROREAD.EXE), which is freely distributed by Adobe Systems Incorporated at the following web address:'
+  evidence_docs: 33
+  status: approved
+- id: bp-9109bff966
+  label: This patch may be installed with users on the system al
+  key: this patch may be installed with users on the system although it is recommended that it be installed during non-peak hours to minimize potential disruption to users. this patch should take less than 5 minutes to install.
+  text: This patch may be installed with users on the system although it is recommended that it be installed during non-peak hours to minimize potential disruption to users. This patch should take less than 5 minutes to install.
+  evidence_docs: 32
+  status: approved
+- id: bp-0797119b47
+  label: 3. When prompted for the following, enter "R" for Routi
+  key: 3. when prompted for the following, enter "r" for routines or "b" for build.
+  text: 3.  When prompted for the following, enter "R" for Routines or "B" for Build.
+  evidence_docs: 31
+  status: approved
+- id: bp-966ada4068
+  label: Enter a command or '^' followed by a caption to jump to
+  key: enter a command or '^' followed by a caption to jump to a specific field.
+  text: Enter a command or '^' followed by a caption to jump to a specific field.
+  evidence_docs: 31
+  status: approved
+- id: bp-d74d12e9bb
+  label: Please see the Roles and Responsibilities table in Sect
+  key: please see the roles and responsibilities table in section 2 above for details about who is responsible for preparing the site to meet these software specifications.
+  text: Please see the Roles and Responsibilities table in Section 2 above for details about who is responsible for preparing the site to meet these software specifications.
+  evidence_docs: 31
+  status: approved
+- id: bp-b07fe56cfd
+  label: To install this VistA patch, the patch installer must b
+  key: to install this vista patch, the patch installer must be an active user on the vista system and have access to the vista menu option “kernel installation & distribution system” \[xpd main\] and have vista security keys xuprog and xuprogmode. knowledge on how to install vista patches using the items on this menu option is also a required skill.
+  text: To install this VistA patch, the patch installer must be an active user on the VistA system and have access to the VistA menu option “Kernel Installation & Distribution System” \[XPD MAIN\] and have VistA security keys XUPROG and XUPROGMODE. Knowledge on how to install VistA patches using the items on this menu option is also a required skill.
+  evidence_docs: 31
+  status: approved
+- id: bp-436fc24b95
+  label: VistA documentation and software can also be downloaded
+  key: vista documentation and software can also be downloaded from the product support (ps) anonymous directories.
+  text: VistA documentation and software can also be downloaded from the Product Support (PS) Anonymous Directories.
+  evidence_docs: 31
+  status: approved
+- id: bp-6916934ea7
+  label: 'Installation scripts are not applicable for this VistA '
+  key: installation scripts are not applicable for this vista patch.
+  text: Installation scripts are not applicable for this VistA patch.
+  evidence_docs: 29
+  status: approved
+- id: bp-7294c2f9c1
+  label: The following table describes hardware specifications r
+  key: the following table describes hardware specifications required at each site prior to deployment.
+  text: The following table describes hardware specifications required at each site prior to deployment.
+  evidence_docs: 29
+  status: approved
+- id: bp-9152179d34
+  label: The following table lists facility-specific features re
+  key: the following table lists facility-specific features required for deployment.
+  text: The following table lists facility-specific features required for deployment.
+  evidence_docs: 29
+  status: approved
+- id: bp-ff039d813b
+  label: '- The first three digits (prefix) of any Social Securit'
+  key: '- the first three digits (prefix) of any social security numbers (ssn) will begin with either "000" or "666".'
+  text: '- The first three digits (prefix) of any Social Security Numbers (SSN) will begin with either "000" or "666".'
+  evidence_docs: 28
+  status: approved
+- id: bp-74cbb6ee0b
+  label: 4. From the Installation Menu, select the Install Packa
+  key: 4. from the installation menu, select the install package(s) option and choose the patch to install.
+  text: 4.  From the Installation Menu, select the Install Package(s) option and choose the patch to install.
+  evidence_docs: 28
+  status: approved
+- id: bp-3d5e34f110
+  label: 'NOTE: The revision history cycle begins once changes or'
+  key: 'note: the revision history cycle begins once changes or enhancements are requested after the document has been baselined.'
+  text: 'NOTE: The revision history cycle begins once changes or enhancements are requested after the document has been baselined.'
+  evidence_docs: 28
+  status: approved
+- id: bp-efc12e493b
+  label: '1. Backup a Transport Global - This option will create '
+  key: 1. backup a transport global - this option will create a backup message of any routines exported with this patch. it will not backup any other changes such as dds or templates.
+  text: 1.  Backup a Transport Global - This option will create a backup message of any routines exported with this patch. It will not backup any other changes such as DDs or templates.
+  evidence_docs: 27
+  status: approved
+- id: bp-b83eae65ec
+  label: Upon national release all VAMCs are expected to install
+  key: upon national release all vamcs are expected to install this patch prior to or on the compliance date. the software will be distributed through forum.
+  text: Upon national release all VAMCs are expected to install this patch prior to or on the compliance date. The software will be distributed through FORUM.
+  evidence_docs: 27
+  status: approved
+- id: bp-3ac5277702
+  label: '- Various symbols are used throughout the documentation'
+  key: '- various symbols are used throughout the documentation to alert the reader to special information. <u>table 1</u> gives a description of each of these symbols:'
+  text: '- Various symbols are used throughout the documentation to alert the reader to special information. <u>Table 1</u> gives a description of each of these symbols:'
+  evidence_docs: 26
+  status: approved
+- id: bp-18d963ab55
+  label: A national release is planned after testing has been su
+  key: a national release is planned after testing has been successfully completed at initial operating capability (ioc) test sites.
+  text: A national release is planned after testing has been successfully completed at initial operating capability (IOC) test sites.
+  evidence_docs: 26
+  status: approved
+- id: bp-73423d07b2
+  label: 'Select Option Name: XPD MAIN Kernel Installation & Dist'
+  key: 'select option name: xpd main kernel installation & distribution system'
+  text: 'Select Option Name: XPD MAIN Kernel Installation & Distribution System'
+  evidence_docs: 26
+  status: approved
+- id: bp-fecfe16ab8
+  label: 4. When prompted "Do you wish to secure this message? N
+  key: 4. when prompted "do you wish to secure this message? no//", press \<enter\> and take the default response of "no".
+  text: 4.  When prompted "Do you wish to secure this message? NO//", press \<enter\> and take the default response of "NO".
+  evidence_docs: 25
+  status: approved
+- id: bp-2bb2df8596
+  label: Documentation can also be found on the VA Software Docu
+  key: 'documentation can also be found on the va software documentation library at:'
+  text: 'Documentation can also be found on the VA Software Documentation Library at:'
+  evidence_docs: 25
+  status: approved
+- id: bp-d56903408c
+  label: The deployment is planned as a national general availab
+  key: the deployment is planned as a national general availability release. the scheduling of test/mirror installs, testing, and the deployment to production will be at the sites’ discretion.
+  text: The deployment is planned as a national general availability release. The scheduling of test/mirror installs, testing, and the deployment to production will be at the sites’ discretion.
+  evidence_docs: 25
+  status: approved
+- id: bp-eca7d2b903
+  label: 'You can now use these Back and Forward command buttons '
+  key: you can now use these **back** and **forward** command buttons in your toolbar to navigate back and forth in your word document when clicking on hyperlinks within the document.
+  text: You can now use these **Back** and **Forward** command buttons in your Toolbar to navigate back and forth in your Word document when clicking on hyperlinks within the document.
+  evidence_docs: 25
+  status: approved
+- id: bp-4e59a61724
+  label: '- Follow the date with a time, such as JAN 20@10, T@10A'
+  key: '- follow the date with a time, such as jan 20@10, t@10am, 10:30, etc.'
+  text: '- Follow the date with a time, such as JAN 20@10, T@10AM, 10:30, etc.'
+  evidence_docs: 23
+  status: approved
+- id: bp-6ef71cf8d9
+  label: Although it is unlikely due to care in collecting appro
+  key: although it is unlikely due to care in collecting approved requirements, software quality assurance (sqa) review and multiple testing stages (unit testing, component integration testing, user acceptance testing) a back-out decision due to major issues with this patch could occur during site mirror testing, site production testing or after national release to the field. the strategy would depend upon the stage of testing when the decision is made. if during site production testing, unless the patch produces catastrophic problems, the normal vista response would be for a new version of the test patch correcting defects to be produced, retested and upon successfully passing development team testing would be resubmitted to the site for testing. if the defects were not discovered until after national release but during the 30 days support period, a new patch will be entered into the national patch module on forum and go through all the necessary milestone reviews etc. as an emergency patch.
+  text: Although it is unlikely due to care in collecting approved requirements, Software Quality Assurance (SQA) review and multiple testing stages (Unit testing, Component Integration Testing, User Acceptance Testing) a back-out decision due to major issues with this patch could occur during site Mirror Testing, Site Production Testing or after National Release to the Field. The strategy would depend upon the stage of testing when the decision is made. If during Site Production Testing, unless the patch produces catastrophic problems, the normal VistA response would be for a new version of the test patch correcting defects to be produced, retested and upon successfully passing development team testing would be resubmitted to the site for testing. If the defects were not discovered until after national release but during the 30 days support period, a new patch will be entered into the National Patch Module on Forum and go through all the necessary milestone reviews etc. as an emergency patch.
+  evidence_docs: 23
+  status: approved
+- id: bp-2f076ab303
+  label: Clinical Application Coordinators (CACs), installers, a
+  key: clinical application coordinators (cacs), installers, and other site personnel (as determined by the site) will need to coordinate installation dates and times. in addition, other support personnel may need to be consulted – such as the citrix support, client technologies (if required).
+  text: Clinical Application Coordinators (CACs), installers, and other site personnel (as determined by the site) will need to coordinate installation dates and times. In addition, other support personnel may need to be consulted – such as the Citrix support, Client Technologies (if required).
+  evidence_docs: 23
+  status: approved
+- id: bp-e1f3784380
+  label: 'Download and extract files are not applicable for this '
+  key: download and extract files are not applicable for this vista patch.
+  text: Download and extract files are not applicable for this VistA patch.
+  evidence_docs: 23
+  status: approved
+- id: bp-733b4a2a12
+  label: '- Text centered between arrows represents a keyboard ke'
+  key: '- text centered between arrows represents a keyboard key that needs to be pressed in order for the system to capture a user response or move the cursor to another field. **\<enter\>** indicates that the enter key (or return key on some keyboards) must be pressed. **\<tab\>** indicates that the tab key must be pressed.'
+  text: '- Text centered between arrows represents a keyboard key that needs to be pressed in order for the system to capture a user response or move the cursor to another field. **\<Enter\>** indicates that the Enter key (or Return key on some keyboards) must be pressed. **\<Tab\>** indicates that the Tab key must be pressed.'
+  evidence_docs: 22
+  status: approved
+- id: bp-27a24c3da8
+  label: 'For national release, sites will receive communication '
+  key: for national release, sites will receive communication that the release has occurred, which will normally be an action item or bulletin.
+  text: For national release, sites will receive communication that the release has occurred, which will normally be an Action Item or Bulletin.
+  evidence_docs: 22
+  status: approved
+- id: bp-4500bb1269
+  label: The intended audience of this manual is the following s
+  key: 'the intended audience of this manual is the following stakeholders:'
+  text: 'The intended audience of this manual is the following stakeholders:'
+  evidence_docs: 22
+  status: approved
+- id: bp-cb378d8f0e
+  label: This method transmits the files from the first availabl
+  key: '> this method transmits the files from the first available ftp server.'
+  text: '> This method transmits the files from the first available FTP server.'
+  evidence_docs: 21
+  status: approved
+- id: bp-7f2798dfbe
+  label: Successful back-out is confirmed by verification that t
+  key: successful back-out is confirmed by verification that the back-out patch was successfully implemented, including verification that new components were removed and modified components were returned to their pre-patch state.
+  text: Successful back-out is confirmed by verification that the back-out patch was successfully implemented, including verification that new components were removed and modified components were returned to their pre-patch state.
+  evidence_docs: 21
+  status: approved
+- id: bp-74af9c2c0d
+  label: This document describes how to deploy and install the v
+  key: this document describes how to deploy and install the various components of the software for the pharmacy reengineering (pre) inbound eprescribing (erx) project, as well as how to back-out the product and rollback to a previous version or data set. this document is a companion to the project charter and management plan for this effort. in cases where a non-developed commercial off-the-shelf (cots) product is being installed, the vendor provided user and installation guide may be used, but the back-out recovery strategy still needs to be included in this document.
+  text: This document describes how to deploy and install the various components of the software for the Pharmacy Reengineering (PRE) Inbound ePrescribing (eRx) project, as well as how to back-out the product and rollback to a previous version or data set. This document is a companion to the project charter and management plan for this effort. In cases where a non-developed Commercial Off-the-Shelf (COTS) product is being installed, the vendor provided User and Installation Guide may be used, but the Back-Out Recovery strategy still needs to be included in this document.
+  evidence_docs: 21
+  status: approved
+- id: bp-ae6a328e12
+  label: '1. Right-click anywhere on the customizable Toolbar in '
+  key: 1. right-click anywhere on the customizable toolbar in word (*not* the ribbon section).
+  text: 1.  Right-click anywhere on the customizable Toolbar in Word (*not* the Ribbon section).
+  evidence_docs: 20
+  status: approved
+- id: bp-491f2ae2c9
+  label: 5. Scroll through the command list in the left column u
+  key: 5. scroll through the command list in the left column until you see the **back** command (green circle with arrow pointing left).
+  text: 5.  Scroll through the command list in the left column until you see the **Back** command (green circle with arrow pointing left).
+  evidence_docs: 20
+  status: approved
+- id: bp-1384569c1e
+  label: 7. Scroll through the command list in the left column u
+  key: 7. scroll through the command list in the left column until you see the **forward** command (green circle with arrow pointing right).
+  text: 7.  Scroll through the command list in the left column until you see the **Forward** command (green circle with arrow pointing right).
+  evidence_docs: 20
+  status: approved
+- id: bp-20af1d2d97
+  label: 'Technical information about VistA M Server-based files '
+  key: technical information about vista m server-based files and the fields in files is stored in data dictionaries (dd). you can use the list file attributes option on the data dictionary utilities submenu in va fileman to print formatted data dictionaries.
+  text: Technical information about VistA M Server-based files and the fields in files is stored in data dictionaries (DD). You can use the List File Attributes option on the Data Dictionary Utilities submenu in VA FileMan to print formatted data dictionaries.
+  evidence_docs: 20
+  status: approved
+- id: bp-b068950c51
+  label: The option Calculate and Show Checksum Values \[XTSUMBL
+  key: the option calculate and show checksum values \[xtsumbld-check\] can be run to compare the routine checksums to what is documented in the patch.
+  text: The option Calculate and Show Checksum Values \[XTSUMBLD-CHECK\] can be run to compare the routine checksums to what is documented in the patch.
+  evidence_docs: 20
+  status: approved
+- id: bp-5f0a4536ee
+  label: Within this documentation, several notations need to be
+  key: within this documentation, several notations need to be outlined.
+  text: Within this documentation, several notations need to be outlined.
+  evidence_docs: 20
+  status: approved
