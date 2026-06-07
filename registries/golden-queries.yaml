@@ -1,0 +1,90 @@
+# registries/golden-queries.yaml — the Phase 0 retrieval-quality evaluation set (remediation-plan
+# §10.5 / §2 · implementation-plan Phase 0.2 & 0.4).
+#
+# A version-controlled set of natural-language queries with graded relevance judgements, used to
+# compute the baseline (0.4) and to gate every later phase (lexical → semantic → hybrid):
+#   nDCG@10 · MRR · recall@k · redundancy@k · version-correctness.
+#
+# SCHEMA
+#   version:  schema version of this file
+#   k:        default cutoff for @k metrics
+#   queries[]:
+#     id:        stable slug (kebab-case) — referenced in metric reports
+#     query:     the natural-language query as a user/agent would phrase it
+#     intent:    one-line description of the information need
+#     axis:      which answerable-Q label / capability this exercises (see dev-corpus.txt axis h)
+#     relevant[]: graded judgements
+#       - section_id: stable `doc_key/slug` (the §10.5 citation unit; also a vdocs:// URI tail)
+#         grade:      3=ideal · 2=highly-relevant · 1=related · 0=non-relevant (omit non-relevant)
+#     notes:     (optional) caveats / what a wrong-version or redundant hit would look like
+#
+# STATUS: STARTER set. The `section_id`s below were pulled from the production ~/data/vdocs/index.db
+# (deterministic `doc_key/slug`). They are RE-VALIDATED against the dev lake in step 0.4 once the DAG
+# runs — slugs are deterministic but any normalize/chunking change since the prod build is reconciled
+# there. Expand toward ~20–30 queries as the set proves out.
+
+version: 1
+k: 10
+
+queries:
+  # ── answerable-Q: kids-install (XU Kernel / KIDS) ──────────────────────────────────────────────
+  - id: kids-install-build
+    query: How do I load and install a KIDS distribution build?
+    intent: Step-by-step KIDS build installation procedure.
+    axis: kids-install
+    relevant:
+      - { section_id: XU/krn_8_0_tm/installation, grade: 3 }
+      - { section_id: XU/krn_8_0_tm/install-vista-patchxu8787, grade: 2 }
+      - { section_id: XOBW/xobw1_0ig/sample-kids-installation, grade: 2 }
+      - { section_id: XOBW/xobw1_0ig/load-and-install-distribution, grade: 1 }
+    notes: A non-latest Kernel TM version answering this would be a version-correctness miss.
+
+  - id: kids-delphi-components-install
+    query: Steps to install the Kernel Delphi Components (KDC)
+    intent: KDC installation procedure from the KIDS distribution IG.
+    axis: kids-install
+    relevant:
+      - { section_id: XU/kdc1_0ig/5-run-the-kernel-delphi-components-installation-program-required, grade: 3 }
+      - { section_id: XU/kdc1_0ig/about-the-installation-procedures, grade: 2 }
+      - { section_id: XU/kdc1_0ig/6-verify-the-installation-of-the-kernel-delphi-components-recommended, grade: 1 }
+
+  # ── answerable-Q: hwsc-rest (XOBW HWSC / HTTP) ─────────────────────────────────────────────────
+  - id: hwsc-rest-from-vista-m
+    query: How does VistA M call a REST web service via HWSC?
+    intent: Using SOAP/REST web-service clients to reach Health*e*Vet from VistA M.
+    axis: hwsc-rest
+    relevant:
+      - { section_id: XOBW/xobw1_0dg/using-soap-and-rest-to-access-healthevet-from-vista-m, grade: 3 }
+      - { section_id: XOBW/xobw1_0dg/cachés-web-services-client-features, grade: 2 }
+      - { section_id: XOBW/xobw1_0dg/support-for-encryption-and-http-basic-authentication, grade: 1 }
+
+  - id: hwsc-install-privileges
+    query: What privileges and steps are needed to install HWSC (XOBW)?
+    intent: HWSC installation prerequisites and KIDS load procedure.
+    axis: hwsc-rest
+    relevant:
+      - { section_id: XOBW/xobw1_0ig/privilegesstaff-needed-to-install, grade: 3 }
+      - { section_id: XOBW/xobw1_0ig/load-and-install-distribution, grade: 2 }
+      - { section_id: XOBW/xobw1_0ig/transfer-xobw-installation-files-to-m-server-file-system, grade: 1 }
+
+  # ── answerable-Q: kaajee-auth (KAAJEE) ─────────────────────────────────────────────────────────
+  - id: kaajee-install-procedure
+    query: How is KAAJEE SSOWAP deployed and installed for VistA authentication?
+    intent: KAAJEE deploy/install procedure (VistA + WebLogic) for single sign-on.
+    axis: kaajee-auth
+    relevant:
+      - { section_id: KAAJEE/kaajee_xu_8_791_dibrg/vista-installation-procedure, grade: 3 }
+      - { section_id: KAAJEE/kaajee_xu_8_791_dibrg/weblogic-installation, grade: 2 }
+      - { section_id: KAAJEE/kaajee_xu_8_791_dibrg/pre-installation-and-system-requirements, grade: 1 }
+      - { section_id: KAAJEE/kaajee_xu_8_791_dibrg/platform-installation-and-preparation, grade: 1 }
+
+  # ── redundancy@k probe (near-duplicate Pharmacy API pair) ──────────────────────────────────────
+  - id: pharmacy-api-dispense
+    query: Pharmacy API for dispensing / outpatient medication data
+    intent: Locate the Pharmacy API entry points — used to measure redundancy@k.
+    axis: redundancy-probe
+    relevant: []
+    notes: >
+      PSO:phar_1_api_r0520 and PSA:phar_1_api_r0520 are near-identical. A good ranker should NOT
+      return both as separate top-k hits (redundancy@k → 0); grade after the dev-lake build once
+      section_ids are confirmed. Left unlabeled deliberately as the redundancy control.

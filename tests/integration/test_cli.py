@@ -157,6 +157,23 @@ def test_fetch_select_file_is_read(tmp_path):
     assert "matches 1" in result.stdout
 
 
+def test_read_select_file_strips_inline_comments(tmp_path):
+    # A curated select file may annotate each id with a trailing `# rationale` (the documented
+    # "'#' comments allowed" — registries/dev-corpus.txt relies on this). Inline comments and
+    # surrounding whitespace are stripped; full-line comments and blanks are ignored.
+    from vdocs.cli.app import _read_select_file
+
+    f = tmp_path / "sel.txt"
+    f.write_text(
+        "# header comment\n"
+        "ADT:d1   # flattened legacy UM\n"
+        "\n"
+        "XU:krn_8_0_tm# no space before hash\n"
+        "  AR/WS:wsuser  \n"  # slashes in app code survive; no inline comment here
+    )
+    assert _read_select_file(str(f)) == frozenset({"ADT:d1", "XU:krn_8_0_tm", "AR/WS:wsuser"})
+
+
 def test_fetch_without_gold_inventory_errors(tmp_path):
     result = runner.invoke(app, ["fetch", "--all"], env={"DATA_DIR": str(tmp_path)})
     assert result.exit_code == 1

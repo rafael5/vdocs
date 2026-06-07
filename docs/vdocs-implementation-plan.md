@@ -38,8 +38,8 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
 
 | Phase | ID | Stage / Step | Status | Flag |
 |-------|----|--------------|--------|------|
-| **0 — Golden dev set** | 0.1 | Mine inventory, propose ~60–100 stratified `doc_id`s | ⬜ | |
-| | 0.2 | Commit `registries/dev-corpus.txt` + `golden-queries.yaml` | ⬜ | |
+| **0 — Golden dev set** | 0.1 | Mine inventory, propose ~60–100 stratified `doc_id`s | ✅ | |
+| | 0.2 | Commit `registries/dev-corpus.txt` + `golden-queries.yaml` | ✅ | |
 | | 0.3 | Stand up dev lake (`~/data/vdocs-dev`); run full DAG | ⬜ | |
 | | 0.4 | Baseline lexical nDCG@10 on golden queries | ⬜ | |
 | **A — Substrate / chunking** | A1 | Pick embedder + right-size chunking (token-budget aligned) | ⬜ | ⚠️ |
@@ -65,13 +65,28 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
 
 | ID | Step | Detail | Gate | Status | Flag |
 |----|------|--------|------|--------|------|
-| 0.1 | Stratified selection | Mine inventory across shape axes (doc_type · era · converter · structure · version-depth · entity-density · size · answerable-Q); propose `doc_id`s + rationale | List approved by maintainer | ⬜ | |
-| 0.2 | Commit selection | `registries/dev-corpus.txt` (doc_ids) + `golden-queries.yaml` (query→section_ids) | Files committed | ⬜ | |
+| 0.1 | Stratified selection | Mine inventory across shape axes (doc_type · era · converter · structure · version-depth · entity-density · size · answerable-Q); propose `doc_id`s + rationale | List approved by maintainer | ✅ | |
+| 0.2 | Commit selection | `registries/dev-corpus.txt` (70 doc_ids) + `golden-queries.yaml` (6 starter labeled queries) | Files committed | ✅ | |
 | 0.3 | Dev lake | `DATA_DIR=~/data/vdocs-dev` `fetch --select` → full DAG (convert→manifest) | DAG green on dev lake | ⬜ | |
 | 0.4 | Baseline | Record lexical nDCG@10 / redundancy@k on golden queries | Baseline recorded | ⬜ | |
 
 ### Discoveries
-- *(none yet)*
+- **2026-06-06 — selection mined from `index.db`, not raw inventory.** The 461 already-processed
+  `is_latest` docs in `index.db` carry *observed* shape (converter, section kinds, chunk counts,
+  entity-mention density, version-group depth) — far richer + safer (already proven fetchable) than
+  the raw enriched catalog. Stratified the golden set over these. All 70 proposed picks exist in
+  `index.db`. *No plan change.*
+- **2026-06-06 — Docling routing is genuinely single-doc.** The `converter-routing` registry lists
+  exactly one Docling target (`CPRS/cprsguium`); v1 noted cprsguium alone is ~65% of all bare markers
+  and `constm` (the only other v1 entry) is absent from the current sample. So the *converter* axis is
+  correctly represented by **one** doc (`CPRS:cprsguium`) — not under-sampling. *No plan change; noted
+  so a future reviewer doesn't "fix" the 1/70 Docling ratio.*
+- **2026-06-07 — select-file parser only handled *full-line* `#` comments.** `_read_select_file`
+  (`cli/app.py`) split on whole-line comments only, so the per-pick `# rationale` annotations on
+  `dev-corpus.txt` would have been swallowed into the `doc_id`s (70 malformed ids). Fixed to strip
+  *inline* `#` comments too (doc_ids never contain `#`); added a TDD unit test. This makes the
+  documented "'#' comments allowed" true for inline use and keeps the select file self-documenting.
+  *Small in-scope code fix; no plan change.*
 
 ### Risks
 - **Sample not representative** → blind spots the full corpus later exposes. *Mitigation:* stratify on the eight shape axes; revisit the set after the first full-corpus run.
@@ -79,6 +94,14 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
 
 ### Changelog
 - 2026-06-06 — Phase 0 added to the remediation plan; tracker created.
+- 2026-06-06 — 0.1 started (🟡): mined `index.db` (461 `is_latest` docs) across the eight shape axes;
+  proposed a **70-doc** stratified golden set (all picks verified present in `index.db`). Awaiting
+  maintainer approval before committing the select file / fetching.
+- 2026-06-07 — 0.1 approved + 0.2 done (✅): committed `registries/dev-corpus.txt` (70 annotated
+  doc_ids, parses to 70 bare ids) and `registries/golden-queries.yaml` (6 starter labeled queries:
+  kids-install ×2, hwsc-rest ×2, kaajee-auth ×1, + a redundancy@k probe). Fixed inline-comment
+  handling in `_read_select_file` (TDD); `make check` green (726 passed, 98.5% cov). Next: 0.3 stand
+  up `~/data/vdocs-dev` and run the DAG.
 
 ### Notes
 - `consolidate`/`index`/`relate`/`manifest` are **corpus-global** (rebuild over whatever is in the

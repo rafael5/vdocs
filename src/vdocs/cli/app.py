@@ -105,11 +105,15 @@ def _flatten(values: list[str]) -> frozenset[str]:
 
 
 def _read_select_file(path: str) -> frozenset[str]:
-    """One ``doc_id`` per line (blank lines and ``#`` comments ignored) — the §5.6 curated list."""
+    """One ``doc_id`` per line — the §5.6 curated list. Blank lines and ``#`` comments are ignored,
+    both full-line and *inline* (a trailing ``# rationale``); ``doc_id``s never contain ``#`` so the
+    first ``#`` always starts a comment. This is what lets ``registries/dev-corpus.txt`` annotate
+    each pick."""
     from pathlib import Path
 
     lines = Path(path).read_text(encoding="utf-8").splitlines()
-    return frozenset(s.strip() for s in lines if s.strip() and not s.lstrip().startswith("#"))
+    ids = (line.split("#", 1)[0].strip() for line in lines)
+    return frozenset(i for i in ids if i)
 
 
 @app.command()

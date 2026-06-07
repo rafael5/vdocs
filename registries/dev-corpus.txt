@@ -1,0 +1,132 @@
+# registries/dev-corpus.txt — the Phase 0 stratified golden dev set (remediation-plan §12 · Phase 0).
+#
+# 70 doc_ids, one per line ('#' comments and blank lines ignored), consumed by:
+#     DATA_DIR=~/data/vdocs-dev .venv/bin/vdocs fetch --select registries/dev-corpus.txt
+#
+# WHY THIS SET (vdocs-implementation-plan.md → Phase 0): prove the full DAG end-to-end on a small,
+# shape-stratified sample before touching the ~1,450-doc corpus, and double as the §10.5
+# retrieval-quality evaluation set (see golden-queries.yaml). Mined from the 461 already-processed
+# `is_latest` docs in ~/data/vdocs/index.db (observed shape = converter, section kinds, chunk count,
+# entity-mention density, version-group depth) — every pick is verified present there.
+#
+# Stratified across eight SHAPE axes (coverage summary at bottom):
+#   (a) doc_type  (b) era old↔modern  (c) converter Pandoc↔Docling  (d) structure
+#   (e) version-group depth  (f) entity density  (g) size  (h) answerable-Q (labeled in golden-queries)
+
+# ── XU · Kernel / KIDS cluster (answerable-Q: kids-install; entity density; doc_type spread) ──
+XU:krn_8_0_tm                 # Kernel TM — KIDS install/distribution menus (Q:kids-install); huge
+XU:kdc1_0ig                   # KIDS Distribution (KDC) Installation Guide (Q:kids-install)
+XU:krn8_0st                   # Kernel Security Guide — boilerplate-heavy
+XU:krn8_0p134                 # Kernel patch PDD — very high entity density (ed 7.5)
+XU:krn_8_0_sm                 # Kernel Systems Management Guide (SMG axis)
+XU:xu_8_0_702_qr              # Kernel Quick-Reference (quick-ref, tiny)
+XU:xu_8_0_p775_dibrg          # Kernel DIBRG (deploy/install/back-out/rollback)
+XU:xu_8_758_ug                # Kernel UG — member of a 42-deep version group
+
+# ── XOBW · HWSC / HTTP-REST cluster (answerable-Q: hwsc-rest) ──
+XOBW:xobw1_0ig                # HWSC Installation Guide — REST client (Q:hwsc-rest)
+XOBW:xobw1_0dg                # HWSC Developer Guide — REST/HTTP/SOAP API (Q:hwsc-rest); ed 3.1
+XOBW:xobw_1_0_p4_scg          # HWSC Configuration Guide (security-config)
+XOBW:xobw1_0sg                # HWSC Systems Management / Security (SM)
+
+# ── KAAJEE · authentication (answerable-Q: kaajee-auth) ──
+KAAJEE:kaajee_xu_8_791_dibrg  # KAAJEE SSOWAP deploy/install/back-out/rollback — auth (Q:kaajee-auth)
+
+# ── DI · FileMan cluster (FileMan-heavy entity density; huge; DG/TM/training) ──
+DI:fm22_2dg                   # FileMan Developer Guide — HUGE (183k w), FileMan-heavy (ed 6.5), big tables
+DI:fm22_2um2                  # FileMan User Manual — huge (101k w)
+DI:fm22_2tm                   # FileMan Technical Manual
+DI:dde_tutorial               # FileMan DDE Tutorial — training-guide shape
+DI:fm22_2rn                   # FileMan Release Notes
+
+# ── XWB · RPC Broker (routine/RPC-heavy entity density) ──
+XWB:xwb1_1p34sp               # RPC Broker patch PDD — ed 9.1 (highest RPC/routine density)
+XWB:xwb_1_1_dg_r              # RPC Broker Developer Guide — large (62k w)
+XWB:xwb_1_1_sm_r              # RPC Broker Systems Management
+
+# ── CPRS · Docling-required exploder + huge + deep group ──
+CPRS:cprsguium                # CPRS GUI User Manual — HUGE (168k w), **Docling-required** bare-marker exploder
+CPRS:cprslmtm_0_636           # CPRS List Manager TM — huge (164k w), version group depth 4, old-gen
+CPRS:or_3_0_629_rn            # CPRS/OR Release Notes — member of a 40-deep version group
+CPRS:cprssetup                # CPRS Setup/Install — SG-SET, large, boilerplate-heavy
+
+# ── Deep version-group representatives ──
+SD:vs_gui_release_1_7_31_2_technical_manual  # Scheduling VS-GUI TM — deepest group (66 members)
+SD:sd_53_536_ug               # Scheduling UG — 63-deep group, old-gen
+PSO:pso_7_0_p770_pharm_um_1   # Outpatient Pharmacy UM — huge (125k w), 39-deep group
+PSS:pss_1_p262_um             # Pharmacy Data Mgmt UM — 25-deep group, large
+ADT:dg_5_3_891_cets_um        # Registration/ADT UM — 15-deep group, old-gen
+PXRM:pxrm_2_0_54_cds          # Clinical Reminders UM — 10-deep group, tiny
+
+# ── Huge / Monograph / big-table / image-heavy ──
+MON:vista_monograph_0723_r    # VistA Monograph — huge (91k w) cross-corpus reference, big tables
+VBECS:vbecs_2_4_1_user_guide  # VBECS User Guide — huge (163k w), 14-deep, title/seal images
+RA:ra5_0um                    # Radiology/NM User Manual — huge (118k w), old-gen
+LEX:lextm2_0                  # Lexicon Utility TM — huge (94k w), FileMan-dense (ed 4.7)
+XM:xm_8_0_userguide           # MailMan User Guide — huge (109k w), old-gen
+
+# ── INT / HL7 interface specs (segment/routine entity density) ──
+MPIF:mpif_1_0is               # MPI/PD Interface Spec — ed 12.8 (HL7 segments, routines)
+LR:la_5_2hl7spec_68           # Lab HL7 Interface Spec — ed 12.2, old-gen
+LEDI:la_52_74_la_52_80_hl7_interface_spec  # Lab LEDI HL7 Interface Spec — ed 8.1
+
+# ── Pharmacy API (RPC/routine API density; near-dup pair for redundancy@k) ──
+PSO:phar_1_api_r0520          # Pharmacy API manual — ed 10.8 (RPC/routine API)
+PSA:phar_1_api_r0520          # near-dup of PSO API — seeds the redundancy@k measurement
+
+# ── Flattened / old-gen (heading recovery, legacy TOC, table dumps) ──
+RMPR:rmpr_3_tm                # Prosthetics TM — flattened legacy (1 recovered section / 19 chunks)
+ACR:acr_pit                   # ACR REF — flattened, extreme entity density (ed 44), legacy table dump
+IBD:aics3_0ig                 # Integrated Billing AICS IG — flattened legacy
+AR/WS:wsuser                  # AR/WS User Manual — flattened, multi-namespace app code
+
+# ── Security / config breadth ──
+HL7:hl71_6sg                  # HL7 Security Guide — tiny
+PRCN:prcn_1_sg                # IFCAP/PRCN Security Guide — tiny
+LEDI:ledi_iv_ap_micro_configuration_guide  # Lab LEDI Configuration Guide — big tables
+ROES:rmpf3_0sg                # ROES Security Guide
+FIM:fim_technical_manual      # FIM Security/Technical (SG) — boilerplate-heavy
+VDEF:vdef_1_0_installation_and_user_configuration_guide  # VDEF Install + Config Guide
+
+# ── Ops / systems-management breadth ──
+CISS:ciss1_4om                # CISS Production Operations Manual (POM)
+VPFS:vpfs_systems_management_guide  # VPFS Systems Management Guide (SMG)
+SQLI:sqli_sm                  # SQLI Systems Management — ed 2.0
+NUMI:numi_server_setup_guide_r      # NUMI Server Setup Guide (SG-SET) — 3-deep
+
+# ── Developer / reference / misc doc-type breadth ──
+VPR:vpr_dg                    # VPR Developer Guide — JSON/data API
+VALM:valm_1_0_dg              # List Manager Developer Guide — ed 6.3 (routines)
+XM:xm_8_0_netrefguide         # MailMan Network Reference Guide (REF) — old-gen
+FMDC:fmdc1_0gs                # FileMan Delphi Components Getting-Started (QRG)
+IFR:krn8_0p416sp              # IFR Kernel patch PDD — large (52k w), ed 4.4
+GMRC:oc_adminkey_tg           # Consults admin-key Technical Guide — tiny TRG
+TIU:tiuum                     # TIU clinical documents User Manual — large, old-gen
+
+# ── Deep-group + medium-guide breadth ──
+LR:lr_5_2_425_ps_ug           # Lab UG — 11-deep group, old-gen
+PSB:psb_3_um_appendixd_508_compliance_r0111  # BCMA UM 508-compliance appendix — 13-deep
+GMRC:dst_1_1_1314_dibr        # Consult DST DIBR — 15-deep group
+PSJ:psj_5_0_p447_tm           # Inpatient Meds TM — 17-deep group, large
+
+# ── Tiny Release-Notes tail (revision-table shapes) ──
+XT:readme                     # Toolkit ReadMe — tiny RN
+VPFS:prpf_4_4_release_notes   # VPFS Release Notes — tiny, revision-table
+XU:xu_80_p548_rn              # Kernel patch RN — tiny, 4-deep, revision-table
+GMRC:cons3_p57_rn             # Consult/Request Tracking RN — tiny
+
+# ───────────────────────────────────────────────────────────────────────────────────────────────
+# COVERAGE SUMMARY (70 docs) — each of the eight shape axes is represented:
+#   (a) doc_type : UM 10 · TM 7 · RN 6 · SG 5 · SM 5 · UG 5 · DG 5 · IG 3 · PDD 3 · DIBR 3 · CFG 3 ·
+#                  INT 3 · QRG 2 · TRG 2 · SG-SET 2 · API 2 · REF 2 · SUP 1 · POM 1
+#                  (SMG→SM · security-config→SG+CFG · quick-ref→QRG · DIBRG→DIBR all covered)
+#   (b) era      : modern 54 · old-gen 16
+#   (c) converter: Pandoc 69 · Docling 1 (CPRS:cprsguium) — 1/70 is correct: the converter-routing
+#                  registry routes exactly one doc to Docling; cprsguium alone is ~65% of all bare
+#                  markers in the corpus (do not "fix" this ratio).
+#   (d) structure: flattened 4 · boilerplate-heavy 3 · big-tables 3 · revision-table 2 ·
+#                  heavy-xref 1 · title/seal-images 1 · near-dup 1
+#   (e) grp depth: 13 deep-group reps (66·63·51·42·40·39·25·17·15·14·13·11·10) + standalone throughout
+#   (f) entity   : XU 7 · FileMan 5 · RPC/routine 5 · HL7 3 · XOBW 2 — spanning ed 0.0 → 44
+#   (g) size     : tiny 12 · small 18 · medium 19 · large 10 · huge 11
+#   (h) answer-Q : kids-install ×2 · hwsc-rest ×2 · kaajee-auth ×1 (labeled in golden-queries.yaml)
