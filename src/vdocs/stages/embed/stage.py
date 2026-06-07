@@ -13,6 +13,7 @@ model is a lazy default exercised by `vdocs embed`. The model id+version enter t
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import sqlite3
 from collections.abc import Callable
@@ -23,11 +24,17 @@ import structlog
 
 from vdocs.contracts.registry import INDEX_CHUNKS, VECTORS_DB
 from vdocs.kernel import db
-from vdocs.models.stage import Idempotency, RunResult
+from vdocs.models.stage import Idempotency, PreflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
 from vdocs.stages.embed import embed_pure as ep
 
 log = structlog.get_logger(__name__)
+
+
+def _fastembed_available() -> bool:
+    """Whether the optional Phase-6 embedding backend (`fastembed`) is importable. Kept as a
+    module-level function so the graceful-skip decision is trivially testable."""
+    return importlib.util.find_spec("fastembed") is not None
 
 
 @dataclass(frozen=True)
@@ -70,6 +77,18 @@ class EmbedStage(Stage):
 
     def _emb(self) -> Embedder:
         return self._embedder or _default_embedder()
+
+    def preflight(self, ctx: StageContext, force: bool) -> PreflightResult:
+        # D3: semantic embedding is optional. If the real backend would be used but `fastembed`
+        # isn't installed, skip gracefully (no-op, semantic stays off) rather than failing the run —
+        # so a `vdocs run` slice that crosses `embed` isn't blocked by the not-yet-enabled stage.
+        # An injected embedder (tests / a custom backend) bypasses this and runs normally.
+        if self._embedder is None and not _fastembed_available():
+            return PreflightResult.skip(
+                "fastembed not installed; semantic embedding unavailable "
+                "(run `uv add fastembed` to enable)"
+            )
+        return super().preflight(ctx, force)
 
     def extra_input_fps(self, ctx: StageContext) -> dict[str, str]:
         e = self._emb()  # cheap: the default sets id+version without loading the model
