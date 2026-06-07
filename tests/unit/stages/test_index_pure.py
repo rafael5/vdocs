@@ -129,6 +129,88 @@ def test_search_chunks_splits_oversized_with_pN_suffix_part0_bare():
     assert all(c.section_id == "SD/x/big" for c in chunks)  # every part cites the same anchor
 
 
+# --- A2b: small-leaf merge (§9c) -----------------------------------------------------------------
+
+
+def _leaf(sid, text, *, path="Options", kind="ok", searchable=True):
+    return _section(text, kind=kind, searchable=searchable, sid=sid, path=path)
+
+
+def _unsearchable(sid, kind):
+    return _leaf(sid, "", kind=kind, searchable=False)
+
+
+def test_chunk_units_merges_small_adjacent_leaves_under_same_parent():
+    secs = [_leaf("d/a", "alpha"), _leaf("d/b", "beta"), _leaf("d/c", "gamma")]
+    units = ip.chunk_units(secs, target=100, merge=True)
+    assert len(units) == 1
+    u = units[0]
+    assert u.section_id == "d/a"  # cites the first leaf (the anchor)
+    assert u.member_ids == ("d/a", "d/b", "d/c")
+    assert "alpha" in u.text and "beta" in u.text and "gamma" in u.text
+
+
+def test_chunk_units_does_not_merge_across_different_parents():
+    secs = [_leaf("d/a", "alpha", path="P1"), _leaf("d/b", "beta", path="P2")]
+    units = ip.chunk_units(secs, target=100, merge=True)
+    assert [u.section_id for u in units] == ["d/a", "d/b"]
+
+
+def test_chunk_units_does_not_merge_top_level_leaves():
+    # empty section_path = top-level (no common parent heading) → never merged (H2-boundary rule)
+    secs = [_leaf("d/a", "alpha", path=""), _leaf("d/b", "beta", path="")]
+    units = ip.chunk_units(secs, target=100, merge=True)
+    assert [u.section_id for u in units] == ["d/a", "d/b"]
+    assert all(len(u.member_ids) == 1 for u in units)
+
+
+def test_chunk_units_flushes_on_non_searchable_section():
+    secs = [_leaf("d/a", "alpha"), _unsearchable("d/c", "container"), _leaf("d/b", "beta")]
+    units = ip.chunk_units(secs, target=100, merge=True)
+    # container breaks the run; no unit for it
+    assert [u.section_id for u in units] == ["d/a", "d/b"]
+
+
+def test_chunk_units_large_leaf_stands_alone():
+    big = "x" * 200  # ≥ target → not mergeable
+    secs = [_leaf("d/a", "alpha"), _leaf("d/big", big), _leaf("d/b", "beta")]
+    units = ip.chunk_units(secs, target=100, merge=True)
+    assert [u.section_id for u in units] == ["d/a", "d/big", "d/b"]
+    assert units[1].member_ids == ("d/big",)
+
+
+def test_chunk_units_starts_new_unit_when_cumulative_exceeds_target():
+    secs = [_leaf("d/a", "a" * 60), _leaf("d/b", "b" * 60), _leaf("d/c", "c" * 60)]
+    units = ip.chunk_units(secs, target=100, merge=True)
+    # a(60) starts a run; +b=120>100 → flush a alone; b(60) starts; +c=120>100 → b alone, c alone
+    assert [u.member_ids for u in units] == [("d/a",), ("d/b",), ("d/c",)]
+
+
+def test_chunks_for_unit_single_and_oversized():
+    one = ip.ChunkUnit("d/a", "A", "Options", "small body", ("d/a",))
+    assert [c.chunk_id for c in ip.chunks_for_unit(one)] == ["d/a"]
+    big = "\n\n".join(f"Paragraph {i}: " + "word " * 80 for i in range(40))
+    many = ip.chunks_for_unit(ip.ChunkUnit("d/big", "B", "Options", big, ("d/big",)))
+    assert len(many) > 1
+    assert many[0].chunk_id == "d/big" and many[1].chunk_id == "d/big#p2"
+    assert all(c.section_id == "d/big" for c in many)
+
+
+def test_chunk_units_skips_non_searchable_entirely():
+    secs = [_unsearchable("d/c", "container"), _unsearchable("d/h", "hollow")]
+    assert ip.chunk_units(secs, target=100, merge=True) == []
+
+
+def test_chunk_units_default_is_one_unit_per_leaf_merge_gated_off():
+    # MERGE_SMALL_LEAVES is off by default (Phase-C-gated): every searchable leaf stands alone,
+    # identical to the pre-A2b per-leaf chunking — so the live lexical surface is unchanged.
+    assert ip.MERGE_SMALL_LEAVES is False
+    secs = [_leaf("d/a", "alpha"), _leaf("d/b", "beta"), _leaf("d/c", "gamma")]
+    units = ip.chunk_units(secs, target=100)  # default merge=MERGE_SMALL_LEAVES
+    assert [u.section_id for u in units] == ["d/a", "d/b", "d/c"]
+    assert all(len(u.member_ids) == 1 for u in units)
+
+
 def test_split_oversized_returns_single_window_when_under_threshold():
     assert ip.split_oversized("short body\n\nanother para") == ["short body\n\nanother para"]
 

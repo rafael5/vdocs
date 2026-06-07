@@ -35,6 +35,14 @@ DEFAULT_TOC_DEPTH = (2, 3)
 OVERSIZED_CHUNK_CHARS = 8000
 CHUNK_TARGET_CHARS = 4000
 
+# A2b small-leaf merge — built and tested, but **gated off** pending Phase C. Merging adjacent small
+# leaves raises mean chunk substance (+53% on the golden set) and drives redundancy→0, but it costs
+# *lexical* citation precision: merged content is cited under the first leaf's anchor, so a
+# fine-grained section query resolves to the merge-anchor sibling (golden nDCG@10 0.395→0.223). That
+# trade only pays off for *semantic* retrieval (coherent embedding units), which isn't live until
+# Phase C. Re-enable here and measure merge ON vs OFF under hybrid retrieval in Phase C.
+MERGE_SMALL_LEAVES = False
+
 
 @dataclass(frozen=True)
 class Section:
@@ -83,25 +91,99 @@ class Chunk:
     text: str
 
 
-def search_chunks(section: Section) -> list[Chunk]:
-    """Expand a section into retrieval chunks (§5.5/§14.6). A non-searchable section (container or
-    hollow) yields **none** — it is kept off the search surface. A searchable leaf yields one chunk
-    (``chunk_id == section_id``), or several windowed parts if oversized: part 0 keeps the bare
-    ``section_id`` (id stability), parts ≥1 get a ``#p{n+1}`` suffix, all citing the same anchor."""
-    if not section.searchable:
-        return []
-    windows = split_oversized(section.text)
+def _windows_to_chunks(section_id: str, text: str) -> list[Chunk]:
+    """Window ``text`` (split if oversized) into chunks all citing ``section_id``: part 0 keeps the
+    bare id (id stability), parts ≥1 get a ``#p{n+1}`` suffix."""
+    windows = split_oversized(text)
     if len(windows) == 1:
-        return [Chunk(section.section_id, section.section_id, 0, windows[0])]
+        return [Chunk(section_id, section_id, 0, windows[0])]
     return [
-        Chunk(
-            section.section_id if i == 0 else f"{section.section_id}#p{i + 1}",
-            section.section_id,
-            i,
-            w,
-        )
+        Chunk(section_id if i == 0 else f"{section_id}#p{i + 1}", section_id, i, w)
         for i, w in enumerate(windows)
     ]
+
+
+def search_chunks(section: Section) -> list[Chunk]:
+    """Expand a single section into retrieval chunks (§5.5/§14.6). A non-searchable section
+    (container or hollow) yields **none** — it is kept off the search surface. A searchable leaf
+    yields one chunk (``chunk_id == section_id``), or several windowed parts if oversized."""
+    if not section.searchable:
+        return []
+    return _windows_to_chunks(section.section_id, section.text)
+
+
+@dataclass(frozen=True)
+class ChunkUnit:
+    """A2b coherent chunking unit (§9c): one or more small adjacent leaf sections merged into a
+    single retrieval unit. ``section_id``/``title``/``section_path`` are the **first**
+    (representative) leaf's — the anchor a hit cites; ``member_ids`` lists every folded-in leaf for
+    traceability; ``text`` is the concatenated bodies. A unit of one is just a single searchable
+    leaf."""
+
+    section_id: str
+    title: str
+    section_path: str
+    text: str
+    member_ids: tuple[str, ...]
+
+
+def chunk_units(
+    sections: list[Section],
+    *,
+    target: int = CHUNK_TARGET_CHARS,
+    merge: bool = MERGE_SMALL_LEAVES,
+) -> list[ChunkUnit]:
+    """Group a document's sections into chunk units. With ``merge=False`` (the current default —
+    `MERGE_SMALL_LEAVES`) every searchable leaf is its own unit (one chunk per leaf, oversized
+    split), identical to the pre-A2b behavior. With ``merge=True`` it merges **consecutive small
+    leaf sections under the same parent heading** (§9c) so a chunk is a coherent unit of knowledge
+    rather than a one-line fragment. Merge rules — a leaf joins the current run iff it is
+    searchable, has the **same non-empty** ``section_path`` (provably the same parent heading —
+    never across an H2 boundary or a top-level/empty path), is itself smaller than ``target``, and
+    keeps the run within ``target``.
+    Anything else (a non-searchable section, a path change, a leaf ≥ target, an over-budget run)
+    flushes the current run; a non-mergeable searchable leaf stands as its own unit (and is split
+    later if oversized). The merged chunk cites the first leaf — adjacent siblings resolve to the
+    same anchor, which is right beside them under the shared parent."""
+    units: list[ChunkUnit] = []
+    run: list[Section] = []
+
+    def flush() -> None:
+        if run:
+            first = run[0]
+            text = "\n\n".join(s.text for s in run)
+            units.append(
+                ChunkUnit(
+                    first.section_id,
+                    first.title,
+                    first.section_path,
+                    text,
+                    tuple(s.section_id for s in run),
+                )
+            )
+            run.clear()
+
+    for s in sections:
+        if not s.searchable:
+            flush()
+            continue
+        mergeable = merge and bool(s.section_path) and len(s.text) < target
+        if not mergeable:
+            flush()
+            units.append(ChunkUnit(s.section_id, s.title, s.section_path, s.text, (s.section_id,)))
+            continue
+        run_len = sum(len(r.text) for r in run)
+        if run and (run[0].section_path != s.section_path or run_len + len(s.text) > target):
+            flush()
+        run.append(s)
+    flush()
+    return units
+
+
+def chunks_for_unit(unit: ChunkUnit) -> list[Chunk]:
+    """Window a chunk unit's merged text into retrieval chunks (oversized → ``#pN``), all citing the
+    unit's representative ``section_id``."""
+    return _windows_to_chunks(unit.section_id, unit.text)
 
 
 def _blocks(text: str) -> list[str]:

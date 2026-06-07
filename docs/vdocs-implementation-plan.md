@@ -43,7 +43,7 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
 | | 0.3 | Stand up dev lake (`~/data/vdocs-dev`); run full DAG | ✅ | |
 | | 0.4 | Baseline lexical nDCG@10 on golden queries | ✅ | |
 | **A — Substrate / chunking** | A1 | Pick embedder (**bge-m3**, 8k) + chunk budget gate | ✅ | |
-| | A2 | Contextual chunk headers + small-leaf merge | ⬜ | |
+| | A2 | Context headers (active) + small-leaf merge (built, **gated off** → C) | ✅ | ⚠️ |
 | | A3 | `stub` chunks → lexical-only (exclude from semantic) | ⬜ | |
 | **B — Denoising (full corpus)** | B1 | `discover` at scale; curate phrases + boilerplate; materialize `_shared/boilerplate/` | ⬜ | |
 | | B2 | Materialize `gold/glossary.md` (PROMOTE) | ⬜ | |
@@ -165,7 +165,7 @@ Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.p
 | ID | Step | Detail | Gate | Status | Flag |
 |----|------|--------|------|--------|------|
 | A1 | Embedder + chunk sizing | **bge-m3 chosen** (1024-d, 8192-tok); chunk constants verified within budget; `embed` asserts no-truncation per chunk (`embed_pure.assert_within_budget`) | No chunk exceeds model token limit | ✅ | |
-| A2 | Context headers + merge | Prepend `«doc_title › section_path»` to embedded text; merge tiny adjacent leaves under same parent up to TARGET | Mean chunk substance ↑; hollow stays 0 | ⬜ | |
+| A2 | Context headers + merge | Prepend `«doc_title › section_path»` to embedded text (**active**); merge tiny adjacent leaves under same parent up to TARGET (**built + tested, gated off** `MERGE_SMALL_LEAVES=False`) | Mean chunk substance ↑ (+53% w/ merge); hollow stays 0 | ✅ | ⚠️ |
 | A3 | Stub handling | `stub` chunks (referent-only) lexical-only, excluded from semantic | Stubs absent from `vectors.db` | ⬜ | |
 
 ### Discoveries
@@ -182,6 +182,16 @@ Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.p
   `BAAI/bge-m3` (model id, lazy load) and that `vectors.db` is built at **dim 1024** (up from the old
   384 — ~2.7× vector storage; `embedding_model` row carries model/version/dim). The default
   `Embedder` advertises `BAAI/bge-m3 : 1.0`, `max_tokens=8192`.
+- ⚠️ **2026-06-07 — A2b small-leaf merge regresses the *lexical* baseline → GATED OFF pending C.**
+  Measured on the dev lake (merge ON): mean chunk substance **+53%** (1769→2703 chars), redundancy@10
+  **0.017→0.0**, chunks 7,189→4,708 — but lexical **nDCG@10 0.395→0.223** / recall@10 0.50→0.367.
+  Root cause (verified, not a findability loss): merge cites folded content under the **first leaf's**
+  anchor, so 5/17 fine-grained golden labels resolve to a merge-anchor *sibling* — a
+  **citation-granularity** effect. Merge's real payoff (coherent embedding units) only shows for
+  *semantic* retrieval, which isn't live until C. **Decision (maintainer-approved):** keep the merge
+  code (tested), gate it off via `index_pure.MERGE_SMALL_LEAVES=False` (current default = pre-A2b
+  per-leaf chunking), and **re-enable + measure merge ON vs OFF under hybrid retrieval in Phase C.**
+  A2a context headers stay active (embed-only → zero lexical effect; baseline unchanged).
 
 ### Risks
 - **Wrong embedder → costly re-embed.** *Mitigation:* decide in A1 with a small eval on the golden set; record the choice + dim in `embedding_model`.
@@ -197,6 +207,16 @@ Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.p
   test added; `make check` green (733 passed, 98.5% cov). A1 gate verified on the dev lake.
   *Deferred to A2:* contextual chunk headers (`«doc_title › section_path»`) on the embedded text +
   small-leaf merge — A1 covered only the embedder/budget half.
+- 2026-06-07 — A2 done (✅). **A2a (active):** `embed_pure.contextual_embed_text` prepends
+  `«doc_title › section_path»` to the *embedded* text only (chunks.text/FTS stay clean); `embed.run`
+  resolves it via a chunks→doc_sections→documents join. Verified on the dev lake — the KAAJEE install
+  section (baseline 0.0) now embeds with its product-name breadcrumb (the intended Phase-C lift). No
+  lexical effect (embed not yet run): baseline unchanged. **A2b (built + gated off):**
+  `index_pure.chunk_units`/`chunks_for_unit` + `ChunkUnit` merge adjacent small same-parent leaves;
+  `index.stage` now builds chunks per-document via `chunk_units`. Measured the ON/OFF tradeoff (see
+  Discoveries ⚠️) and **gated off** by maintainer decision. TDD: A2a 4 pure +1 integration; A2b 8
+  pure +1 gate-off. `make check` green (747 passed, 98.5% cov). A2a committed in `cbeb7e3`; A2b
+  (gated) committed alongside this tracker update.
 
 ### Notes
 - Constants live in `src/vdocs/stages/index/index_pure.py` (`CHUNK_TARGET_CHARS`,

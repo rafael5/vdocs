@@ -145,18 +145,30 @@ class IndexStage(Stage):
                         s.section_path,
                     )
                 )
+                # entities stay a section-level signal (mentions cite the anchor section_id)
                 if is_latest:  # the search surface + entity graph are anchor-only (§14.6)
-                    # Chunks are the retrieval units: containers/hollow yield none; oversized split.
-                    for c in ip.search_chunks(s):
-                        chunks.append((c.chunk_id, c.section_id, doc_key, c.part, c.text))
-                        fts.append(
-                            (c.chunk_id, c.section_id, doc_key, s.title, s.section_path, c.text)
-                        )
-                    # entities stay a section-level signal (mentions cite the anchor section_id)
                     for etype, canon in ent.extract(s.text, rules):
                         eid = f"{etype}:{canon}"
                         ent_count[(eid, etype, canon)] += 1
                         mentions.append((eid, doc_key, s.section_id))
+            # Chunks are the retrieval units (A2b): small adjacent leaves under one parent merge
+            # into a coherent unit, oversized leaves split (#pN); containers/hollow yield none. The
+            # merged unit cites its first leaf (`unit.section_id`); the FTS title/path are that
+            # anchor's.
+            if is_latest:
+                for unit in ip.chunk_units(secs):
+                    for c in ip.chunks_for_unit(unit):
+                        chunks.append((c.chunk_id, c.section_id, doc_key, c.part, c.text))
+                        fts.append(
+                            (
+                                c.chunk_id,
+                                c.section_id,
+                                doc_key,
+                                unit.title,
+                                unit.section_path,
+                                c.text,
+                            )
+                        )
 
         def build(conn: sqlite3.Connection) -> None:
             conn.executescript(_SCHEMA)
