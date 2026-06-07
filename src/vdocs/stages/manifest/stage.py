@@ -24,9 +24,11 @@ from vdocs.contracts.registry import (
     DISCOVERY_JSON,
     INDEX_DOCUMENTS,
     INDEX_ENTITIES,
+    REGISTRIES,
     RELATIONS,
 )
 from vdocs.kernel import cas, db
+from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
 from vdocs.stages.manifest import manifest_pure as mp
@@ -37,7 +39,7 @@ log = structlog.get_logger(__name__)
 class ManifestStage(Stage):
     name = "manifest"
     description = "assemble corpus-manifest.json + discovery.json + the AI corpus card"
-    requires = [CONSOLIDATED, INDEX_DOCUMENTS, INDEX_ENTITIES, RELATIONS]
+    requires = [CONSOLIDATED, INDEX_DOCUMENTS, INDEX_ENTITIES, RELATIONS, REGISTRIES]
     produces = [CORPUS_MANIFEST, DISCOVERY_JSON, AI_MANIFEST, CORPUS_CARD]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
 
@@ -70,6 +72,14 @@ class ManifestStage(Stage):
         )
         cas.atomic_write(cfg.ai_manifest, _dumps(card))
         cas.atomic_write(cfg.corpus_card, (mp.corpus_card(card)).encode("utf-8"))
+
+        # B1 (§9.6/§9.7): materialise the curated boilerplate canonical copies so `normalize`'s
+        # `_shared/boilerplate/<id>.md` REFERENCE links resolve (single-sourced, de-duplicated).
+        shared = mp.shared_boilerplate_files(_load_boilerplate_entries(cfg))
+        bp_dir = cfg.gold_shared / "boilerplate"
+        for name, text in shared.items():
+            cas.atomic_write(bp_dir / name, text.encode("utf-8"))
+
         return RunResult(
             counts={
                 "documents": counts["documents"],
@@ -77,9 +87,18 @@ class ManifestStage(Stage):
                 "entities": counts["entities"],
                 "relations": counts["relations"],
                 "catalog_docs": len(catalog),
+                "shared_boilerplate": len(shared),
                 "semantic_available": int(embedding is not None),
             }
         )
+
+
+def _load_boilerplate_entries(cfg) -> list:  # type: ignore[no-untyped-def]
+    """The curated boilerplate registry rows (empty if absent) — source of the canonical copies."""
+    data = kregistry.load_mapping(
+        cfg.registries / "boilerplate" / "boilerplate.yaml", missing_ok=True
+    )
+    return data.get("boilerplate") or []
 
 
 def _dumps(obj) -> bytes:  # type: ignore[no-untyped-def]

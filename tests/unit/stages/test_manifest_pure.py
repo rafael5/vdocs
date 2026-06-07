@@ -8,6 +8,23 @@ from __future__ import annotations
 
 from vdocs.stages.manifest import manifest_pure as mp
 
+
+def test_shared_boilerplate_files_materializes_approved_entries():
+    # B1: each approved boilerplate registry entry → a canonical `<id>.md` carrying its verbatim
+    # text, so normalize's `_shared/boilerplate/<id>.md` REFERENCE links resolve.
+    entries = [
+        {"id": "bp-abc", "label": "VA notice", "text": "VA notice block.", "status": "approved"},
+        {"id": "bp-def", "label": "Pending", "text": "draft block", "status": "candidate"},
+        {"id": "bp-ghi", "label": "No text", "status": "approved"},
+    ]
+    files = mp.shared_boilerplate_files(entries)
+    assert files == {"bp-abc.md": "VA notice block.\n"}  # only the approved entry with text
+
+
+def test_shared_boilerplate_files_empty_for_no_registry():
+    assert mp.shared_boilerplate_files([]) == {}
+
+
 _COUNTS = {
     "documents": 469,
     "documents_latest": 290,

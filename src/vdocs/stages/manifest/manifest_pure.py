@@ -14,6 +14,21 @@ from typing import Any
 
 from vdocs.server import ids
 
+
+def shared_boilerplate_files(entries: list[dict[str, Any]]) -> dict[str, str]:
+    """B1 (§9.6/§9.7): the canonical `_shared/boilerplate/<id>.md` files to materialise from the
+    curated boilerplate registry. Each **approved** entry with text yields ``{<id>.md: <text>\\n}``
+    — the verbatim canonical block that `normalize`'s REFERENCE links point at (kept once,
+    de-duplicated). Non-approved or text-less entries are skipped. Pure: registry rows in, file map
+    out; the driver writes them under ``gold/_shared/boilerplate/``."""
+    out: dict[str, str] = {}
+    for e in entries:
+        text = (e.get("text") or "").strip()
+        if e.get("status") == "approved" and text:
+            out[f"{e['id']}.md"] = text + "\n"
+    return out
+
+
 # The stable-ID contract (§5.5) — advertised so an agent can resolve any citation deterministically.
 ID_SCHEME = {
     "doc_key": "<safe_app>/<doc_slug> — the URL-safe document key; MCP resource + section-id base",
