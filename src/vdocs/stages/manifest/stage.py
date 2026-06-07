@@ -10,12 +10,16 @@ exists fills the fields and flips the capability on (the "optional produces don'
 
 from __future__ import annotations
 
+import hashlib
 import json
+from pathlib import Path
 
 import structlog
 
 from vdocs.contracts.registry import (
+    AI_MANIFEST,
     CONSOLIDATED,
+    CORPUS_CARD,
     CORPUS_MANIFEST,
     DISCOVERY_JSON,
     INDEX_DOCUMENTS,
@@ -32,9 +36,9 @@ log = structlog.get_logger(__name__)
 
 class ManifestStage(Stage):
     name = "manifest"
-    description = "assemble corpus-manifest.json + discovery.json (the MCP front door)"
+    description = "assemble corpus-manifest.json + discovery.json + the AI corpus card"
     requires = [CONSOLIDATED, INDEX_DOCUMENTS, INDEX_ENTITIES, RELATIONS]
-    produces = [CORPUS_MANIFEST, DISCOVERY_JSON]
+    produces = [CORPUS_MANIFEST, DISCOVERY_JSON, AI_MANIFEST, CORPUS_CARD]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
@@ -50,12 +54,29 @@ class ManifestStage(Stage):
         discovery = mp.discovery_descriptor(counts, tool_ver=cfg.tool_ver, embedding=embedding)
         cas.atomic_write(cfg.corpus_manifest, _dumps(manifest))
         cas.atomic_write(cfg.discovery_json, _dumps(discovery))
+
+        # The AI corpus card (§14.7): the always-fresh catalog + entity index + query recipe an
+        # agent reads to answer "based on the vdocs gold corpus, …" without re-discovering it.
+        catalog = mp.build_catalog(_gather_catalog(cfg.index_db))
+        entity_index = mp.build_entity_index(_gather_entity_rows(cfg.index_db))
+        card = mp.ai_manifest(
+            counts,
+            catalog,
+            entity_index,
+            tool_ver=cfg.tool_ver,
+            generated_at=generated_at,
+            index_fingerprint=_index_fingerprint(cfg.index_db),
+            embedding=embedding,
+        )
+        cas.atomic_write(cfg.ai_manifest, _dumps(card))
+        cas.atomic_write(cfg.corpus_card, (mp.corpus_card(card)).encode("utf-8"))
         return RunResult(
             counts={
                 "documents": counts["documents"],
                 "version_groups": counts["version_groups"],
                 "entities": counts["entities"],
                 "relations": counts["relations"],
+                "catalog_docs": len(catalog),
                 "semantic_available": int(embedding is not None),
             }
         )
@@ -90,6 +111,40 @@ def _gather_counts(index_db):  # type: ignore[no-untyped-def]
         }
     finally:
         conn.close()
+
+
+def _gather_catalog(index_db):  # type: ignore[no-untyped-def]
+    """The `is_latest` anchor documents (catalog rows for the AI card), ordered for stable order."""
+    conn = db.connect(index_db, read_only=True)
+    try:
+        rows = conn.execute(
+            "SELECT doc_key, doc_id, title, app_code, doc_type, pkg_ns, patch_id, version, "
+            "section_count, word_count FROM documents WHERE is_latest=1 "
+            "ORDER BY app_code, title, doc_key"
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def _gather_entity_rows(index_db):  # type: ignore[no-untyped-def]
+    """Every entity (type, canonical name, mention count) — grouped/trimmed by the pure builder."""
+    conn = db.connect(index_db, read_only=True)
+    try:
+        rows = conn.execute("SELECT type, canonical_name, mention_count FROM entities").fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def _index_fingerprint(index_db: Path) -> str:
+    """A content fingerprint of `index.db` (streamed sha256) — the staleness stamp the AI card
+    records so a consumer can tell whether the card still matches the live index."""
+    h = hashlib.sha256()
+    with index_db.open("rb") as fh:
+        for block in iter(lambda: fh.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
 
 
 def _read_embedding(vectors_db):  # type: ignore[no-untyped-def]

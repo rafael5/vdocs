@@ -34,10 +34,29 @@ def test_recover_headings_promotes_toc_bookmark_paragraphs():
     assert "Some intro text." in out and "details" in out
 
 
-def test_recover_headings_skips_docs_that_already_have_headings():
+def test_recover_headings_skips_plain_bookmark_spans_when_headings_exist():
     body = '# Real Heading\n\n<span id="_Toc1" class="anchor"></span>Not Promoted\n'
-    # the doc already has a markdown heading tree → leave its _Toc paragraphs alone
+    # a doc with a heading tree: a PLAIN bookmark-span paragraph (a figure/inline target) is left
+    # alone — only bold-wrapped pseudo-headings are promoted (see the A2 test below).
     assert nz.recover_headings(body) == body
+
+
+def test_recover_headings_v2_promotes_bold_pseudo_heading_when_headings_exist():
+    # A2 (§6.7): a Word heading Pandoc rendered as **bold** (carrying a _Toc/_Ref span) is a real
+    # heading that lost its level. Promote it to `##` even though the doc already has ATX headings —
+    # so its anchor is minted and its cross-refs resolve. A plain bookmark span stays prose.
+    body = (
+        "# Manual\n\nintro\n\n"
+        '<span id="_Toc55" class="anchor"></span>**Reminder Location List Menu**\n\n'
+        "menu details\n\n"
+        '<span id="_Ref9" class="anchor"></span>See Figure 3 for the layout.\n'
+    )
+    out = nz.recover_headings(body)
+    assert "## Reminder Location List Menu" in out  # the bold pseudo-heading promoted
+    assert '<span id="_Toc55"' in out  # the bookmark span retained (so anchors_pure can map it)
+    assert "## See Figure" not in out  # the plain _Ref paragraph stays prose, not a heading
+    # idempotent: a second pass changes nothing (the promoted heading isn't re-promoted)
+    assert nz.recover_headings(out) == out
 
 
 def test_recover_headings_then_toc_gives_structureless_doc_a_toc():

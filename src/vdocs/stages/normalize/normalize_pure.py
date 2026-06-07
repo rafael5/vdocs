@@ -85,6 +85,9 @@ _TOC_ENTRY_RE = re.compile(r"^\s*- \[.*\]\(#.*\)\s*$")
 # promotes each to a level-2 heading while **keeping** the anchor span on the line above, so
 # `parse_headings` can capture the bookmark before `rewrite_link_targets` drops it (§6.7).
 _RECOVER_RE = re.compile(r'^(<span id="_(?:Toc|Ref)\w+"[^>]*></span>)\s*(.+?)\s*$', re.MULTILINE)
+# A2 (§6.7): the remainder after the span is **bold-wrapped** — a Word heading Pandoc rendered as
+# `**bold**` instead of an ATX heading. Whole-line bold (not an inline bold span in prose).
+_BOLD_PSEUDO_HEADING_RE = re.compile(r"^\*\*.*\*\*$")
 
 
 def recover_headings(body: str) -> str:
@@ -92,14 +95,24 @@ def recover_headings(body: str) -> str:
     to ``_Toc…``/``_Ref…`` bookmarks; Pandoc emits those targets as plain paragraphs (a leading
     ``<span id="_Toc…" …></span>`` + the heading text). Promote each to a level-2 heading
     (stripping inline markup) while **retaining** the bookmark span on the line above, so the
-    bookmark identity survives into ``parse_headings``. Runs **only when the body has no markdown
-    headings**, so well-structured docs are left untouched. (Level inference from TOC
-    depth/numbering is deferred — a flat tree still gives a working TOC + anchors where none
-    existed.)"""
-    if _HEADING_LINE_RE.search(body):
-        return body
+    bookmark identity survives into ``parse_headings``.
+
+    Two modes (A2):
+      * **no ATX headings yet** — every bookmark-span paragraph is a heading-recovery seed (the
+        structureless-doc path: a flat ``##`` tree beats none);
+      * **the doc already has headings** — promote **only** a span paragraph whose text is
+        *bold-wrapped* (``**Reminder Location List Menu**``): a styled heading Pandoc rendered as
+        bold instead of ``##``. A plain bookmark-span paragraph (a figure/table/inline target) is
+        left as prose — high precision, so we recover the lost section headings (and mint the
+        anchor their cross-refs resolve to) without promoting non-headings.
+
+    Idempotent: a promoted heading sits on its own line below the (now bare) span, which no longer
+    matches the single-line recovery pattern. (Level inference from TOC depth is deferred.)"""
+    bold_only = bool(_HEADING_LINE_RE.search(body))  # structured doc → only bold pseudo-headings
 
     def repl(m: re.Match[str]) -> str:
+        if bold_only and not _BOLD_PSEUDO_HEADING_RE.match(m.group(2).strip()):
+            return m.group(0)  # a plain bookmark-span paragraph in a structured doc: leave as prose
         # strip inline HTML tags and any wrapping markdown emphasis (**bold**/_italic_)
         text = strip_tags(m.group(2)).strip().strip("*_ ").strip()
         return f"{m.group(1)}\n## {text}" if text else m.group(0)

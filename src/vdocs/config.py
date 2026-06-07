@@ -186,6 +186,16 @@ class Settings(BaseSettings):
         return self.gold / "discovery.json"
 
     @property
+    def ai_manifest(self) -> Path:
+        """The AI corpus card, machine rendering (§14.7): catalog + entity index + query recipe."""
+        return self.gold / "ai-manifest.json"
+
+    @property
+    def corpus_card(self) -> Path:
+        """The AI corpus card rendered as markdown for direct context loading (§14.7)."""
+        return self.gold / "CORPUS.md"
+
+    @property
     def glossary(self) -> Path:
         return self.gold / "glossary.md"
 

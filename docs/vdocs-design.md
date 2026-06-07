@@ -411,6 +411,8 @@ $LAKE/                                       # DATA_DIR, default ~/data/vdocs, e
     gold/glossary.md                         #   normalize (single-sourced corpus glossary)
     gold/corpus-manifest.json                #   manifest (lineage)
     gold/discovery.json                      #   manifest (machine-discovery descriptor — §14)
+    gold/ai-manifest.json                    #   manifest (AI corpus card — catalog + entity index + query recipe — §14.7)
+    gold/CORPUS.md                           #   manifest (the AI corpus card rendered for context loading — §14.7)
     gold/publish/<section>/<pkg>/...         #   publish (human tree; markdown-only, images materialized+gitignored)
 
   state.db                                   # cross-cutting: stage_runs, fingerprints, lineage, acquisitions
@@ -1100,7 +1102,7 @@ plane), **DOC** = the document medallion (data plane) (§4). The inventory track
 | 🥇 DOC | **relate** | `index.db` (documents, entities, sections) | `index.db:relations` (doc↔entity, doc↔doc xref, entity↔entity — the knowledge graph) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **embed** | `index.db:chunks` (**`searchable AND is_latest` only** — §5.5) | `vectors.db` (per-chunk embeddings + ANN index over the searchable current chunks, keyed by `chunk_id`; containers/hollow + prior-version chunks excluded — §14.6) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **fidelity** | `text@normalized`, `raw` (bronze `S`), `index.db` (structure/sections/template schema), `registries` (to dereference single-sourced content) | `reports/fidelity` (per-document migration-fidelity records — content/provenance/history axes, template compliance, TOC integrity — + corpus report; `fidelity-framework.md`) | SKIP_IF_UNCHANGED |
-| 🥇 DOC | **manifest** | `consolidated`, `index.db` (documents/entities + **`relations`**, so the graph capability + counts are honest), `vectors.db` (**optional** — produced by `embed` in Phase 6; absent ⇒ embedding/vector fields omitted, **semantic capability off** [D3]) | `corpus-manifest.json` + `discovery.json` (counts · stable-ID scheme · MCP capabilities; lineage `tool_ver`+`generated_at`) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **manifest** | `consolidated`, `index.db` (documents/entities + **`relations`**, so the graph capability + counts are honest), `vectors.db` (**optional** — produced by `embed` in Phase 6; absent ⇒ embedding/vector fields omitted, **semantic capability off** [D3]) | `corpus-manifest.json` + `discovery.json` (counts · stable-ID scheme · MCP capabilities; lineage `tool_ver`+`generated_at`) + **`ai-manifest.json` + `CORPUS.md`** (the AI corpus card: document catalog + per-type entity index + the `vdocs ask` query recipe + the `index.db` fingerprint for staleness — §14.7) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **publish** | `corpus-manifest.json`, `text@normalized`, `consolidated`, `assets`, `catalog.enriched`, `glossary` | `publish` (markdown-only human tree + INDEX) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **validate** | `text@normalized` (`capture.yaml` + `refs.yaml`) + `consolidated` (each anchor bundle's `bundle.yaml` + parts) **[sidecar-verification slice — active now]**; `publish`, `index.db`, `vectors.db`, `reports/fidelity` **[deferred, arrive with publish/index/fidelity]**; reads the prior `stage_runs[normalize].counts` (out-of-contract historical baseline for cross-run drop detection, like `fetch`↔`acquisitions`) | `reports/validation` (the verification findings) + (HARD GATE — sets its own `ok`). **Sidecar-verification slice (built first):** (1) **typed-absence gate** — any per-bundle `capture.yaml` outcome of `absent-unexpected` or `failed` blocks; (2) **count reconciliation** — a sidecar class going `absent-expected` corpus-wide, or a count dropping vs. the prior run with no matching source change, is re-classified `absent-unexpected` and blocks; (3) **ref-resolution gate** — every outbound ref in each `refs.yaml` is resolved against that bundle's live anchor set: a **severed** ref (resolved slug matches no live anchor — a true dead anchor) blocks at a hard floor of zero (the C5 TOC round-trip generalised to all cross-refs, §6.7); an **unmapped** ref (`UNRESOLVED` — a Word bookmark `normalize` never mapped) is **reported as a metric, not gated**, split into two classes (triage 2026-06-03): a `_Toc…` bookmark is a TOC field targeting a **heading** → the **C5-bounded, recoverable** resolvability class (mapping lost because Pandoc drops some heading bookmark spans, but reconstructible from the legacy TOC — a tracked `normalize` follow-up — so the C5 ≤0.02 applies to **`_Toc`→heading** resolution, ~0.76 today (534 of 705 on the 1299-doc lake): a known gap, not a regression); a `_Ref…`/other bookmark is a cross-reference to a **non-heading** target (figure/table/numbered item/page span), unmappable to a heading anchor by construction → reported as **expected-unmapped**, **outside** the C5 rate (the `_Ref` class is ~64% of unmapped and resolves 0%, so conflating it miscalibrated the old "~92% expected" framing); (4) **bundle-integrity gate** — for each `consolidated` anchor bundle, recompute every part's `sha256` from disk against its `bundle.yaml`, confirm the on-disk part set matches the manifest exactly (no extra/missing), and recompute `bundle_digest`; any mismatch (tamper / incompleteness) blocks (§6.6 signed manifest). **Deferred (full gate):** schema + lineage + ID/vector integrity + the per-document **fidelity verdict** [PASS / REVIEW-with-sign-off only; QUARANTINE blocks], landing with `publish`/`index`/`fidelity`. | ALWAYS_RERUN |
 | 🚀 DOC | **push** | `publish` (+ validate `ok`) | `git:vistadocs/vdl` (one anchor file per version group + travel-with lineage sidecars; **commit-replay deferred behind opt-in `--replay-history`**, §6.6) | FORCE_ONLY |
@@ -1692,7 +1694,7 @@ The server answers queries across four retrieval modes and **fuses** them, rathe
 offering only one:
 
 - **Semantic** — meaning-based nearest-neighbour over per-chunk embeddings (`vectors.db`).
-- **Lexical** — exact / keyword / phrase over FTS5 (`index.db:doc_sections_fts`).
+- **Lexical** — exact / keyword / phrase over FTS5 (`index.db:chunks_fts`, the search-chunk index).
 - **Structured** — typed filters over fields (`app_code`, `doc_type`, `section`, `is_latest`,
   FileMan file number, has-entity, date) — deterministic, composable.
 - **Graph** — traversal over `relations` (which routine is defined where; which docs
@@ -1839,6 +1841,39 @@ latest-only correctness + structure-aligned chunks + a structured pre-filter, fu
 this is the design for maximal retrieval fidelity across all three modes. The claim is *verified*,
 not assumed, by the **retrieval-quality measurement** in `fidelity-framework.md` §10.5 (golden query
 set, per-mode nDCG/precision, a redundancy metric, and a with/without-condensation ablation).
+
+### 14.7 The AI corpus card (`ai-manifest.json` + `CORPUS.md`) — orientation without re-discovery
+
+The MCP server (§14.3) is the eventual rich front door, but it is a long-running service and a later
+build. The **AI corpus card** is the always-available, zero-infrastructure surface that lets an agent
+(Claude in particular) answer *"based on the vdocs gold corpus, …"* questions **without re-discovering
+the corpus every session** and **without guessing about VistA internals**. `manifest` emits it
+alongside `corpus-manifest.json`/`discovery.json`, so it regenerates on every pipeline run and is
+**always consistent with the derived stores** — staleness is detectable because the card records the
+`index.db` content fingerprint it was built from.
+
+Two renderings of the same content, both under `gold/`:
+
+- **`ai-manifest.json`** (machine) — a denormalized, self-describing descriptor: the header
+  (`schema_version`, `tool_ver`, `generated_at`, `index_fingerprint`), the capability + ID/citation
+  scheme (so a citation is resolvable deterministically), the **query recipe** (the exact `vdocs ask`
+  invocation — telling the agent *how to use the corpus*, not just what is in it), the corpus
+  **counts**, a **catalog** of every `is_latest` anchor document (`doc_key`, `doc_id`, `title`,
+  `app_code`, `doc_type`, `patch_id`, `version`, section/word counts, and the resolved
+  `gold/consolidated/<app>/<slug>/body.md` path), and a **per-type entity index** (the top entities by
+  mention count → the documents that define/reference them).
+- **`CORPUS.md`** (human/AI) — the same content rendered as markdown an agent can load directly as
+  context: what the corpus is, the one-line *"always query, never guess, always cite"* usage rule, the
+  citation format, the catalog grouped by application, and the entity highlights.
+
+**The query path — `vdocs ask`.** Retrieval is the lexical slice of the §14 hybrid engine
+(`server/search.py`), surfaced as a CLI affordance ahead of the full MCP server: `vdocs ask
+"<question>" --k N [--json]` runs FTS5 over the `is_latest` `chunks_fts` surface, joins back to
+`documents`/`doc_sections`, and returns ranked, **pre-cited** hits — `section_id`, `doc_key`, document
++ section title, a snippet, the score, and the resolved gold `body.md` path. It is the same query the
+MCP `search()` tool (semantic disabled until Phase 6) will wrap; building it as a function in
+`server/search.py` now means the MCP server reuses it rather than re-implementing it. Citations are the
+**stable IDs** (§14.5) — resolvable both here and in the published GitHub corpus.
 
 ---
 

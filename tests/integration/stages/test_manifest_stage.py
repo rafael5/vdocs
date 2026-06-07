@@ -24,23 +24,41 @@ def _seed(ctx):
     conn = db.connect(ctx.cfg.index_db)
     conn.executescript(
         """
-        CREATE TABLE documents (doc_key TEXT PRIMARY KEY, is_latest INTEGER);
+        CREATE TABLE documents (
+          doc_key TEXT PRIMARY KEY, doc_id TEXT, title TEXT, app_code TEXT, doc_type TEXT,
+          pkg_ns TEXT, patch_id TEXT, version TEXT, section_count INTEGER, word_count INTEGER,
+          is_latest INTEGER
+        );
         CREATE TABLE doc_sections (section_id TEXT PRIMARY KEY, is_latest INTEGER);
         CREATE TABLE chunks (chunk_id TEXT PRIMARY KEY, section_id TEXT);
-        CREATE TABLE entities (entity_id TEXT PRIMARY KEY, type TEXT);
+        CREATE TABLE entities (
+          entity_id TEXT PRIMARY KEY, type TEXT, canonical_name TEXT, mention_count INTEGER
+        );
         CREATE TABLE relations (src_id TEXT, rel TEXT, dst_id TEXT);
         """
     )
-    conn.executemany("INSERT INTO documents VALUES (?, ?)", [("d1", 1), ("d2", 0), ("d3", 1)])
+    conn.executemany(
+        "INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+            # d1: a grouped (versioned) anchor; d3: a standalone anchor; d2: a prior version
+            ("CPRS/or_um", "CPRS:or_um", "OR User Manual", "CPRS", "UM", "OR",
+             "OR*3.0*539", "3.0", 4, 1200, 1),
+            ("CPRS/or_um_old", "CPRS:or_um_old", "OR User Manual", "CPRS", "UM", "OR",
+             "OR*3.0*1", "3.0", 4, 1100, 0),
+            ("KAAJEE/dibr", "KAAJEE:dibr", "KAAJEE DIBR", "KAAJEE", "", "",
+             "", "", 3, 800, 1),
+        ],
+    )  # fmt: skip
     conn.executemany(
         "INSERT INTO doc_sections VALUES (?, ?)", [("d1/a", 1), ("d2/a", 0), ("d3/a", 1)]
     )
     # the search surface = chunks (one per searchable is_latest section here)
     conn.executemany("INSERT INTO chunks VALUES (?, ?)", [("d1/a", "d1/a"), ("d3/a", "d3/a")])
     conn.executemany(
-        "INSERT INTO entities VALUES (?, ?)",
-        [("build:X", "build"), ("global:G", "global"), ("global:H", "global")],
-    )
+        "INSERT INTO entities VALUES (?, ?, ?, ?)",
+        [("build:X", "build", "X", 2), ("global:G", "global", "G", 9),
+         ("global:H", "global", "H", 3)],
+    )  # fmt: skip
     conn.executemany(
         "INSERT INTO relations VALUES (?, ?, ?)",
         [("d1", "mentions", "build:X"), ("d1", "xref", "d3")],
@@ -109,6 +127,26 @@ def test_manifest_writes_both_json_with_counts_and_semantic_off(ctx):
     assert set(discovery["entity_types"]) == {"build", "global"}
     assert discovery["capabilities"]["semantic"] is False
     assert discovery["counts"]["version_groups"] == 2
+
+
+def test_manifest_writes_ai_corpus_card(ctx):
+    _seed(ctx)
+    (result,) = Orchestrator([ManifestStage()]).run(ctx)
+    assert result.counts["catalog_docs"] == 2  # the two is_latest anchors
+
+    card = json.loads(ctx.cfg.ai_manifest.read_text())
+    assert card["index_fingerprint"]  # the staleness stamp is recorded
+    assert "vdocs ask" in card["query"]["command"]
+    by_key = {d["doc_key"]: d for d in card["documents"]}
+    assert set(by_key) == {"CPRS/or_um", "KAAJEE/dibr"}  # prior version excluded
+    # the grouped anchor resolves to the version-free consolidated body path
+    assert by_key["CPRS/or_um"]["body_path"] == "documents/gold/consolidated/CPRS/or_um/body.md"
+    assert by_key["KAAJEE/dibr"]["body_path"] == "documents/gold/consolidated/KAAJEE/dibr/body.md"
+    # entity index is grouped by type, ordered by mention count
+    assert card["entities"]["global"][0] == {"name": "G", "mentions": 9}
+
+    md = ctx.cfg.corpus_card.read_text()
+    assert "OR User Manual" in md and "never guess" in md.lower()
 
 
 def test_manifest_flips_semantic_on_when_vectors_present(ctx):

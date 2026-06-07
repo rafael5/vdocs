@@ -276,3 +276,66 @@ def test_inventory_status_without_gold_inventory_errors(tmp_path):
     result = runner.invoke(app, ["inventory", "--status"], env={"DATA_DIR": str(tmp_path)})
     assert result.exit_code == 1
     assert "serve-inventory" in result.stdout
+
+
+def _seed_index_for_ask(tmp_path):
+    """A minimal index.db with the chunks_fts search surface — what `vdocs ask` queries (§14.7)."""
+    from vdocs.kernel import db
+
+    cfg = Settings(data_dir=tmp_path)
+    cfg.lake.mkdir(parents=True, exist_ok=True)
+    conn = db.connect(cfg.index_db)
+    conn.executescript(
+        """
+        CREATE TABLE documents (
+          doc_key TEXT PRIMARY KEY, doc_id TEXT, title TEXT, app_code TEXT, doc_type TEXT,
+          pkg_ns TEXT, is_latest INTEGER
+        );
+        CREATE VIRTUAL TABLE chunks_fts USING fts5(
+          chunk_id UNINDEXED, section_id UNINDEXED, doc_key UNINDEXED, title, section_path, body
+        );
+        """
+    )
+    conn.execute(
+        "INSERT INTO documents VALUES ('KAAJEE/dibr','KAAJEE:dibr','KAAJEE DIBR','KAAJEE','','',1)"
+    )
+    conn.execute(
+        "INSERT INTO chunks_fts (chunk_id, section_id, doc_key, title, section_path, body) "
+        "VALUES ('KAAJEE/dibr/intro','KAAJEE/dibr/intro','KAAJEE/dibr','Introduction','KAAJEE',"
+        "'KAAJEE is the Kernel Authentication and Authorization broker.')"
+    )
+    conn.commit()
+    conn.close()
+
+
+def test_ask_without_index_errors(tmp_path):
+    result = runner.invoke(app, ["ask", "what is KAAJEE"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 1
+    assert "vdocs index" in result.stdout
+
+
+def test_ask_returns_cited_hits(tmp_path):
+    _seed_index_for_ask(tmp_path)
+    result = runner.invoke(app, ["ask", "KAAJEE authentication"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 0, result.stdout
+    assert "KAAJEE DIBR" in result.stdout
+    assert "vdocs://section/KAAJEE/dibr/intro" in result.stdout
+    assert "documents/gold/consolidated/KAAJEE/dibr/body.md" in result.stdout
+
+
+def test_ask_json_output_is_machine_readable(tmp_path):
+    _seed_index_for_ask(tmp_path)
+    result = runner.invoke(
+        app, ["ask", "KAAJEE authentication", "--json"], env={"DATA_DIR": str(tmp_path)}
+    )
+    assert result.exit_code == 0
+    hits = json.loads(result.stdout)
+    assert hits[0]["section_id"] == "KAAJEE/dibr/intro"
+    assert hits[0]["body_path"] == "documents/gold/consolidated/KAAJEE/dibr/body.md"
+
+
+def test_ask_no_match_reports_clearly(tmp_path):
+    _seed_index_for_ask(tmp_path)
+    result = runner.invoke(app, ["ask", "zz"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 0
+    assert "no match" in result.stdout.lower()

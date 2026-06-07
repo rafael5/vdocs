@@ -29,6 +29,56 @@ entities:
     status: approved
     note: canonical is the file number (e.g. 2, 200, 101) captured from "file #N".
 
+  # --- M routines: a routine call is TAG^ROUTINE / $$FUNC^ROUTINE / DO ^ROUTINE — the label (or
+  #     DO command) before the caret distinguishes it from a bare ^GLOBAL data reference. Two forms,
+  #     both capturing the routine name after the caret (high precision in technical manuals).
+  - type: routine
+    pattern: '\b[A-Z%][A-Z0-9]*\^(%?[A-Z][A-Z0-9]{1,7})\b'
+    canonical: group1
+    casefold: true
+    status: approved
+    note: e.g. EN^XQOR, $$GET^ORWU → XQOR/ORWU. A bare ^DPT (no leading TAG) stays a global.
+  - type: routine
+    pattern: '\bDO?\s+\^(%?[A-Z][A-Z0-9]{1,7})\b'
+    canonical: group1
+    casefold: true
+    status: approved
+    note: the tagless DO ^ROUTINE form (D ^XUP / DO ^ZTMB).
+
+  # --- HL7 v2 segments: a closed standard vocabulary, matched case-sensitively as whole words ---
+  - type: hl7_segment
+    terms: [MSH, MSA, EVN, PID, PV1, PV2, NK1, ORC, OBR, OBX, NTE, DG1, AL1, IN1,
+            RXA, RXD, RXE, RXO, RXR, SCH, MFE, MFI, QRD]
+    case_sensitive: true
+    status: approved
+    note: standard HL7 v2 segment ids; the closed vocab keeps precision high.
+
+  # --- MailMan mail groups: the distinctive `G.NAME` reference form (file 3.8) ---
+  - type: mail_group
+    pattern: '\bG\.([A-Z][A-Z0-9.]+)\b'
+    canonical: group1
+    casefold: true
+    status: approved
+    note: e.g. G.IRM, G.PSB → IRM/PSB. The `G.` prefix is MailMan-specific.
+
+  # --- RPC / option / protocol: keyword-anchored (like fileman_file) so they match only when the
+  #     manual labels them — precise-or-nothing. status:candidate — discover refines the yield. ---
+  - type: rpc
+    pattern: '\b([A-Z][A-Z0-9]+(?:\s+[A-Z0-9]+){0,4})\s+RPC\b'
+    canonical: group1
+    casefold: true
+    status: candidate
+    note: suffix form "ORWPT LIST RPC" → ORWPT LIST.
+  - type: option
+    pattern: '(?i)\bmenu option\s+([A-Z][A-Z0-9]+(?:\s+[A-Z0-9]+){0,5})\b'
+    canonical: group1
+    casefold: true
+    status: candidate
+    note: '"menu option XUMAINT" → XUMAINT (the "menu option" anchor keeps it precise).'
+  # NOTE: a bare `protocol NAME` pattern was tried and dropped — on the real corpus it matched any
+  # uppercase word after "protocol" (e.g. "protocol FILED"), polluting the graph. Protocols (file
+  # 101) need FileMan-context or a curated terms list (a discover follow-up), not a keyword anchor.
+
   # --- VistA package namespaces: distinctive uppercase codes, matched case-sensitively as whole
   #     words (the ambiguous English homographs OR / PS / IT / IB are deliberately omitted from the
   #     starter set; add them only with disambiguating context if discover shows they're needed).

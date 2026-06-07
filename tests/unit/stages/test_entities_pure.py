@@ -67,6 +67,48 @@ def test_extract_returns_each_occurrence_for_mention_counting():
     assert occ.count(("global", "^DPT")) == 2 and occ.count(("global", "^DGPM")) == 1
 
 
+# --- A3: the deeper VistA entity types (routine, hl7_segment, rpc, mail_group) ---
+
+_RULES_A3 = ent.compile_rules(
+    [
+        {"type": "routine", "pattern": r"\b[A-Z%][A-Z0-9]*\^(%?[A-Z][A-Z0-9]{1,7})\b",
+         "canonical": "group1", "casefold": True},
+        {"type": "routine", "pattern": r"\bDO?\s+\^(%?[A-Z][A-Z0-9]{1,7})\b",
+         "canonical": "group1", "casefold": True},
+        {"type": "hl7_segment", "terms": ["MSH", "PID", "OBX", "OBR", "ORC"],
+         "case_sensitive": True},
+        {"type": "mail_group", "pattern": r"\bG\.([A-Z][A-Z0-9.]+)\b",
+         "canonical": "group1", "casefold": True},
+        {"type": "rpc", "pattern": r"\b([A-Z][A-Z0-9]+(?:\s+[A-Z0-9]+){0,4})\s+RPC\b",
+         "canonical": "group1", "casefold": True},
+    ]
+)  # fmt: skip
+
+
+def _find3(text):
+    return set(ent.extract(text, _RULES_A3))
+
+
+def test_routine_refs_distinct_from_globals():
+    # TAG^ROUTINE, $$F^ROUTINE, and DO ^ROUTINE are routine calls; a bare ^GLOBAL is NOT a routine
+    got = _find3("Call EN^XQOR and $$GET^ORWU; then DO ^XUP. Set ^DPT(1).")
+    assert ("routine", "XQOR") in got and ("routine", "ORWU") in got and ("routine", "XUP") in got
+    assert not any(t == "routine" and n == "DPT" for t, n in got)  # ^DPT stays a global here
+
+
+def test_hl7_segments_closed_vocab():
+    assert _find3("Map the PID and OBX segments; the MSH header.") == {
+        ("hl7_segment", "PID"),
+        ("hl7_segment", "OBX"),
+        ("hl7_segment", "MSH"),
+    }
+
+
+def test_mail_group_g_prefix_and_rpc_suffix():
+    assert ("mail_group", "IRM") in _find3("Add the user to G.IRM for alerts.")
+    assert ("rpc", "ORWPT LIST") in _find3("The ORWPT LIST RPC returns the cover sheet.")
+
+
 def test_rule_without_pattern_or_terms_is_rejected():
     import pytest
 

@@ -65,3 +65,70 @@ def test_discovery_descriptor_schema_and_ids():
 def test_discovery_semantic_on_with_embedding():
     d = mp.discovery_descriptor(_COUNTS, tool_ver="0.1.0", embedding={"model": "m", "dim": 8})
     assert d["capabilities"]["semantic"] is True
+
+
+# --- the AI corpus card (§14.7) -------------------------------------------------------------
+
+_DOCS = [
+    {
+        "doc_key": "CPRS/or_um", "doc_id": "CPRS:or_um", "title": "OR User Manual",
+        "app_code": "CPRS", "doc_type": "UM", "pkg_ns": "OR", "patch_id": "OR*3.0*539",
+        "version": "3.0", "section_count": 12, "word_count": 3400,
+    },
+    {
+        "doc_key": "KAAJEE/dibr", "doc_id": "KAAJEE:dibr", "title": "KAAJEE DIBR",
+        "app_code": "KAAJEE", "doc_type": "", "pkg_ns": "", "patch_id": "",
+        "version": "", "section_count": 5, "word_count": 800,
+    },
+]  # fmt: skip
+_ENTS = [
+    {"type": "routine", "canonical_name": "XLFSTR", "mention_count": 42},
+    {"type": "routine", "canonical_name": "DGTMV", "mention_count": 10},
+    {"type": "global", "canonical_name": "^DPT", "mention_count": 99},
+]
+
+
+def test_build_catalog_resolves_gold_body_path():
+    cat = mp.build_catalog(_DOCS)
+    # a grouped doc resolves to the version-free anchor relpath (pkg_ns_doctype, lowercased)
+    or_um = next(d for d in cat if d["doc_key"] == "CPRS/or_um")
+    assert or_um["body_path"] == "documents/gold/consolidated/CPRS/or_um/body.md"
+    assert or_um["patch_id"] == "OR*3.0*539" and or_um["sections"] == 12
+    # a standalone doc (no doc_type) anchors on its own slug (the doc_key tail)
+    dibr = next(d for d in cat if d["doc_key"] == "KAAJEE/dibr")
+    assert dibr["body_path"] == "documents/gold/consolidated/KAAJEE/dibr/body.md"
+
+
+def test_build_entity_index_groups_and_trims_by_mentions():
+    idx = mp.build_entity_index(_ENTS, top_n=1)
+    assert idx["routine"] == [{"name": "XLFSTR", "mentions": 42}]  # top by mention_count
+    assert idx["global"] == [{"name": "^DPT", "mentions": 99}]
+
+
+def test_ai_manifest_assembles_card_with_recipe_and_fingerprint():
+    cat = mp.build_catalog(_DOCS)
+    ents = mp.build_entity_index(_ENTS, top_n=25)
+    m = mp.ai_manifest(
+        _COUNTS, cat, ents, tool_ver="0.1.0", generated_at="t", index_fingerprint="deadbeef"
+    )
+    assert m["schema_version"] == 1 and m["index_fingerprint"] == "deadbeef"
+    assert m["counts"]["documents"] == 469
+    assert "vdocs ask" in m["query"]["command"]
+    assert "section_id" in m["citation"]["format"]
+    assert m["documents"] == cat and m["entities"] == ents
+    assert m["capabilities"]["semantic"] is False  # no embedding → semantic off (D3)
+
+
+def test_corpus_card_renders_usage_catalog_and_recipe():
+    cat = mp.build_catalog(_DOCS)
+    ents = mp.build_entity_index(_ENTS, top_n=25)
+    m = mp.ai_manifest(
+        _COUNTS, cat, ents, tool_ver="0.1.0", generated_at="t", index_fingerprint="deadbeef"
+    )
+    md = mp.corpus_card(m)
+    assert md.startswith("# ")
+    assert "vdocs ask" in md  # the query recipe is rendered
+    assert "OR User Manual" in md  # the catalog is rendered
+    assert "documents/gold/consolidated/CPRS/or_um/body.md" in md  # with resolvable paths
+    assert "XLFSTR" in md  # entity highlights rendered
+    assert "never guess" in md.lower()  # the anti-hallucination usage rule

@@ -68,6 +68,17 @@ def test_default_registry_declares_bronze_artifacts():
     assert reg.get("bronze/raw").produced_by == "fetch"
 
 
+def test_default_registry_declares_ai_corpus_card(tmp_path):
+    # the AI corpus card (§14.7) — both renderings are manifest-produced gold files
+    reg = default_registry()
+    keys = {c.key for c in reg.all()}
+    assert {"gold/ai-manifest.json", "gold/CORPUS.md"} <= keys
+    for key in ("gold/ai-manifest.json", "gold/CORPUS.md"):
+        c = reg.get(key)
+        assert c.produced_by == "manifest"
+        assert c.kind is Kind.FILE
+
+
 def test_registries_contract_resolves_to_repo_dir_and_fingerprints_edits(tmp_path):
     # REGISTRIES is curated repo config (root=REGISTRIES), not lake data — but a *real* tree
     # fingerprint so a curation edit invalidates its consumers' inputs (§7.3, §8 note).
