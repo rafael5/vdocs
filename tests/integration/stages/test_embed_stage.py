@@ -18,15 +18,7 @@ from vdocs.stages.embed import stage as embed_stage
 from vdocs.stages.embed.stage import Embedder, EmbedStage
 
 
-def _seed_chunks(ctx):
-    conn = db.connect(ctx.cfg.index_db)
-    conn.executescript("CREATE TABLE chunks (chunk_id TEXT PRIMARY KEY, text TEXT)")
-    conn.executemany(
-        "INSERT INTO chunks VALUES (?, ?)",
-        [("d/a", "alpha text"), ("d/b", "beta text")],
-    )
-    conn.commit()
-    conn.close()
+def _record_index_ok(ctx):
     ctx.state.record(
         StageRun(
             stage="index",
@@ -41,6 +33,30 @@ def _seed_chunks(ctx):
             tool_ver=ctx.cfg.tool_ver,
         )  # fmt: skip
     )
+
+
+def _seed_chunks(ctx, chunks=(("d/a", "d/a", "alpha text"), ("d/b", "d/b", "beta text"))):
+    """Seed a minimal but real-shaped index.db: documents + doc_sections (for the A2a header join)
+    + chunks. ``chunks`` rows are ``(chunk_id, section_id, text)``; all live under doc_key ``d``."""
+    conn = db.connect(ctx.cfg.index_db)
+    conn.executescript(
+        "CREATE TABLE documents (doc_key TEXT PRIMARY KEY, title TEXT);"
+        "CREATE TABLE doc_sections (section_id TEXT PRIMARY KEY, doc_key TEXT, section_path TEXT);"
+        "CREATE TABLE chunks (chunk_id TEXT PRIMARY KEY, section_id TEXT, doc_key TEXT, "
+        "part INTEGER, text TEXT);"
+    )
+    conn.execute("INSERT INTO documents VALUES ('d', 'Doc Title')")
+    secs = {(sid, "Parent" if sid.endswith("b") else "") for _, sid, _ in chunks}
+    conn.executemany(
+        "INSERT INTO doc_sections (section_id, doc_key, section_path) VALUES (?, 'd', ?)", secs
+    )
+    conn.executemany(
+        "INSERT INTO chunks (chunk_id, section_id, doc_key, part, text) VALUES (?, ?, 'd', 0, ?)",
+        chunks,
+    )
+    conn.commit()
+    conn.close()
+    _record_index_ok(ctx)
 
 
 def test_embed_skips_when_fastembed_absent(ctx, monkeypatch):
@@ -87,29 +103,23 @@ def test_embed_runs_with_injected_embedder(ctx):
 def test_embed_rejects_chunk_over_token_budget(ctx):
     # A1 gate: a chunk that would exceed the model's token budget must fail the build (silent
     # truncation at embed time would leave a hole in the vector index), naming the offender.
-    conn = db.connect(ctx.cfg.index_db)
-    conn.executescript("CREATE TABLE chunks (chunk_id TEXT PRIMARY KEY, text TEXT)")
-    conn.executemany(
-        "INSERT INTO chunks VALUES (?, ?)",
-        [("d/ok", "small"), ("d/huge", "x" * 100_000)],
-    )
-    conn.commit()
-    conn.close()
-    ctx.state.record(
-        StageRun(
-            stage="index",
-            scope="",
-            status="ok",
-            started_at="t",
-            finished_at="t",
-            inputs_fp={},
-            outputs_fp={INDEX_CHUNKS.key: INDEX_CHUNKS.fingerprint(ctx.cfg)},
-            counts={},
-            contract_ver=1,
-            tool_ver=ctx.cfg.tool_ver,
-        )  # fmt: skip
-    )
+    _seed_chunks(ctx, chunks=(("d/ok", "d/ok", "small"), ("d/huge", "d/huge", "x" * 100_000)))
     tiny_budget = Embedder("fake", "0", lambda texts: [[0.0] for _ in texts], max_tokens=64)
     with pytest.raises(ValueError, match="d/huge"):
         Orchestrator([EmbedStage(embedder=tiny_budget)]).run(ctx)
     assert not ctx.cfg.vectors_db.exists()
+
+
+def test_embed_uses_contextual_header_not_bare_body(ctx):
+    # A2a: the embedder must receive the `«doc_title › section_path»` header, while chunks.text and
+    # the FTS body stay the bare body. Capture what the fake embedder is handed.
+    _seed_chunks(ctx)  # d/a (no ancestors), d/b (section_path "Parent"); doc title "Doc Title"
+    seen: list[str] = []
+
+    def capture(texts):
+        seen.extend(texts)
+        return [[0.0] for _ in texts]
+
+    Orchestrator([EmbedStage(embedder=Embedder("fake", "0", capture))]).run(ctx)
+    assert "«Doc Title»\n\nalpha text" in seen
+    assert "«Doc Title › Parent»\n\nbeta text" in seen

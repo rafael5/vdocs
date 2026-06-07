@@ -103,6 +103,8 @@ class EmbedStage(Stage):
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         emb = self._emb()
+        # A2a: embed the *contextual* text (body + `«doc_title › section_path»` header), not the
+        # bare body — the stored/cited chunk and the FTS row stay clean.
         ids, texts = _read_chunks(ctx.cfg.index_db)
         # A1 gate (§9a): refuse to build a vectors.db with silently-truncated chunks. Cheap
         # conservative estimate — runs before the model loads, so a sizing mismatch fails fast.
@@ -117,13 +119,26 @@ class EmbedStage(Stage):
 
 
 def _read_chunks(index_db) -> tuple[list[str], list[str]]:  # type: ignore[no-untyped-def]
-    """`(chunk_ids, texts)` for every chunk, ordered by id (deterministic build)."""
+    """`(chunk_ids, embed_texts)` for every chunk, ordered by id (deterministic build).
+
+    The text is the **contextual** embed text (A2a, §9b): the chunk body prefixed with a
+    `«doc_title › section_path»` breadcrumb resolved by joining `doc_sections`/`documents`. The
+    chunk body in `chunks.text` and the FTS row stay clean — only what the embedder sees is
+    decorated."""
     conn = db.connect(index_db, read_only=True)
     try:
-        rows = conn.execute("SELECT chunk_id, text FROM chunks ORDER BY chunk_id").fetchall()
+        rows = conn.execute(
+            "SELECT c.chunk_id, d.title, s.section_path, c.text "
+            "FROM chunks c "
+            "JOIN doc_sections s ON s.section_id = c.section_id "
+            "JOIN documents d ON d.doc_key = c.doc_key "
+            "ORDER BY c.chunk_id"
+        ).fetchall()
     finally:
         conn.close()
-    return [r[0] for r in rows], [r[1] for r in rows]
+    ids = [r[0] for r in rows]
+    texts = [ep.contextual_embed_text(r[1] or "", r[2] or "", r[3]) for r in rows]
+    return ids, texts
 
 
 def _build_vectors_db(vectors_db, emb: Embedder, dim: int, ids, vectors) -> None:  # type: ignore[no-untyped-def]

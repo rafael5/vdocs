@@ -49,3 +49,30 @@ def test_assert_within_budget_accepts_injected_estimator():
     ep.assert_within_budget(["d/a"], ["whatever"], max_tokens=10, estimate=lambda _t: 5)
     with pytest.raises(ValueError):
         ep.assert_within_budget(["d/a"], ["whatever"], max_tokens=10, estimate=lambda _t: 11)
+
+
+# --- A2a: contextual chunk headers (§9b) ---------------------------------------------------------
+
+
+def test_contextual_embed_text_prepends_doc_and_section_path():
+    out = ep.contextual_embed_text(
+        "KAAJEE Installation Guide", "Platform Setup > WebLogic", "## WebLogic\n\nstart the server"
+    )
+    assert out == (
+        "«KAAJEE Installation Guide › Platform Setup › WebLogic»\n\n## WebLogic\n\nstart the server"
+    )
+
+
+def test_contextual_embed_text_doc_title_only_when_no_section_path():
+    # a top-level section (no ancestors) still gets the document title — the key context for a
+    # terse leaf whose body never repeats the product name.
+    assert ep.contextual_embed_text("MailMan UG", "", "body") == "«MailMan UG»\n\nbody"
+
+
+def test_contextual_embed_text_no_header_when_no_crumbs():
+    # nothing to add → return the body unchanged (never an empty «» header)
+    assert ep.contextual_embed_text("", "", "body") == "body"
+
+
+def test_contextual_embed_text_drops_blank_crumbs():
+    assert ep.contextual_embed_text("Doc", " > A >  > B", "x") == "«Doc › A › B»\n\nx"

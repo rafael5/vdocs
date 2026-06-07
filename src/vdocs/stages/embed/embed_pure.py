@@ -28,6 +28,21 @@ def estimate_tokens(text: str) -> int:
     return max(by_words, by_chars)
 
 
+def contextual_embed_text(doc_title: str, section_path: str, body: str) -> str:
+    """A2a contextual chunk header (§9b): prepend a compact breadcrumb to the **embedded** text.
+
+    Returns ``«{doc_title} › {ancestors…}»\\n\\n{body}``. A terse VistA leaf (e.g. "Select
+    Installation Option: 1") is ambiguous in isolation; the breadcrumb injects the document title
+    and the ancestor heading path — which the body often never repeats — so semantic recall on such
+    sections improves sharply. This decorates *only* the text handed to the embedder; the
+    stored/cited chunk body and the FTS row stay clean. Blank crumbs are dropped; with no crumbs at
+    all the body is returned unchanged (never an empty ``«»`` header)."""
+    crumbs = [c.strip() for c in [doc_title, *section_path.split(" > ")] if c.strip()]
+    if not crumbs:
+        return body
+    return f"«{' › '.join(crumbs)}»\n\n{body}"
+
+
 def assert_within_budget(
     ids: Sequence[str],
     texts: Sequence[str],
