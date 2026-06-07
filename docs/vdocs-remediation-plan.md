@@ -416,6 +416,25 @@ denoising lift.
 A sequenced, dependency-ordered plan to reach the three goals (best human search · best AI search ·
 best signal-to-noise). Each step is a shippable increment with a gate.
 
+### Phase 0 — Stand up a stratified golden dev set (prereq: prove the stack fast)
+Build and prove the **full stack on a small, shape-stratified "golden set"** (~60–100 docs) before
+iterating on the full corpus. Develop the code path on the sample; mine corpus-frequency patterns
+(Phase B denoising) on the **full** corpus regardless — boilerplate/phrase/glossary are corpus-scale
+phenomena that a sample cannot reveal. The golden set doubles as the `fidelity §10.5` evaluation set.
+- **0.1.** Mine the inventory across the *shape* axes (doc_type · era [old-gen↔modern] · converter
+  [Pandoc↔Docling] · structure [revision-table / legacy-TOC / heavy xrefs / big data tables /
+  boilerplate-heavy / title images] · version-group depth · entity density [KIDS/HWSC/FileMan] ·
+  size · answerable-Q coverage). Propose ~60–100 `doc_id`s with a one-line rationale each.
+- **0.2.** Commit the selection as a version-controlled select file (`registries/dev-corpus.txt`) +
+  a starter `golden-queries.yaml` (query → expected `section_id`s) for the §10.5 gate.
+- **0.3.** Stand up a **separate dev lake** (`DATA_DIR=~/data/vdocs-dev`); `fetch --select` → run the
+  full DAG into it. The production lake `~/data/vdocs` stays intact; flip between them by env var.
+- **0.4.** Capture a baseline (lexical nDCG@10 on the golden queries) to measure every later phase
+  against.
+- *Gate: the full DAG runs end-to-end on the dev lake; baseline metrics recorded.*
+- **Graduation to full corpus:** (a) stack runs end-to-end on the dev lake, (b) golden-set
+  nDCG@10/redundancy@k hit target, (c) registries mined+curated on the **full** corpus.
+
 ### Phase A — Fix the substrate before embedding (prereq for everything semantic)
 - **A1. Right-size chunking to the embedder** (§9a): pick the model (recommend **bge-m3, 8k-context**),
   set `CHUNK_TARGET/HARD` to its token budget, assert no-truncation at embed time. *Gate: no chunk
@@ -449,9 +468,13 @@ best signal-to-noise). Each step is a shippable increment with a gate.
 - *Gate: per-doc PASS/REVIEW/QUARANTINE verdicts + a published retrieval-quality claim; human corpus
   live on GitHub.*
 
-**Critical path:** A → C → D (semantic AI search). **Parallelizable:** B (denoising) and E1 (publish)
-can proceed alongside. **Do A1 first** — running `embed` before fixing chunk size would bake in
-truncated vectors.
+**Critical path:** 0 → A → C → D (semantic AI search). **Parallelizable:** B (denoising — on the full
+corpus) and E1 (publish) can proceed alongside once Phase 0 stands up the dev lake. **Do Phase 0
+then A1 first** — running `embed` before fixing chunk size would bake in truncated vectors.
+
+> Execution status for this plan is tracked in
+> [`vdocs-implementation-plan.md`](vdocs-implementation-plan.md) (master tracker + per-phase tables,
+> discoveries, risks, changelog). Plan-impacting discoveries are flagged there with ⚠️.
 
 ---
 
