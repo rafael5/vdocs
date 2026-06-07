@@ -42,7 +42,7 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
 | | 0.2 | Commit `registries/dev-corpus.txt` + `golden-queries.yaml` | ✅ | |
 | | 0.3 | Stand up dev lake (`~/data/vdocs-dev`); run full DAG | ✅ | |
 | | 0.4 | Baseline lexical nDCG@10 on golden queries | ✅ | |
-| **A — Substrate / chunking** | A1 | Pick embedder + right-size chunking (token-budget aligned) | ⬜ | ⚠️ |
+| **A — Substrate / chunking** | A1 | Pick embedder (**bge-m3**, 8k) + chunk budget gate | ✅ | |
 | | A2 | Contextual chunk headers + small-leaf merge | ⬜ | |
 | | A3 | `stub` chunks → lexical-only (exclude from semantic) | ⬜ | |
 | **B — Denoising (full corpus)** | B1 | `discover` at scale; curate phrases + boilerplate; materialize `_shared/boilerplate/` | ⬜ | |
@@ -164,29 +164,45 @@ Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.p
 
 | ID | Step | Detail | Gate | Status | Flag |
 |----|------|--------|------|--------|------|
-| A1 | Embedder + chunk sizing | Choose model (recommend **bge-m3**, 8k ctx); set `CHUNK_TARGET/HARD` to its token budget; assert no truncation at embed time | No chunk exceeds model token limit | ⬜ | ⚠️ |
+| A1 | Embedder + chunk sizing | **bge-m3 chosen** (1024-d, 8192-tok); chunk constants verified within budget; `embed` asserts no-truncation per chunk (`embed_pure.assert_within_budget`) | No chunk exceeds model token limit | ✅ | |
 | A2 | Context headers + merge | Prepend `«doc_title › section_path»` to embedded text; merge tiny adjacent leaves under same parent up to TARGET | Mean chunk substance ↑; hollow stays 0 | ⬜ | |
 | A3 | Stub handling | `stub` chunks (referent-only) lexical-only, excluded from semantic | Stubs absent from `vectors.db` | ⬜ | |
 
 ### Discoveries
-- ⚠️ **2026-06-06 — chunk/embedder truncation (plan-impacting).** Current `CHUNK_TARGET_CHARS=4000` /
-  `OVERSIZED_CHUNK_CHARS=8000` exceed the **512-token (~2,000 char) limit of the originally-planned
-  `bge-small-en-v1.5`** → the back half of large chunks would be silently dropped at embed time.
-  **Plan change:** A1 now includes an explicit embedder decision; recommendation is to switch to a
-  long-context embedder (**bge-m3 / nomic-embed / jina-v3, 8k**) and align chunk constants to its
-  budget. *Do A1 before any `embed` run (Phase C).*
+- ⚠️→✅ **2026-06-06 — chunk/embedder truncation (plan-impacting; RESOLVED 2026-06-07 in A1).** Current
+  `CHUNK_TARGET_CHARS=4000` / `OVERSIZED_CHUNK_CHARS=8000` exceed the **512-token (~2,000 char) limit
+  of the originally-planned `bge-small-en-v1.5`** → the back half of large chunks would be silently
+  dropped at embed time. **Resolution (A1):** switched the embedder to **bge-m3 (8192-token context,
+  1024-d)**; at that budget the existing chunk constants are safe (worst golden-set chunk ~5.7k tok
+  worst-case / 4.5k conservative = **54% of budget**, 0 of 7,189 chunks over), so the char constants
+  were **kept** (they're B3 calibration targets, not truncation knobs). `embed` now enforces it per
+  chunk via `embed_pure.assert_within_budget` (fails the build rather than truncating). Flag cleared.
+- **2026-06-07 — bge-m3 dep + dim must be verified at C1.** A1 only *decides* the model + gates chunk
+  size; it does **not** install `fastembed` or run `embed`. C1 must confirm fastembed actually serves
+  `BAAI/bge-m3` (model id, lazy load) and that `vectors.db` is built at **dim 1024** (up from the old
+  384 — ~2.7× vector storage; `embedding_model` row carries model/version/dim). The default
+  `Embedder` advertises `BAAI/bge-m3 : 1.0`, `max_tokens=8192`.
 
 ### Risks
 - **Wrong embedder → costly re-embed.** *Mitigation:* decide in A1 with a small eval on the golden set; record the choice + dim in `embedding_model`.
 - **Over-merging crosses semantic boundaries.** *Mitigation:* merge only within the same parent heading; never merge across H2 boundaries.
 
 ### Changelog
-- *(none yet)*
+- 2026-06-07 — A1 done (✅). Embedder decision: **`BAAI/bge-m3`** (8192-token context, 1024-d) — user-
+  approved over nomic-8k / right-sized-bge-small. `_default_embedder` switched from bge-small;
+  `Embedder` gained `max_tokens` (default 8192); `embed.run` now calls the new pure gate
+  `embed_pure.assert_within_budget` (conservative token estimate, runs before the model loads). Chunk
+  constants **unchanged** (proven safe: 0/7,189 golden chunks exceed budget, worst 54%). Also
+  committed the pre-existing graceful-skip WIP separately (`1d9c108`). TDD: 6 pure + 1 integration
+  test added; `make check` green (733 passed, 98.5% cov). A1 gate verified on the dev lake.
+  *Deferred to A2:* contextual chunk headers (`«doc_title › section_path»`) on the embedded text +
+  small-leaf merge — A1 covered only the embedder/budget half.
 
 ### Notes
 - Constants live in `src/vdocs/stages/index/index_pure.py` (`CHUNK_TARGET_CHARS`,
-  `OVERSIZED_CHUNK_CHARS`) and `kernel/markdown.py` (`MIN_SUBSTANTIVE_TOKENS=8`). A1 changes these +
-  adds a context-header field to the embedded text (not the displayed/cited body).
+  `OVERSIZED_CHUNK_CHARS`) and `kernel/markdown.py` (`MIN_SUBSTANTIVE_TOKENS=8`). A1 kept the char
+  constants and added the embed-time budget gate; **A2** still adds the context-header field to the
+  embedded text (not the displayed/cited body) + the small-leaf merge pass.
 
 ---
 

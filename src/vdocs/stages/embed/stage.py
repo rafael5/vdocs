@@ -39,18 +39,25 @@ def _fastembed_available() -> bool:
 
 @dataclass(frozen=True)
 class Embedder:
-    """An injected embedding backend: its model id+version (cheap, for the fingerprint) and a
-    batch ``embed`` callable text→vectors (the heavy part, loaded lazily by the real default)."""
+    """An injected embedding backend: its model id+version (cheap, for the fingerprint), the model's
+    ``max_tokens`` context budget (the A1 no-truncation gate, §9a), and a batch ``embed`` callable
+    text→vectors (the heavy part, loaded lazily by the real default)."""
 
     model: str
     version: str
     embed: Callable[[list[str]], list[list[float]]]
+    max_tokens: int = 8192
 
 
 def _default_embedder() -> Embedder:
-    """The real backend: fastembed's ``BAAI/bge-small-en-v1.5`` (384-dim). The model id+version are
-    static (so the fingerprint is cheap); the model itself loads lazily on the first ``embed``
-    call — a Phase-6 runtime dep (``uv add fastembed``), not a test/`make check` dependency."""
+    """The real backend: fastembed's ``BAAI/bge-m3`` (1024-dim, **8192-token** context — A1, §9a).
+
+    bge-m3 is the chosen long-context embedder: its 8k budget comfortably fits the structure-aligned
+    chunks (largest golden-set chunk ~5.7k tokens worst-case), so no chunk is silently truncated —
+    unlike the originally-planned ``bge-small-en-v1.5`` (512 tokens), which would have truncated the
+    back half of every large chunk. The model id+version+budget are static (so the fingerprint stays
+    cheap); the model itself loads lazily on the first ``embed`` call — a runtime dep
+    (``uv add fastembed``, Phase C1), not a test/`make check` dependency."""
     state: dict = {}
 
     def embed(texts: list[str]) -> list[list[float]]:  # pragma: no cover - real backend
@@ -58,10 +65,10 @@ def _default_embedder() -> Embedder:
         if model is None:
             from fastembed import TextEmbedding
 
-            model = state["model"] = TextEmbedding("BAAI/bge-small-en-v1.5")
+            model = state["model"] = TextEmbedding("BAAI/bge-m3")
         return [[float(x) for x in v] for v in model.embed(texts)]
 
-    return Embedder("BAAI/bge-small-en-v1.5", "1.5", embed)
+    return Embedder("BAAI/bge-m3", "1.0", embed, max_tokens=8192)
 
 
 class EmbedStage(Stage):
@@ -97,6 +104,9 @@ class EmbedStage(Stage):
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         emb = self._emb()
         ids, texts = _read_chunks(ctx.cfg.index_db)
+        # A1 gate (§9a): refuse to build a vectors.db with silently-truncated chunks. Cheap
+        # conservative estimate — runs before the model loads, so a sizing mismatch fails fast.
+        ep.assert_within_budget(ids, texts, max_tokens=emb.max_tokens)
         vectors: list[list[float]] = []
         for batch in ep.batched(texts, self._batch):
             vectors.extend(emb.embed(batch))

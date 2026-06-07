@@ -22,9 +22,16 @@ from vdocs.stages.normalize.anchors_pure import github_slug
 
 DEFAULT_TOC_DEPTH = (2, 3)
 
-# Oversized-leaf splitting (§14.6, A1 increment 3). Calibration targets (tune against the B3 golden
-# set), not magic constants: only a leaf body larger than OVERSIZED_CHUNK_CHARS is split; each
-# window aims for ~CHUNK_TARGET_CHARS, with a one-block overlap so a cross-boundary passage holds.
+# Oversized-leaf splitting (§14.6). Calibration targets (tune against the B3 golden set), not magic
+# constants: only a leaf body larger than OVERSIZED_CHUNK_CHARS is split; each window aims for
+# ~CHUNK_TARGET_CHARS, with a one-block overlap so a cross-boundary passage holds.
+#
+# A1 (§9a) aligned these to the chosen embedder, **bge-m3 (8192-token context)**: the worst case a
+# leaf can reach is a single unsplittable block (a wide table/fence forms its own over-target
+# window), and the largest such chunk on the golden set is ~14.3k chars ≈ 5.7k tokens — comfortably
+# inside 8192. So no chunk is truncated at embed time; `embed` asserts this per-chunk
+# (`embed_pure.assert_within_budget`) as a hard gate. (The originally-planned bge-small had a
+# 512-token cap that these sizes would have blown — that mismatch is what A1 resolved.)
 OVERSIZED_CHUNK_CHARS = 8000
 CHUNK_TARGET_CHARS = 4000
 

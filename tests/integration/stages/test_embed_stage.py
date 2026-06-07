@@ -8,6 +8,8 @@ With an injected embedder (the test/fake path) it runs regardless.
 
 from __future__ import annotations
 
+import pytest
+
 from vdocs.contracts.registry import INDEX_CHUNKS
 from vdocs.kernel import db
 from vdocs.models.stage import Decision, StageRun
@@ -80,3 +82,34 @@ def test_embed_runs_with_injected_embedder(ctx):
         vconn.close()
     assert tuple(model) == ("fake-model", "0", 3)
     assert has_vec == 1
+
+
+def test_embed_rejects_chunk_over_token_budget(ctx):
+    # A1 gate: a chunk that would exceed the model's token budget must fail the build (silent
+    # truncation at embed time would leave a hole in the vector index), naming the offender.
+    conn = db.connect(ctx.cfg.index_db)
+    conn.executescript("CREATE TABLE chunks (chunk_id TEXT PRIMARY KEY, text TEXT)")
+    conn.executemany(
+        "INSERT INTO chunks VALUES (?, ?)",
+        [("d/ok", "small"), ("d/huge", "x" * 100_000)],
+    )
+    conn.commit()
+    conn.close()
+    ctx.state.record(
+        StageRun(
+            stage="index",
+            scope="",
+            status="ok",
+            started_at="t",
+            finished_at="t",
+            inputs_fp={},
+            outputs_fp={INDEX_CHUNKS.key: INDEX_CHUNKS.fingerprint(ctx.cfg)},
+            counts={},
+            contract_ver=1,
+            tool_ver=ctx.cfg.tool_ver,
+        )  # fmt: skip
+    )
+    tiny_budget = Embedder("fake", "0", lambda texts: [[0.0] for _ in texts], max_tokens=64)
+    with pytest.raises(ValueError, match="d/huge"):
+        Orchestrator([EmbedStage(embedder=tiny_budget)]).run(ctx)
+    assert not ctx.cfg.vectors_db.exists()
