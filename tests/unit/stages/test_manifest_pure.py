@@ -25,6 +25,61 @@ def test_shared_boilerplate_files_empty_for_no_registry():
     assert mp.shared_boilerplate_files([]) == {}
 
 
+# --- B2: glossary promotion (§9.6 PROMOTE) -------------------------------------------------------
+
+
+def test_acronym_table_pairs_extracts_term_definition():
+    rows = [
+        ["Term", "Description"],
+        ["GUI", "Graphical User Interface"],
+        ["DLL", "Dynamic Link Library"],
+    ]
+    assert mp.acronym_table_pairs(rows) == [
+        ("GUI", "Graphical User Interface"),
+        ("DLL", "Dynamic Link Library"),
+    ]
+
+
+def test_acronym_table_pairs_strips_markdown_emphasis_in_header_and_cells():
+    rows = [["**Acronym**", "**Definition**"], ["AD", "Active Directory"]]
+    assert mp.acronym_table_pairs(rows) == [("AD", "Active Directory")]
+
+
+def test_acronym_table_pairs_ignores_non_acronym_tables():
+    # a data-dictionary table is not a glossary — must not be harvested
+    assert mp.acronym_table_pairs([["File Number", "File Name"], ["2", "PATIENT"]]) == []
+
+
+def test_acronym_table_pairs_skips_junk_rows():
+    rows = [
+        ["Acronym", "Definition"],
+        ["", "no term"],  # empty term
+        ["X" * 60, "term too long"],  # over length cap
+        ["OK", "ab"],  # definition too short
+        ["VA", "Department of Veterans Affairs"],
+    ]
+    assert mp.acronym_table_pairs(rows) == [("VA", "Department of Veterans Affairs")]
+
+
+def test_build_glossary_dedupes_case_insensitively_and_picks_most_common_def():
+    pairs = [
+        ("VA", "Department of Veterans Affairs"),
+        ("va", "Department of Veterans Affairs"),  # same def, different case → one entry
+        ("VA", "Veterans Administration"),  # minority def
+        ("GUI", "Graphical User Interface"),
+    ]
+    md = mp.build_glossary(pairs)
+    assert md.startswith("# Glossary")
+    assert "**VA** — Department of Veterans Affairs" in md  # majority def wins
+    assert "Veterans Administration" not in md
+    # alphabetical: GUI before VA
+    assert md.index("**GUI**") < md.index("**VA**")
+
+
+def test_build_glossary_empty_is_header_only():
+    assert mp.build_glossary([]).strip() == "# Glossary"
+
+
 _COUNTS = {
     "documents": 469,
     "documents_latest": 290,

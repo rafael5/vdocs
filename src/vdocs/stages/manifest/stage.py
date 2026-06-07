@@ -80,6 +80,11 @@ class ManifestStage(Stage):
         for name, text in shared.items():
             cas.atomic_write(bp_dir / name, text.encode("utf-8"))
 
+        # B2 (§9.6 PROMOTE): harvest the per-doc acronym/abbreviation tables corpus-wide into one
+        # `gold/glossary.md` (term promoted once, deduped). The per-doc tables stay as-is for now.
+        glossary = mp.build_glossary(_harvest_glossary_pairs(cfg))
+        cas.atomic_write(cfg.glossary, glossary.encode("utf-8"))
+
         return RunResult(
             counts={
                 "documents": counts["documents"],
@@ -88,9 +93,26 @@ class ManifestStage(Stage):
                 "relations": counts["relations"],
                 "catalog_docs": len(catalog),
                 "shared_boilerplate": len(shared),
+                "glossary_terms": glossary.count("\n**"),
                 "semantic_available": int(embedding is not None),
             }
         )
+
+
+def _harvest_glossary_pairs(cfg) -> list:  # type: ignore[no-untyped-def]
+    """Scan every `tables/*.csv` sidecar under silver-normalized and collect `(term, definition)`
+    pairs from those that are acronym glossaries (B2). Non-glossary tables yield none."""
+    import csv
+
+    pairs: list = []
+    for csv_path in cfg.silver_normalized.rglob("tables/*.csv"):
+        try:
+            with csv_path.open(newline="", encoding="utf-8") as fh:
+                rows = list(csv.reader(fh))
+        except (OSError, UnicodeDecodeError, csv.Error):
+            continue
+        pairs.extend(mp.acronym_table_pairs(rows))
+    return pairs
 
 
 def _load_boilerplate_entries(cfg) -> list:  # type: ignore[no-untyped-def]

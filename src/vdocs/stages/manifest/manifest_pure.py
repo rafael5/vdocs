@@ -9,10 +9,77 @@ info and flips semantic on — the same "optional produces don't gate" rule as `
 
 from __future__ import annotations
 
-from collections import defaultdict
+import re
+from collections import Counter, defaultdict
 from typing import Any
 
 from vdocs.server import ids
+
+# B2 glossary harvest (§9.6 PROMOTE): a `tables/*.csv` sidecar is an acronym/abbreviation glossary
+# when its two header cells read like "<term> | <definition>" — harvested into the one corpus
+# glossary; a data-dictionary table (File Number | File Name) is not.
+_GLOSSARY_TERM_HEAD = re.compile(r"^(acronym|abbreviation|term|symbol)s?$", re.I)
+_GLOSSARY_DEF_HEAD = re.compile(r"^(definition|description|meaning|expansion|stands for)$", re.I)
+_TERM_MAX_CHARS = 40
+_DEF_MIN_CHARS = 3
+
+
+def _demphasis(cell: str) -> str:
+    """Strip markdown emphasis (`*`/`**`) and surrounding whitespace from a table cell."""
+    return re.sub(r"\*+", "", cell or "").strip()
+
+
+def acronym_table_pairs(rows: list[list[str]]) -> list[tuple[str, str]]:
+    """Harvest ``(term, definition)`` pairs from one extracted table's rows **iff** it is an
+    acronym/abbreviation glossary (B2, §9.6 PROMOTE). A non-glossary table (e.g. a data dictionary)
+    returns ``[]``. Junk rows — empty/over-long term, too-short definition, purely numeric term —
+    are skipped so the promoted glossary stays clean."""
+    if len(rows) < 2 or len(rows[0]) < 2:
+        return []
+    h_term, h_def = _demphasis(rows[0][0]), _demphasis(rows[0][1])
+    if not (_GLOSSARY_TERM_HEAD.match(h_term) and _GLOSSARY_DEF_HEAD.match(h_def)):
+        return []
+    out: list[tuple[str, str]] = []
+    for r in rows[1:]:
+        if len(r) < 2:
+            continue
+        term, definition = _demphasis(r[0]), _demphasis(r[1])
+        if not (1 <= len(term) <= _TERM_MAX_CHARS) or term.isdigit():
+            continue
+        if len(definition) >= _DEF_MIN_CHARS:
+            out.append((term, definition))
+    return out
+
+
+def build_glossary(pairs: list[tuple[str, str]]) -> str:
+    """Render the promoted corpus glossary `gold/glossary.md` from harvested ``(term, definition)``
+    pairs (B2). Terms are deduped **case-insensitively**; the canonical display casing and the
+    definition are each the most common variant seen across the corpus (ties broken
+    deterministically). Sorted alphabetically (case-insensitive). No timestamp — so a no-op re-run
+    is byte-identical (content-skip)."""
+    casing: dict[str, Counter] = defaultdict(Counter)
+    defs: dict[str, Counter] = defaultdict(Counter)
+    for term, definition in pairs:
+        key = term.upper()
+        casing[key][term] += 1
+        defs[key][definition] += 1
+    lines = ["# Glossary", ""]
+    if defs:
+        lines.append(
+            "_VistA acronyms and defined terms, promoted once from the corpus's "
+            "acronym/abbreviation tables (§9.6 PROMOTE)._"
+        )
+        lines.append("")
+        for key in sorted(defs, key=lambda k: (k.lower(), k)):
+            term = _most_common(casing[key])
+            definition = _most_common(defs[key])
+            lines.append(f"**{term}** — {definition}")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _most_common(counter: Counter) -> str:
+    """The most frequent value, ties broken by the value (deterministic, no clock/order dep)."""
+    return max(counter.items(), key=lambda kv: (kv[1], kv[0]))[0]
 
 
 def shared_boilerplate_files(entries: list[dict[str, Any]]) -> dict[str, str]:
