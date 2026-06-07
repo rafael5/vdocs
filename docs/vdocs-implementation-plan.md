@@ -44,7 +44,7 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
 | | 0.4 | Baseline lexical nDCG@10 on golden queries | ✅ | |
 | **A — Substrate / chunking** | A1 | Pick embedder (**bge-m3**, 8k) + chunk budget gate | ✅ | |
 | | A2 | Context headers (active) + small-leaf merge (built, **gated off** → C) | ✅ | ⚠️ |
-| | A3 | `stub` chunks → lexical-only (exclude from semantic) | ⬜ | |
+| | A3 | `stub` chunks → lexical-only (exclude from semantic) | ✅ | |
 | **B — Denoising (full corpus)** | B1 | `discover` at scale; curate phrases + boilerplate; materialize `_shared/boilerplate/` | ⬜ | |
 | | B2 | Materialize `gold/glossary.md` (PROMOTE) | ⬜ | |
 | | B3 | De-weight globals; index extracted tables as data | ⬜ | |
@@ -166,7 +166,7 @@ Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.p
 |----|------|--------|------|--------|------|
 | A1 | Embedder + chunk sizing | **bge-m3 chosen** (1024-d, 8192-tok); chunk constants verified within budget; `embed` asserts no-truncation per chunk (`embed_pure.assert_within_budget`) | No chunk exceeds model token limit | ✅ | |
 | A2 | Context headers + merge | Prepend `«doc_title › section_path»` to embedded text (**active**); merge tiny adjacent leaves under same parent up to TARGET (**built + tested, gated off** `MERGE_SMALL_LEAVES=False`) | Mean chunk substance ↑ (+53% w/ merge); hollow stays 0 | ✅ | ⚠️ |
-| A3 | Stub handling | `stub` chunks (referent-only) lexical-only, excluded from semantic | Stubs absent from `vectors.db` | ⬜ | |
+| A3 | Stub handling | `stub` chunks (referent-only) lexical-only, excluded from semantic | Stubs absent from `vectors.db` | ✅ | |
 
 ### Discoveries
 - ⚠️→✅ **2026-06-06 — chunk/embedder truncation (plan-impacting; RESOLVED 2026-06-07 in A1).** Current
@@ -217,6 +217,15 @@ Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.p
   Discoveries ⚠️) and **gated off** by maintainer decision. TDD: A2a 4 pure +1 integration; A2b 8
   pure +1 gate-off. `make check` green (747 passed, 98.5% cov). A2a committed in `cbeb7e3`; A2b
   (gated) committed alongside this tracker update.
+- 2026-06-07 — A3 done (✅) → **Phase A COMPLETE.** `embed._read_chunks` now filters
+  `WHERE s.kind != 'stub'`: a pointer-only `stub` section ("[see boilerplate]") embeds to nothing
+  useful, so it stays lexically findable in FTS but is excluded from the semantic surface
+  (`vectors.db` holds fewer chunks than `index.db:chunks` by the stub count). Verified on the dev
+  lake: 7,189 chunks → **7,141 embed-eligible** (48 stubs excluded, **0 leak**); FTS still holds all
+  7,189 (lexical unchanged → baseline unaffected, no re-index needed). TDD: 1 integration test (seed
+  reshaped to carry `kind`). `make check` green (748 passed). *Phase-C note:* with A2b merge OFF a
+  chunk maps 1:1 to a section so the kind filter is exact; when merge is re-enabled in C, a merged
+  unit cites its first leaf — exclude only if that representative is a stub (revisit then).
 
 ### Notes
 - Constants live in `src/vdocs/stages/index/index_pure.py` (`CHUNK_TARGET_CHARS`,

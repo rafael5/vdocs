@@ -124,7 +124,11 @@ def _read_chunks(index_db) -> tuple[list[str], list[str]]:  # type: ignore[no-un
     The text is the **contextual** embed text (A2a, §9b): the chunk body prefixed with a
     `«doc_title › section_path»` breadcrumb resolved by joining `doc_sections`/`documents`. The
     chunk body in `chunks.text` and the FTS row stay clean — only what the embedder sees is
-    decorated."""
+    decorated.
+
+    A3 (§8.3): **`stub` sections are excluded** — a pointer-only chunk ("[see boilerplate]") embeds
+    to nothing useful, so it stays lexically findable in FTS but never enters the semantic surface.
+    `vectors.db` therefore holds fewer chunks than `index.db:chunks` by the stub count."""
     conn = db.connect(index_db, read_only=True)
     try:
         rows = conn.execute(
@@ -132,6 +136,7 @@ def _read_chunks(index_db) -> tuple[list[str], list[str]]:  # type: ignore[no-un
             "FROM chunks c "
             "JOIN doc_sections s ON s.section_id = c.section_id "
             "JOIN documents d ON d.doc_key = c.doc_key "
+            "WHERE s.kind != 'stub' "
             "ORDER BY c.chunk_id"
         ).fetchall()
     finally:

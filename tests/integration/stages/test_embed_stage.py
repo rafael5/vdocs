@@ -35,20 +35,28 @@ def _record_index_ok(ctx):
     )
 
 
-def _seed_chunks(ctx, chunks=(("d/a", "d/a", "alpha text"), ("d/b", "d/b", "beta text"))):
-    """Seed a minimal but real-shaped index.db: documents + doc_sections (for the A2a header join)
-    + chunks. ``chunks`` rows are ``(chunk_id, section_id, text)``; all live under doc_key ``d``."""
+def _seed_chunks(
+    ctx, chunks=(("d/a", "d/a", "alpha text"), ("d/b", "d/b", "beta text")), kinds=None
+):
+    """Seed a minimal but real-shaped index.db: documents + doc_sections (for the A2a header join +
+    the A3 stub filter) + chunks. ``chunks`` rows are ``(chunk_id, section_id, text)``; ``kinds``
+    maps a section_id → kind (default ``ok``). All live under doc_key ``d``."""
+    kinds = kinds or {}
     conn = db.connect(ctx.cfg.index_db)
     conn.executescript(
         "CREATE TABLE documents (doc_key TEXT PRIMARY KEY, title TEXT);"
-        "CREATE TABLE doc_sections (section_id TEXT PRIMARY KEY, doc_key TEXT, section_path TEXT);"
+        "CREATE TABLE doc_sections (section_id TEXT PRIMARY KEY, doc_key TEXT, section_path TEXT, "
+        "kind TEXT);"
         "CREATE TABLE chunks (chunk_id TEXT PRIMARY KEY, section_id TEXT, doc_key TEXT, "
         "part INTEGER, text TEXT);"
     )
     conn.execute("INSERT INTO documents VALUES ('d', 'Doc Title')")
-    secs = {(sid, "Parent" if sid.endswith("b") else "") for _, sid, _ in chunks}
+    secs = {
+        (sid, "Parent" if sid.endswith("b") else "", kinds.get(sid, "ok")) for _, sid, _ in chunks
+    }
     conn.executemany(
-        "INSERT INTO doc_sections (section_id, doc_key, section_path) VALUES (?, 'd', ?)", secs
+        "INSERT INTO doc_sections (section_id, doc_key, section_path, kind) VALUES (?, 'd', ?, ?)",
+        secs,
     )
     conn.executemany(
         "INSERT INTO chunks (chunk_id, section_id, doc_key, part, text) VALUES (?, ?, 'd', 0, ?)",
@@ -123,3 +131,23 @@ def test_embed_uses_contextual_header_not_bare_body(ctx):
     Orchestrator([EmbedStage(embedder=Embedder("fake", "0", capture))]).run(ctx)
     assert "«Doc Title»\n\nalpha text" in seen
     assert "«Doc Title › Parent»\n\nbeta text" in seen
+
+
+def test_embed_excludes_stub_chunks_from_semantic(ctx):
+    # A3 (§8.3): a `stub` section (pointer-only, embeds to nothing useful) stays lexically findable
+    # in FTS but is excluded from the semantic surface — never reaches the embedder or vectors.db.
+    _seed_chunks(
+        ctx,
+        chunks=(("d/ok", "d/ok", "real prose"), ("d/stub", "d/stub", "[see boilerplate]")),
+        kinds={"d/stub": "stub"},
+    )
+    seen: list[str] = []
+
+    def capture(texts):
+        seen.extend(texts)
+        return [[0.0] for _ in texts]
+
+    (result,) = Orchestrator([EmbedStage(embedder=Embedder("fake", "0", capture))]).run(ctx)
+    assert result.counts["chunks"] == 1  # only the ok chunk embedded
+    assert any("real prose" in t for t in seen)
+    assert all("see boilerplate" not in t for t in seen)  # the stub never reached the embedder
