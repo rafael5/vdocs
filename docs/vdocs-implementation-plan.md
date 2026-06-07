@@ -40,8 +40,8 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
 |-------|----|--------------|--------|------|
 | **0 — Golden dev set** | 0.1 | Mine inventory, propose ~60–100 stratified `doc_id`s | ✅ | |
 | | 0.2 | Commit `registries/dev-corpus.txt` + `golden-queries.yaml` | ✅ | |
-| | 0.3 | Stand up dev lake (`~/data/vdocs-dev`); run full DAG | ⬜ | |
-| | 0.4 | Baseline lexical nDCG@10 on golden queries | ⬜ | |
+| | 0.3 | Stand up dev lake (`~/data/vdocs-dev`); run full DAG | ✅ | |
+| | 0.4 | Baseline lexical nDCG@10 on golden queries | ✅ | |
 | **A — Substrate / chunking** | A1 | Pick embedder + right-size chunking (token-budget aligned) | ⬜ | ⚠️ |
 | | A2 | Contextual chunk headers + small-leaf merge | ⬜ | |
 | | A3 | `stub` chunks → lexical-only (exclude from semantic) | ⬜ | |
@@ -67,8 +67,8 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
 |----|------|--------|------|--------|------|
 | 0.1 | Stratified selection | Mine inventory across shape axes (doc_type · era · converter · structure · version-depth · entity-density · size · answerable-Q); propose `doc_id`s + rationale | List approved by maintainer | ✅ | |
 | 0.2 | Commit selection | `registries/dev-corpus.txt` (70 doc_ids) + `golden-queries.yaml` (6 starter labeled queries) | Files committed | ✅ | |
-| 0.3 | Dev lake | `DATA_DIR=~/data/vdocs-dev` `fetch --select` → full DAG (convert→manifest) | DAG green on dev lake | ⬜ | |
-| 0.4 | Baseline | Record lexical nDCG@10 / redundancy@k on golden queries | Baseline recorded | ⬜ | |
+| 0.3 | Dev lake | `DATA_DIR=~/data/vdocs-dev` `fetch --select` → full DAG (convert→manifest) | DAG green on dev lake | ✅ | |
+| 0.4 | Baseline | Record lexical nDCG@10 / redundancy@k on golden queries | Baseline recorded | ✅ | |
 
 ### Discoveries
 - **2026-06-06 — selection mined from `index.db`, not raw inventory.** The 461 already-processed
@@ -87,6 +87,15 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
   *inline* `#` comments too (doc_ids never contain `#`); added a TDD unit test. This makes the
   documented "'#' comments allowed" true for inline use and keeps the select file self-documenting.
   *Small in-scope code fix; no plan change.*
+- **2026-06-07 — lexical baseline whiffs on concept-queries over terse/generically-titled sections.**
+  `kaajee-install-procedure` scores **nDCG@10 = 0.0**: the labeled KAAJEE install sections are indexed
+  & searchable (`kind=ok`) but never appear in the top-200 BM25 chunk hits — their bodies are terse
+  and their headings generic ("VistA Installation Procedure", "WebLogic Installation"), so other docs'
+  install sections outrank them, and the doc-defining token ("KAAJEE") is sparse in the relevant
+  bodies. This is the canonical case for **A2 contextual chunk headers** (`«doc_title › section_path»`
+  prepended to embedded text) **+ Phase C semantic/hybrid** — it is a clean "before" data point, not a
+  label bug. *Validates A2/C rationale; no plan change.* (Also a candidate for golden-label refinement
+  as the set matures — do not inflate labels to mask the lexical gap.)
 
 ### Risks
 - **Sample not representative** → blind spots the full corpus later exposes. *Mitigation:* stratify on the eight shape axes; revisit the set after the first full-corpus run.
@@ -102,11 +111,50 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
   kids-install ×2, hwsc-rest ×2, kaajee-auth ×1, + a redundancy@k probe). Fixed inline-comment
   handling in `_read_select_file` (TDD); `make check` green (726 passed, 98.5% cov). Next: 0.3 stand
   up `~/data/vdocs-dev` and run the DAG.
+- 2026-06-07 — 0.3 done (✅): dev lake `~/data/vdocs-dev` stood up (prod untouched). **Fetch**:
+  70 picks → 455 lineage docs, **453 fetched / 2 failed** (both failures = non-selected NUMI
+  prior-versions, "docx unavailable"; all 70 picks fetched). **Full DAG `convert→manifest` ran green**
+  in ~3 min: convert 451 (docling=1 → cprsguium ✓, 0 errors), consolidate 451→**69 version groups**,
+  index **33,407 sections / 7,189 chunks / 1,824 entities / 22,342 mentions**, validate **0 blocking**,
+  **embed SKIPPED** (no fastembed ✓), relate 34,476 edges, manifest `semantic_available=0`. Dev index:
+  69 latest anchors, 6,308 searchable sections. All 17 golden-query `section_id` labels resolve in the
+  dev index (slugs deterministic across lakes). Next: 0.4 baseline metrics.
+- 2026-06-07 — 0.4 done (✅) → **Phase 0 COMPLETE.** Recorded the lexical (FTS5+BM25) baseline on the
+  golden queries via `scripts/baseline_golden.py` (report: `reports/baseline-phase0.{md,json}`):
+  **mean nDCG@10 = 0.3947 · MRR = 0.5167 · recall@10 = 0.50 · redundancy@10 = 0.017** (5 labeled
+  queries + 1 redundancy probe). Per-query nDCG@10 ranges 0.0 (kaajee — see Discoveries) → 0.98
+  (hwsc-install-privileges). Redundancy is already near-zero (consolidate collapsed version groups).
+  Metric oracle inlined; retrieval path imported (measures the real engine). `make check` green.
+  **This is the number every later phase (A2 headers, C semantic/hybrid RRF) must beat.**
+
+### Baseline (Phase 0.4 — lexical FTS5+BM25, dev lake, 2026-06-07)
+
+| metric | value | notes |
+|---|---|---|
+| mean nDCG@10 | **0.3947** | 5 labeled queries |
+| mean MRR | **0.5167** | |
+| mean recall@10 | **0.50** | |
+| mean redundancy@10 | **0.0167** | near-dup content (Jaccard ≥ 0.85), all 6 queries |
+
+Per-query nDCG@10: kids-install-build 0.267 · kids-delphi-components-install 0.354 ·
+hwsc-rest-from-vista-m 0.373 · hwsc-install-privileges 0.979 · kaajee-install-procedure **0.000**.
+Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.py`.
 
 ### Notes
 - `consolidate`/`index`/`relate`/`manifest` are **corpus-global** (rebuild over whatever is in the
   lake), so a *separate dev lake* is the clean way to scope — not per-doc flags on the prod lake.
 - The prod lake `~/data/vdocs` (~1,450 docs) stays intact; switch scopes by `DATA_DIR` env var.
+- **Dev-lake standup recipe (0.3).** The inventory medallion is the control plane and identical
+  across lakes, so we **reuse prod's** rather than re-crawling the live VDL site (avoids drift):
+  (1) copy `~/data/vdocs/inventory/` → dev, **preserving mtimes** (`os.utime` from prod) so the cheap
+  `size:mtime_ns` fingerprints still match; (2) seed dev `state.db` with the three inventory
+  `stage_runs` rows (`crawl`/`catalog`/`serve-inventory` = ok) copied from prod — required because
+  `fetch`'s preflight checks upstream completion in `state.db`, not just file presence; (3)
+  `fetch --select registries/dev-corpus.txt`; (4) `run --from convert --to manifest`. No doc-side
+  acquisitions are copied, so the DOC DAG builds fresh.
+- **70 selected ids → 455 fetched docs** (×6.5): `fetch` always acquires a selected doc's **full
+  version lineage** (§5.6 invariant 2). Intended — the deep-version-group picks exist to exercise
+  `consolidate` (455 physical docs collapse to ~70 latest anchors in the searchable corpus).
 
 ---
 
