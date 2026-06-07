@@ -30,6 +30,7 @@ import structlog
 from vdocs.contracts.registry import (
     CONSOLIDATED,
     DOC_META_STAGED,
+    INDEX_CHUNKS,
     INDEX_DOCUMENTS,
     INDEX_ENTITIES,
     INDEX_SECTIONS,
@@ -96,7 +97,7 @@ class IndexStage(Stage):
     name = "index"
     description = "build index.db: documents, sections (anchors), chunks+FTS5 (search), entities"
     requires = [TEXT_NORMALIZED, CONSOLIDATED, DOC_META_STAGED]
-    produces = [INDEX_DOCUMENTS, INDEX_SECTIONS, INDEX_ENTITIES]
+    produces = [INDEX_DOCUMENTS, INDEX_SECTIONS, INDEX_CHUNKS, INDEX_ENTITIES]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:

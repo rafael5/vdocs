@@ -18,6 +18,7 @@ from vdocs.stages.consolidate.stage import ConsolidateStage
 from vdocs.stages.convert.stage import ConvertStage
 from vdocs.stages.crawl.stage import CrawlStage
 from vdocs.stages.discover.stage import DiscoverStage
+from vdocs.stages.embed.stage import EmbedStage
 from vdocs.stages.enrich.stage import EnrichStage
 from vdocs.stages.fetch.stage import FetchStage
 from vdocs.stages.index.stage import IndexStage
@@ -46,6 +47,7 @@ def build_stages() -> list[Stage]:
         ConsolidateStage(),
         IndexStage(),
         RelateStage(),
+        EmbedStage(),
         ManifestStage(),
         ValidateStage(),
     ]
@@ -224,6 +226,42 @@ def relate(force: bool = typer.Option(False, "--force", "-f")) -> None:
 def manifest(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Assemble corpus-manifest.json + discovery.json — the MCP front door (semantic off now)."""
     _drive(only="manifest", force=force)
+
+
+@app.command()
+def ask(
+    query: str = typer.Argument(..., help="a natural-language question about VistA / the corpus"),
+    k: int = typer.Option(8, "--k", "-k", help="how many ranked hits to return"),
+    apps: list[str] = typer.Option([], "--app", help="restrict to these app codes (exact)"),
+    doc_types: list[str] = typer.Option([], "--doc-type", help="restrict to these doc codes"),
+    json_out: bool = typer.Option(False, "--json", help="emit hits as JSON (for tools/agents)"),
+) -> None:
+    """Search the gold corpus and return ranked, **pre-cited** hits — the answer to "based on the
+    vdocs gold corpus, …" without guessing (§14.7). Lexical FTS5 over the is_latest search chunks;
+    each hit carries its section_id, the document/section titles, a snippet, and the gold body path.
+    """
+    import json
+
+    from vdocs.server import search
+
+    cfg = Settings()
+    if not cfg.index_db.exists():
+        typer.echo("no index.db yet — run: vdocs index (then relate, manifest)")
+        raise typer.Exit(code=1)
+    hits = search.lexical_search(
+        cfg.index_db, query, k=k, app=list(apps) or None, doc_type=list(doc_types) or None
+    )
+    if json_out:
+        typer.echo(json.dumps(hits, indent=2, ensure_ascii=False))
+        return
+    if not hits:
+        typer.echo("no matches in the gold corpus.")
+        return
+    for i, h in enumerate(hits, 1):
+        typer.echo(f"{i}. [{h['score']}] {h['doc_title']} — §{h['section_title']}")
+        typer.echo(f"   {h['uri']}")
+        typer.echo(f"   {h['body_path']}")
+        typer.echo(f"   {h['snippet']}")
 
 
 @app.command()

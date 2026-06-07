@@ -201,6 +201,15 @@ INDEX_ENTITIES = ArtifactContract(
     db="index.db",
     table="entities",
 )
+# the retrieval units derived from sections (§5.5, A1) — the search surface `embed` consumes.
+INDEX_CHUNKS = ArtifactContract(
+    key="index.db:chunks",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="index",
+    db="index.db",
+    table="chunks",
+)
 # `relate`: the knowledge-graph edges, appended to index.db over the entities `index` extracted
 # (doc↔entity, entity↔entity, doc↔doc — §8). Added via `kernel.db.replace_table_atomic`, so it never
 # touches `index`'s tables in the same file.
@@ -227,6 +236,36 @@ DISCOVERY_JSON = ArtifactContract(
     storage_class=StorageClass.STATE,
     produced_by="manifest",
     relpath="documents/gold/discovery.json",
+)
+# `manifest`: the AI corpus card (§14.7) — the always-fresh, denormalized catalog + entity index +
+# the `vdocs ask` query recipe + the index.db fingerprint for staleness. `ai-manifest.json` is the
+# machine rendering; `CORPUS.md` is the same content rendered for direct context loading.
+AI_MANIFEST = ArtifactContract(
+    key="gold/ai-manifest.json",
+    kind=Kind.FILE,
+    storage_class=StorageClass.STATE,
+    produced_by="manifest",
+    relpath="documents/gold/ai-manifest.json",
+)
+CORPUS_CARD = ArtifactContract(
+    key="gold/CORPUS.md",
+    kind=Kind.FILE,
+    storage_class=StorageClass.STATE,
+    produced_by="manifest",
+    relpath="documents/gold/CORPUS.md",
+)
+
+
+# `embed` (Phase 6, §14.6): per-chunk embeddings + ANN index over the searchable is_latest chunks,
+# in `vectors.db` (sqlite-vec). The `embedding_model` meta row (model/version/dim) is what
+# `manifest` reads to flip semantic search on. produced_by="embed"; keyed by `chunk_id`.
+VECTORS_DB = ArtifactContract(
+    key="vectors.db:embedding_model",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="embed",
+    db="vectors.db",
+    table="embedding_model",
 )
 
 
@@ -269,9 +308,13 @@ def default_registry() -> ArtifactRegistry:
         INDEX_DOCUMENTS,
         INDEX_SECTIONS,
         INDEX_ENTITIES,
+        INDEX_CHUNKS,
         RELATIONS,
+        VECTORS_DB,
         CORPUS_MANIFEST,
         DISCOVERY_JSON,
+        AI_MANIFEST,
+        CORPUS_CARD,
         VALIDATION_REPORT,
     ):
         reg.register(contract)
