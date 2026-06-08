@@ -60,10 +60,12 @@ smoke-test rig (verified: the KAAJEE doc and its golden target sections are pres
 1. [Master tracker](#master-tracker)
 2. [Phase L0 — Transition housekeeping](#phase-l0--transition-housekeeping)
 3. [Phase L1 — Lexical quality](#phase-l1--lexical-quality)
-4. [Phase L2 — Distributable Go search CLI](#phase-l2--distributable-go-search-cli)
-5. [Phase L3 — Human corpus deliverable](#phase-l3--human-corpus-deliverable)
-6. [Phase L4 — Quality gate](#phase-l4--quality-gate)
-7. [Cross-cutting risks & recommendations](#cross-cutting-risks--recommendations)
+4. [Phase L1.5 — Curated term signal](#phase-l15--curated-term-signal-human-in-the-loop)
+5. [Phase LF — Faceted (focused) search](#phase-lf--faceted-focused-search)
+6. [Phase L2 — Faceted-first Go search CLI](#phase-l2--faceted-first-go-search-cli)
+7. [Phase L3 — Human corpus deliverable](#phase-l3--human-corpus-deliverable)
+8. [Phase L4 — Quality gate](#phase-l4--quality-gate)
+9. [Cross-cutting risks & recommendations](#cross-cutting-risks--recommendations)
 
 ---
 
@@ -84,9 +86,15 @@ smoke-test rig (verified: the KAAJEE doc and its golden target sections are pres
 | | L1.5d | Title normalization (strip boilerplate) | ⬜ | strip DIBRG/UM/version scaffolding |
 | | L1.5e | Entity-type demotion (globals) | ⬜ | 2,359 globals dominate |
 | | L1.5f | Selective synonyms (test individually) | ⬜ | blanket failed (L1.3); per-entry |
-| **L2 — Go CLI** | L2.1 | Go module + `modernc.org/sqlite` (FTS5), read-only open | ⬜ | no cgo |
-| | L2.2 | Port ranker (`query` pkg mirrors `search_pure`) | ⬜ | MATCH + weights |
-| | L2.3 | CLI (flags, human + `--json`, citations) | ⬜ | `vdocs-search` |
+| **LF — Faceted search** | LF.1 | Prototype facet catalog + faceted query path | ✅ | `scripts/faceted_search_demo.py`; 26,923→238 |
+| | LF.2 | Audience registry (doc_type→audience) | ⬜ | technical/clinical/admin |
+| | LF.3 | Facet catalog API (`server/facets.py`) | ⬜ | counted facet values |
+| | LF.4 | Faceted query path (narrow→FTS-within) | ⬜ | reuses `search_pure` |
+| | LF.5 | SQLite indices on facet columns | ⬜ | at `index` build |
+| | LF.6 | Measure faceted vs open-ended precision | ⬜ | golden set |
+| **L2 — Faceted-first Go CLI** | L2.1 | Go module + `modernc.org/sqlite` (FTS5), read-only open | ⬜ | no cgo |
+| | L2.2 | Port ranker + facet layer (`query` pkg) | ⬜ | MATCH/weights + faceted filter |
+| | L2.3 | CLI: facet flags + content + open-ended fallback | ⬜ | `vdocs-search --type/--app/…` |
 | | L2.4 | Cross-compile matrix + handoff docs | ⬜ | static binaries |
 | | L2.5 | Ranker-parity gate (Go ↔ Python on golden set) | ⬜ | CI |
 | **L3 — Human corpus** | L3.1 | `publish` stage (md tree + INDEX + glossary) | ⬜ | from `consolidated/` |
@@ -268,6 +276,11 @@ corpus-ubiquitous terms (IDF normally demotes them), so common sense must prune 
 human in the loop, common sense will not prevail.** Each curation is **measured against the 19-query
 golden set and kept only if it helps** (propose → measure → keep).
 
+> **Re-scoped by Phase LF (2026-06-08).** L1.5 governs the **open-ended discovery fallback**, not the
+> primary path. Faceting (LF) turns the doc_type/title words this phase agonizes over into *facets*,
+> so L1.5 is now **lower-stakes**: finish the clearly-correct, doc_type-redundant STOPs (the
+> maintainer's scan) and the title normalization, but do **not** chase the long tail.
+
 **Grounding (prod, 462 latest docs):** "guide" is in **48%** of titles, "version" 37%, "manual" 35%,
 "installation" 25% — all carrying the L1.2 ×2.5 `doc_title` weight as pure noise. The DIBRG
 scaffolding "Deployment, Installation, Back-Out, and Rollback Guide" spans ~40 titles. Globals
@@ -318,23 +331,89 @@ dominate entities (2,359 distinct / 28,599 mentions, led by `^TMP`, `^DIC`).
 
 ---
 
-## Phase L2 — Distributable Go search CLI
+## Phase LF — Faceted (focused) search
+
+**Goal:** support the way an expert actually finds *specific* information — **narrow by structured
+facets first, then content-search within the tiny narrowed set** — alongside (not instead of) the
+open-ended ranker. This is the "focused information retrieval" method the maintainer described:
+`doc_type → title/package → frontmatter/entity → content`.
+
+**Why (the design rationale):** a single open-ended ranking function can't know whether a token is a
+doc-type word, a package, or content — which is the root of every L1.x fight ("guide" 48%, "vista
+useless", the `doc_title` over-weighting). **Faceting dissolves those problems** by turning structured
+signals into *filters* instead of forcing them through one ranker. Evidence (prototype on the dev
+lake, `scripts/faceted_search_demo.py`): two facet picks collapse **26,923 chunks → 238 (0.88% of the
+corpus)**; the within-facet content search is then trivially precise. The hard cases open-ended
+ranking *failed* on are solved structurally — `hwsc-rest` (→ technical-audience + "web service"),
+`fileman`/`vbecs`/file-#60 (→ entity facet + content), KAAJEE (→ package + "weblogic").
+
+**No pipeline/indexing change** — faceting is a **serving-layer** read over columns `index.db` already
+has. Each of the maintainer's 4 layers maps to existing data:
+
+| Layer | Facet | Source (already produced) |
+|---|---|---|
+| 1 document type | `doc_type` + derived **audience** (technical/clinical/admin) | `documents.doc_type` (25) |
+| 2 title/package | `app_code` / `pkg_ns` + title FTS | `documents.app_code` (142), `pkg_ns` (131) |
+| 3 frontmatter/entity | version / `is_latest` + entity (file#/RPC/routine/option) | `documents.version/is_latest`, `entities` (4,792) |
+| 4 content | BM25 within the narrowed set | `chunks_fts` (+ `doc_key IN (…)`) |
+
+**Steps**
+- **LF.1 — Prototype (✅).** `scripts/faceted_search_demo.py`: facet catalog + layered
+  narrow→content-search, reusing the shipped ranker. Demonstrates the flow end-to-end on dev.
+- **LF.2 — Audience registry.** `registries/inventory/audiences.yaml` (`doc_type → technical/clinical/
+  admin`) — realizes the "differentiate users/usage" insight as a real facet.
+- **LF.3 — Facet catalog API.** Promote the catalog into `server/facets.py` (distinct facet values +
+  counts) with TDD; a `manifest`-style artifact the CLI/UI presents.
+- **LF.4 — Faceted query path.** `faceted_search(filters, query)` in `server/` (narrow→FTS-within),
+  TDD; reuses `search_pure` so within-facet ranking == `vdocs ask`.
+- **LF.5 — Indices.** Add SQLite indices on `documents(doc_type, app_code, pkg_ns, is_latest)` at
+  `index` build time for instant filtering.
+- **LF.6 — Measure precision.** Show faceted vs open-ended on the golden set (faceted should hit the
+  relevant doc with near-perfect precision once the facets are supplied).
+
+### Changelog
+- 2026-06-08 — **LF opened; LF.1 prototype done.** Built `scripts/faceted_search_demo.py` and verified
+  the layered flow on the dev lake (26,923→238 chunks on two facets; hard open-ended cases solved
+  structurally). Design recorded; L2 reshaped to faceted-first.
+
+### Discoveries
+- **2026-06-08 — faceted-first is the better primary path for focused retrieval, and it needs no
+  pipeline change.** The structured signals the pipeline already produces (doc_type, package, entity,
+  version) do the heavy narrowing; the contentious open-ended title-weighting/stoplist work (L1.x)
+  becomes a *lower-stakes refinement of the discovery fallback*, not the main event. The maintainer's
+  `doc_type`-redundancy scan points exactly here: those words belong in the **facet layer**.
+
+### Risks
+- **Facet discoverability** — a user must know the facets. *Mitigation:* present counted facet
+  catalogs (LF.3); offer open-ended as the top-level fallback.
+- **Audience mapping is a judgement** (doc_type→audience). *Mitigation:* small curated registry
+  (LF.2), maintainer-reviewable.
+
+### Recommendations for improvement
+- Promote the machine-facing sidecars (`toc`, `cross_refs`) into `index.db` (remediation **D2**) to
+  enable a 5th drill-down layer (within-doc structural navigation) — optional for v1.
+- A faceted **TUI/static-HTML** front-end (counted facet menus + content box) is the natural human UI;
+  the Go CLI (L2) is the headless core it sits on.
+
+---
+
+## Phase L2 — Faceted-first Go search CLI
 
 **Goal:** the portability deliverable — a single static, cross-compiled binary that searches a
-handed-over `index.db` offline with **zero ML dependencies**. Decision recorded in the lean plan
-(2026-06-08): **Go + `modernc.org/sqlite` (FTS5 compiled in)**; `vdocs` (Python) stays the index
-builder; `index.db` is the contract.
+handed-over `index.db` offline with **zero ML dependencies**, built **faceted-first** (LF) with an
+open-ended fallback. Decision (lean plan, 2026-06-08): **Go + `modernc.org/sqlite` (FTS5 compiled
+in)**; `vdocs` (Python) stays the index builder; `index.db` is the contract.
 
 **Steps**
 - **L2.1 — Module + engine.** Go module; `modernc.org/sqlite` (pure-Go, cgo-free, FTS5); open
   `index.db` **read-only**. *Gate:* opens prod `index.db`, runs a raw FTS5 MATCH, no cgo in the
   build.
-- **L2.2 — Port the ranker.** A `query` package mirroring `search_pure`: build the MATCH string
-  (with L1.3 expansion) + the `bm25(...)` weight vector (L1.1) + the structured WHERE. Keep it small
-  and declarative. *TDD:* Go table tests for MATCH construction + weights.
-- **L2.3 — CLI.** `vdocs-search <query>` with `--db --k --app --doc-type --json`; human output =
-  table with snippet + citation (`section_id`/URI/`body_path`), `--json` = machine-readable. Glossary
-  term map embedded via `go:embed`.
+- **L2.2 — Port the ranker + facet layer.** A `query` package mirroring `search_pure` (MATCH +
+  `bm25(...)` weight vector) **and** the faceted narrow→content-search path (LF.4) + facet catalog
+  (LF.3). Keep it small and declarative. *TDD:* Go table tests for MATCH/weights + faceted filtering.
+- **L2.3 — CLI (faceted-first).** `vdocs-search` with facet flags `--type --app --pkg --audience
+  --entity` (narrow), an optional content query (search within), `--facets` (print the catalog), and a
+  bare `<query>` open-ended fallback; `--json` for machine output, human output = citations + snippet.
 - **L2.4 — Cross-compile + handoff.** `GOOS`/`GOARCH` matrix (linux/darwin/windows × amd64/arm64);
   document the "give a developer the corpus" path (`index.db` + binary, no rebuild). Decide: ship full
   prod `index.db` (167 MB) or a curated subset. *Gate:* a clean machine with no Python/ML searches via
