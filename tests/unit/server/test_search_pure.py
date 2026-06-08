@@ -39,3 +39,28 @@ def test_bm25_weights_module_defaults_favor_title_over_body():
 def test_bm25_expr_is_a_weighted_bm25_call_in_column_order():
     expr = sp.bm25_expr("chunks_fts", ("title", "body"), {"title": 8.0, "body": 1.0})
     assert expr == "bm25(chunks_fts, 8.0, 1.0)"
+
+
+def test_acronym_phrase_clauses_adds_one_quoted_phrase_per_known_acronym():
+    cl = sp.acronym_phrase_clauses(["call", "HWSC"], {"HWSC": "HealtheVet Web Services Client"})
+    # a single PHRASE clause (precise), not loose OR-tokens
+    assert cl == ['"healthevet web services client"']
+
+
+def test_acronym_phrase_clauses_is_case_insensitive_and_skips_short_tokens():
+    exp = {"RPC": "Remote Procedure Call", "DD": "Data Dict"}
+    cl = sp.acronym_phrase_clauses(["rpc", "dd"], exp)
+    assert cl == ['"remote procedure call"']  # rpc (≥3) expands; dd (<3) does not
+
+
+def test_acronym_phrase_clauses_noop_without_a_match():
+    assert sp.acronym_phrase_clauses(["hello", "world"], {"RPC": "Remote Procedure Call"}) == []
+
+
+def test_fts_match_query_appends_phrase_clause_only_when_a_map_is_given():
+    exp = {"HWSC": "HealtheVet Web Services Client"}
+    assert (
+        sp.fts_match_query("via HWSC", exp) == '"via" OR "HWSC" OR "healthevet web services client"'
+    )
+    # no expansions arg => unchanged behaviour (the existing contract)
+    assert sp.fts_match_query("via HWSC") == '"via" OR "HWSC"'

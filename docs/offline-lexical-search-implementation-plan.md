@@ -76,8 +76,8 @@ smoke-test rig (verified: the KAAJEE doc and its golden target sections are pres
 | | L0.3 | Add `index`→`relate` ordering guard (if kept) | ⛔ | N/A — relate shelved |
 | **L1 — Lexical quality** | L1.1 | Field-weighted `bm25()` in `search.py` | ✅⚠️ | infra landed; heading weights give **no lift** — lever → L1.2 |
 | | L1.2 | Index `doc_title` into `chunks_fts` | ✅ | KAAJEE 0→0.43; **mean 0.387→0.469**; hwsc-rest ⚠️ |
-| | L1.3 | Glossary query expansion (`fts_match_query`) | ⬜ | needs registry term map (L1.3a) |
-| | L1.4 | Re-measure + record final L1 quality | ⬜ | vs nDCG@10 0.395 / KAAJEE 0.0 |
+| | L1.3 | Glossary query expansion (`fts_match_query`) | ✅⚠️ | built+tested; **regresses → gated OFF** (opt-in only) |
+| | L1.4 | Re-measure + record final L1 quality | ✅ | shipped **0.523** (19-q) / KAAJEE 0→0.43 |
 | **L2 — Go CLI** | L2.1 | Go module + `modernc.org/sqlite` (FTS5), read-only open | ⬜ | no cgo |
 | | L2.2 | Port ranker (`query` pkg mirrors `search_pure`) | ⬜ | MATCH + weights |
 | | L2.3 | CLI (flags, human + `--json`, citations) | ⬜ | `vdocs-search` |
@@ -188,6 +188,17 @@ query-time (zero rebuild). Measure each lever independently.
   98.13% cov). **Measured (dev):** **KAAJEE 0.0 → 0.4278**, **mean nDCG@10 0.3874 → 0.4692**
   (+21%), recall@10 0.50 → 0.7167, MRR 0.5167 → 0.5389. `doc_title` weight tuned to **2.5** by sweep
   (≥4 over-promotes common title tokens — see Discovery).
+- 2026-06-08 — **L1.3 built, measured, GATED OFF (✅⚠️) — a negative result.** Promoted
+  `gold/glossary.md` → `registries/glossary/expansions.yaml` (696 acronym→expansion pairs), added a
+  tested pure expander (`acronym_phrase_clauses`/`fts_match_query(expansions=…)`) + an opt-in loader
+  (`search.default_expansions`). TDD first. **Measured on the 19-query set, expansion *regresses*:**
+  token-OR form 0.5232 → 0.4337 (even broke KAAJEE to 0.0); the precise phrase form still 0.5232 →
+  0.5092. So expansion is **off by default** (opt-in `expansions=` param retained). `make check` green
+  (784 passed, 98.09% cov). Shipped ranker unchanged at **0.5232**.
+- 2026-06-08 — **L1.4 (✅) final L1 result.** Shipped lexical ranker = L1.1 (neutral) + L1.2
+  (doc_title). **Dev golden set (19 q): mean nDCG@10 0.5232 / MRR 0.5849 / recall@10 0.6204**, up from
+  the **0.3874** start (+35%); the marquee **KAAJEE 0.0 → 0.4278**. Open per-query misses for later
+  tuning: `fileman-add-field` 0.0, `vbecs-accept-order` 0.0, `hwsc-rest` 0.224 (L1.2-introduced).
 
 ### Discoveries
 - ⚠️ **2026-06-08 — weighting *section* headings gives no lexical lift on this corpus.** Sweep on the
@@ -209,6 +220,16 @@ query-time (zero rebuild). Measure each lever independently.
   to revisit.** *Remediation candidates:* (a) glossary/structured-filter help in L1.3 (expand
   "HWSC"/"REST" so the right doc wins on body+path, not just title); (b) cap doc_title's contribution
   for multi-token generic queries; (c) grow the golden set (L4.2) and re-tune. Tracked for L1.4.
+- ⚠️ **2026-06-08 — query expansion REGRESSES lexical quality on this corpus (L1.3 negative result).**
+  OR-adding an acronym's expansion *tokens* injects common words ("Kernel", "Authentication",
+  "Web", "System") that drown the rare-acronym signal `doc_title` weighting relies on — it dropped
+  the mean 0.5232 → 0.4337 and **broke KAAJEE to 0.0**. Switching to a precise **phrase** clause
+  (`"healthevet web services client"`) recovered most of the loss but stayed net-negative (0.5092):
+  it helps `hwsc-rest` (+0.025) yet hurts KAAJEE/rpc/hwsc-mgmt. *Root cause:* L1.2's `doc_title`
+  already captures the acronym precisely; any extra OR-clause mostly perturbs BM25 normalization and
+  adds noise. *Remediation:* expansion **gated OFF** by default; kept as a tested opt-in
+  (`expansions=` param + `default_expansions()` loader) and the 696-entry registry for a future
+  *adaptive* use (expand only when the bare query yields no doc-title hit). The 3rd L1 lever doesn't pay.
 
 ### Risks
 - **Weights overfit the 6-query golden set.** *Mitigation:* prefer changes that help the *class*

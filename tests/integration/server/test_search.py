@@ -71,3 +71,19 @@ def test_lexical_search_empty_query_returns_nothing(tmp_path):
     index_db = tmp_path / "index.db"
     _build(index_db)
     assert search.lexical_search(index_db, "   ?  ", k=5) == []
+
+
+def test_default_expansions_loads_the_glossary_registry():
+    # the promoted acronym→expansion map (registries/glossary/expansions.yaml); opt-in for callers.
+    exp = search.default_expansions()
+    assert exp.get("HWSC", "").lower().startswith("healthevet")
+
+
+def test_lexical_search_accepts_opt_in_expansions(tmp_path):
+    # expansion is off by default (it regresses — L1.3); the opt-in param path still returns hits.
+    index_db = tmp_path / "index.db"
+    _build(index_db)
+    hits = search.lexical_search(
+        index_db, "KAAJEE", k=5, expansions={"KAAJEE": "Kernel Authentication and Authorization"}
+    )
+    assert hits and any(h["doc_key"] == "KAAJEE/dibr" for h in hits)

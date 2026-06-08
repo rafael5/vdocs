@@ -34,11 +34,40 @@ FTS_WEIGHTS: dict[str, float] = {
 }  # fmt: skip
 
 
-def fts_match_query(text: str) -> str:
+def acronym_phrase_clauses(tokens: list[str], expansions: dict[str, str]) -> list[str]:
+    """For any token whose upper-case form is a known acronym (≥3 chars, L1.3), the expansion as a
+    single **quoted phrase** FTS5 clause (e.g. `"healthevet web services client"`). A *phrase* —
+    not loose OR-tokens — is the load-bearing choice: it matches only the exact spelled-out
+    sequence, adding precise signal without injecting common words ("Kernel", "System", "Web") that
+    dilute the rare-acronym match and drown a `doc_title` win. De-duped, order-preserving."""
+    clauses: list[str] = []
+    seen: set[str] = set()
+    for t in tokens:
+        if len(t) < 3:
+            continue
+        exp = expansions.get(t.upper())
+        if not exp:
+            continue
+        words = _TOKEN.findall(exp)
+        phrase = " ".join(words).lower()  # FTS5 is case-insensitive; lower-case is deterministic
+        if len(words) >= 2 and phrase not in seen:
+            clauses.append(f'"{phrase}"')
+            seen.add(phrase)
+    return clauses
+
+
+def fts_match_query(text: str, expansions: dict[str, str] | None = None) -> str:
     """A safe FTS5 MATCH string from free text: alnum tokens (length ≥ 2), each double-quoted,
-    OR-joined. Returns `""` when no usable token remains (the caller treats that as no results)."""
+    OR-joined. Returns `""` when no usable token remains (the caller treats that as no results).
+
+    When `expansions` is given (acronym → expansion), each query acronym also contributes the
+    spelled-out form as one **precise phrase clause** (L1.3); omitting it preserves the
+    bare-tokenisation contract."""
     tokens = [t for t in _TOKEN.findall(text or "") if len(t) >= 2]
-    return " OR ".join(f'"{t}"' for t in tokens)
+    clauses = [f'"{t}"' for t in tokens]
+    if expansions:
+        clauses += acronym_phrase_clauses(tokens, expansions)
+    return " OR ".join(clauses)
 
 
 def bm25_weights(

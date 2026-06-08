@@ -10,12 +10,33 @@ relevance score, and the resolved gold `body_path`. Read-only (opened via `db.co
 
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 from vdocs.kernel import db
 from vdocs.server import ids
 from vdocs.server import search_pure as sp
+
+# Repo-relative `registries/` (same default resolution as `config.Settings.registries`, but without
+# requiring a configured lake — the registry is version-controlled repo data, §9.7).
+_GLOSSARY_EXPANSIONS = (
+    Path(__file__).resolve().parents[3] / "registries" / "glossary" / "expansions.yaml"
+)
+
+
+@lru_cache(maxsize=1)
+def default_expansions() -> dict[str, str]:
+    """The acronym → expansion query-expansion map (L1.3), loaded once from the glossary registry;
+    `{}` if absent (expansion is then a no-op). Used by `lexical_search` so the CLI and the
+    measurement harness expand identically."""
+    if not _GLOSSARY_EXPANSIONS.is_file():
+        return {}
+    data = yaml.safe_load(_GLOSSARY_EXPANSIONS.read_text(encoding="utf-8")) or {}
+    return {str(k): str(v) for k, v in (data.get("expansions") or {}).items()}
+
 
 # 0-based column index of `body` in chunks_fts (the snippet() target) — single-sourced from the
 # column order in `search_pure` so it can't drift from the FTS schema.
@@ -45,14 +66,20 @@ def lexical_search(
     k: int = 10,
     app: list[str] | None = None,
     doc_type: list[str] | None = None,
+    expansions: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Rank `is_latest` chunks against `query` by BM25 and return up to `k` pre-cited hits.
 
     `app`/`doc_type` are optional structured pre-filters (applied as a WHERE clause *before*
     ranking, §14.2). Returns `[]` for an empty/no-usable-token query. Each hit:
     `{score, section_id, doc_key, doc_id, doc_title, section_title, app_code, doc_type, snippet,
-    uri, body_path}` (`score` = −bm25, so higher is more relevant)."""
-    match = sp.fts_match_query(query)
+    uri, body_path}` (`score` = −bm25, so higher is more relevant).
+
+    `expansions` (acronym → expansion) is an **opt-in** glossary query-expansion map; pass
+    `default_expansions()` to enable it. It is **off by default** because measurement (L1.3, the
+    19-query golden set) showed it *regresses* lexical quality on this corpus — `doc_title`
+    weighting already captures the acronym signal, and expansion only dilutes it."""
+    match = sp.fts_match_query(query, expansions)
     if not match:
         return []
     filters: str = ""
