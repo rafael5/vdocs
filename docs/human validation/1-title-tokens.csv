@@ -1,46 +1,46 @@
-token,in_n_titles,total_titles,pct,recommendation,decision
-guide,222,462,48%,STOP,STOP
-version,170,462,37%,STOP,STOP
-manual,164,462,35%,STOP,STOP
-installation,117,462,25%,STOP,STOP
-user,106,462,23%,STOP,STOP
-technical,82,462,18%,STOP,STOP
-and,66,462,14%,STOP,STOP
-notes,51,462,11%,STOP,STOP
-release,50,462,11%,STOP,STOP
-rollback,46,462,10%,STOP,STOP
-out,43,462,9%,STOP,STOP
-back,43,462,9%,STOP,STOP
-deployment,41,462,9%,STOP,STOP
-security,24,462,5%,STOP,STOP
-laboratory,22,462,5%,KEEP?,KEEP?
-interface,21,462,5%,KEEP?,KEEP?
-updated,20,462,4%,STOP,STOP
-management,19,462,4%,STOP,STOP
-or,19,462,4%,KEEP?,KEEP?
-health,17,462,4%,KEEP?,KEEP?
-lr,16,462,3%,KEEP?,KEEP?
-change,15,462,3%,KEEP?,KEEP?
-pages,15,462,3%,KEEP?,KEEP?
-vista,15,462,3%,STOP,STOP
-hl7,14,462,3%,KEEP?,KEEP?
-pharmacy,14,462,3%,KEEP?,KEEP?
-tool,13,462,3%,KEEP?,KEEP?
-patch,13,462,3%,STOP,STOP
-package,13,462,3%,STOP,STOP
-la,13,462,3%,KEEP?,KEEP?
-tiu,13,462,3%,KEEP?,KEEP?
-implementation,11,462,2%,KEEP?,KEEP?
-clinical,11,462,2%,KEEP?,KEEP?
-tracking,11,462,2%,KEEP?,KEEP?
-developer,11,462,2%,KEEP?,KEEP?
-for,11,462,2%,STOP,STOP
-22,10,462,2%,KEEP?,KEEP?
-to,10,462,2%,STOP,STOP
-care,9,462,2%,KEEP?,KEEP?
-cprs,9,462,2%,KEEP?,KEEP?
-xu,9,462,2%,KEEP?,KEEP?
-record,9,462,2%,KEEP?,KEEP?
-patient,9,462,2%,KEEP?,KEEP?
-install,8,462,2%,KEEP?,KEEP?
-10,7,462,2%,KEEP?,KEEP?
+token,in_n_titles,total_titles,pct,recommendation,decision,note
+guide,222,462,48%,STOP,STOP,scaffolding
+version,170,462,37%,STOP,STOP,scaffolding
+manual,164,462,35%,STOP,STOP,scaffolding
+installation,117,462,25%,STOP,STOP,maintainer: task label (STOP)
+user,106,462,23%,STOP,STOP,maintainer: default audience (STOP)
+technical,82,462,18%,KEEP,KEEP,maintainer: technical-audience differentiator
+and,66,462,14%,STOP,STOP,stopword
+notes,51,462,11%,STOP,STOP,maintainer: doc-type label (in doc_type field)
+release,50,462,11%,STOP,STOP,maintainer: doc-type label
+rollback,46,462,10%,STOP,STOP,DIBRG scaffolding
+out,43,462,9%,STOP,STOP,DIBRG scaffolding
+back,43,462,9%,STOP,STOP,DIBRG scaffolding
+deployment,41,462,9%,STOP,STOP,DIBRG scaffolding
+security,24,462,5%,KEEP,KEEP,maintainer: function differentiator
+laboratory,22,462,5%,KEEP,KEEP,maintainer: clinical domain
+interface,21,462,5%,KEEP,KEEP,topic/technical (weak); metric will validate
+updated,20,462,4%,STOP,STOP,scaffolding
+management,19,462,4%,STOP,STOP,maintainer: task label (STOP)
+or,19,462,4%,STOP,STOP,conjunction (lowercased; not the OR namespace)
+health,17,462,4%,KEEP,KEEP,domain (weak); metric will validate
+lr,16,462,3%,KEEP,KEEP,package: Laboratory
+change,15,462,3%,STOP,STOP,generic (change pages)
+pages,15,462,3%,STOP,STOP,scaffolding (change pages)
+vista,15,462,3%,STOP,STOP,corpus-ubiquitous (whole corpus is VistA)
+hl7,14,462,3%,KEEP,KEEP,maintainer: technical domain
+pharmacy,14,462,3%,KEEP,KEEP,maintainer: clinical domain
+tool,13,462,3%,STOP,STOP,generic
+patch,13,462,3%,STOP,STOP,scaffolding
+package,13,462,3%,STOP,STOP,scaffolding
+la,13,462,3%,KEEP,KEEP,package: Lab Automation
+tiu,13,462,3%,KEEP,KEEP,package: Text Integration Utilities
+implementation,11,462,2%,STOP,STOP,task label (like installation)
+clinical,11,462,2%,KEEP,KEEP,clinical-audience differentiator
+tracking,11,462,2%,KEEP,KEEP,topic (weak); metric will validate
+developer,11,462,2%,KEEP,KEEP,technical-audience differentiator
+for,11,462,2%,STOP,STOP,stopword
+22,10,462,2%,STOP,STOP,version number
+to,10,462,2%,STOP,STOP,stopword
+care,9,462,2%,KEEP,KEEP,clinical domain (weak); metric will validate
+cprs,9,462,2%,KEEP,KEEP,maintainer: package/clinical
+xu,9,462,2%,KEEP,KEEP,maintainer: Kernel package
+record,9,462,2%,KEEP,KEEP,part of package names (VPR/CPRS); weak
+patient,9,462,2%,KEEP,KEEP,clinical domain (weak); metric will validate
+install,8,462,2%,STOP,STOP,task label (like installation)
+10,7,462,2%,STOP,STOP,version number
