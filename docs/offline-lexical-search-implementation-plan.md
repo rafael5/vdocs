@@ -274,10 +274,12 @@ scaffolding "Deployment, Installation, Back-Out, and Rollback Guide" spans ~40 t
 dominate entities (2,359 distinct / 28,599 mentions, led by `^TMP`, `^DIC`).
 
 **Steps**
-- **L1.5a — Triage worksheet (✅).** `docs/l1.5-curation-worksheet.md` — generated from prod: title
-  tokens (STOP/KEEP), boilerplate title fragments (STRIP), entity types (DEMOTE/KEEP), ambiguous
-  terms, selective-synonym candidates. Each row has a **Decision** column.
-- **L1.5b — Human triage.** Maintainer marks the Decision cells (the irreplaceable step). *Blocking.*
+- **L1.5a — Triage tables (✅).** Editable CSVs in **`human validation/`** (one per table: title
+  tokens, boilerplate fragments, entity types, ambiguous terms, synonyms) + `HOW-TO-USE.md`; a
+  read-only overview is `docs/l1.5-curation-worksheet.md`. Generated from prod; each row has a
+  `decision` column.
+- **L1.5b — Human triage.** Maintainer edits the `decision` column in the `human validation/` CSVs
+  (the irreplaceable step). *Blocking.*
 - **L1.5c — Weighted-field stoplist.** Encode the STOP tokens as a `registries/` list applied to the
   **weighted fields only** (title/doc_title), not the body (IDF already handles the body). *Gate:*
   nDCG@10 ↑ or flat; `hwsc-rest`-class regressions recover.

@@ -1,0 +1,7 @@
+term,issue,recommendation,decision
+order,clinical order vs sort order,context-dependent?,?
+note,TIU note vs annotation,?,?
+SD,Scheduling namespace vs 'standard',KEEP caps-only,KEEP caps-only
+RA,Radiology namespace vs prose 'RA',KEEP caps-only,KEEP caps-only
+AR,Accounts Receivable namespace vs 'are',KEEP caps-only,KEEP caps-only
+PSS,Pharmacy Data Mgmt - clean,KEEP,KEEP
