@@ -22,6 +22,28 @@
 4. **Measurement discipline:** every L1 change is measured against the golden set
    (`scripts/baseline_golden.py`) and the before/after recorded — never assert a lift, show the number.
 
+## Dev-first execution & graduation to prod
+
+**Develop and smoke-test every change on the dev lake (`~/data/vdocs-dev`, ~70 `is_latest` docs);
+touch prod (`~/data/vdocs`, 1,449 docs) only twice, deliberately.** The dev lake + golden set are the
+smoke-test rig (verified: the KAAJEE doc and its golden target sections are present in dev, so the
+`0.0` baseline is a real mis-ranking the fix can move there).
+
+- **Dev-native (no prod run):** all of L1 (the harness defaults to `~/data/vdocs-dev`; re-index is
+  seconds), L2 (Go CLI built/tested against the dev `index.db`; parity gate runs on the golden set),
+  L4 (the gate lives on a dev/fixture lake — prod's 167 MB is too big for CI). Ranker changes (L1.1,
+  L1.3) are **query-time and corpus-agnostic** — they need no re-index at all.
+- **The only deliberate prod operations:** (1) **one** prod re-index after **L1.2** bumps `index`'s
+  `contract_ver` (to add `doc_title` to prod's FTS); (2) **publish the full corpus** + ship the prod
+  `index.db` (L3).
+- **Caveat — sample ≠ corpus.** BM25 depends on corpus-wide IDF / avg-doc-length; weights optimal on
+  8k dev chunks can shift on 27k prod chunks. **Tune on dev, then re-measure on prod after the prod
+  re-index, before publishing the quality claim (L4.3).** Don't assume dev nDCG transfers 1:1. (Golden
+  `section_id`s are stable across the `doc_title` change, so the set stays valid on both lakes.)
+- **Dry-run recipe:** reproduce dev baseline → L1.1 → L1.2 (+dev re-index, assert KAAJEE>0) → L1.3 →
+  build Go CLI on dev + parity gate → **graduate:** bump `contract_ver`, re-index prod once,
+  re-measure, ship.
+
 ## Status legend
 
 | Symbol | Meaning |
@@ -49,9 +71,9 @@
 
 | Phase | ID | Step | Status | Note |
 |-------|----|------|--------|------|
-| **L0 — Housekeeping** | L0.1 | Delete 0-byte `vectors.db` zombie (prod) | ⬜ | from killed embed run |
-| | L0.2 | Decide `relate`: re-run vs shelve graph | ⬜ | absent from prod `index.db` |
-| | L0.3 | Add `index`→`relate` ordering guard (if kept) | ⬜ | wipe-on-rebuild sharp edge |
+| **L0 — Housekeeping** | L0.1 | Delete 0-byte `vectors.db` zombie (prod) | ✅ | trashed 2026-06-08 |
+| | L0.2 | Decide `relate`: re-run vs shelve graph | ✅ | **shelved** — graph not needed for lexical |
+| | L0.3 | Add `index`→`relate` ordering guard (if kept) | ⛔ | N/A — relate shelved |
 | **L1 — Lexical quality** | L1.1 | Field-weighted `bm25()` in `search.py` | ⬜ | query-time; zero rebuild |
 | | L1.2 | Index `doc_title` into `chunks_fts` | ⬜ | build-time; `contract_ver` bump |
 | | L1.3 | Glossary query expansion (`fts_match_query`) | ⬜ | needs registry term map (L1.3a) |
@@ -85,26 +107,30 @@ truthful lake. Small, fast, no new abstractions.
   (wiped by this week's `index` rebuilds). For the lexical-only goal the graph is not required;
   decide explicitly to **(a) re-run `relate`** to restore it, or **(b) formally shelve** it and note
   that `manifest`/any consumer must tolerate its absence. Record the decision here.
-- **L0.3 — Ordering guard (only if L0.2 = keep).** `index` rebuilds `index.db` wholesale, wiping
-  `relations`; `relate` must run after. Add a guard/preflight so a lone `index` run flags that
-  `relate` is now stale, preventing silent graph loss.
+- **L0.3 — Ordering guard.** **N/A** — `relate` is shelved (L0.2), so there is no graph to keep in
+  sync. Re-open only if the graph is ever revived.
 
 ### Changelog
-- *(none yet)*
+- 2026-06-08 — **L0 closed.** L0.1: deleted the 0-byte prod `vectors.db` zombie (trashed). L0.2:
+  **`relate` shelved** — the knowledge graph is not required for offline lexical search; the
+  `relations` table stays absent from prod `index.db` and no re-run is scheduled. L0.3: N/A
+  (no graph to guard). Baked the **Dev-first / graduation-to-prod** block into this plan.
 
 ### Discoveries
 - *(carried from the as-is snapshot, 2026-06-08)* `vectors.db` 0-byte zombie; `relations` absent from
   prod `index.db`; `registries/glossary` empty despite a materialized 268 KB `gold/glossary.md`.
 
 ### Risks
-- Re-running `relate` on prod touches the live `index.db`; do it when no other run is active.
+- **Shelving `relate` leaves `manifest`/any consumer that reads `relations` to tolerate its absence.**
+  *Mitigation:* the lexical path doesn't read the graph; if a future structured-search step wants it,
+  revive `relate` then (and add the ordering guard at that point).
 
 ### Remediations
-- *(none yet)*
+- 2026-06-08 — vectors.db zombie removed; relate formally shelved (decision recorded, not a defect).
 
 ### Recommendations for improvement
-- Treat `relations` materialization as part of `index`'s definition of done, or merge the two stages'
-  invariants, so "rebuilt index ⇒ missing graph" can't recur.
+- If the graph is ever revived, treat `relations` materialization as part of `index`'s definition of
+  done (or merge the two stages' invariants) so "rebuilt index ⇒ missing graph" can't recur.
 
 ---
 
