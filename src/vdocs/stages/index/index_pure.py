@@ -275,8 +275,10 @@ def split_oversized(
     boundaries — never inside a fenced code block (``_blocks`` keeps fences atomic) — each window
     aiming for ~``target`` chars, with a **one-block overlap**: the last block of each window is
     repeated at the start of the next so a passage spanning the boundary is not lost. No content is
-    dropped (every source block appears in some window). A single block larger than ``target`` (e.g.
-    a big table or fence) can't be split structurally, so it forms its own (over-target) window."""
+    dropped (every source block appears in some window). A single block larger than ``target``
+    (e.g. a big table or fence) can't be split structurally, so a final guarantee pass
+    line/char-splits any window still over ``hard`` — so **no window exceeds ``hard``** (the embed
+    token budget holds even for an unextracted inline-HTML table with no blank-line boundaries)."""
     if len(text) <= hard:
         return [text]
     windows: list[str] = []
@@ -291,7 +293,39 @@ def split_oversized(
         cur_len += len(b)
     if cur:
         windows.append("\n\n".join(cur))
-    return windows
+    # guarantee ≤ hard: a blank-line-less block (inline HTML table) can otherwise form one over-hard
+    # window that would blow the embedder budget — hard-split such windows by lines, then chars.
+    bounded: list[str] = []
+    for w in windows:
+        bounded.extend([w] if len(w) <= hard else _split_long(w, hard))
+    return bounded
+
+
+def _split_long(block: str, limit: int) -> list[str]:
+    """Split a single over-``limit`` block (no blank lines to break on) into ``<= limit`` pieces —
+    by lines, and a single over-limit line by character windows. Every piece is ``<= limit``."""
+    pieces: list[str] = []
+    cur: list[str] = []
+    cur_len = 0
+
+    def flush() -> None:
+        nonlocal cur, cur_len
+        if cur:
+            pieces.append("\n".join(cur))
+            cur, cur_len = [], 0
+
+    for raw in block.split("\n"):
+        line = raw
+        while len(line) > limit:  # a single enormous line → hard character windows
+            flush()
+            pieces.append(line[:limit])
+            line = line[limit:]
+        if cur and cur_len + len(line) + 1 > limit:
+            flush()
+        cur.append(line)
+        cur_len += len(line) + 1
+    flush()
+    return pieces
 
 
 def shred_sections(

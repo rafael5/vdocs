@@ -288,6 +288,16 @@ def test_split_oversized_never_splits_inside_a_fence():
     assert any(fence in w for w in windows)  # the whole fence lives intact in exactly one window
 
 
+def test_split_oversized_bounds_a_giant_blank_lineless_block():
+    # an unextracted inline HTML table is one block with no blank-line boundaries — it must still be
+    # bounded to ≤ hard so it can't blow the embedder token budget the embed gate asserts.
+    giant = "\n".join(f"<td>cell {i} value</td>" for i in range(3000))  # ~60k chars, no blank lines
+    windows = ip.split_oversized(giant, target=2000, hard=4000)
+    assert len(windows) > 1
+    assert all(len(w) <= 4000 for w in windows)  # every window within the hard cap
+    assert sum(w.count("<td>") for w in windows) == 3000  # no rows lost
+
+
 def test_shred_sets_section_path_to_ancestor_chain():
     # section_path = the ancestor-title chain (context as metadata, §14.6) — so a condensed chunk is
     # self-interpretable. Real ancestors only (the doc-title H1 is a real heading, not fabricated).
