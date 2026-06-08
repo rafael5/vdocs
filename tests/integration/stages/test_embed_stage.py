@@ -45,13 +45,13 @@ def _seed_chunks(
     kinds = kinds or {}
     conn = db.connect(ctx.cfg.index_db)
     conn.executescript(
-        "CREATE TABLE documents (doc_key TEXT PRIMARY KEY, title TEXT);"
+        "CREATE TABLE documents (doc_key TEXT PRIMARY KEY, title TEXT, is_latest INTEGER);"
         "CREATE TABLE doc_sections (section_id TEXT PRIMARY KEY, doc_key TEXT, section_path TEXT, "
         "kind TEXT);"
         "CREATE TABLE chunks (chunk_id TEXT PRIMARY KEY, section_id TEXT, doc_key TEXT, "
         "part INTEGER, text TEXT);"
     )
-    conn.execute("INSERT INTO documents VALUES ('d', 'Doc Title')")
+    conn.execute("INSERT INTO documents (doc_key, title, is_latest) VALUES ('d', 'Doc Title', 1)")
     secs = {
         (sid, "Parent" if sid.endswith("b") else "", kinds.get(sid, "ok")) for _, sid, _ in chunks
     }
@@ -189,3 +189,32 @@ def test_embed_excludes_stub_chunks_from_semantic(ctx):
     assert result.counts["chunks"] == 1  # only the ok chunk embedded
     assert any("real prose" in t for t in seen)
     assert all("see boilerplate" not in t for t in seen)  # the stub never reached the embedder
+
+
+def test_embed_excludes_superseded_doc_versions(ctx):
+    # latest-only: a chunk under a superseded document version (is_latest=0) must never enter the
+    # semantic surface — retrieval is over the clean latest-only corpus. Upstream `index` already
+    # chunks latest-only, but `embed` enforces it too so it never depends on that distant invariant.
+    _seed_chunks(ctx)  # doc 'd' is_latest=1, chunks d/a + d/b
+    conn = db.connect(ctx.cfg.index_db)
+    conn.execute("INSERT INTO documents (doc_key, title, is_latest) VALUES ('old', 'Old Doc', 0)")
+    conn.execute(
+        "INSERT INTO doc_sections (section_id, doc_key, section_path, kind) "
+        "VALUES ('old/s', 'old', '', 'ok')"
+    )
+    conn.execute(
+        "INSERT INTO chunks (chunk_id, section_id, doc_key, part, text) "
+        "VALUES ('old/s', 'old/s', 'old', 0, 'superseded prose')"
+    )
+    conn.commit()
+    conn.close()
+    _record_index_ok(ctx)  # re-fingerprint: index.db now includes the superseded rows
+    seen: list[str] = []
+
+    def capture(texts):
+        seen.extend(texts)
+        return [[0.0] for _ in texts]
+
+    (result,) = Orchestrator([EmbedStage(embedder=Embedder("fake", "0", capture))]).run(ctx)
+    assert result.counts["chunks"] == 2  # only the two latest chunks
+    assert all("superseded prose" not in t for t in seen)  # superseded version never embedded

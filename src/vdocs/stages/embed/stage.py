@@ -146,7 +146,12 @@ def _read_chunks(index_db) -> tuple[list[str], list[str]]:  # type: ignore[no-un
 
     A3 (§8.3): **`stub` sections are excluded** — a pointer-only chunk ("[see boilerplate]") embeds
     to nothing useful, so it stays lexically findable in FTS but never enters the semantic surface.
-    `vectors.db` therefore holds fewer chunks than `index.db:chunks` by the stub count."""
+    `vectors.db` therefore holds fewer chunks than `index.db:chunks` by the stub count.
+
+    **Latest-only:** chunks under superseded document versions (`is_latest = 0`) are excluded — the
+    semantic surface mirrors the clean latest-only corpus that lexical search serves. Upstream
+    `index` already chunks latest-only, so this is currently a no-op guard; enforcing it here keeps
+    the stage honest if `index` ever retains superseded chunks (e.g. for version-diffing)."""
     conn = db.connect(index_db, read_only=True)
     try:
         rows = conn.execute(
@@ -154,7 +159,7 @@ def _read_chunks(index_db) -> tuple[list[str], list[str]]:  # type: ignore[no-un
             "FROM chunks c "
             "JOIN doc_sections s ON s.section_id = c.section_id "
             "JOIN documents d ON d.doc_key = c.doc_key "
-            "WHERE s.kind != 'stub' "
+            "WHERE s.kind != 'stub' AND d.is_latest = 1 "
             "ORDER BY c.chunk_id"
         ).fetchall()
     finally:
