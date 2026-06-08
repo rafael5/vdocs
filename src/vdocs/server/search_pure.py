@@ -20,16 +20,18 @@ _TOKEN = re.compile(r"[A-Za-z0-9_]+")
 # (The first three are UNINDEXED, so their weight is inert; kept for positional correctness since
 # FTS5 bm25() takes one weight per column in declaration order.)
 FTS_COLUMNS: tuple[str, ...] = (
-    "chunk_id", "section_id", "doc_key", "title", "section_path", "body",
+    "chunk_id", "section_id", "doc_key", "title", "doc_title", "section_path", "body",
 )  # fmt: skip
 
 # Per-column bm25 weights (higher = more influence on rank).
-# L1.1 finding (dev golden set): weighting *section* headings gives NO lift here — VistA section
-# titles are generic ("Installation", "Overview") and the answer is in the body, so aggressive
-# heading weights (8/4) regress and mild ones (2/1.5) are measured-neutral. Kept mild as a harmless
-# prior; the real lever for the doc-defining-token case (KAAJEE) is `doc_title` (L1.2), which is not
-# yet an FTS column. Re-tune once doc_title lands and the golden set grows (L4.2).
-FTS_WEIGHTS: dict[str, float] = {"title": 2.0, "section_path": 1.5, "body": 1.0}
+# L1.1 finding: weighting *section* headings (`title`/`section_path`) gives no lift here — VistA
+# section titles are generic and the answer is in the body — so those stay a mild neutral prior.
+# L1.2 adds `doc_title` (the document title), which carries the doc-defining token (e.g. "KAAJEE").
+# Sweep on the dev golden set picked doc_title=2.5: KAAJEE 0.0→0.43, mean nDCG@10 0.387→0.469;
+# heavier (≥4) over-promotes common title tokens ("VistA") and tanks `hwsc-rest`. Re-tune at L4.2.
+FTS_WEIGHTS: dict[str, float] = {
+    "doc_title": 2.5, "title": 2.0, "section_path": 1.5, "body": 1.0,
+}  # fmt: skip
 
 
 def fts_match_query(text: str) -> str:

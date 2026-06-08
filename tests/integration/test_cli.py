@@ -309,7 +309,8 @@ def _seed_index_for_ask(tmp_path):
           pkg_ns TEXT, is_latest INTEGER
         );
         CREATE VIRTUAL TABLE chunks_fts USING fts5(
-          chunk_id UNINDEXED, section_id UNINDEXED, doc_key UNINDEXED, title, section_path, body
+          chunk_id UNINDEXED, section_id UNINDEXED, doc_key UNINDEXED, title, doc_title,
+          section_path, body
         );
         """
     )
@@ -317,9 +318,10 @@ def _seed_index_for_ask(tmp_path):
         "INSERT INTO documents VALUES ('KAAJEE/dibr','KAAJEE:dibr','KAAJEE DIBR','KAAJEE','','',1)"
     )
     conn.execute(
-        "INSERT INTO chunks_fts (chunk_id, section_id, doc_key, title, section_path, body) "
-        "VALUES ('KAAJEE/dibr/intro','KAAJEE/dibr/intro','KAAJEE/dibr','Introduction','KAAJEE',"
-        "'KAAJEE is the Kernel Authentication and Authorization broker.')"
+        "INSERT INTO chunks_fts "
+        "(chunk_id, section_id, doc_key, title, doc_title, section_path, body) "
+        "VALUES ('KAAJEE/dibr/intro','KAAJEE/dibr/intro','KAAJEE/dibr','Introduction',"
+        "'KAAJEE DIBR','KAAJEE','KAAJEE is the Kernel Authentication and Authorization broker.')"
     )
     conn.commit()
     conn.close()

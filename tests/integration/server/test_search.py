@@ -20,7 +20,8 @@ def _build(index_db):
           pkg_ns TEXT, is_latest INTEGER
         );
         CREATE VIRTUAL TABLE chunks_fts USING fts5(
-          chunk_id UNINDEXED, section_id UNINDEXED, doc_key UNINDEXED, title, section_path, body
+          chunk_id UNINDEXED, section_id UNINDEXED, doc_key UNINDEXED, title, doc_title,
+          section_path, body
         );
         """
     )
@@ -32,13 +33,14 @@ def _build(index_db):
         ],
     )
     conn.executemany(
-        "INSERT INTO chunks_fts (chunk_id, section_id, doc_key, title, section_path, body) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO chunks_fts "
+        "(chunk_id, section_id, doc_key, title, doc_title, section_path, body) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
         [
-            ("CPRS/or_um/auth", "CPRS/or_um/auth", "CPRS/or_um", "Authentication", "OR",
-             "KAAJEE handles user authentication and single sign-on tokens."),
-            ("KAAJEE/dibr/intro", "KAAJEE/dibr/intro", "KAAJEE/dibr", "Introduction", "KAAJEE",
-             "KAAJEE is the Kernel Authentication and Authorization broker."),
+            ("CPRS/or_um/auth", "CPRS/or_um/auth", "CPRS/or_um", "Authentication", "OR User Manual",
+             "OR", "KAAJEE handles user authentication and single sign-on tokens."),
+            ("KAAJEE/dibr/intro", "KAAJEE/dibr/intro", "KAAJEE/dibr", "Introduction", "KAAJEE DIBR",
+             "KAAJEE", "KAAJEE is the Kernel Authentication and Authorization broker."),
         ],
     )  # fmt: skip
     conn.commit()

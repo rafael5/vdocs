@@ -75,7 +75,7 @@ smoke-test rig (verified: the KAAJEE doc and its golden target sections are pres
 | | L0.2 | Decide `relate`: re-run vs shelve graph | ✅ | **shelved** — graph not needed for lexical |
 | | L0.3 | Add `index`→`relate` ordering guard (if kept) | ⛔ | N/A — relate shelved |
 | **L1 — Lexical quality** | L1.1 | Field-weighted `bm25()` in `search.py` | ✅⚠️ | infra landed; heading weights give **no lift** — lever → L1.2 |
-| | L1.2 | Index `doc_title` into `chunks_fts` | ⬜ | build-time; `contract_ver` bump |
+| | L1.2 | Index `doc_title` into `chunks_fts` | ✅ | KAAJEE 0→0.43; **mean 0.387→0.469**; hwsc-rest ⚠️ |
 | | L1.3 | Glossary query expansion (`fts_match_query`) | ⬜ | needs registry term map (L1.3a) |
 | | L1.4 | Re-measure + record final L1 quality | ⬜ | vs nDCG@10 0.395 / KAAJEE 0.0 |
 | **L2 — Go CLI** | L2.1 | Go module + `modernc.org/sqlite` (FTS5), read-only open | ⬜ | no cgo |
@@ -180,6 +180,14 @@ query-time (zero rebuild). Measure each lever independently.
 - 2026-06-08 — **Baseline drift noted.** Dev `index.db` was rebuilt by the C1 oversized-chunk fixes
   after 0.395 was recorded; current dev baseline is **0.3874 / MRR 0.5167 / recall 0.50 /
   redundancy 0.0333**. KAAJEE = 0.0 (10 hits, none relevant — a real mis-ranking).
+- 2026-06-08 — **L1.2 landed (✅) — the lever worked.** Added a `doc_title` FTS column to
+  `chunks_fts` (`stages/index/stage.py`, schema + population from `documents.title`), bumped
+  `index.contract_ver` → 2, synced `search_pure.FTS_COLUMNS`, and re-indexed the **dev** lake
+  (8,036 chunks, seconds). TDD: integration test on a title-only token ("Guide") first. Updated 3
+  hand-built FTS fixtures (search/cli tests) to the 7-column schema. `make check` green (778 passed,
+  98.13% cov). **Measured (dev):** **KAAJEE 0.0 → 0.4278**, **mean nDCG@10 0.3874 → 0.4692**
+  (+21%), recall@10 0.50 → 0.7167, MRR 0.5167 → 0.5389. `doc_title` weight tuned to **2.5** by sweep
+  (≥4 over-promotes common title tokens — see Discovery).
 
 ### Discoveries
 - ⚠️ **2026-06-08 — weighting *section* headings gives no lexical lift on this corpus.** Sweep on the
@@ -191,6 +199,16 @@ query-time (zero rebuild). Measure each lever independently.
   column**. *Impact:* L1.1's value is the reusable weighting **infrastructure**, not a heading boost;
   the actual lever moves to **L1.2 (index `doc_title`)**, after which `doc_title` — not section
   `title` — should carry the weight. *Remediation:* mild neutral weights kept; re-tune in L1.2/L4.2.
+- ⚠️ **2026-06-08 — `doc_title` indexing regresses `hwsc-rest` (0.3726 → 0.2243), even unweighted.**
+  Adding `doc_title` to the FTS surface changes BM25 for *all* queries, and for
+  "How does VistA M call a REST web service via HWSC?" it lets docs with common tokens ("VistA",
+  "Web Service") in their **title** outrank the truly relevant XOBW sections. The doc_title weight
+  sweep (dev) shows the tradeoff: w=2.5 is the aggregate optimum (mean 0.4692, KAAJEE fixed, recall
+  0.7167) but `hwsc-rest` stays below its baseline; w≥4 tanks it to 0.0. *Impact:* a net-positive
+  change with one per-query regression — accepted for the big KAAJEE win + mean/recall lift, **flagged
+  to revisit.** *Remediation candidates:* (a) glossary/structured-filter help in L1.3 (expand
+  "HWSC"/"REST" so the right doc wins on body+path, not just title); (b) cap doc_title's contribution
+  for multi-token generic queries; (c) grow the golden set (L4.2) and re-tune. Tracked for L1.4.
 
 ### Risks
 - **Weights overfit the 6-query golden set.** *Mitigation:* prefer changes that help the *class*

@@ -167,6 +167,22 @@ def test_index_builds_documents_sections_entities(ctx):
         conn.close()
 
 
+def test_chunks_fts_indexes_doc_title_so_title_only_tokens_match(ctx):
+    # "Guide" appears only in the document title ("Install Guide") — never in a section title or
+    # body — so it is findable iff doc_title is its own FTS column (L1.2: doc-defining-token fix).
+    _seed(ctx)
+    (result,) = Orchestrator([IndexStage()]).run(ctx)
+    assert result.status == "ok"
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        hits = conn.execute(
+            "SELECT DISTINCT doc_key FROM chunks_fts WHERE chunks_fts MATCH 'Guide'"
+        ).fetchall()
+    finally:
+        conn.close()
+    assert hits and all(r[0] == "CPRS/or_3_566_ig" for r in hits)
+
+
 def test_index_reads_toc_depth_from_refs_yaml(ctx):
     # a bundle's refs.yaml toc_depth drives section toc_level (not the default)
     old, new = _seed(ctx)

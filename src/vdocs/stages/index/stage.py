@@ -70,7 +70,7 @@ CREATE TABLE chunks (
   text       TEXT NOT NULL
 );
 CREATE VIRTUAL TABLE chunks_fts USING fts5(
-  chunk_id UNINDEXED, section_id UNINDEXED, doc_key UNINDEXED, title, section_path, body
+  chunk_id UNINDEXED, section_id UNINDEXED, doc_key UNINDEXED, title, doc_title, section_path, body
 );
 CREATE TABLE entities (
   entity_id TEXT PRIMARY KEY, type TEXT, canonical_name TEXT, mention_count INTEGER
@@ -99,6 +99,9 @@ class IndexStage(Stage):
     requires = [TEXT_NORMALIZED, CONSOLIDATED, DOC_META_STAGED]
     produces = [INDEX_DOCUMENTS, INDEX_SECTIONS, INDEX_CHUNKS, INDEX_ENTITIES]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
+    # v2 (L1.2): chunks_fts gained a `doc_title` column (the doc-defining-token search fix). The
+    # bump folds into consumers' inputs_fp so a re-run rebuilds the FTS surface.
+    contract_ver = 2
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
@@ -112,7 +115,8 @@ class IndexStage(Stage):
         documents: list[tuple] = []
         sections: list[tuple] = []  # one row per heading — the anchor/structure map
         chunks: list[tuple] = []  # (chunk_id, section_id, doc_key, part, text) — search units
-        fts: list[tuple] = []  # (chunk_id, section_id, doc_key, title, section_path, body)
+        # fts cols: (chunk_id, section_id, doc_key, title, doc_title, section_path, body)
+        fts: list[tuple] = []
         ent_count: Counter = Counter()  # (entity_id, type, canonical) → mentions
         mentions: list[tuple] = []
 
@@ -124,6 +128,9 @@ class IndexStage(Stage):
                 staged.get("doc_id") or f"{meta.get('app_code', '')}:{doc_key.split('/')[-1]}"
             )
             is_latest = doc_id in latest_ids
+            # The document title is an FTS column (L1.2) so a doc-defining token (e.g. "KAAJEE")
+            # is findable on every chunk of the doc even when section titles/bodies are generic.
+            doc_title = str(meta.get("title", "") or staged.get("doc_title") or "")
             toc_depth = _toc_depth(body_path.parent / "refs.yaml")
             secs = ip.shred_sections(body, doc_key, toc_depth)
             word_count = int(staged.get("word_count") or ep.word_count(body))
@@ -165,6 +172,7 @@ class IndexStage(Stage):
                                 c.section_id,
                                 doc_key,
                                 unit.title,
+                                doc_title,
                                 unit.section_path,
                                 c.text,
                             )
@@ -182,7 +190,10 @@ class IndexStage(Stage):
                         for i, text in enumerate(ip.table_chunk_texts(caption, rows)):
                             tid = base if i == 0 else f"{base}#p{i + 1}"
                             chunks.append((tid, s.section_id, doc_key, i, text))
-                            fts.append((tid, s.section_id, doc_key, caption, s.section_path, text))
+                            fts.append(
+                                (tid, s.section_id, doc_key, caption, doc_title,
+                                 s.section_path, text)
+                            )  # fmt: skip
 
         def build(conn: sqlite3.Connection) -> None:
             conn.executescript(_SCHEMA)
@@ -206,8 +217,8 @@ class IndexStage(Stage):
             )
             conn.executemany(
                 "INSERT INTO chunks_fts "
-                "(chunk_id, section_id, doc_key, title, section_path, body) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "(chunk_id, section_id, doc_key, title, doc_title, section_path, body) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 fts,
             )
             conn.executemany(
