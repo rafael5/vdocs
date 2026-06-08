@@ -50,14 +50,16 @@ class Embedder:
 
 
 def _default_embedder() -> Embedder:
-    """The real backend: fastembed's ``BAAI/bge-m3`` (1024-dim, **8192-token** context — A1, §9a).
+    """The real backend: fastembed's ``nomic-ai/nomic-embed-text-v1.5`` (768-dim, **8192-token**
+    context — C1).
 
-    bge-m3 is the chosen long-context embedder: its 8k budget comfortably fits the structure-aligned
-    chunks (largest golden-set chunk ~5.7k tokens worst-case), so no chunk is silently truncated —
-    unlike the originally-planned ``bge-small-en-v1.5`` (512 tokens), which would have truncated the
-    back half of every large chunk. The model id+version+budget are static (so the fingerprint stays
-    cheap); the model itself loads lazily on the first ``embed`` call — a runtime dep
-    (``uv add fastembed``, Phase C1), not a test/`make check` dependency."""
+    A1 chose **bge-m3** for its 8k context, but fastembed's dense ``TextEmbedding`` API does not
+    serve bge-m3 (only via sentence-transformers/FlagEmbedding). nomic-embed-text-v1.5 is the
+    fastembed-native long-context (8k) embedder — same no-truncation property (the largest golden
+    chunk ~5.7k tokens « 8192), keeping the planned `uv add fastembed` toolchain. It requires a
+    **task prefix** on every input: the corpus side here uses ``search_document:`` (the query side
+    uses ``search_query:``, C2). The id+version+budget are static (cheap fingerprint); the model
+    loads lazily on first ``embed`` — a runtime dep, not a `make check` dependency."""
     state: dict = {}
 
     def embed(texts: list[str]) -> list[list[float]]:  # pragma: no cover - real backend
@@ -65,10 +67,11 @@ def _default_embedder() -> Embedder:
         if model is None:
             from fastembed import TextEmbedding
 
-            model = state["model"] = TextEmbedding("BAAI/bge-m3")
-        return [[float(x) for x in v] for v in model.embed(texts)]
+            model = state["model"] = TextEmbedding("nomic-ai/nomic-embed-text-v1.5")
+        prefixed = [f"search_document: {t}" for t in texts]
+        return [[float(x) for x in v] for v in model.embed(prefixed)]
 
-    return Embedder("BAAI/bge-m3", "1.0", embed, max_tokens=8192)
+    return Embedder("nomic-ai/nomic-embed-text-v1.5", "1.5", embed, max_tokens=8192)
 
 
 class EmbedStage(Stage):
