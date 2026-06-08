@@ -296,6 +296,11 @@ Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.p
   routines table (was invisible). **B3a (§8.2) de-weight globals:** `build_entity_index` caps
   low-signal types (globals) to **5** headline slots vs 25, full set stays queryable (974 globals in
   `index.db`). Semantic-boost de-weight is Phase C. TDD 5; `make check` 761.
+- 2026-06-07 — **Phase B APPLIED TO PROD** (maintainer-authorized). `DATA_DIR=~/data/vdocs run
+  --from normalize --to manifest --force` over all 1,449 docs, **0 errors**: boilerplate refs
+  649→**2,437**, `_shared/boilerplate/` **89** copies, `gold/glossary.md` **2,081** terms, **1,996**
+  table chunks (total 24,338→26,334), globals 25→**5** in the headline. Verified on disk. (In-place
+  prod rebuild required explicit auth — auto-denied on the first attempt.)
 
 ### Phase B summary (2026-06-07)
 
@@ -309,11 +314,16 @@ Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.p
 | extracted tables searchable | **+table chunks** (was invisible) |
 | globals in entity headline | 25 → **5** (still fully queryable) |
 
-**Not yet applied to prod** (`~/data/vdocs`): all of B is committed code + registries; the
-full-corpus apply (re-run prod normalize→manifest with the enriched registries) is a separate
-maintainer-authorized step (an in-place prod `--force` was auto-denied). Measured on throwaway
-`~/data/vdocs-bmeas` (safe to delete). **Gate reframed** (see ⚠️ Discovery): the golden-set lexical
-metric is blind to denoising; the lift is corpus single-sourcing + Phase-C semantic.
+**APPLIED TO PROD** (`~/data/vdocs`, 2026-06-07, maintainer-authorized): re-ran prod
+`normalize→manifest --force` with the enriched registries + current code across all **1,449 docs,
+0 errors**. Corpus-wide before→after: boilerplate refs **649 → 2,437** (3.8×); `_shared/boilerplate/`
+**0 → 89** materialized; `gold/glossary.md` **0 → 2,081** terms; searchable **table chunks 0 → 1,996**
+(total chunks 24,338 → 26,334); global entity headline **25 → 5** slots. consolidate 462 groups /
+relate 110,387 edges unchanged-shape. (This also brought prod to current code — A2b merge stays OFF
+so chunk structure is unchanged apart from the new table chunks; A2a/A3 are embed-only.) Throwaway
+`~/data/vdocs-bmeas` is now redundant (safe to delete). **Gate reframed** (see ⚠️ Discovery): the
+golden-set lexical metric is blind to denoising; the lift is corpus single-sourcing + Phase-C
+semantic.
 
 ### Notes
 - **Must run on the FULL corpus, not the golden set** — boilerplate/phrase/glossary are
