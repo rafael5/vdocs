@@ -1,0 +1,714 @@
+{
+  "rollup": {
+    "k": 10,
+    "labeled_queries": 18,
+    "total_queries": 19,
+    "mean_ndcg@k": 0.5232,
+    "mean_mrr": 0.5849,
+    "mean_recall@k": 0.6204,
+    "mean_redundancy@k": 0.0421,
+    "mode": "lexical (FTS5+BM25)"
+  },
+  "queries": [
+    {
+      "id": "kids-install-build",
+      "axis": "kids-install",
+      "n_judged": 4,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XOBW/xobw1_0ig/load-and-install-distribution",
+          "grade": 1
+        },
+        {
+          "rank": 2,
+          "section_id": "XU/krn_8_0_tm/kernel-1",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XOBW/xobw1_0ig/sample-kids-installation",
+          "grade": 2
+        },
+        {
+          "rank": 4,
+          "section_id": "XU/krn_8_0_tm/production-account-routines",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "CPRS/cprslmtm/print-a-list-of-package-components",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.231,
+      "mrr": 1.0,
+      "recall@k": 0.5
+    },
+    {
+      "id": "kids-delphi-components-install",
+      "axis": "kids-install",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XU/kdc1_0ig/4-de-install-any-previous-kernel-delphi-components-installed-for-delphi-v-4-5-or-6-required",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XU/kdc1_0ig/6-verify-the-clientserver-installation-of-the-kernel-delphi-components-recommended",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XU/kdc1_0ig/1-considerations-before-installing-the-kdc",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "XU/kdc1_0ig/5-run-the-kernel-delphi-components-installation-program-required",
+          "grade": 3
+        },
+        {
+          "rank": 5,
+          "section_id": "XU/kdc1_0ig/about-the-installation-procedures",
+          "grade": 2
+        }
+      ],
+      "ndcg@k": 0.4824,
+      "mrr": 0.25,
+      "recall@k": 1.0
+    },
+    {
+      "id": "hwsc-rest-from-vista-m",
+      "axis": "hwsc-rest",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XOBW/xobw1_0dg/parsing-xml-responses-rest",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XOBW/xobw1_0dg/timeouts-rest",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XOBW/xobw1_0dg/how-to-export-an-m-business-delegate-rest",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "XOBW/xobw1_0dg/regrestxobwlib-register-a-rest-service-definition",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XOBW/xobw1_0dg/automatic-retries",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.2243,
+      "mrr": 0.1111,
+      "recall@k": 0.3333
+    },
+    {
+      "id": "hwsc-install-privileges",
+      "axis": "hwsc-rest",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XOBW/xobw1_0ig/privilegesstaff-needed-to-install",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "XOBW/xobw1_0ig/load-and-install-distribution",
+          "grade": 2
+        },
+        {
+          "rank": 3,
+          "section_id": "XOBW/xobw1_0ig/enter-directory-for-xobw_1_0_bxxxml-file",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "XOBW/xobw1_0ig/cach\u00e9-error-5024-unable-to-copy-file",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XOBW/xobw1_0ig/sample-kids-installation",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.9804,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "kaajee-install-procedure",
+      "axis": "kaajee-auth",
+      "n_judged": 4,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "KAAJEE/kaajee_xu_8_791_dibrg/purpose",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "KAAJEE/kaajee_xu_8_791_dibrg/deployment-topology-targeted-architecture",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "KAAJEE/kaajee_xu_8_791_dibrg/vista-installation-procedure",
+          "grade": 3
+        },
+        {
+          "rank": 4,
+          "section_id": "KAAJEE/kaajee_xu_8_791_dibrg/timeline",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "KAAJEE/kaajee_xu_8_791_dibrg/pre-installation-and-system-requirements",
+          "grade": 1
+        }
+      ],
+      "ndcg@k": 0.4278,
+      "mrr": 0.3333,
+      "recall@k": 0.75
+    },
+    {
+      "id": "pharmacy-api-dispense",
+      "axis": "redundancy-probe",
+      "n_judged": 0,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "PSO/pso_7_0_p770_pharm_um_1/automatically-printing-fda-medication-guides-is-optional",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "MON/vista_monograph_0723_r/pharmacy-pharmacy-benefits-management-pbm",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "PSO/pso_7_0_p770_pharm_um_1/reprint-an-outpatient-rx-label",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "PSO/pso_7_0_p770_pharm_um_1/fda-medication-guide-printer-selection",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "MON/vista_monograph_0723_r/consolidated-mail-output-pharmacy-cmop",
+          "grade": 0
+        }
+      ]
+    },
+    {
+      "id": "fileman-add-field",
+      "axis": "fileman-dd",
+      "n_judged": 4,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XU/krn8_0p134/source-file-data-dictionary",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "CPRS/cprslmtm/how-to-edit-local-site-terms",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XU/krn8_0p134/index",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "FMDC/fmdc1_0gs/tfmfiler-adding-a-record",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "DI/fm22_2dg/introduction-15",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.0,
+      "mrr": 0.0,
+      "recall@k": 0.0
+    },
+    {
+      "id": "rpc-broker-client-call",
+      "axis": "rpc-broker",
+      "n_judged": 4,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XWB/xwb_1_1_dg_r/rpc-overview",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XWB/xwb_1_1_sm_r/how-does-it-all-work",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XWB/xwb_1_1_dg_r/broker-call-steps",
+          "grade": 3
+        },
+        {
+          "rank": 4,
+          "section_id": "MON/vista_monograph_0723_r/remote-procedure-call-broker-rpc",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XWB/xwb_1_1_dg_r/relationship-between-an-m-entry-point-and-an-rpc",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.3234,
+      "mrr": 0.3333,
+      "recall@k": 0.25
+    },
+    {
+      "id": "mailman-decnet-transmission",
+      "axis": "mailman-network",
+      "n_judged": 4,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XM/xm_8_0_netrefguide/revision-history",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XM/xm_8_0_netrefguide/2-enter-a-transmission-script-in-the-domain-file",
+          "grade": 3
+        },
+        {
+          "rank": 3,
+          "section_id": "XM/xm_8_0_netrefguide/setting-up-a-decnet-channel-for-mailman",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "XM/xm_8_0_netrefguide/index",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XM/xm_8_0_netrefguide/7-create-the-logincom-file",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.4835,
+      "mrr": 0.5,
+      "recall@k": 0.5
+    },
+    {
+      "id": "radiology-cancel-exam",
+      "axis": "radiology",
+      "n_judged": 2,
+      "hits": 8,
+      "redundancy@k": 0.2,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "RA/ra5_0um/cancel-an-exam-18",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "RA/ra5_0um/cancel-a-request",
+          "grade": 2
+        },
+        {
+          "rank": 3,
+          "section_id": "RA/ra5_0um/exam-deletion-360",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "RA/ra5_0um/index",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "RA/ra5_0um/add-exams-to-last-visit-6",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 1.0,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "pharmacy-release-signed-order",
+      "axis": "pharmacy-release",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "PSO/pso_7_0_p770_pharm_um_1/changes-to-releasing-orders-function---digitally-signed-orders-only",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "CPRS/cprsguium/how-does-cprs-show-a-digital-signature",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "PSO/pso_7_0_p770_pharm_um_1/changes-to-finishing-pending-orders-process---digitally-signed-orders-only",
+          "grade": 2
+        },
+        {
+          "rank": 4,
+          "section_id": "PSO/pso_7_0_p770_pharm_um_1/hash-counts-and-dea-certification",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "CPRS/cprslmtm/how-does-rdi-work",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.9429,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "tiu-unsigned-notes",
+      "axis": "tiu-notes",
+      "n_judged": 3,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "TIU/tiuum/all-my-unsigned-progress-notes",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "TIU/tiuum/index",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "TIU/tiuum/show-progress-notes-across-patients",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "TIU/tiuum/progress-notes-options",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "TIU/tiuum/list-notes-by-title",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.7453,
+      "mrr": 1.0,
+      "recall@k": 0.3333
+    },
+    {
+      "id": "vpr-allergy-data",
+      "axis": "vpr-domains",
+      "n_judged": 3,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "VPR/vpr_dg/allergyadverse-reaction-tracking-gmra-1",
+          "grade": 1
+        },
+        {
+          "rank": 2,
+          "section_id": "VPR/vpr_dg/allergyadverse-reaction-tracking-gmra",
+          "grade": 3
+        },
+        {
+          "rank": 3,
+          "section_id": "VPR/vpr_dg/vital-measurements-gmv",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "VPR/vpr_dg/allergies",
+          "grade": 2
+        },
+        {
+          "rank": 5,
+          "section_id": "MON/vista_monograph_0723_r/cprs-adverse-reaction-tracking-art",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.7142,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "lab-file60-audit",
+      "axis": "lab-audit",
+      "n_judged": 4,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "LR/lr_5_2_425_ps_ug/file-60-audit-tool-options",
+          "grade": 2
+        },
+        {
+          "rank": 2,
+          "section_id": "LR/lr_5_2_425_ps_ug/display-file-60-changes",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "LR/lr_5_2_425_ps_ug/send-extract-file-as-mail-message",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "LR/lr_5_2_425_ps_ug/laboratory-test-file-60-audit-tool-overview",
+          "grade": 3
+        },
+        {
+          "rank": 5,
+          "section_id": "LR/lr_5_2_425_ps_ug/delete-auditing-from-optional-fields",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.6444,
+      "mrr": 1.0,
+      "recall@k": 0.75
+    },
+    {
+      "id": "cprs-enter-immunization",
+      "axis": "cprs-gui",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "CPRS/cprsguium/deleting-an-immunizationskin-test-in-cprs",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "CPRS/cprsguium/editing-an-immunizationskin-test-in-cprs",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "CPRS/cprsguium/accessing-the-enter-immunization-screen-from-the-coversheet",
+          "grade": 3
+        },
+        {
+          "rank": 4,
+          "section_id": "CPRS/cprsguium/viewing-the-immunizationskin-test-status-in-cprs",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "CPRS/cprsguium/accessing-the-enter-immunizationskin-test-screen-from-the-reminder-dialogs",
+          "grade": 1
+        }
+      ],
+      "ndcg@k": 0.5276,
+      "mrr": 0.3333,
+      "recall@k": 1.0
+    },
+    {
+      "id": "vbecs-accept-order",
+      "axis": "vbecs-orders",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/collecting-workload-uc_15",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/navigation-how-to-generate-a-cprs-blood-bank-report",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/maintain-specimen",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "CPRS/cprsguium/ordering-blood-components-and-diagnostic-tests",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/options-that-require-vistalink",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.0,
+      "mrr": 0.0,
+      "recall@k": 0.0
+    },
+    {
+      "id": "lexicon-lookup",
+      "axis": "lexicon",
+      "n_judged": 2,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "LEX/lextm2_0/revised-may-23-2017",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "LEX/lextm2_0/infolexaiendate-icr-1597",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "LEX/lextm2_0/1597-expression-information--lexa",
+          "grade": 2
+        },
+        {
+          "rank": 4,
+          "section_id": "LEX/lextm2_0/variables-affecting-the-lookup-lexll",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "LEX/lextm2_0/lexvdt",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.417,
+      "mrr": 0.3333,
+      "recall@k": 1.0
+    },
+    {
+      "id": "hl7-security-keys",
+      "axis": "hl7-security",
+      "n_judged": 2,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "HL7/hl71_6sg/security-keys",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "XU/krn_8_0_tm/security-keys",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XM/xm_8_0_userguide/broadcast-messages",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "DI/fm22_2dg/difrom-completes-building-routines-of-package-components",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "PSJ/psj_5_0_p447_tm/option-security-keys",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.9173,
+      "mrr": 1.0,
+      "recall@k": 0.5
+    },
+    {
+      "id": "hwsc-web-service-manager",
+      "axis": "hwsc-manage",
+      "n_judged": 4,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XOBW/xobw1_0sg/hwsc-features",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XOBW/xobw1_0dg/role-of-hwsc",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XOBW/xobw1_0sg/using-web-service-manager",
+          "grade": 3
+        },
+        {
+          "rank": 4,
+          "section_id": "XOBW/xobw1_0dg/passing-input-parameters-to-web-services-soap",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XOBW/xobw1_0dg/processing-web-service-return-types-soap",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.3563,
+      "mrr": 0.3333,
+      "recall@k": 0.25
+    }
+  ]
+}

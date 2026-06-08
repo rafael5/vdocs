@@ -88,3 +88,141 @@ queries:
       PSO:phar_1_api_r0520 and PSA:phar_1_api_r0520 are near-identical. A good ranker should NOT
       return both as separate top-k hits (redundancy@k → 0); grade after the dev-lake build once
       section_ids are confirmed. Left unlabeled deliberately as the redundancy control.
+
+  # ════════════════════════════════════════════════════════════════════════════════════════════════
+  # L4.2 expansion (2026-06-08): +13 queries across the dev-lake shape axes, grounded in sections
+  # verified present + chunk-reachable in ~/data/vdocs-dev. Grades are content-based (read section
+  # titles, judged against the intent), NOT rank-based: 3=direct answer · 2=highly relevant · 1=related.
+  # ════════════════════════════════════════════════════════════════════════════════════════════════
+
+  # ── answerable-Q: fileman-dd (DI FileMan Developer's Guide) ────────────────────────────────────
+  - id: fileman-add-field
+    query: How do I add a new field to a FileMan file's data dictionary?
+    intent: Adding/defining fields in a FileMan file via the DD editor.
+    axis: fileman-dd
+    relevant:
+      - { section_id: DI/fm22_2dg/adding-fields-f, grade: 3 }
+      - { section_id: DI/fm22_2dg/adding, grade: 2 }
+      - { section_id: DI/fm22_2dg/adding-new-subentries-to-a-multiple, grade: 1 }
+      - { section_id: DI/fm22_2dg/assigning-a-location-for-fields-stored-within-a-global, grade: 1 }
+
+  # ── answerable-Q: rpc-broker (XWB RPC Broker Developer's Guide) ────────────────────────────────
+  - id: rpc-broker-client-call
+    query: How does a client application call an RPC through the RPC Broker?
+    intent: Steps a client takes to connect and invoke a remote procedure via XWB.
+    axis: rpc-broker
+    relevant:
+      - { section_id: XWB/xwb_1_1_dg_r/broker-call-steps, grade: 3 }
+      - { section_id: XWB/xwb_1_1_dg_r/c-connect-to-the-server, grade: 2 }
+      - { section_id: XWB/xwb_1_1_dg_r/c-create-broker-instances, grade: 2 }
+      - { section_id: XWB/xwb_1_1_dg_r/broker-security-enhancement-bse-overview, grade: 1 }
+
+  # ── answerable-Q: mailman-network (XM MailMan Network Reference Guide) ─────────────────────────
+  - id: mailman-decnet-transmission
+    query: How do I configure a DECnet transmission script for MailMan network mail?
+    intent: Setting up DECnet transmission/domain entries for network MailMan.
+    axis: mailman-network
+    relevant:
+      - { section_id: XM/xm_8_0_netrefguide/2-enter-a-transmission-script-in-the-domain-file, grade: 3 }
+      - { section_id: XM/xm_8_0_netrefguide/1-create-an-entry-for-the-decnet-protocol, grade: 2 }
+      - { section_id: XM/xm_8_0_netrefguide/components-of-network-mailman, grade: 1 }
+      - { section_id: XM/xm_8_0_netrefguide/avoiding-infinite-transmission-loops, grade: 1 }
+
+  # ── answerable-Q: radiology (RA Radiology User Manual) ─────────────────────────────────────────
+  - id: radiology-cancel-exam
+    query: How do I cancel a radiology exam or request?
+    intent: Cancelling an exam/request in the Radiology package.
+    axis: radiology
+    relevant:
+      - { section_id: RA/ra5_0um/cancel-an-exam-18, grade: 3 }
+      - { section_id: RA/ra5_0um/cancel-a-request, grade: 2 }
+
+  # ── answerable-Q: pharmacy-release (PSO Outpatient Pharmacy User Manual) ───────────────────────
+  - id: pharmacy-release-signed-order
+    query: How does releasing a digitally signed outpatient pharmacy order work?
+    intent: The release/finish flow for digitally signed orders in Outpatient Pharmacy.
+    axis: pharmacy-release
+    relevant:
+      - { section_id: PSO/pso_7_0_p770_pharm_um_1/changes-to-releasing-orders-function---digitally-signed-orders-only, grade: 3 }
+      - { section_id: PSO/pso_7_0_p770_pharm_um_1/changes-to-finishing-pending-orders-process---digitally-signed-orders-only, grade: 2 }
+      - { section_id: PSO/pso_7_0_p770_pharm_um_1/changes-to-releasing-orders-function--signature-alert, grade: 1 }
+
+  # ── answerable-Q: tiu-notes (TIU Clinical Coordinator & User Manual) ───────────────────────────
+  - id: tiu-unsigned-notes
+    query: How do I find and print my unsigned progress notes in TIU?
+    intent: Locating/printing a clinician's unsigned documents/progress notes.
+    axis: tiu-notes
+    relevant:
+      - { section_id: TIU/tiuum/all-my-unsigned-progress-notes, grade: 3 }
+      - { section_id: TIU/tiuum/all-my-unsigned-documents, grade: 2 }
+      - { section_id: TIU/tiuum/clinical-document-print-1, grade: 1 }
+
+  # ── answerable-Q: vpr-domains (VPR Developer's Guide) ──────────────────────────────────────────
+  - id: vpr-allergy-data
+    query: How does the Virtual Patient Record return allergy and adverse reaction data?
+    intent: The VPR allergy/adverse-reaction (GMRA) data domain.
+    axis: vpr-domains
+    relevant:
+      - { section_id: VPR/vpr_dg/allergyadverse-reaction-tracking-gmra, grade: 3 }
+      - { section_id: VPR/vpr_dg/allergies, grade: 2 }
+      - { section_id: VPR/vpr_dg/allergyadverse-reaction-tracking-gmra-1, grade: 1 }
+
+  # ── answerable-Q: lab-audit (LR Laboratory User Guide) ─────────────────────────────────────────
+  - id: lab-file60-audit
+    query: How do I audit changes to the Laboratory Test file (#60)?
+    intent: Using the File #60 audit tool in the Laboratory package.
+    axis: lab-audit
+    relevant:
+      - { section_id: LR/lr_5_2_425_ps_ug/laboratory-test-file-60-audit-tool-overview, grade: 3 }
+      - { section_id: LR/lr_5_2_425_ps_ug/file-60-audit-tool-options, grade: 2 }
+      - { section_id: LR/lr_5_2_425_ps_ug/manually-run-file-60-audit-reports, grade: 1 }
+      - { section_id: LR/lr_5_2_425_ps_ug/display-list-of-audited-fields, grade: 1 }
+
+  # ── answerable-Q: cprs-gui (CPRS GUI User Manual) ──────────────────────────────────────────────
+  - id: cprs-enter-immunization
+    query: How do I enter an immunization in the CPRS GUI?
+    intent: Entering immunizations from the coversheet/encounter form in CPRS.
+    axis: cprs-gui
+    relevant:
+      - { section_id: CPRS/cprsguium/accessing-the-enter-immunization-screen-from-the-coversheet, grade: 3 }
+      - { section_id: CPRS/cprsguium/accessing-the-enter-immunizationskin-test-screen-from-the-encounter-form, grade: 2 }
+      - { section_id: CPRS/cprsguium/accessing-the-enter-immunizationskin-test-screen-from-the-reminder-dialogs, grade: 1 }
+
+  # ── answerable-Q: vbecs-orders (VBECS Blood Bank User Guide) ───────────────────────────────────
+  - id: vbecs-accept-order
+    query: How do I accept or cancel a blood bank order in VBECS?
+    intent: Accepting/cancelling pending orders in VBECS.
+    axis: vbecs-orders
+    relevant:
+      - { section_id: VBECS/vbecs_2_4_1_user_guide/accept-orders-accept-an-order, grade: 3 }
+      - { section_id: VBECS/vbecs_2_4_1_user_guide/accept-orders-cancel-a-pending-order, grade: 2 }
+      - { section_id: VBECS/vbecs_2_4_1_user_guide/accept-orders-pending-order-list, grade: 1 }
+
+  # ── answerable-Q: lexicon (LEX Clinical Lexicon Technical Manual) ──────────────────────────────
+  - id: lexicon-lookup
+    query: How do I perform a Lexicon lookup with LEXA?
+    intent: Using the Lexicon lookup API/utility (LEXA).
+    axis: lexicon
+    relevant:
+      - { section_id: LEX/lextm2_0/2950-lexicon-lookup---lexa, grade: 3 }
+      - { section_id: LEX/lextm2_0/1597-expression-information--lexa, grade: 2 }
+
+  # ── answerable-Q: hl7-security (HL7 Package Security Guide) ────────────────────────────────────
+  - id: hl7-security-keys
+    query: What security keys does the HL7 package use?
+    intent: HL7 package security keys and FileMan access.
+    axis: hl7-security
+    relevant:
+      - { section_id: HL7/hl71_6sg/security-keys, grade: 3 }
+      - { section_id: HL7/hl71_6sg/va-fileman-access-codes, grade: 1 }
+
+  # ── answerable-Q: hwsc-manage (XOBW HWSC Systems Management Guide) ─────────────────────────────
+  - id: hwsc-web-service-manager
+    query: How do I manage web services with the HWSC Web Service Manager?
+    intent: Using the HWSC Web Service / Web Server Manager to register and check services.
+    axis: hwsc-manage
+    relevant:
+      - { section_id: XOBW/xobw1_0sg/using-web-service-manager, grade: 3 }
+      - { section_id: XOBW/xobw1_0sg/using-the-web-server-manager, grade: 2 }
+      - { section_id: XOBW/xobw1_0sg/hwsc-availability-checking, grade: 1 }
+      - { section_id: XOBW/xobw1_0sg/securing-a-web-service-using-http-basic-authentication, grade: 1 }

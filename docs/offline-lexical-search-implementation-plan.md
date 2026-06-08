@@ -86,7 +86,7 @@ smoke-test rig (verified: the KAAJEE doc and its golden target sections are pres
 | **L3 — Human corpus** | L3.1 | `publish` stage (md tree + INDEX + glossary) | ⬜ | from `consolidated/` |
 | | L3.2 | `push` to public docs repo | ⬜ | `vistadocs/vdl` |
 | **L4 — Quality gate** | L4.1 | Gate golden metrics in CI (floor) | ⬜ | regressions fail |
-| | L4.2 | Expand `golden-queries.yaml` → ~20–30 | ⬜ | trust weight-tuning |
+| | L4.2 | Expand `golden-queries.yaml` → 19 queries | ✅ | new ref **mean 0.523** (18 labeled); 2 hard 0.0 cases |
 | | L4.3 | Publish the quality claim | ⬜ | reproducible |
 
 **Suggested order:** L0 (quick) → L1 (defines the quality ceiling, mostly query-time) → L2 (the
@@ -332,10 +332,23 @@ human half of the original master plan, now the headline deliverable.
   reproducible quality statement.
 
 ### Changelog
-- *(none yet)*
+- 2026-06-08 — **L4.2 (done early, ✅).** Pulled forward before L1.3 so expansion is tuned on firmer
+  ground (per the dev-first plan). Grew `golden-queries.yaml` 6 → **19 queries** (+13), spanning the
+  dev-lake shape axes (FileMan DD, RPC Broker, MailMan network, Radiology, Pharmacy release, TIU
+  notes, VPR domains, Lab File-60 audit, CPRS GUI, VBECS orders, Lexicon, HL7 security, HWSC mgmt).
+  Every label verified **present + chunk-reachable** in `~/data/vdocs-dev` (41/41) and graded
+  content-first (read section titles vs intent; 3/2/1), not rank-first — no inflation. **New
+  reference (current L1.2 ranker, dev): mean nDCG@10 = 0.5232, MRR 0.5849, recall@10 0.6204** (18
+  labeled). This replaces the 6-query 0.4692 as the L1.3 baseline.
 
 ### Discoveries
-- *(none yet)*
+- **2026-06-08 — the expanded set surfaced 2 honest hard misses (ranker, not labels).**
+  `fileman-add-field` = 0.0 (the DI Developer's-Guide "adding-fields-f"/"adding" sections rank below
+  top-10; generic-titled DD sections from *other* docs win) and `vbecs-accept-order` = 0.0
+  (doc_title weighting floats VBECS to the top correctly, but the specific "accept-orders-*" sections
+  lose to other VBECS sections). Verified by inspecting the live top-10 — the labeled sections are
+  genuinely the right answers, just mis-ranked. *Impact:* concrete targets for L1.3 (query expansion)
+  and future tuning; they are the new "before" data points, kept un-inflated.
 
 ### Risks
 - **A small/biased golden set makes the gate meaningless or brittle.** *Mitigation:* L4.2 first;
