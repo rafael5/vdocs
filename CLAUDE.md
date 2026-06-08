@@ -18,8 +18,11 @@ developer can search **offline with zero ML dependencies**. Repo, import package
 Driven by the **go-forward plan** (with two frozen predecessors kept as record/background):
 
 - **[`docs/offline-lexical-search-plan.md`](docs/offline-lexical-search-plan.md)** — ⭐ **the active
-  plan.** Go-forward scope: lexical-search quality, the zero-dependency distributable search tool,
-  the human `publish`/`push` deliverable, and the quality gate. **Update it as work lands.**
+  plan** (*what/why*). Go-forward scope: lexical-search quality, the zero-dependency distributable
+  search tool, the human `publish`/`push` deliverable, and the quality gate.
+- **[`docs/offline-lexical-search-implementation-plan.md`](docs/offline-lexical-search-implementation-plan.md)**
+  — the *how/status* tracker (detailed L0–L4 steps, per-phase changelog/discoveries/risks). **Update
+  it as work lands** (TDD → `make check` → update tracker → commit, per step).
 - **[`docs/vdocs-implementation-plan.md`](docs/vdocs-implementation-plan.md)** — **frozen** spike
   execution record (per-phase status, discoveries, risks). See its 🏁 Closure section for the
   decisive embed-vs-lexical finding. Read for *why*; do not execute its C/D phases.

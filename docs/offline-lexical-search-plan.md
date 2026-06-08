@@ -1,5 +1,10 @@
 # Offline Lexical Search — Plan & Tracker
 
+> **The *how/status* execution tracker lives in**
+> [`offline-lexical-search-implementation-plan.md`](offline-lexical-search-implementation-plan.md)
+> (detailed L0–L4 steps, per-phase changelog/discoveries/risks/remediations/recommendations). This
+> document is the *what/why*.
+
 > **Successor to** [`vdocs-implementation-plan.md`](vdocs-implementation-plan.md), which is now
 > **closed/frozen** (see its 🏁 Closure section). That effort was a spike; its decisive finding —
 > *the all-or-nothing embedding/vector path is not worth its cost on this corpus* — set the
