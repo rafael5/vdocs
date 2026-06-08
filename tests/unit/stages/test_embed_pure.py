@@ -51,6 +51,53 @@ def test_assert_within_budget_accepts_injected_estimator():
         ep.assert_within_budget(["d/a"], ["whatever"], max_tokens=10, estimate=lambda _t: 11)
 
 
+# --- token-budget batching (OOM fix) -------------------------------------------------------------
+#
+# A fixed *item-count* batch OOMs the embedder: ONNX pads each batch to its longest member, so the
+# transient activation footprint scales with `len(batch) × longest_sequence`. A batch of 256 where
+# one chunk is ~2.5k tokens forces all 256 to that length → tens of GB. `token_batched` bounds the
+# *padded* footprint (`items × longest`) instead, so a long chunk shrinks its own batch.
+
+
+def test_token_batched_empty_yields_nothing():
+    assert list(ep.token_batched([], max_padded_tokens=100, max_items=10)) == []
+
+
+def test_token_batched_covers_all_items_in_order():
+    items = [f"t{i}" for i in range(10)]
+    out = list(ep.token_batched(items, max_padded_tokens=10, max_items=3, estimate=lambda _t: 1))
+    assert [x for b in out for x in b] == items  # order preserved, every item exactly once
+
+
+def test_token_batched_caps_by_item_count():
+    out = list(
+        ep.token_batched(["a"] * 7, max_padded_tokens=10_000, max_items=3, estimate=lambda _t: 1)
+    )
+    assert [len(b) for b in out] == [3, 3, 1]
+
+
+def test_token_batched_caps_by_padded_tokens():
+    # padded cost = items × longest. budget 200: ["100","100"]→2*100=200 ok; a third →3*100>200
+    items = ["100", "100", "100"]
+    out = list(ep.token_batched(items, max_padded_tokens=200, max_items=99, estimate=int))
+    assert [len(b) for b in out] == [2, 1]
+
+
+def test_token_batched_a_long_item_shrinks_its_batch():
+    # the 500-token item can't share a 500-budget batch with anything else (2*500 > 500)
+    items = ["10", "10", "500", "10"]
+    out = list(ep.token_batched(items, max_padded_tokens=500, max_items=99, estimate=int))
+    assert out == [["10", "10"], ["500"], ["10"]]
+
+
+def test_token_batched_lone_oversize_item_gets_its_own_batch():
+    # an item whose own estimate exceeds the budget still yields alone (never dropped/merged): the
+    # A1 gate already caps any chunk at the model's token limit, so it is bounded.
+    items = ["50", "9000", "50"]
+    out = list(ep.token_batched(items, max_padded_tokens=500, max_items=99, estimate=int))
+    assert out == [["50"], ["9000"], ["50"]]
+
+
 # --- A2a: contextual chunk headers (§9b) ---------------------------------------------------------
 
 

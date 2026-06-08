@@ -68,18 +68,35 @@ def assert_within_budget(
         )
 
 
-def batched(items: Iterable[str], size: int) -> Iterator[list[str]]:
-    """Yield successive ``size``-length batches of ``items`` (the last may be short). ``size <= 0``
-    yields a single batch — so an injected backend that prefers one call still works."""
+def token_batched(
+    texts: Iterable[str],
+    *,
+    max_padded_tokens: int,
+    max_items: int,
+    estimate: Callable[[str], int] = estimate_tokens,
+) -> Iterator[list[str]]:
+    """Yield batches bounded by their **padded** token footprint — ``len(batch) × longest member`` —
+    rather than a fixed item count.
+
+    The embedder pads every batch to its longest sequence before the forward pass, so transient
+    activation/attention memory scales with ``items × longest_len`` (and worse with length). A fixed
+    256-item batch therefore OOMs the moment one long chunk drags the whole batch up to its length
+    (the v1 bug: 256 × ~2.5k-token chunks ≈ tens of GB). Capping the padded footprint makes a long
+    chunk shrink its own batch instead. ``max_items`` is a secondary safety cap for the all-tiny
+    case. A single text whose own estimate exceeds ``max_padded_tokens`` still yields as its own
+    one-item batch (never dropped, never merged) — the A1 budget gate already caps any chunk at the
+    model's token limit, so it is bounded. Order is preserved and every text appears exactly once.
+    ``estimate`` is injectable (same conservative default as the budget gate)."""
     buf: list[str] = []
-    if size <= 0:
-        yield list(items)
-        return
-    for it in items:
-        buf.append(it)
-        if len(buf) == size:
+    buf_max = 0
+    for t in texts:
+        n = estimate(t)
+        new_max = max(buf_max, n)
+        if buf and (len(buf) >= max_items or (len(buf) + 1) * new_max > max_padded_tokens):
             yield buf
-            buf = []
+            buf, buf_max, new_max = [], 0, n
+        buf.append(t)
+        buf_max = new_max
     if buf:
         yield buf
 

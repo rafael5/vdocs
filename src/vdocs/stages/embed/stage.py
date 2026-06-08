@@ -81,9 +81,20 @@ class EmbedStage(Stage):
     produces = [VECTORS_DB]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
 
-    def __init__(self, embedder: Embedder | None = None, *, batch_size: int = 256) -> None:
+    def __init__(
+        self,
+        embedder: Embedder | None = None,
+        *,
+        max_batch_tokens: int = 8192,
+        max_batch_items: int = 64,
+    ) -> None:
         self._embedder = embedder  # None → the real fastembed default (lazy)
-        self._batch = batch_size
+        # Bound each embed batch by its *padded* footprint (items × longest member), not a fixed
+        # count — a fixed 256-item batch OOMs on long 8k-context chunks (see token_batched / the C1
+        # OOM fix). 8192 padded tokens keeps peak activation memory to ~1 GB for the corpus (max
+        # chunk ~2.5k tokens) and ~3 GB for a lone worst-case 8k chunk.
+        self._max_batch_tokens = max_batch_tokens
+        self._max_batch_items = max_batch_items
 
     def _emb(self) -> Embedder:
         return self._embedder or _default_embedder()
@@ -112,11 +123,15 @@ class EmbedStage(Stage):
         # A1 gate (§9a): refuse to build a vectors.db with silently-truncated chunks. Cheap
         # conservative estimate — runs before the model loads, so a sizing mismatch fails fast.
         ep.assert_within_budget(ids, texts, max_tokens=emb.max_tokens)
-        vectors: list[list[float]] = []
-        for batch in ep.batched(texts, self._batch):
-            vectors.extend(emb.embed(batch))
-        dim = ep.uniform_dim(vectors) if vectors else 0
-        _build_vectors_db(ctx.cfg.vectors_db, emb, dim, ids, vectors)
+        # Stream batch-by-batch into vectors.db (no list of every vector held at once): the embedder
+        # is fed token-budgeted batches and each batch's vectors are written as it returns.
+        batches = (
+            emb.embed(batch)
+            for batch in ep.token_batched(
+                texts, max_padded_tokens=self._max_batch_tokens, max_items=self._max_batch_items
+            )
+        )
+        dim = _build_vectors_db(ctx.cfg.vectors_db, emb, ids, batches)
         # counts are ints (§7.2); the model id+version are persisted in vectors.db:embedding_model
         return RunResult(counts={"chunks": len(ids), "dim": dim})
 
@@ -149,9 +164,15 @@ def _read_chunks(index_db) -> tuple[list[str], list[str]]:  # type: ignore[no-un
     return ids, texts
 
 
-def _build_vectors_db(vectors_db, emb: Embedder, dim: int, ids, vectors) -> None:  # type: ignore[no-untyped-def]
+def _build_vectors_db(vectors_db, emb: Embedder, ids, vector_batches) -> int:  # type: ignore[no-untyped-def]
     """Build `vectors.db` atomically (temp + ``os.replace``): the `embedding_model` meta row + a
-    sqlite-vec ``vec0`` ANN table keyed by `chunk_id`. dim 0 (empty corpus) ⇒ meta only, no vec."""
+    sqlite-vec ``vec0`` ANN table keyed by `chunk_id`. Returns the embedding ``dim``.
+
+    Streams ``vector_batches`` (an iterable of per-batch vector lists, in `ids` order) into the
+    table as they arrive — never materializing every vector at once. The ``vec0`` table needs the
+    dim up front, so it is created from the first batch; the `embedding_model` row is written at the
+    end with the final dim. An empty corpus (no batches) ⇒ meta only, dim 0, no vec table (semantic
+    search stays off)."""
     vectors_db.parent.mkdir(parents=True, exist_ok=True)
     tmp = vectors_db.parent / f".{vectors_db.name}.tmp"
     for p in (tmp, tmp.with_name(tmp.name + "-wal"), tmp.with_name(tmp.name + "-shm")):
@@ -161,18 +182,26 @@ def _build_vectors_db(vectors_db, emb: Embedder, dim: int, ids, vectors) -> None
         conn.enable_load_extension(True)
         sqlite_vec.load(conn)
         conn.enable_load_extension(False)
-        conn.execute("CREATE TABLE embedding_model (model TEXT, version TEXT, dim INTEGER)")
-        conn.execute("INSERT INTO embedding_model VALUES (?, ?, ?)", (emb.model, emb.version, dim))
-        if dim > 0:
-            conn.execute(
-                f"CREATE VIRTUAL TABLE vec_chunks USING vec0("
-                f"chunk_id TEXT PRIMARY KEY, embedding float[{dim}])"
-            )
+        id_iter = iter(ids)
+        dim = 0
+        for vectors in vector_batches:
+            bdim = ep.uniform_dim(vectors)
+            if dim == 0:
+                dim = bdim
+                conn.execute(
+                    f"CREATE VIRTUAL TABLE vec_chunks USING vec0("
+                    f"chunk_id TEXT PRIMARY KEY, embedding float[{dim}])"
+                )
+            elif bdim != dim:
+                raise ValueError(f"embedder returned non-uniform dims: {sorted({dim, bdim})}")
             conn.executemany(
                 "INSERT INTO vec_chunks(chunk_id, embedding) VALUES (?, ?)",
-                [(cid, sqlite_vec.serialize_float32(list(v))) for cid, v in zip(ids, vectors)],
+                [(next(id_iter), sqlite_vec.serialize_float32(list(v))) for v in vectors],
             )
+        conn.execute("CREATE TABLE embedding_model (model TEXT, version TEXT, dim INTEGER)")
+        conn.execute("INSERT INTO embedding_model VALUES (?, ?, ?)", (emb.model, emb.version, dim))
         conn.commit()
     finally:
         conn.close()
     os.replace(tmp, vectors_db)
+    return dim

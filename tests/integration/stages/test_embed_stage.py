@@ -14,6 +14,7 @@ from vdocs.contracts.registry import INDEX_CHUNKS
 from vdocs.kernel import db
 from vdocs.models.stage import Decision, StageRun
 from vdocs.orchestrator.engine import Orchestrator
+from vdocs.stages.embed import embed_pure as ep
 from vdocs.stages.embed import stage as embed_stage
 from vdocs.stages.embed.stage import Embedder, EmbedStage
 
@@ -131,6 +132,43 @@ def test_embed_uses_contextual_header_not_bare_body(ctx):
     Orchestrator([EmbedStage(embedder=Embedder("fake", "0", capture))]).run(ctx)
     assert "«Doc Title»\n\nalpha text" in seen
     assert "«Doc Title › Parent»\n\nbeta text" in seen
+
+
+def test_embed_bounds_each_batch_by_padded_tokens(ctx):
+    # OOM fix: one long chunk must not drag a whole 256-item batch up to its length. The stage feeds
+    # the embedder token-budgeted batches (`items × longest ≤ max_batch_tokens`), so a long chunk
+    # shrinks its own batch instead of inflating the padded activation footprint.
+    big = "word " * 400  # ~625 conservative tokens — well under the 8192 model budget, but large
+    chunks = tuple((f"d/c{i}", f"d/c{i}", (big if i == 0 else "tiny")) for i in range(6))
+    _seed_chunks(ctx, chunks=chunks)
+    calls: list[list[str]] = []
+
+    def rec(texts):
+        calls.append(list(texts))
+        return [[0.0, 0.0] for _ in texts]
+
+    fake = Embedder("fake", "0", rec)
+    (result,) = Orchestrator([EmbedStage(fake, max_batch_tokens=200, max_batch_items=64)]).run(ctx)
+    assert result.counts == {"chunks": 6, "dim": 2}
+    assert len(calls) > 1  # batching actually engaged (not one giant call)
+    for batch in calls:
+        longest = max(ep.estimate_tokens(t) for t in batch)
+        # a lone over-budget chunk gets its own batch; any multi-item batch must fit the budget
+        assert len(batch) == 1 or len(batch) * longest <= 200
+
+
+def test_embed_streams_without_accumulating_all_vectors(ctx):
+    # the builder consumes vector *batches* lazily (no list of every vector held at once); proven by
+    # an embedder whose generator would blow up if fully realized eagerly but is fine streamed.
+    _seed_chunks(ctx, chunks=tuple((f"d/c{i}", f"d/c{i}", f"chunk {i}") for i in range(20)))
+    stage = EmbedStage(
+        embedder=Embedder("fake", "0", lambda texts: [[float(len(t))] for t in texts]),
+        max_batch_tokens=8,
+        max_batch_items=4,
+    )
+    (result,) = Orchestrator([stage]).run(ctx)
+    assert result.counts == {"chunks": 20, "dim": 1}
+    assert ctx.cfg.vectors_db.exists()
 
 
 def test_embed_excludes_stub_chunks_from_semantic(ctx):

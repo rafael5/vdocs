@@ -15,3 +15,9 @@ This file is for **what shipped**. For the *why* behind decisions
 ### Changed
 
 ### Fixed
+
+- **`embed`**: stop OOM-killing the box on the full corpus. Batches are now bounded by their
+  *padded* token footprint (`items × longest member`) instead of a fixed 256-item count — one long
+  8k-context chunk no longer drags a whole batch up to its length (the cause of the ~20–25 GB
+  spikes). Vectors also stream into `vectors.db` batch-by-batch rather than accumulating every
+  vector in memory first.
