@@ -80,6 +80,9 @@ CREATE TABLE entity_mentions (
   doc_key   TEXT NOT NULL REFERENCES documents(doc_key),
   section_id TEXT NOT NULL
 );
+-- facet indices (LF.5): instant narrow-by-facet for focused search (perf only, no shape change)
+CREATE INDEX idx_documents_facets ON documents(is_latest, doc_type, app_code, pkg_ns);
+CREATE INDEX idx_entity_mentions_eid ON entity_mentions(entity_id);
 CREATE VIEW quality AS
   SELECT d.doc_key, d.doc_id, d.is_latest, d.word_count, d.section_count,
          (SELECT count(*) FROM entity_mentions em WHERE em.doc_key = d.doc_key) AS entity_mentions

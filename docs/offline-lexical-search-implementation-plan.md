@@ -87,11 +87,11 @@ smoke-test rig (verified: the KAAJEE doc and its golden target sections are pres
 | | L1.5e | Entity-type demotion (globals) | ⬜ | 2,359 globals dominate |
 | | L1.5f | Selective synonyms (test individually) | ⬜ | blanket failed (L1.3); per-entry |
 | **LF — Faceted search** | LF.1 | Prototype facet catalog + faceted query path | ✅ | `scripts/faceted_search_demo.py`; 26,923→238 |
-| | LF.2 | Audience registry (doc_type→audience) | ⬜ | technical/clinical/admin |
-| | LF.3 | Facet catalog API (`server/facets.py`) | ⬜ | counted facet values |
-| | LF.4 | Faceted query path (narrow→FTS-within) | ⬜ | reuses `search_pure` |
-| | LF.5 | SQLite indices on facet columns | ⬜ | at `index` build |
-| | LF.6 | Measure faceted vs open-ended precision | ⬜ | golden set |
+| | LF.2 | Audience registry (doc_type→audience) | ✅ | `registries/inventory/audiences.yaml` |
+| | LF.3 | Facet catalog API (`server/facets.py`) | ✅ | `facet_catalog()` |
+| | LF.4 | Faceted query path (narrow→FTS-within) | ✅ | `faceted_search()`, TDD (11 tests) |
+| | LF.5 | SQLite indices on facet columns | ✅ | added to `index` schema (next rebuild) |
+| | LF.6 | Measure faceted vs open-ended precision | ✅ | typeapp 0.523→0.551; granularity caveat |
 | **L2 — Faceted-first Go CLI** | L2.1 | Go module + `modernc.org/sqlite` (FTS5), read-only open | ⬜ | no cgo |
 | | L2.2 | Port ranker + facet layer (`query` pkg) | ⬜ | MATCH/weights + faceted filter |
 | | L2.3 | CLI: facet flags + content + open-ended fallback | ⬜ | `vdocs-search --type/--app/…` |
@@ -375,6 +375,25 @@ has. Each of the maintainer's 4 layers maps to existing data:
 - 2026-06-08 — **LF opened; LF.1 prototype done.** Built `scripts/faceted_search_demo.py` and verified
   the layered flow on the dev lake (26,923→238 chunks on two facets; hard open-ended cases solved
   structurally). Design recorded; L2 reshaped to faceted-first.
+- 2026-06-08 — **LF.2–LF.6 landed (real code, TDD).** `registries/inventory/audiences.yaml`
+  (doc_type→audience); `server/facets_pure.py` (narrow-clause + audience resolution, 5 unit tests) +
+  `server/facets.py` (`facet_catalog` + `faceted_search` + `default_audiences`, 6 integration tests);
+  facet indices added to the `index` schema (LF.5, perf-only, applies on next rebuild). `make check`
+  green (795 passed, 98.02% cov). **LF.6 measured** (`scripts/faceted_eval.py`, dev golden set,
+  ceiling = facet chosen from the answer): mean nDCG@10 open-ended **0.5232** → faceted **0.5513**
+  (typeapp) / **0.5292** (app-only). Big per-query wins where the answer is concentrated:
+  `hwsc-web-service-manager` 0.36→0.67, `vbecs` 0.0→0.22, `hl7` 0.92→0.98, `rpc` 0.32→0.41.
+
+### Discoveries
+- **2026-06-08 — facet *granularity* is the dial; nDCG under-credits faceting.** Strict
+  `doc_type+app` faceting gives the biggest lift but can **exclude valid cross-doc answers**
+  (`kids-install-build` 0.23→0.0 — its relevant sections span XU-TM *and* XOBW, which a single-doc
+  facet drops); package-only (`app`) is safer but smaller (+0.006). The aggregate nDCG lift is modest
+  because (a) the open-ended ranker is already decent on these queries and (b) nDCG penalises the
+  recall an over-narrow facet sacrifices. **Faceting's real value is precision + user control +
+  explainability + the 0.88% candidate-set collapse for focused retrieval — not the aggregate nDCG.**
+  Operating guidance: default facets to **package/audience level**, not single-doc. `fileman-add-field`
+  stays 0.0 even faceted — a *within-doc* ranking miss, orthogonal to faceting.
 
 ### Discoveries
 - **2026-06-08 — faceted-first is the better primary path for focused retrieval, and it needs no
