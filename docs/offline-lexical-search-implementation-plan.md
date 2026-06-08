@@ -78,6 +78,12 @@ smoke-test rig (verified: the KAAJEE doc and its golden target sections are pres
 | | L1.2 | Index `doc_title` into `chunks_fts` | ✅ | KAAJEE 0→0.43; **mean 0.387→0.469**; hwsc-rest ⚠️ |
 | | L1.3 | Glossary query expansion (`fts_match_query`) | ✅⚠️ | built+tested; **regresses → gated OFF** (opt-in only) |
 | | L1.4 | Re-measure + record final L1 quality | ✅ | shipped **0.523** (19-q) / KAAJEE 0→0.43 |
+| **L1.5 — Curated term signal** | L1.5a | Generate promote/demote triage worksheet | ✅ | `docs/l1.5-curation-worksheet.md` |
+| | L1.5b | Human triage (mark Decision cols) | ⬜ | **awaiting maintainer review** |
+| | L1.5c | Weighted-field stoplist (registry) | ⬜ | "guide" 48% of titles, etc. |
+| | L1.5d | Title normalization (strip boilerplate) | ⬜ | strip DIBRG/UM/version scaffolding |
+| | L1.5e | Entity-type demotion (globals) | ⬜ | 2,359 globals dominate |
+| | L1.5f | Selective synonyms (test individually) | ⬜ | blanket failed (L1.3); per-entry |
 | **L2 — Go CLI** | L2.1 | Go module + `modernc.org/sqlite` (FTS5), read-only open | ⬜ | no cgo |
 | | L2.2 | Port ranker (`query` pkg mirrors `search_pure`) | ⬜ | MATCH + weights |
 | | L2.3 | CLI (flags, human + `--json`, citations) | ⬜ | `vdocs-search` |
@@ -251,6 +257,62 @@ query-time (zero rebuild). Measure each lever independently.
   multi-term queries without losing recall.
 - Treat the glossary term map as a **maintained asset** fed by `discover`; it benefits both expansion
   and the human glossary deliverable (L3).
+
+---
+
+## Phase L1.5 — Curated term signal (human-in-the-loop)
+
+**Goal:** apply human judgement the metric can't supply — *which terms are noise* — to the weighted
+lexical fields. Motivated by the L1.2/L1.3 findings: field-weighting `doc_title` re-amplified
+corpus-ubiquitous terms (IDF normally demotes them), so common sense must prune them. **Without a
+human in the loop, common sense will not prevail.** Each curation is **measured against the 19-query
+golden set and kept only if it helps** (propose → measure → keep).
+
+**Grounding (prod, 462 latest docs):** "guide" is in **48%** of titles, "version" 37%, "manual" 35%,
+"installation" 25% — all carrying the L1.2 ×2.5 `doc_title` weight as pure noise. The DIBRG
+scaffolding "Deployment, Installation, Back-Out, and Rollback Guide" spans ~40 titles. Globals
+dominate entities (2,359 distinct / 28,599 mentions, led by `^TMP`, `^DIC`).
+
+**Steps**
+- **L1.5a — Triage worksheet (✅).** `docs/l1.5-curation-worksheet.md` — generated from prod: title
+  tokens (STOP/KEEP), boilerplate title fragments (STRIP), entity types (DEMOTE/KEEP), ambiguous
+  terms, selective-synonym candidates. Each row has a **Decision** column.
+- **L1.5b — Human triage.** Maintainer marks the Decision cells (the irreplaceable step). *Blocking.*
+- **L1.5c — Weighted-field stoplist.** Encode the STOP tokens as a `registries/` list applied to the
+  **weighted fields only** (title/doc_title), not the body (IDF already handles the body). *Gate:*
+  nDCG@10 ↑ or flat; `hwsc-rest`-class regressions recover.
+- **L1.5d — Title normalization.** Strip the STRIP fragments from the indexed `doc_title` so the
+  weighted field carries the discriminative core (package/topic). Re-index dev; measure.
+- **L1.5e — Entity-type demotion.** Down-weight/exclude `global` (and maybe `hl7_segment`) from the
+  ranking signal; keep file#/rpc/routine/option. Measure.
+- **L1.5f — Selective synonyms.** Test the worksheet's synonym candidates **one at a time** (blanket
+  expansion failed in L1.3); keep only entries that move the metric.
+
+### Changelog
+- 2026-06-08 — **L1.5a done; phase opened.** Generated the triage worksheet from the prod corpus
+  (title-token DF, title n-gram boilerplate, entity-type distribution, ambiguity + synonym
+  candidates). Slotted L1.5 into the tracker. **Awaiting maintainer triage (L1.5b)** before encoding.
+
+### Discoveries
+- **2026-06-08 — field-weighting re-introduces the ubiquitous-term problem BM25 IDF normally solves.**
+  In the body, IDF makes "guide"/"vista" inert; weighting `doc_title` ×2.5 (L1.2) manually amplifies
+  them again — the mechanism behind the `hwsc-rest` regression. *So curation must target the weighted
+  fields, not the body* — a precise, measured scope for the stoplist/normalization.
+
+### Risks
+- **Over-stopping kills real signal** (e.g. "installation" is noise in a title but a real query term
+  in the body). *Mitigation:* apply the stoplist to weighted fields only; never to the body; measure.
+- **Title normalization could strip a discriminative token** if a package name overlaps scaffolding.
+  *Mitigation:* strip only curated fragments (human-approved), re-index dev, diff hits.
+
+### Remediations
+- *(none yet — pending L1.5b)*
+
+### Recommendations for improvement
+- Make the triage worksheet a **recurring artifact** (`discover` can regenerate candidate lists as the
+  corpus grows), so curation is maintained, not one-shot.
+- Consider an FTS5 **custom tokenizer with a stoplist** for the weighted columns as the clean
+  long-term mechanism (vs. query/title rewriting).
 
 ---
 
