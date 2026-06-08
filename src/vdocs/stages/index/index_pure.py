@@ -209,6 +209,41 @@ def table_chunk_text(caption: str, rows: list[list[str]]) -> str:
     return "\n".join(lines)
 
 
+def table_chunk_texts(
+    caption: str,
+    rows: list[list[str]],
+    *,
+    target: int = CHUNK_TARGET_CHARS,
+    hard: int = OVERSIZED_CHUNK_CHARS,
+) -> list[str]:
+    """Render an extracted table into one or more searchable chunk texts (B3b). A table within
+    ``hard`` chars is a single chunk; a larger one is **windowed by rows** (each ≤ ~``target``,
+    never exceeding the embedder budget that `embed` asserts) with the **caption repeated** in every
+    window so each part is self-describing and no row is lost. Empty → ``[]``."""
+    full = table_chunk_text(caption, rows)
+    if not full.strip():
+        return []
+    if len(full) <= hard:
+        return [full]
+    cap = caption.strip()
+    base = len(cap) + 1 if cap else 0
+    windows: list[str] = []
+    cur: list[list[str]] = []
+    cur_len = base
+    for row in rows:
+        line = " | ".join(c.strip() for c in row)
+        if not line.strip():
+            continue
+        if cur and cur_len + len(line) + 1 > target:
+            windows.append(table_chunk_text(caption, cur))
+            cur, cur_len = [], base
+        cur.append(row)
+        cur_len += len(line) + 1
+    if cur:
+        windows.append(table_chunk_text(caption, cur))
+    return [w for w in windows if w.strip()]
+
+
 def _blocks(text: str) -> list[str]:
     """Split ``text`` into paragraph blocks separated by blank lines, keeping a fenced code block
     (``` / ~~~) atomic — its inner blank lines never break it (so a split never lands mid-fence)."""

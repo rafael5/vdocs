@@ -175,12 +175,14 @@ class IndexStage(Stage):
                 tables_dir = body_path.parent / "tables"
                 for s in secs:
                     for name, caption in ip.find_table_refs(s.text):
-                        text = ip.table_chunk_text(caption, _read_table_csv(tables_dir / name))
-                        if not text.strip():
-                            continue
-                        tid = f"{s.section_id}#{name}"
-                        chunks.append((tid, s.section_id, doc_key, 0, text))
-                        fts.append((tid, s.section_id, doc_key, caption, s.section_path, text))
+                        rows = _read_table_csv(tables_dir / name)
+                        # oversized tables are windowed by rows (#pN) so no chunk blows the
+                        # embedder token budget that `embed` asserts.
+                        base = f"{s.section_id}#{name}"
+                        for i, text in enumerate(ip.table_chunk_texts(caption, rows)):
+                            tid = base if i == 0 else f"{base}#p{i + 1}"
+                            chunks.append((tid, s.section_id, doc_key, i, text))
+                            fts.append((tid, s.section_id, doc_key, caption, s.section_path, text))
 
         def build(conn: sqlite3.Connection) -> None:
             conn.executescript(_SCHEMA)

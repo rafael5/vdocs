@@ -232,6 +232,27 @@ def test_table_chunk_text_handles_empty_caption_and_rows():
     assert ip.table_chunk_text("Cap", []) == "Cap"
 
 
+def test_table_chunk_texts_single_window_when_small():
+    rows = [["Term", "Def"], ["A", "alpha"]]
+    assert ip.table_chunk_texts("Cap", rows) == [ip.table_chunk_text("Cap", rows)]
+
+
+def test_table_chunk_texts_splits_oversized_tables_repeating_caption():
+    # a big table must be windowed so no single chunk blows the embedder token budget; the caption
+    # repeats in each window so every part is self-describing.
+    rows = [[f"ROW{i}", "x" * 50] for i in range(400)]  # well over the hard cap
+    windows = ip.table_chunk_texts("Acronyms", rows, target=2000, hard=4000)
+    assert len(windows) > 1
+    assert all(w.startswith("Acronyms") for w in windows)  # caption in every window
+    assert all(len(w) <= 4000 for w in windows)  # each within the hard cap
+    # no rows lost across windows
+    assert sum(w.count("ROW") for w in windows) == 400
+
+
+def test_table_chunk_texts_empty_is_no_windows():
+    assert ip.table_chunk_texts("", []) == []
+
+
 def test_chunk_units_default_is_one_unit_per_leaf_merge_gated_off():
     # MERGE_SMALL_LEAVES is off by default (Phase-C-gated): every searchable leaf stands alone,
     # identical to the pre-A2b per-leaf chunking — so the live lexical surface is unchanged.
