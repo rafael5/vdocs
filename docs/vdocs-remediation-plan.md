@@ -16,6 +16,49 @@
 > **best AI search**, and **best signal-to-noise** (optimal chunking + optimal denoising for the
 > richest, most substantive searchable text).
 
+> ### ⏱ Closure progress — updated 2026-06-08
+> The audit below (§3–§5, §13) is the **as-is snapshot from 2026-06-06** and is kept as the dated
+> baseline — it is *not* edited as phases land. **Live execution status is tracked in**
+> [`vdocs-implementation-plan.md`](vdocs-implementation-plan.md). Where this audit and the tracker
+> disagree, the tracker is current. State of the §12 closure plan as of this update:
+>
+> | Phase | Status | Notes |
+> |---|---|---|
+> | **0 — Golden dev set** | ✅ done | dev lake + stratified 70-doc golden set; lexical baseline nDCG@10 = **0.395** |
+> | **A — Substrate / chunking** | ✅ done | embedder + budget gate; context headers active; small-leaf merge built but **gated off** (revisit under hybrid in C); stubs lexical-only |
+> | **B — Denoising (full corpus)** | ✅ done — **applied to prod** | boilerplate 21→89 (refs 649→2,437), `gold/glossary.md` 2,081 terms, table chunks 0→1,996, globals headline 25→5 |
+> | **C — Semantic + hybrid** | 🟡 **in progress (C1 live)** | embedder is **`nomic-embed-text-v1.5` (768-d)**, not bge-m3 — fastembed's dense API doesn't serve bge-m3. `vdocs run --only embed` **running now** on `~/data/vdocs`; `vectors.db` building. C2 (ANN + RRF) not started |
+> | **D — MCP endpoint** | ⬜ not started | |
+> | **E — Human deliverable + quality gate** | ⬜ not started | `publish`/`push`/`fidelity` still unbuilt |
+>
+> **So the §1 executive summary below is partly superseded:** the chunk/embedder mismatch (§1.3, §9a)
+> is **resolved** (A1), denoising is **realized and applied to prod** (Phase B — registries no longer
+> thin), and `embed`/`vectors.db` are **being built now** (C1) rather than "empty / never run." The
+> MCP server (§11A) and the human `publish`/`push` deliverable remain the open headline gaps.
+
+> ### 🏁 Direction reset — 2026-06-08 (supersedes the closure plan's C/D)
+> This audit was the spike's *plan*; the spike has since **delivered its decision** and is closed.
+> The C1 embed run referenced just above **never finished** — it OOM-killed the machine via ONNX
+> process fan-out (~19 workers × ~1.78 GB ≈ 24.6 GB on a 16-core/27 GiB box), and, more structurally,
+> `embed` has **no incrementality**: any upstream doc add or silver-doc change forces a full
+> ~26k-chunk re-embed + `vectors.db` rebuild, on a corpus we do **not** control upstream. Set against
+> the **reframed goal — high-quality offline, human, no-AI search distributed to developers with no
+> agent to plug in** — the all-or-nothing embedding/vector path is **not worth its cost**.
+>
+> **Consequences for this document:**
+> - **Phase C (semantic + hybrid) is PARKED; Phase D (MCP / agent endpoint) is DESCOPED.** The §1,
+>   §2, §7, §11 framing of a *co-equal AI/MCP consumer* and the §12 critical path `0 → A → C → D` no
+>   longer hold. Lexical is now the primary surface, not one half of a hybrid.
+> - **The portability argument is the headline:** "distribute to developers with no agent" is a
+>   portability requirement a self-contained `index.db` (SQLite + FTS5, zero ML deps) satisfies and a
+>   500 MB-model surface does not. See the lexical-vs-vector comparison in the implementation plan's
+>   🏁 Closure section.
+> - **Read this audit for background only** where it assumes a semantic/MCP finish. The decisive
+>   finding lives in [`vdocs-implementation-plan.md`](vdocs-implementation-plan.md) (🏁 Closure +
+>   Phase C Discoveries, 2026-06-08); the **active go-forward plan** is
+>   [`offline-lexical-search-plan.md`](offline-lexical-search-plan.md) (lexical quality · the
+>   zero-dependency distributable search tool · `publish`/`push` · quality gate).
+
 ## Table of Contents
 
 1. [Executive Summary](#1-executive-summary)

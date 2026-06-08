@@ -2,20 +2,37 @@
 
 ## What this project is
 
-`vdocs` is the **greenfield v2 rewrite** of the `vista-docs` pipeline: it turns the VA VistA
-Document Library (DOCX/PDF manuals) into (1) a clean, human-browsable markdown corpus on GitHub
-and (2) a machine-discoverable knowledge base served over MCP (hybrid semantic + lexical +
-structured + graph search). Repo, import package, and CLI are all `vdocs`.
+`vdocs` turns the VA VistA Document Library (DOCX/PDF manuals) into a clean, human-browsable
+markdown corpus **and** a self-contained lexical search index (`index.db`, SQLite + FTS5) that any
+developer can search **offline with zero ML dependencies**. Repo, import package, and CLI are all
+`vdocs`.
+
+> **Direction reset (2026-06-08).** The original twin goal included a **semantic/vector + MCP agent**
+> surface. A spike proved the all-or-nothing embedding/vector path is **not worth its cost** on this
+> upstream-uncontrolled corpus (OOM via ONNX fan-out; full re-embed on every doc change). The project
+> is now **lexical-first, offline, human-consumer**. Semantic search is parked; the MCP/agent surface
+> is descoped.
 
 ## THE SOURCE OF TRUTH
 
-- **[`docs/vdocs-design.md`](docs/vdocs-design.md)** is the single source of architectural truth.
-  **If the code and that document disagree, the document is the bug report.** Read it before
-  changing anything structural.
-- **[`docs/fidelity-framework.md`](docs/fidelity-framework.md)** is the QA companion (per-document
-  migration fidelity, currency, template compliance, TOC integrity, retrieval-quality).
+Driven by the **go-forward plan** (with two frozen predecessors kept as record/background):
 
-Do not redesign in code. Propose design changes by editing the design doc first.
+- **[`docs/offline-lexical-search-plan.md`](docs/offline-lexical-search-plan.md)** — ⭐ **the active
+  plan.** Go-forward scope: lexical-search quality, the zero-dependency distributable search tool,
+  the human `publish`/`push` deliverable, and the quality gate. **Update it as work lands.**
+- **[`docs/vdocs-implementation-plan.md`](docs/vdocs-implementation-plan.md)** — **frozen** spike
+  execution record (per-phase status, discoveries, risks). See its 🏁 Closure section for the
+  decisive embed-vs-lexical finding. Read for *why*; do not execute its C/D phases.
+- **[`docs/vdocs-remediation-plan.md`](docs/vdocs-remediation-plan.md)** — the original *what/why*
+  audit. Background; superseded where it assumes a semantic/MCP finish.
+
+**If the code and the active plan disagree, the plan is the bug report.** Read it before changing
+anything structural; propose design changes by editing the plan first, not in code.
+
+The original design docs — `vdocs-design.md` (architecture) and `fidelity-framework.md` (QA
+companion: per-document migration fidelity, currency, template compliance, TOC integrity,
+retrieval-quality) — are now archived under [`docs/historical/`](docs/historical/) as **reference
+only** (superseded by the plans above where they disagree).
 
 ## How to build
 

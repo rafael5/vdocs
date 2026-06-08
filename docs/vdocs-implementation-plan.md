@@ -5,6 +5,54 @@
 > Update it as work lands. The remediation plan defines the phases (0, A–E); this tracks each phase's
 > stages, status, discoveries, risks, and changelog.
 
+## 🏁 Closure — spike succeeded, plan frozen (2026-06-08)
+
+> **This plan is CLOSED and frozen as a record.** It is no longer executed to its original C→D
+> finish. Go-forward work lives in **[`offline-lexical-search-plan.md`](offline-lexical-search-plan.md)**.
+
+The remediation effort this plan tracked was, in effect, a **spike** — and a spike's deliverable is a
+*decision*, not a feature set. It delivered: it subset the full VDL into a stratified gold dev corpus,
+stood up the entire 14-stage DAG end-to-end on it, recorded a lexical baseline (nDCG@10 = **0.395**),
+drove denoising to prod, and then produced the **decisive architectural finding** that closes it:
+
+> **Key discovery (full detail in Phase C Discoveries, 2026-06-08): the all-or-nothing
+> embedding/vector path is not worth its cost on this corpus.** It OOM-killed the machine via ONNX
+> process fan-out (~19 workers × ~1.78 GB ≈ 24.6 GB on a 16-core/27 GiB box), and — more
+> structurally — it has **no incrementality**: any upstream doc add or silver-doc change forces a
+> full ~26k-chunk re-embed + `vectors.db` rebuild, on a corpus we do **not** control upstream.
+
+That finding, set against the **reframed goal** — *high-quality offline, human, no-AI search,
+distributed to developers who have no agent to plug in* — flips the architecture decision:
+
+| | **Lexical (FTS5 + BM25)** | **Vector (embed → vectors.db)** |
+|---|---|---|
+| Footprint | SQLite built-in; no model/GPU | ~500 MB model + fastembed + onnxruntime + sqlite-vec |
+| Rebuild on corpus change | seconds–minutes, no inference | full re-embed of all chunks; OOM-prone |
+| Incrementality | cheap; trivially incremental | none — one new doc ⇒ whole-corpus rebuild |
+| Iteration | field weights / query shaping are *query-time* | every chunking tweak invalidates the index |
+| **Portability** | **one `index.db`, opened anywhere with stock `sqlite3`, zero ML deps** | recipient needs the full ML stack to query at all |
+
+For this corpus + goal, lexical is the better engineering trade and its residual quality gap is
+closable cheaply (field-weighted BM25 + doc-title/breadcrumb in FTS + glossary expansion) — and
+**portability is the headline**: "distribute to developers with no agent" *is* a portability
+requirement that a self-contained SQLite file satisfies and a 500 MB-model surface does not.
+
+**Disposition of the phases** (the Master Tracker rows are annotated to match):
+- **Kept / done & still load-bearing:** Phase 0 (golden set → now the lexical quality harness),
+  Phase B (denoising — helps lexical *and* human readability; applied to prod).
+- **Done but embed-motivated, now inert for lexical-only:** A1 (chunk-sizing to the embedder token
+  budget) and A2a (contextual headers — already noted to have *zero* lexical effect). Retained, not
+  load-bearing for the go-forward goal.
+- **⛔ Parked:** Phase C (semantic + hybrid) — see the 2026-06-08 Discovery.
+- **⛔ Descoped:** Phase D (MCP endpoint) — that is the *AI-agent* deliverable; out of scope for the
+  no-agent goal. Revisit only if an agent consumer ever materializes.
+- **➡️ Promoted to primary go-forward work** (tracked in the new plan): Phase E (human deliverable —
+  `publish`/`push` + the lexical quality gate) **plus** the lexical-quality thread and a
+  zero-dependency **distributable offline search tool** over `index.db`.
+
+Everything below this section is the **frozen execution record** of the spike — accurate as of
+2026-06-08, not maintained further.
+
 ## Introduction
 
 This plan executes the greenfield closure of the vdocs pipeline toward three outcomes — **best human
@@ -30,6 +78,7 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
 | 🟡 | In progress |
 | ⬜ | Not started |
 | ⏸️ | Blocked (see Notes) |
+| ⛔ | Parked / descoped at closure (see the 🏁 Closure section) |
 | ⚠️ | Flag — a discovery warrants a plan/implementation change (see Discoveries) |
 
 ---
@@ -42,20 +91,22 @@ the **full** corpus regardless, since it is a corpus-scale phenomenon.
 | | 0.2 | Commit `registries/dev-corpus.txt` + `golden-queries.yaml` | ✅ | |
 | | 0.3 | Stand up dev lake (`~/data/vdocs-dev`); run full DAG | ✅ | |
 | | 0.4 | Baseline lexical nDCG@10 on golden queries | ✅ | |
-| **A — Substrate / chunking** | A1 | Pick embedder (**bge-m3**, 8k) + chunk budget gate | ✅ | |
+| **A — Substrate / chunking** | A1 | Pick embedder (**nomic-embed-text-v1.5**, 8k; A1 chose bge-m3 — see ⚠️) + chunk budget gate | ✅ | ⚠️ |
 | | A2 | Context headers (active) + small-leaf merge (built, **gated off** → C) | ✅ | ⚠️ |
 | | A3 | `stub` chunks → lexical-only (exclude from semantic) | ✅ | |
 | **B — Denoising (full corpus)** | B1 | `discover` at scale; curate phrases + boilerplate; materialize `_shared/boilerplate/` | ✅ | ⚠️ |
 | | B2 | Materialize `gold/glossary.md` (PROMOTE) | ✅ | |
 | | B3 | De-weight globals; index extracted tables as data | ✅ | |
-| **C — Semantic + hybrid** | C1 | Add embedder dep; run `embed`; `vectors.db`; manifest flips semantic on | ⬜ | |
-| | C2 | ANN query + RRF fusion + full structured pre-filter | ⬜ | |
-| **D — MCP endpoint** | D1 | `server/mcp.py` + `vdocs serve-mcp` (Tools/Resources/Prompts) | ⬜ | |
-| | D2 | Promote machine-facing sidecars → `index.db` (contract_ver bump) | ⬜ | |
-| **E — Human + quality gate** | E1 | Build `publish` + `push` (GitHub markdown tree) | ⬜ | |
-| | E2 | Wire `fidelity`; §10.5 retrieval-quality gate; full `validate` gate | ⬜ | |
+| **C — Semantic + hybrid** | C1 | Add embedder dep; run `embed`; `vectors.db`; manifest flips semantic on | ⛔ | ⚠️ |
+| | C2 | ANN query + RRF fusion + full structured pre-filter | ⛔ | |
+| **D — MCP endpoint** | D1 | `server/mcp.py` + `vdocs serve-mcp` (Tools/Resources/Prompts) | ⛔ | |
+| | D2 | Promote machine-facing sidecars → `index.db` (contract_ver bump) | ⛔ | |
+| **E — Human + quality gate** | E1 | Build `publish` + `push` (GitHub markdown tree) | ➡️ moved | |
+| | E2 | Wire `fidelity`; §10.5 retrieval-quality gate; full `validate` gate | ➡️ moved | |
 
-**Critical path:** 0 → A → C → D. **Parallel:** B and E1 once Phase 0 stands up the dev lake.
+**Critical path (original):** 0 → A → C → D. **Superseded at closure (2026-06-08):** C/D parked·
+descoped; E + lexical-quality work moved to
+[`offline-lexical-search-plan.md`](offline-lexical-search-plan.md). See the 🏁 Closure section.
 
 ---
 
@@ -164,7 +215,7 @@ Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.p
 
 | ID | Step | Detail | Gate | Status | Flag |
 |----|------|--------|------|--------|------|
-| A1 | Embedder + chunk sizing | **bge-m3 chosen** (1024-d, 8192-tok); chunk constants verified within budget; `embed` asserts no-truncation per chunk (`embed_pure.assert_within_budget`) | No chunk exceeds model token limit | ✅ | |
+| A1 | Embedder + chunk sizing | A1 chose **bge-m3** (1024-d); **C1 switched to `nomic-embed-text-v1.5`** (768-d, 8192-tok) — fastembed's dense API doesn't serve bge-m3 (⚠️ Discoveries). Chunk constants verified within the 8k budget; `embed` asserts no-truncation per chunk (`embed_pure.assert_within_budget`) | No chunk exceeds model token limit | ✅ | ⚠️ |
 | A2 | Context headers + merge | Prepend `«doc_title › section_path»` to embedded text (**active**); merge tiny adjacent leaves under same parent up to TARGET (**built + tested, gated off** `MERGE_SMALL_LEAVES=False`) | Mean chunk substance ↑ (+53% w/ merge); hollow stays 0 | ✅ | ⚠️ |
 | A3 | Stub handling | `stub` chunks (referent-only) lexical-only, excluded from semantic | Stubs absent from `vectors.db` | ✅ | |
 
@@ -177,11 +228,17 @@ Reproduce: `DATA_DIR=~/data/vdocs-dev .venv/bin/python scripts/baseline_golden.p
   worst-case / 4.5k conservative = **54% of budget**, 0 of 7,189 chunks over), so the char constants
   were **kept** (they're B3 calibration targets, not truncation knobs). `embed` now enforces it per
   chunk via `embed_pure.assert_within_budget` (fails the build rather than truncating). Flag cleared.
-- **2026-06-07 — bge-m3 dep + dim must be verified at C1.** A1 only *decides* the model + gates chunk
-  size; it does **not** install `fastembed` or run `embed`. C1 must confirm fastembed actually serves
-  `BAAI/bge-m3` (model id, lazy load) and that `vectors.db` is built at **dim 1024** (up from the old
-  384 — ~2.7× vector storage; `embedding_model` row carries model/version/dim). The default
-  `Embedder` advertises `BAAI/bge-m3 : 1.0`, `max_tokens=8192`.
+- ⚠️ **2026-06-07 — embedder switched bge-m3 → `nomic-ai/nomic-embed-text-v1.5` at C1 (plan-impacting).**
+  A1 decided **bge-m3** (1024-d) and only *gated* chunk size — it did not install fastembed or run
+  `embed`. At C1 (commit `41514dd`) we found **fastembed's dense `TextEmbedding` API does not serve
+  bge-m3** (only via sentence-transformers/FlagEmbedding), so to keep the planned `uv add fastembed`
+  toolchain the default `_default_embedder` switched to **`nomic-ai/nomic-embed-text-v1.5`** — the
+  fastembed-native long-context (8192-tok) embedder. Consequences: **`vectors.db` is dim 768, not
+  1024** (still ~2× the old 384); the model needs a **task prefix** on every input — the corpus side
+  uses `search_document:` (C1), the query side uses `search_query:` (C2); same no-truncation property
+  (largest golden chunk ~5.7k tok « 8192). The `embedding_model` row carries
+  `nomic-ai/nomic-embed-text-v1.5 : 1.5 : 768`. See `stages/embed/stage.py:_default_embedder`. *Flag
+  on A1 + C1 rows; the original bge-m3 1024-d expectation is superseded.*
 - ⚠️ **2026-06-07 — A2b small-leaf merge regresses the *lexical* baseline → GATED OFF pending C.**
   Measured on the dev lake (merge ON): mean chunk substance **+53%** (1769→2703 chars), redundancy@10
   **0.017→0.0**, chunks 7,189→4,708 — but lexical **nDCG@10 0.395→0.223** / recall@10 0.50→0.367.
@@ -336,24 +393,136 @@ semantic.
 
 **Goal:** turn on semantic search and fuse it with lexical/structured via RRF.
 
+> ⛔ **PARKED (2026-06-08) — plan-changing.** On this corpus the embed/vector path costs more
+> than it returns for the *actual* near-term goal (high-quality **offline, human, no-AI** search,
+> distributed to developers with no agent to plug in). Two compounding findings drove the call:
+> a **process-fan-out OOM that killed the whole machine overnight**, and **no incrementality —
+> every upstream doc add/change forces a full ~26k-chunk re-embed + `vectors.db` rebuild** on a
+> corpus we do **not** control upstream. See the 2026-06-08 Discovery. **Pivot: lexical-first**
+> (field-weighted BM25 + doc-title/breadcrumb in FTS + glossary query expansion). Revisit a
+> *lightweight static-embedding* surface only if a measured golden-query gap demands it.
+
 | ID | Step | Detail | Gate | Status | Flag |
 |----|------|--------|------|--------|------|
-| C1 | Embed | `uv add` the chosen model; run `embed`; populate `vectors.db`; `manifest` flips `capabilities.semantic` on | `vectors.db` built; semantic=true | ⬜ | |
-| C2 | Hybrid retrieval | Vector ANN over `vec_chunks` + **RRF fusion** with lexical; structured pre-filter as WHERE | hybrid nDCG@10 ≥ lexical baseline | ⬜ | |
+| C1 | Embed | `uv add fastembed`; run `embed`; populate `vectors.db` (dim 768); `manifest` flips `capabilities.semantic` on | `vectors.db` built; semantic=true | ⛔ PARKED | ⚠️ |
+| C2 | Hybrid retrieval | Vector ANN over `vec_chunks` + **RRF fusion** with lexical; structured pre-filter as WHERE | hybrid nDCG@10 ≥ lexical baseline | ⛔ PARKED | |
 
 ### Discoveries
-- *(none yet)*
+- ⚠️⚠️ **2026-06-08 — PLAN-CHANGING: the heavyweight embed/vector path is not worth its cost on
+  this corpus; Phase C semantic+hybrid is PARKED, pivot to lexical-first.** Two compounding findings
+  from the live prod embed run:
+
+  **(1) A process-fan-out OOM killed the entire machine overnight — distinct from the b1c5c2c
+  per-batch fix.** The Jun-8 live run (`vdocs run --only embed` on `~/data/vdocs`, ~26,179 chunks)
+  kept climbing past the "fixed" ~5.3 GB single-worker peak and at **01:44:31** the kernel
+  OOM-killer fired. Root cause is **not** per-batch padding (that *is* fixed) but **fastembed /
+  ONNX-Runtime process fan-out**: a single OOM dump shows **19 `python` worker processes** (≈ one
+  per core on the **16-core** box), **each independently resident at ~1.78 GB RSS** (model weights +
+  ONNX runtime loaded per process), summing to **~24.6 GB of `python`** against **27 GiB RAM + ~2 GiB
+  swap**. The kernel fired the OOM-killer **9 times** and SIGKILLed **14 processes** — the cascade
+  went *beyond* embed into the user session itself (`systemd`/`sd-pam`/VS Code/`codex`), so the whole
+  `claude` task died and **`vectors.db` was never materialized**. The b1c5c2c fix bounds *one*
+  worker's padded batch; it does nothing about *N* workers each loading the full model. A safe
+  unattended run would need an explicit cap (ONNX `intra_op` / `OMP_NUM_THREADS` + fastembed
+  `parallel=1` / single-process) — **but see (2) before investing.**
+
+  **(2) `embed` has no incrementality — every corpus change forces a FULL re-embed + `vectors.db`
+  rebuild.** `EmbedStage.run` reads *all* latest non-stub chunks, re-embeds the **entire** corpus,
+  and atomically rebuilds `vectors.db` from scratch (temp + `os.replace`); there is no per-chunk
+  delta. Its SKIP/run decision is the cheap input fingerprint of `index.db:chunks`, which is **just
+  the row count** (`rows:{N}`, `kernel/fingerprint.py`). Consequences:
+  - **Fetch one new VDL doc — or any silver normalize/chunking change that adds/removes/splits
+    chunks — re-embeds all ~26,179 chunks** (the heavy, OOM-prone, multi-GB, tens-of-minutes job
+    above). One document ⇒ the whole corpus.
+  - **Same-count text edits silently skip** (the cheap fingerprint is blind to content) → stale
+    vectors unless `--force` / `--verify` (a correctness footgun in its own right).
+  - The VDL is a **large upstream corpus we do NOT control** — docs are added/revised on the VA's
+    cadence, so this full-rebuild cost is **recurring, not one-time**.
+  - It also **throttles iteration on the cheaper, higher-leverage lexical/structural/chunking work**:
+    every chunking tweak invalidates the *entire* `vectors.db`, so the full embed cost is re-paid on
+    each experiment — directly opposing rapid lexical optimization.
+
+  **Decision (plan change).** The actual near-term goal is **high-quality offline, human, no-AI
+  search distributed to developers who have no agent to plug in** — not agent/semantic retrieval.
+  For *that* goal the embed/vector cost (CPU fan-out OOM risk + full-corpus rebuild on every upstream
+  change + iteration drag) is **not justified**. **Park C1/C2.** Pivot to **lexical-first**:
+  field-weighted BM25 + doc-title/breadcrumb indexed in `chunks_fts` + glossary query expansion —
+  all rebuild in **seconds**, cannot OOM, and are well-matched to expert humans searching technical
+  VistA docs (exact-token strength; the human reformulates, the agent can't). Revisit a *lightweight
+  static-embedding* surface (e.g. `model2vec` — tens of MB, CPU-instant, no process fan-out, no
+  transformer inference) **only if** a measured golden-query gap proves lexical insufficient — never
+  the heavyweight fastembed/nomic path on this corpus. *Supersedes the Phase C goal; C1/C2 parked.*
+- ⚠️ **2026-06-07 — embedder is `nomic-ai/nomic-embed-text-v1.5` (768-d), not bge-m3 (1024-d).**
+  fastembed's dense `TextEmbedding` API doesn't serve bge-m3, so C1 (commit `41514dd`) switched the
+  default backend to fastembed-native nomic-embed-text-v1.5 (8192-tok context). `vectors.db` is built
+  at **dim 768**; every input is task-prefixed (`search_document:` corpus side / `search_query:` query
+  side, C2). Full detail + rationale in Phase A Discoveries (the A1 entry). *Tracker reconciled:
+  A1/C1 rows + details updated.*
+- **2026-06-07 — embed OOM fixed before the first real run.** The fixed `batch_size=256` made
+  fastembed/ONNX pad every batch to its longest member, so transient memory scaled with
+  `items × longest_seq` — one ~2.5k-token chunk dragged all 256 up and allocated ~20-25 GB, OOM-killing
+  the box (and the VSCode terminal cgroup) twice with no `vectors.db` produced. Fix (`b1c5c2c`, landed
+  on master): `embed_pure.token_batched` bounds the *padded* footprint (`items × longest ≤
+  max_batch_tokens=8192`, `max_batch_items=64`) and `_build_vectors_db` streams vectors batch-by-batch
+  instead of accumulating them. Measured peak on the full-corpus run: **~5.3 GB RSS** (model + ONNX
+  runtime), far under the 27 GB box. *No plan change; unblocks C1.*
+- **2026-06-08 — the A1 budget gate worked: it caught two oversized-chunk classes before `vectors.db`
+  was written, forcing index-side fixes.** Running `embed` on prod, `assert_within_budget` (the A1
+  no-truncation gate) failed the build *correctly* rather than silently truncating — twice, on chunks
+  the chunker had emitted whole because they had no splittable boundaries: (1) a **21,518-token B3b
+  glossary table chunk** (a single big extracted table emitted as one chunk) → fixed by `table_chunk_texts`
+  windowing a table by rows, caption repeated per `#pN` window, no row lost (`d5a6169`); (2) a **~35k-char
+  (~11k-token) section with an *unextracted* inline HTML `<table>`** — one block, no blank-line
+  boundaries, so paragraph windowing left it whole → fixed by a final `_split_long` guarantee pass
+  (line-split, then char-split a single enormous line) so no window exceeds `hard` (`d91e34d`). Also
+  tightened the embed query to `AND d.is_latest = 1` so the semantic surface mirrors the latest-only
+  lexical corpus instead of leaning on the upstream `index` invariant (`2a994c7`, no-op on current prod
+  — all 26,179 non-stub chunks are already `is_latest=1`). *Validates the A1 gate design; no plan change.*
 
 ### Risks
+- 🔴 **REALIZED (2026-06-08) — embed process-fan-out OOM.** ~19 ONNX/fastembed workers × ~1.78 GB
+  each ≈ 24.6 GB on a 27 GiB box → OOM-killer took down the whole session. *Mitigation if ever
+  un-parked:* cap workers/threads (`parallel=1`, `OMP_NUM_THREADS`), run single-process, watch RSS.
+  See the 2026-06-08 Discovery.
+- 🔴 **REALIZED (2026-06-08) — full-corpus re-embed on every upstream change.** No incrementality;
+  fingerprint is chunk row count. One new/changed doc ⇒ rebuild all of `vectors.db`. *Mitigation:*
+  parked — lexical-first needs no rebuild. A delta-embed keyed on per-chunk content hash would be a
+  prerequisite to ever un-parking.
 - **RRF weighting/`k` tuning** under-/over-weights a mode. *Mitigation:* tune against the golden query set; report per-mode + fused nDCG.
-- **Embedding throughput** on the full corpus (24k+ chunks) with an 8k model. *Mitigation:* batch; run on dev lake first; cache.
 
 ### Changelog
-- *(none yet)*
+- 2026-06-07 — **C1 started (🟡).** Landed the embed OOM fix (`b1c5c2c`) on master, then ran
+  `vdocs run --only embed` on the full prod lake (`~/data/vdocs`, 26,923 chunks / 744 stubs →
+  ~26,179 embed-eligible). First run downloads `nomic-ai/nomic-embed-text-v1.5` (~hundreds of MB) then
+  embeds; peak ~5.3 GB RSS (OOM fix holds). Reconciled the embedder notes (bge-m3 → nomic, dim 768).
+  `vectors.db` build + `manifest` semantic flip + verification pending. *(updated to ✅ on verify.)*
+- 2026-06-08 — **C1 oversized-chunk fixes + live embed run.** The A1 budget gate fired on prod and
+  caught two unsplittable oversized chunks before any vectors were written (see Discoveries
+  2026-06-08): fixed B3b table-chunk row-windowing (`d5a6169`) and a final `_split_long` guarantee pass
+  for blank-line-less blocks / giant inline HTML tables (`d91e34d`), and tightened the embed query to
+  latest-only (`2a994c7`). `make check` green across all three (765 passed). With chunks now provably
+  ≤ budget, **`vdocs run --only embed` is running live on `~/data/vdocs`** (as of this update ~38 min
+  in, ~10 GB RSS, `vectors.db` not yet materialized — fastembed streams and renames on completion).
+  Still 🟡: flips to ✅ once `vectors.db` is built, `manifest` reports `semantic_available=1`, and the
+  vector count is verified against the 26,179 embed-eligible chunks.
+- 2026-06-08 — **C1/C2 PARKED (⛔) — plan change.** The live prod embed run never finished: at
+  **01:44:31** the kernel OOM-killer fired (process fan-out — ~19 workers × ~1.78 GB ≈ 24.6 GB on a
+  16-core / 27 GiB box), SIGKILLing 14 processes and cascading into the user session; `vectors.db`
+  was never written. Combined with the structural finding that `embed` re-embeds the **entire**
+  ~26k-chunk corpus + rebuilds `vectors.db` on **any** upstream doc/chunk change (no incrementality,
+  row-count fingerprint), the embed/vector path is judged **not worth its cost** for the offline,
+  human, no-AI search goal. Phase C semantic+hybrid is **parked**; work pivots to **lexical-first**
+  (field-weighted BM25 + doc-title/breadcrumb FTS + glossary query expansion). Full rationale +
+  numbers in the 2026-06-08 Discovery. *No `vectors.db` shipped; `manifest` semantic stays off.*
 
 ### Notes
 - `embed` already skips gracefully without `fastembed` (preflight SKIP). C1 is gated by A1 (chunk
   sizing) — do not run embed until A1 lands.
+- **⛔ C1/C2 parked as of 2026-06-08** (see Discoveries/Changelog). The embed code, the A1 budget
+  gate, and the b1c5c2c per-batch fix all stay in-tree and correct — parking is a *cost/sequencing*
+  decision for this corpus + goal, not a defect. Un-parking prerequisites: (1) worker/thread cap to
+  kill the fan-out OOM, **and** (2) incremental delta-embed keyed on per-chunk content hash so an
+  upstream change doesn't rebuild the whole `vectors.db`.
 
 ---
 
