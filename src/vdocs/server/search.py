@@ -17,20 +17,25 @@ from vdocs.kernel import db
 from vdocs.server import ids
 from vdocs.server import search_pure as sp
 
-# 0-based column index of `body` in the chunks_fts virtual table — the snippet() target column.
-_BODY_COL = 5
+# 0-based column index of `body` in chunks_fts (the snippet() target) — single-sourced from the
+# column order in `search_pure` so it can't drift from the FTS schema.
+_BODY_COL = sp.FTS_COLUMNS.index("body")
+
+# Field-weighted bm25 (L1.1): a doc-defining token in `title`/`section_path` outranks the same token
+# buried in `body`. Built once from the single-source column order/weights in `search_pure`.
+_BM25 = sp.bm25_expr("chunks_fts")
 
 _SELECT = """
 SELECT f.chunk_id, f.section_id, f.doc_key, f.title AS section_title,
        snippet(chunks_fts, {body}, '[', ']', ' … ', 16) AS snippet,
-       bm25(chunks_fts) AS bm25,
+       {bm25} AS bm25,
        d.doc_id, d.title AS doc_title, d.app_code, d.doc_type, d.pkg_ns
 FROM chunks_fts f
 JOIN documents d ON d.doc_key = f.doc_key
 WHERE chunks_fts MATCH ?{filters}
-ORDER BY bm25(chunks_fts)
+ORDER BY {bm25}
 LIMIT ?
-""".format(body=_BODY_COL, filters="{filters}")
+""".format(body=_BODY_COL, bm25=_BM25, filters="{filters}")
 
 
 def lexical_search(

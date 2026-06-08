@@ -1,0 +1,233 @@
+{
+  "rollup": {
+    "k": 10,
+    "labeled_queries": 5,
+    "total_queries": 6,
+    "mean_ndcg@k": 0.3874,
+    "mean_mrr": 0.5167,
+    "mean_recall@k": 0.5,
+    "mean_redundancy@k": 0.0333,
+    "mode": "lexical (FTS5+BM25)"
+  },
+  "queries": [
+    {
+      "id": "kids-install-build",
+      "axis": "kids-install",
+      "n_judged": 4,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XOBW/xobw1_0ig/load-and-install-distribution",
+          "grade": 1
+        },
+        {
+          "rank": 2,
+          "section_id": "XU/krn_8_0_tm/kernel-1",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XOBW/xobw1_0ig/sample-kids-installation",
+          "grade": 2
+        },
+        {
+          "rank": 4,
+          "section_id": "XU/krn_8_0_tm/production-account-routines",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "CPRS/cprslmtm/print-a-list-of-package-components",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.231,
+      "mrr": 1.0,
+      "recall@k": 0.5
+    },
+    {
+      "id": "kids-delphi-components-install",
+      "axis": "kids-install",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XU/kdc1_0ig/1-considerations-before-installing-the-kdc",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XU/kdc1_0ig/4-de-install-any-previous-kernel-delphi-components-installed-for-delphi-v-4-5-or-6-required",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XU/kdc1_0ig/6-verify-the-clientserver-installation-of-the-kernel-delphi-components-recommended",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "XU/kdc1_0ig/5-run-the-kernel-delphi-components-installation-program-required",
+          "grade": 3
+        },
+        {
+          "rank": 5,
+          "section_id": "MON/vista_monograph_0723_r/kernel-delphi-components-kdc",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.3545,
+      "mrr": 0.25,
+      "recall@k": 0.6667
+    },
+    {
+      "id": "hwsc-rest-from-vista-m",
+      "axis": "hwsc-rest",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XOBW/xobw1_0dg/parsing-xml-responses-rest",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XOBW/xobw1_0dg/regrestxobwlib-register-a-rest-service-definition",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XOBW/xobw1_0dg/using-soap-and-rest-to-access-healthevet-from-vista-m",
+          "grade": 3
+        },
+        {
+          "rank": 4,
+          "section_id": "XOBW/xobw1_0dg/application-caller-to-business-delegate-level",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XOBW/xobw1_0dg/unregxobwlib-un-registerdelete-a-web-service",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.3726,
+      "mrr": 0.3333,
+      "recall@k": 0.3333
+    },
+    {
+      "id": "hwsc-install-privileges",
+      "axis": "hwsc-rest",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XOBW/xobw1_0ig/privilegesstaff-needed-to-install",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "XOBW/xobw1_0ig/load-and-install-distribution",
+          "grade": 2
+        },
+        {
+          "rank": 3,
+          "section_id": "XOBW/xobw1_0ig/enter-directory-for-xobw_1_0_bxxxml-file",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "XOBW/xobw1_0ig/cach\u00e9-error-5024-unable-to-copy-file",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XOBW/xobw1_0ig/sample-kids-installation",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.9788,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "kaajee-install-procedure",
+      "axis": "kaajee-auth",
+      "n_judged": 4,
+      "hits": 10,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "KAAJEE/kaajee_xu_8_791_dibrg/deployment-topology-targeted-architecture",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "MON/vista_monograph_0723_r/kernel-authentication--authorization-for-java-2-enterprise-edition-kaajee",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "VPFS/vpfs_systems_management_guide/va-services",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "KAAJEE/kaajee_xu_8_791_dibrg/software",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "VPFS/vpfs_systems_management_guide/oracle-server",
+          "grade": 0
+        }
+      ],
+      "ndcg@k": 0.0,
+      "mrr": 0.0,
+      "recall@k": 0.0
+    },
+    {
+      "id": "pharmacy-api-dispense",
+      "axis": "redundancy-probe",
+      "n_judged": 0,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "MON/vista_monograph_0723_r/pharmacy-pharmacy-benefits-management-pbm",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "MON/vista_monograph_0723_r/consolidated-mail-output-pharmacy-cmop",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "PSO/pso_7_0_p770_pharm_um_1/fda-medication-guide-printer-selection",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "MON/vista_monograph_0723_r/pharmacy-outpatient-pharmacy",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "MON/vista_monograph_0723_r/pharmacy-inpatient-medications",
+          "grade": 0
+        }
+      ]
+    }
+  ]
+}

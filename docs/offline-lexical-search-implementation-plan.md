@@ -74,7 +74,7 @@ smoke-test rig (verified: the KAAJEE doc and its golden target sections are pres
 | **L0 — Housekeeping** | L0.1 | Delete 0-byte `vectors.db` zombie (prod) | ✅ | trashed 2026-06-08 |
 | | L0.2 | Decide `relate`: re-run vs shelve graph | ✅ | **shelved** — graph not needed for lexical |
 | | L0.3 | Add `index`→`relate` ordering guard (if kept) | ⛔ | N/A — relate shelved |
-| **L1 — Lexical quality** | L1.1 | Field-weighted `bm25()` in `search.py` | ⬜ | query-time; zero rebuild |
+| **L1 — Lexical quality** | L1.1 | Field-weighted `bm25()` in `search.py` | ✅⚠️ | infra landed; heading weights give **no lift** — lever → L1.2 |
 | | L1.2 | Index `doc_title` into `chunks_fts` | ⬜ | build-time; `contract_ver` bump |
 | | L1.3 | Glossary query expansion (`fts_match_query`) | ⬜ | needs registry term map (L1.3a) |
 | | L1.4 | Re-measure + record final L1 quality | ⬜ | vs nDCG@10 0.395 / KAAJEE 0.0 |
@@ -171,10 +171,26 @@ query-time (zero rebuild). Measure each lever independently.
   recall@10 / redundancy@10 and the per-lever deltas in this phase's Changelog.
 
 ### Changelog
-- *(none yet)*
+- 2026-06-08 — **L1.1 landed (✅⚠️).** Added field-weighting infra to `search_pure` (`FTS_COLUMNS`,
+  `FTS_WEIGHTS`, `bm25_weights`, `bm25_expr`; column order single-sourced; `_BODY_COL` now derived
+  from it) and wired the weighted `bm25(...)` into `search.py`. TDD: 4 pure tests first.
+  `make check` green (777 passed, 98.13% cov). **Measured on dev: no net lift** (see Discovery) —
+  weights set to a mild, measured-neutral prior (title 2 · section_path 1.5 · body 1). Working
+  baseline reaffirmed at **nDCG@10 = 0.3874** (the recorded 0.395 predates the C1 dev re-index).
+- 2026-06-08 — **Baseline drift noted.** Dev `index.db` was rebuilt by the C1 oversized-chunk fixes
+  after 0.395 was recorded; current dev baseline is **0.3874 / MRR 0.5167 / recall 0.50 /
+  redundancy 0.0333**. KAAJEE = 0.0 (10 hits, none relevant — a real mis-ranking).
 
 ### Discoveries
-- *(none yet)*
+- ⚠️ **2026-06-08 — weighting *section* headings gives no lexical lift on this corpus.** Sweep on the
+  dev golden set: title=8/path=4 **regressed** the mean (0.3874→0.366, `hwsc-rest` 0.373→0.266);
+  title=3/path=2 also down (0.377); title≤2/path≤1.5 **exactly neutral** (0.3874). Cause is
+  structural — VistA section titles are generic ("Installation", "Overview") and the answering text
+  is in the **body**, so up-weighting headings promotes generic-titled sections over the real answer.
+  The doc-defining token (e.g. "KAAJEE") lives in the **document title**, which is **not yet an FTS
+  column**. *Impact:* L1.1's value is the reusable weighting **infrastructure**, not a heading boost;
+  the actual lever moves to **L1.2 (index `doc_title`)**, after which `doc_title` — not section
+  `title` — should carry the weight. *Remediation:* mild neutral weights kept; re-tune in L1.2/L4.2.
 
 ### Risks
 - **Weights overfit the 6-query golden set.** *Mitigation:* prefer changes that help the *class*
