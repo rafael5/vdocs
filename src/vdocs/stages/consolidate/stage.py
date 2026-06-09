@@ -160,7 +160,7 @@ def _member_from(meta, doc_slug, raw, bodies, bundle_dir):  # type: ignore[no-un
     # date baked into identity FM (§6.4) — so it populates even where no revision table exists.
     official_date = cp.official_date(revision_newest, str(meta.get("published", "")))
     return cp.Member(
-        anchor_key=kids.anchor_key(app_code, pkg_ns, doc_code),
+        anchor_key=kids.anchor_key(app_code, pkg_ns, doc_code, doc_slug),
         app_code=app_code,
         pkg_ns=pkg_ns,
         doc_code=doc_code,

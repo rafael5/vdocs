@@ -57,6 +57,20 @@ def test_anchor_key_empty_without_doc_code():
     assert anchor_key("CPRS", "OR", "") == ""
 
 
+def test_anchor_key_folds_slug_stem_to_fix_b1_over_grouping():
+    # B1: distinct Kernel guides share app:pkg:doc_code but must NOT share a version group —
+    # the version-stripped slug stem keeps them apart.
+    alerts = anchor_key("XU", "XU", "UG", "krn_8_0_dg_alerts_ug")
+    hygiene = anchor_key("XU", "XU", "UG", "krn_8_0_dg_address_hygiene_ug")
+    assert alerts == "XU:XU:UG:krn_dg_alerts_ug"
+    assert hygiene == "XU:XU:UG:krn_dg_address_hygiene_ug"
+    assert alerts != hygiene  # no longer collapsed into one XU:XU:UG group
+    # but true versions of ONE doc (same stem) still share the key → still consolidate together
+    v1 = anchor_key("ADT", "DG", "UM", "dg_5_3_1057_um")
+    v2 = anchor_key("ADT", "DG", "UM", "dg_5_4_2000_um")
+    assert v1 == v2 == "ADT:DG:UM:dg_um"
+
+
 def test_official_date_prefers_revision_then_published():
     assert cp.official_date("2018-02", "2010-03") == "2018-02"  # revision table wins
     assert cp.official_date("", "2010-03") == "2010-03"  # no revision table → cover date fallback
@@ -75,6 +89,16 @@ def test_anchor_relpath_is_version_free():
 def test_anchor_relpath_standalone_doc_keeps_its_own_slug():
     # no doc_code ⇒ no version group ⇒ the doc is its own anchor at its own slug
     assert cp.anchor_relpath("ADT", "", "", doc_slug="some_doc") == "ADT/some_doc"
+
+
+def test_anchor_relpath_uses_logical_doc_stem_so_distinct_guides_dont_collide():
+    # B1: distinct guides under XU:XU:UG must NOT share an anchor path (was XU/xu_ug for all)
+    a = cp.anchor_relpath("XU", "XU", "UG", doc_slug="krn_8_0_dg_alerts_ug")
+    b = cp.anchor_relpath("XU", "XU", "UG", doc_slug="krn_8_0_dg_address_hygiene_ug")
+    assert a == "XU/krn_dg_alerts_ug" and b == "XU/krn_dg_address_hygiene_ug" and a != b
+    # versions of one doc share the (version-stable) stem path
+    assert cp.anchor_relpath("ADT", "DG", "UM", doc_slug="dg_5_3_1057_um") == "ADT/dg_um"
+    assert cp.anchor_relpath("ADT", "DG", "UM", doc_slug="dg_5_4_2000_um") == "ADT/dg_um"
 
 
 # --- parse_patch_num ---

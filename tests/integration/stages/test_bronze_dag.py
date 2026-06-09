@@ -88,7 +88,7 @@ def test_bronze_dag_runs_end_to_end(bronze_ctx):
     assert {r.patch_id for r in inv.records} == {"DG*5.3*1057"}
     assert {r.doc_code for r in inv.records} == {"UM"}
     assert {r.group_key for r in inv.records} == {"ADT:DG:5.3"}  # v1 version key
-    assert {r.anchor_key for r in inv.records} == {"ADT:DG:UM"}  # version-free (vdocs §9.4)
+    assert {r.anchor_key for r in inv.records} == {"ADT:DG:UM:dg_um"}  # version-free (vdocs §9.4)
     assert all(r.noise_type == "" for r in inv.records)
 
     # fetch stored one logical doc (DOCX preferred) into the CAS + wrote the index

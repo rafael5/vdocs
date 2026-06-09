@@ -9,7 +9,17 @@ duck-typed via a Protocol, so this never imports ``models``.
 
 from __future__ import annotations
 
+import re
 from typing import Protocol
+
+# A doc_slug is '_'-delimited; these tokens are version/patch noise, not part of the document's
+# identity. Stripping them yields a version-free **stem** that is the same for every version of one
+# document and *different* for distinct documents — the disambiguator the version-group key needs
+# so ``app:pkg:doc_code`` doesn't over-group unrelated manuals (B1). (Underscores are \w, so a regex
+# \b won't split ``_123``; we tokenize on '_' instead.)
+_VERSION_SLUG_TOKEN = re.compile(
+    r"^(?:\d+|p\d+|v\d+|r\d+|patch|release|addendum|rev|ver|version|build)$", re.IGNORECASE
+)
 
 
 class HasIdentity(Protocol):
@@ -25,15 +35,29 @@ def doc_id(record: HasIdentity) -> str:
     return f"{record.app_name_abbrev}:{record.doc_slug}"
 
 
-def anchor_key(app_code: str, pkg_ns: str, doc_code: str) -> str:
-    """The **version-group key** — ``app:pkg:doc_code``, version-free (§6.6/§9.4).
+def slug_stem(doc_slug: str) -> str:
+    """The version-free stem of a ``doc_slug`` — drop pure version/patch tokens, keep the rest.
+
+    ``dg_5_3_1057_um`` & ``dg_5_4_2000_um`` → ``dg_um`` (versions of one doc collapse);
+    ``krn_8_0_dg_alerts_ug`` → ``krn_dg_alerts_ug`` (distinct Kernel guides stay distinct). This is
+    the logical-document identity folded into :func:`anchor_key` to fix B1 over-consolidation."""
+    return "_".join(t for t in doc_slug.split("_") if not _VERSION_SLUG_TOKEN.match(t))
+
+
+def anchor_key(app_code: str, pkg_ns: str, doc_code: str, doc_slug: str = "") -> str:
+    """The **version-group key** — ``app:pkg:doc_code:<stem>``, version-free (§6.6/§9.4).
 
     The one place the formula lives (§9.2): ``catalog`` computes it over an enriched row, and
-    ``consolidate`` reconstructs it from a normalized bundle's identity frontmatter
-    (``app_code``/``pkg_ns``/``doc_type``); both must agree exactly so the group a doc lands in is
-    stable end-to-end. Empty ``doc_code`` ⇒ no version group (``""``): the document is a standalone
-    anchor of one."""
-    return f"{app_code}:{pkg_ns}:{doc_code}" if doc_code else ""
+    ``consolidate`` reconstructs it from a normalized bundle (identity frontmatter +
+    ``doc_slug``); both pass the same ``doc_slug`` so the group a doc lands in is stable end-to-end.
+    The ``<stem>`` (version-stripped ``doc_slug``, :func:`slug_stem`) is what keeps *distinct*
+    documents that share an ``app:pkg:doc_code`` from collapsing into one version group (B1). Empty
+    ``doc_code`` ⇒ no version group (``""``): a standalone anchor of one. A ``doc_slug`` that strips
+    to nothing falls back to the bare ``app:pkg:doc_code``."""
+    if not doc_code:
+        return ""
+    stem = slug_stem(doc_slug)
+    return f"{app_code}:{pkg_ns}:{doc_code}:{stem}" if stem else f"{app_code}:{pkg_ns}:{doc_code}"
 
 
-__all__ = ["HasIdentity", "anchor_key", "doc_id"]
+__all__ = ["HasIdentity", "anchor_key", "doc_id", "slug_stem"]

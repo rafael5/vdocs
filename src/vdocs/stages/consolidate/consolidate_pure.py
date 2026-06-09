@@ -14,6 +14,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
+from vdocs.kernel.ids import slug_stem
 from vdocs.kernel.text import safe_component
 
 
@@ -69,12 +70,15 @@ def _sort_key(m: Member) -> tuple[bool, int, str, str]:
 def anchor_relpath(app_code: str, pkg_ns: str, doc_code: str, *, doc_slug: str = "") -> str:
     """The **stable, version-free** ``<app>/<slug>`` path of a version group's anchor bundle (§6.6).
 
-    Keyed on the version-group identity (``pkg_ns``/``doc_code``), so the living file's path is
-    invariant as patches accrue. A standalone document with no ``doc_code`` (no version group) is
-    its own anchor and keeps its own ``doc_slug``. Uniqueness follows from ``anchor_key``
-    uniqueness: one group ⇒ one path."""
+    Keyed on the logical-document identity (the version-stripped ``doc_slug`` stem), so the living
+    file's path is invariant as patches accrue **and** distinct manuals that merely share an
+    ``app:pkg:doc_code`` get distinct paths (B1 — without the stem, all 42 ``XU:XU:UG`` Kernel
+    guides collided into one ``XU/xu_ug``). A standalone document with no ``doc_code`` keeps its own
+    ``doc_slug``. Falls back to ``<pkg>_<doc_code>`` if the stem strips to nothing. Uniqueness
+    follows from ``anchor_key`` uniqueness: one group ⇒ one path."""
     if doc_code:
-        return f"{safe_component(app_code)}/{safe_component(f'{pkg_ns}_{doc_code}'.lower())}"
+        stem = slug_stem(doc_slug) or f"{pkg_ns}_{doc_code}"
+        return f"{safe_component(app_code)}/{safe_component(stem.lower())}"
     return f"{safe_component(app_code)}/{safe_component(doc_slug)}"
 
 

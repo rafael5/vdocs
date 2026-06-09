@@ -420,7 +420,9 @@ def enrich_rows(rows: list[dict], reg: Registries) -> list[dict]:
             row["doc_code"], row["doc_label"], reg.doc_labels
         )
         row["doc_labelling"] = "manual" if row["doc_slug"] in reg.manual_slugs else "code"
-        row["anchor_key"] = anchor_key(row["app_name_abbrev"], row["pkg_ns"], row["doc_code"])
+        row["anchor_key"] = anchor_key(
+            row["app_name_abbrev"], row["pkg_ns"], row["doc_code"], row["doc_slug"]
+        )
         row["system_type"], row["cots_dependent"] = classify_system(row["app_name_abbrev"], reg)
 
     return enriched

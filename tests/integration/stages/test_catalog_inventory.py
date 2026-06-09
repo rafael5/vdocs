@@ -139,7 +139,7 @@ def test_catalog_stage_writes_enriched_inventory(ctx):
     d = next(r for r in inv.records if r.doc_format == "docx")
     assert d.patch_id == "DG*5.3*1057" and d.doc_code == "DIBR"
     assert d.section_code == "CLI" and d.canonical_pkg == "ADT"
-    assert d.group_key == "ADT:DG:5.3" and d.anchor_key == "ADT:DG:DIBR"
+    assert d.group_key == "ADT:DG:5.3" and d.anchor_key == "ADT:DG:DIBR:dg_dibr"
     assert d.system_type == "VistA" and d.cots_dependent is False
     # companion pairing across the DOCX/PDF pair
     assert d.companion_url.endswith(".pdf")

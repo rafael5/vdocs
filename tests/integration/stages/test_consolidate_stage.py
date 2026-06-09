@@ -107,7 +107,7 @@ def test_consolidate_builds_one_anchor_with_ordered_lineage(ctx):
 
     # ordered history.yaml: both members oldest→newest, is_latest on the newest only
     hist = yaml.safe_load((anchor / "history.yaml").read_text())
-    assert hist["anchor_key"] == "CPRS:OR:IG" and hist["member_count"] == 2
+    assert hist["anchor_key"] == "CPRS:OR:IG:or_ig" and hist["member_count"] == 2
     assert [m["patch_id"] for m in hist["members"]] == ["OR*3*190", "OR*3.0*566"]
     assert [m["is_latest"] for m in hist["members"]] == [False, True]
     # each member folds its own revisions.yaml + carries a CAS ref to its retained body
@@ -186,7 +186,8 @@ def test_consolidate_member_without_revisions_sidecar(ctx):
 
     (result,) = Orchestrator([ConsolidateStage()]).run(ctx)
     assert result.status == "ok" and result.counts["documents"] == 1
-    anchor = ctx.cfg.gold_consolidated / "CPRS" / "or_ig"
+    # anchor path now follows the logical-doc stem of the slug (B1 fix), not <pkg>_<doc_code>
+    anchor = ctx.cfg.gold_consolidated / "CPRS" / "flat_um"
     hist = yaml.safe_load((anchor / "history.yaml").read_text())
     assert hist["members"][0]["revisions"] == [] and hist["members"][0]["official_date"] == ""
 
@@ -276,7 +277,7 @@ def test_consolidate_writes_verifiable_bundle_manifest(ctx):
 
     anchor = ctx.cfg.gold_consolidated / "CPRS" / "or_ig"
     manifest = yaml.safe_load((anchor / "bundle.yaml").read_text())
-    assert manifest["anchor_key"] == "CPRS:OR:IG"
+    assert manifest["anchor_key"] == "CPRS:OR:IG:or_ig"
     assert manifest["bundle_digest"] and manifest["source_sha256"]
     listed = {e["path"]: e for e in manifest["parts"]}
     assert "body.md" in listed and "history.yaml" in listed

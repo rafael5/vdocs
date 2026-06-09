@@ -201,7 +201,7 @@ def test_enrich_rows_end_to_end(reg):
     # package-master canon + section + anchor_key + system class
     assert d["section_code"] == "CLI"
     assert d["canonical_pkg"] == "ADT"
-    assert d["anchor_key"] == "ADT:DG:DIBR"
+    assert d["anchor_key"] == "ADT:DG:DIBR:dg_dibr"
     assert d["group_key"] == "ADT:DG:5.3"
     assert d["system_type"] == "VistA" and d["cots_dependent"] is False
     # the shared VBA url is flagged noise (both rows), never deleted
