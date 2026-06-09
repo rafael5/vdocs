@@ -14,9 +14,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from scripts.seed_app_profiles import (  # noqa: E402
     _FALLBACK_PROFILES,
+    app_namespace,
     build_profiles,
     classify_scope,
     derive_audience,
+    parent_package,
     parse_monograph_entries,
     resolve_audience,
     software_class,
@@ -189,6 +191,37 @@ def test_monograph_profile_carries_class_and_vasi_status() -> None:
     prof = build_profiles(parse_monograph_entries(_FIXTURE), inv)["profiles"]["PRCA"]
     assert prof["software_class"] == "I"
     assert prof["vasi_status"] == "Production"
+
+
+def test_namespace_enrichment_fills_onco() -> None:
+    # ONCO (Registries) has no inventory namespace; enrich to the Oncology package (ONC)
+    assert app_namespace("ONCO", "") == "ONC"
+    # an app with a namespace keeps it
+    assert app_namespace("PSO", "PSO") == "PSO"
+
+
+def test_parent_package_for_sub_prefix_and_sub_product_apps() -> None:
+    assert parent_package("KMPV") == "KMP"  # sub-product of Capacity Management
+    assert parent_package("SSO/UC") == "XU"  # sub-prefix of Kernel
+    assert parent_package("PRF") == "DG"  # sub-prefix of Registration
+    assert parent_package("PSO") == ""  # standalone package -> no parent
+
+
+def test_fallback_profile_carries_enrichments() -> None:
+    inv = EnrichedInventory(
+        records=[
+            EnrichedRecord(
+                app_name_abbrev="ONCO",
+                app_name_full="Registries",
+                pkg_ns="",
+                system_type="VistA",
+                app_status="archive",
+                app_url="https://www.va.gov/vdl/application.asp?appid=998",
+            )
+        ]
+    )
+    fb = build_profiles(parse_monograph_entries(_FIXTURE), inv)["fallback_profiles"]["ONCO"]
+    assert fb["namespace"] == "ONC"
 
 
 def test_classify_scope_excludes_non_vista_and_decommissioned() -> None:

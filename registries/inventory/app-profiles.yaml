@@ -871,6 +871,7 @@ profiles:
       line: 3130
       match: appid
     confidence: high
+    parent_package: DG
   FH:
     name: Nutrition and Food Service
     purpose: The Nutrition and Food Service (N&FS) software integrates the automation of many Clinical
@@ -1507,6 +1508,7 @@ profiles:
       line: 1088
       match: appid
     confidence: high
+    parent_package: KMP
   KMPR:
     name: Resource Usage Monitor
     purpose: The Resource Usage Monitor (RUM) software is intended for use by staff responsible for the
@@ -1534,6 +1536,7 @@ profiles:
       line: 7808
       match: appid
     confidence: high
+    parent_package: KMP
   KMPS:
     name: Statistical Analysis of Global Growth
     purpose: The Veterans Health Administration (VHA) developed the Statistical Analysis of Global Growth
@@ -1568,6 +1571,7 @@ profiles:
       line: 8164
       match: namespace
     confidence: medium
+    parent_package: KMP
   LA:
     name: 'Laboratory: Universal Interface'
     purpose: 'Moved to System Component/Application for 1381: VistA - Laboratory'
@@ -2479,6 +2483,7 @@ profiles:
       line: 6228
       match: appid
     confidence: high
+    parent_package: DG
   PSA:
     name: 'Pharmacy: Drug Accountability'
     purpose: The Unit Dose (UD) module of Inpatient Medications provides a standard computerized system
@@ -3172,6 +3177,7 @@ profiles:
       line: 7768
       match: appid
     confidence: high
+    parent_package: DG
   RMPR:
     name: Prosthetics
     purpose: The VistA Prosthetics package automates purchasing. The Prosthetics module enhances patient
@@ -3363,6 +3369,7 @@ profiles:
       line: 7808
       match: namespace
     confidence: medium
+    parent_package: KMP
   SAGG:
     name: Statistical Analysis of Global Growth
     purpose: The Veterans Health Administration (VHA) developed the Statistical Analysis of Global Growth
@@ -3391,6 +3398,7 @@ profiles:
       line: 8164
       match: namespace
     confidence: medium
+    parent_package: KMP
   SQLI:
     name: SQL Interface
     purpose: VA FileMan is the VistA database management system (DBMS). It runs in any American National
@@ -3921,6 +3929,7 @@ profiles:
       line: 4626
       match: appid
     confidence: high
+    parent_package: XU
   XU:
     name: Kernel
     purpose: ​Kernel provides a portability layer between the underlying operating system and application
@@ -4128,6 +4137,7 @@ fallback_profiles:
     evidence:
       doc: kmpv_um
     confidence: low
+    parent_package: KMP
   MJCF:
     name: Bar Code Expansion (BCE)
     purpose: ''
@@ -4190,7 +4200,7 @@ fallback_profiles:
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: unknown
-    namespace: ''
+    namespace: ONC
     source: manual
     status: pending-fetch
     reviewed: true
@@ -4352,6 +4362,7 @@ fallback_profiles:
     needs_review: true
     evidence: {}
     confidence: low
+    parent_package: XU
   XOB:
     name: Name Standardization
     purpose: ''

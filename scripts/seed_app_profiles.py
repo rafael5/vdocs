@@ -172,6 +172,38 @@ def software_class(abbrev: str) -> tuple[str, str]:
     return "I", "VDL national catalog membership (nationally released)"
 
 
+# Namespace enrichments where the inventory has no pkg_ns but the FileMan #9.4 roster resolves it.
+_NAMESPACE_OVERRIDE: dict[str, str] = {
+    "ONCO": "ONC",  # Registries -> the Oncology package (^ONCO routines, #9.4 namespace ONC)
+}
+
+# Parent package for VDL "applications" that #9.4 records as a sub-prefix (#9.66) of, or a
+# sub-product of, one installed package. Verified against `vista list packages`.
+_PARENT_PACKAGE: dict[str, str] = {
+    "FFP": "DG",  # DGFFP sub-prefix of Registration
+    "PRF": "DG",  # DGPF
+    "RMDS": "DG",  # DGRU
+    "SSO/UC": "XU",  # XUSC sub-prefix of Kernel
+    "XQOR": "XU",  # Kernel menu system
+    "KMPD": "KMP",  # Capacity Management sub-products
+    "KMPR": "KMP",
+    "KMPS": "KMP",
+    "KMPV": "KMP",
+    "RUM": "KMP",
+    "SAGG": "KMP",
+}
+
+
+def app_namespace(abbrev: str, pkg_ns: str) -> str:
+    """Inventory namespace, with a #9.4-verified override where the inventory had none."""
+    return _NAMESPACE_OVERRIDE.get(abbrev, pkg_ns)
+
+
+def parent_package(abbrev: str) -> str:
+    """Parent #9.4 package namespace for a sub-prefix / sub-product app, else '' (standalone)."""
+    return _PARENT_PACKAGE.get(abbrev, "")
+
+
 def classify_scope(system_type: str, app_status: str, vasi_status: str) -> tuple[bool, str]:
     """In-scope = active VistA (M-based) app. COTS/web/non-VistA and decommissioned/inactive out."""
     if not system_type.startswith("VistA"):
@@ -389,7 +421,7 @@ def _fallback_profile(abbrev: str, app: dict) -> dict:
     """A curated fallback profile (manual/corpus-derived) for an app absent from the Monograph."""
     c = _FALLBACK_PROFILES[abbrev]
     cls, cls_basis = software_class(abbrev)
-    return {
+    profile = {
         "name": app["name"],
         "purpose": c["purpose"],
         "function_category": "",  # no SPM product line off-Monograph
@@ -398,7 +430,7 @@ def _fallback_profile(abbrev: str, app: dict) -> dict:
         "software_class": cls,
         "software_class_basis": cls_basis,
         "vasi_status": "unknown",  # not in the Monograph
-        "namespace": app["pkg_ns"],
+        "namespace": app_namespace(abbrev, app["pkg_ns"]),
         "source": "manual",
         "status": c["status"],
         "reviewed": True,
@@ -406,6 +438,9 @@ def _fallback_profile(abbrev: str, app: dict) -> dict:
         "evidence": {"doc": c["doc"]} if c["doc"] else {},
         "confidence": "low",
     }
+    if parent_package(abbrev):
+        profile["parent_package"] = parent_package(abbrev)
+    return profile
 
 
 def build_profiles(entries: list[dict], inv: EnrichedInventory) -> dict:
@@ -455,7 +490,7 @@ def build_profiles(entries: list[dict], inv: EnrichedInventory) -> dict:
             "software_class_basis": cls_basis,
             "vasi_status": entry["vasi_status"],
             "features": entry["features"],
-            "namespace": entry["namespace"],
+            "namespace": app_namespace(abbrev, entry["namespace"]),
             "source": "monograph",
             "reviewed": abbrev in _APP_AUDIENCE_OVERRIDE,
             "evidence": {"doc": _MON_DOC, "line": entry["line"], "match": method},
@@ -463,6 +498,8 @@ def build_profiles(entries: list[dict], inv: EnrichedInventory) -> dict:
         }
         if secondary:
             profile["audience_secondary"] = secondary
+        if parent_package(abbrev):
+            profile["parent_package"] = parent_package(abbrev)
         profiles[abbrev] = profile
 
     return {
