@@ -75,13 +75,27 @@ VistA-based. Only *pure* COTS/web/enterprise-service apps are excluded.
 **`III`** override (NUPA — explicit own-doc reclassification). **`II`** is deliberately *not*
 assigned: the field-developed / nationally-distributed-but-optional middle tier is not separable
 from the Monograph or doc text (doc-level class mentions are component-level and noisy — 24/142 apps,
-self-contradicting). To pull the true Class II apps out of the `I` default, the only authoritative
-source is the VA **SAC/SACC class designations** or **FORUM National Patch Module / PACKAGE file
-(#9.4)** — neither is in the corpus. When that list is available, seed a curated
-`registries/inventory/software-class.yaml` (by namespace, same pattern as `package-master.yaml`) and
-join it in the profile build to overwrite the default. Until then `software_class` stays I/III only.
-This pairs with the gate: `software_class` + `vasi_status` are the per-app *importance* gradient the
-gate's in/out decision doesn't capture on its own.
+self-contradicting).
+
+**Verified (2026-06-09) via the `vista` CLI** (code/doc model of a live VistA): FileMan file **#9.4
+PACKAGE** (`^DIC(9.4,`, 31 fields, 479 records) **has no software-class field** — checked every
+CLASS-named FileMan field in the model; none belongs to #9.4. Class I/II/III is a **SAC/SACC**
+attribute managed on **FORUM** (the national dev / National Patch Module system), not a field in the
+distributed PACKAGE file. So #9.4 is a **dead end for class**; the published VA **SAC class list** is
+the *only* source. When it's available, seed a curated `registries/inventory/software-class.yaml` (by
+namespace, same pattern as `package-master.yaml`) and join it in the profile build to overwrite the
+`I` default. Until then `software_class` stays I/III only. `software_class` + `vasi_status` are the
+per-app *importance* gradient the gate's in/out decision doesn't capture on its own.
+
+**Namespace cross-check (same `vista` model).** #9.4 *is* the authoritative installed-package roster
+(174 namespaces). 87/113 profile namespaces validate against it directly; the 26 non-matches are
+**not errors** — they're (a) sub-prefixes of a parent package recorded under #9.66 (FFP=DGFFP,
+PRF=DGPF, RMDS=DGRU under DG; SSO/UC=XUSC, XQOR under XU), (b) sub-products of one package (KMPD/KMPR/
+KMPS/KMPV/RUM/SAGG → the single `KMP` "Capacity Management" package), (c) registry sub-systems (EFR,
+NCR, ROEB/ROEG/ROEV, TBI), and (d) apps newer than / absent from the modeled instance (MJCF, ASCD,
+CHDS, IVMB, PAIT, SRA, XOB). Small enrichment opportunities surfaced: fill the empty `namespace` on
+ONCO (→ `Oncology` package) and optionally record each sub-prefix app's **parent package**. The
+`vista` CLI is a live VistA model worth using to validate the whole profile/namespace set.
 
 ## References
 
