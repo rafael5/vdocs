@@ -106,9 +106,10 @@ def _seed_gold_inventory(tmp_path):
             app_name_abbrev=app,
             app_name_full=f"{app} App ({app})",
             section_code="CLIN",
+            system_type="VistA",  # admitted by the app-scope gate
             doc_slug=slug,
-            doc_code="DIBR",
-            anchor_key=f"{app}:DG:DIBR",
+            doc_code="UM",  # admitted by the doc-type gate (Tier-A reference core)
+            anchor_key=f"{app}:DG:UM",
             noise_type=noise,
         )
 
@@ -196,11 +197,11 @@ def test_failure_exits_nonzero_with_remediation(tmp_path):
 
 # --- crawl + fetch commands, driven with faked network via build_stages ------
 _INDEX = '<a href="section.asp?secid=1">Clinical</a>'
-_SECTION = '<a href="application.asp?appid=1">ADT (DG)</a>'
+_SECTION = '<a href="application.asp?appid=1">Admission Discharge Transfer (ADT)</a>'
 _APP = (
     "<table><tr>"
-    "<td>DG*5.3*1 Installation Guide</td>"
-    '<td><a href="https://vdl.test/dg_5_3_1_dibr.docx">DOCX</a></td>'
+    "<td>DG*5.3*1 User Manual</td>"
+    '<td><a href="https://vdl.test/dg_5_3_1_um.docx">DOCX</a></td>'
     "</tr></table>"
 )
 _PAGES = {
@@ -208,7 +209,7 @@ _PAGES = {
     "https://vdl.test/section.asp?secid=1": _SECTION,
     "https://vdl.test/application.asp?appid=1": _APP,
 }
-_BYTES = {"https://vdl.test/dg_5_3_1_dibr.docx": b"PK\x03\x04 fake"}
+_BYTES = {"https://vdl.test/dg_5_3_1_um.docx": b"PK\x03\x04 fake"}
 
 
 def _faked_stages():
@@ -267,7 +268,7 @@ def test_crawl_catalog_fetch_commands_in_sequence(tmp_path, monkeypatch):
     assert runner.invoke(app, ["convert"], env=env).exit_code == 0
     bodies = list(cfg.silver_converted.rglob("body.md"))
     assert len(bodies) == 1 and bodies[0].read_text().startswith("# Converted")
-    assert bodies[0].parent.name == "dg_5_3_1_dibr"  # <app>/<slug>/body.md
+    assert bodies[0].parent.name == "dg_5_3_1_um"  # <app>/<slug>/body.md
 
     # discover mines the converted corpus into the candidate-patterns report
     assert runner.invoke(app, ["discover"], env=env).exit_code == 0
@@ -280,7 +281,7 @@ def test_crawl_catalog_fetch_commands_in_sequence(tmp_path, monkeypatch):
     from vdocs.kernel import frontmatter
 
     meta, _ = frontmatter.parse(enriched[0].read_text())
-    assert meta["app_code"] == "DG" and meta["title"].startswith("DG*5.3*1")
+    assert meta["app_code"] == "ADT" and meta["title"].startswith("DG*5.3*1")
 
     # normalize regenerates the TOC + stamps source_sha256
     assert runner.invoke(app, ["normalize"], env=env).exit_code == 0

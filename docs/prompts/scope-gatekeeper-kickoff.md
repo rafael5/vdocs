@@ -43,6 +43,24 @@ VistA-based. Only *pure* COTS/web/enterprise-service apps are excluded.
 - Signals available on every inventory row: `system_type`, `cots_dependent`, `app_status`,
   `app_name_abbrev`, `pkg_ns`; plus Monograph `VASI System Status` where the app joins.
 
+## STATUS — partially implemented (2026-06-09)
+
+Both gates are **enforced at the fetch chokepoint** and green (`make check`, 813 tests, 98% cov):
+- `registries/inventory/scope-policy.yaml` (app scope) + `registries/inventory/doctype-policy.yaml`
+  (doc-type) now exist and are loaded by `src/vdocs/stages/fetch/policy.py::load_gate_policy`.
+- `fetch_pure.GatePolicy` is a third **always-on** narrowing in `select_fetch_targets` (alongside
+  noise §9.5 + DOCX §1) — even `--all` can't pull an out-of-scope app or omitted doc-type. Wired
+  into both the `fetch` stage (with a `gate_policy` fingerprint → SKIP_IF_UNCHANGED) and the CLI
+  preview. On the real lake this admits ~1390 of 3728 in-scope docs (Tier-A reference core, active
+  VistA apps only).
+
+**Remaining** (the rest of this doc): surface the decision in the **gold inventory / index.db facet
+/ gold frontmatter** (`app_in_scope`, `doc_kept`, policy `tier`) so it's visible offline, not just
+enforced at fetch; add the `state.db` skip-logging + regression fixture (lock the 1390/2338 and the
+83-app `_excluded` splits); fold the per-app manual overrides into `scope-policy.yaml`. The pure
+predicate already exists (`GatePolicy.admits`) — promote it from fetch-only to a baked inventory
+field in `catalog`/`enrich`.
+
 ## Two gates, one job
 
 The gatekeeper has **two orthogonal axes**, both "what's allowed into gold," both declared-as-data:

@@ -137,6 +137,7 @@ def fetch(
     """
     from vdocs.models.catalog import EnrichedInventory
     from vdocs.stages.fetch.fetch_pure import Selection, select_fetch_targets
+    from vdocs.stages.fetch.policy import load_gate_policy
 
     cfg = Settings()
     if not cfg.gold_inventory_json.exists():
@@ -145,6 +146,9 @@ def fetch(
     records = EnrichedInventory.model_validate_json(
         cfg.gold_inventory_json.read_text(encoding="utf-8")
     ).records
+    # the always-on admission gate (app scope + doc-type policy) — the preview must match what
+    # the fetch stage will actually pull, so apply it here too.
+    policy = load_gate_policy(cfg.registries)
     selection = Selection(
         apps=_flatten(apps),
         sections=_flatten(sections),
@@ -155,14 +159,14 @@ def fetch(
         all_=all_,
     )
 
-    available = len(select_fetch_targets(records, Selection(all_=True)))
+    available = len(select_fetch_targets(records, Selection(all_=True), policy))
     if selection.is_empty:
         typer.echo(
             f"no selection — fetched nothing. {available} genuine in-scope documents available; "
             "narrow with --app/--section/--status/--doc-type/--group/--select, or all with --all."
         )
         return
-    targets = select_fetch_targets(records, selection)
+    targets = select_fetch_targets(records, selection, policy)
     if dry_run:
         typer.echo(
             f"selection matches {len(targets)} of {available} genuine in-scope documents "

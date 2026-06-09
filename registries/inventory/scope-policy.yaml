@@ -1,0 +1,27 @@
+# registries/inventory/scope-policy.yaml
+# =========================================================================================
+# DECLARATIVE app-level admission gate for the gold vdocs library — the corpus is VistA
+# (M-based) software only. This is the data behind the pipeline's app-scope gate (enforced as
+# an always-on narrowing in fetch's select_fetch_targets, alongside the noise §9.5 and DOCX
+# §1 invariants). It pairs with doctype-policy.yaml (the document-level gate).
+#
+# In-scope  ⟺  system_type starts with an allowed prefix  AND  app_status not denied.
+# Out of scope (never fetched, analysed, or published): pure COTS / web / VA-enterprise-service
+# / integration-middleware / VBA apps, and decommissioned packages. VistA hybrids
+# (VistA + GUI / + COTS / + middleware) stay IN — they are VistA-based.
+#
+# NOTE: the live inventory carries system_type + app_status only; the Monograph-only
+# "VASI status = Inactive" exclusion (see app-profiles.yaml _excluded) is applied during
+# profile curation, not here. This gate therefore omits the 61 non-vista + 13 decommissioned
+# apps; the 9 inactive-by-VASI are handled at the profile layer.
+#
+# Reversible/tunable like doctype-policy: edit the lists and re-run from serve-inventory.
+# =========================================================================================
+
+app_scope:
+  # system_type values admitted if they START WITH any of these (so "VistA + GUI" matches "VistA")
+  allowed_system_type_prefixes:
+    - VistA
+  # app_status values that are out of scope regardless of system_type
+  denied_app_status:
+    - decommissioned

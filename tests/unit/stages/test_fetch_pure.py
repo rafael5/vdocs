@@ -46,6 +46,54 @@ def _rec(
     )
 
 
+# --- the admission gate (app scope + doc-type policy) ---
+
+_VISTA_GATE = fp.GatePolicy(
+    allowed_system_prefixes=("VistA",),
+    denied_app_status=frozenset({"decommissioned"}),
+    omitted_doc_codes=frozenset({"RN", "DIBR"}),
+)
+
+
+def test_gate_app_scope_admits_vista_denies_cots_and_decommissioned():
+    g = _VISTA_GATE
+    assert g.app_in_scope(_rec("a", doc_code="UM").model_copy(update={"system_type": "VistA"}))
+    assert g.app_in_scope(
+        _rec("a", doc_code="UM").model_copy(update={"system_type": "VistA + GUI"})
+    )
+    assert not g.app_in_scope(
+        _rec("a", doc_code="UM").model_copy(update={"system_type": "Web client"})
+    )
+    assert not g.app_in_scope(
+        _rec("a", doc_code="UM").model_copy(
+            update={"system_type": "VistA", "app_status": "decommissioned"}
+        )
+    )
+
+
+def test_gate_doctype_policy_omits_listed_codes():
+    g = _VISTA_GATE
+    keep = _rec("a", doc_code="UM").model_copy(update={"system_type": "VistA"})
+    omit = _rec("a", doc_code="RN").model_copy(update={"system_type": "VistA"})
+    assert g.doctype_kept(keep) and g.admits(keep)
+    assert not g.doctype_kept(omit) and not g.admits(omit)
+
+
+def test_select_fetch_targets_enforces_gate_even_under_all():
+    recs = [
+        _rec("keep_um", doc_code="UM").model_copy(update={"system_type": "VistA"}),
+        _rec("omit_rn", doc_code="RN").model_copy(update={"system_type": "VistA"}),  # omitted type
+        _rec("cots_um", doc_code="UM").model_copy(
+            update={"system_type": "COTS product"}
+        ),  # OOS app
+    ]
+    # without a policy: all three genuine docx rows are targets (back-compat default)
+    assert len(fp.select_fetch_targets(recs, ALL)) == 3
+    # with the gate: only the in-scope VistA + kept-doctype row survives
+    gated = fp.select_fetch_targets(recs, ALL, _VISTA_GATE)
+    assert [t.doc_slug for t in gated] == ["keep_um"]
+
+
 # --- the two always-on narrowing filters (noise gate + DOCX scope, §5.6 invariants) ---
 
 

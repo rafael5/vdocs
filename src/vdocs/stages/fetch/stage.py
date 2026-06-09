@@ -40,16 +40,26 @@ class FetchStage(Stage):
         self.selection = selection or Selection()
 
     def extra_input_fps(self, ctx: StageContext) -> dict[str, str]:
-        # the resolved selection participates in SKIP_IF_UNCHANGED (§5.6/§7.3)
-        return {"selection": self.selection.fingerprint()}
+        # the resolved selection AND the admission gate participate in SKIP_IF_UNCHANGED
+        # (§5.6/§7.3): editing scope-policy/doctype-policy re-runs fetch.
+        from vdocs.stages.fetch.policy import load_gate_policy
+
+        return {
+            "selection": self.selection.fingerprint(),
+            "gate_policy": load_gate_policy(ctx.cfg.registries).fingerprint(),
+        }
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.stages.fetch import fetch_pure as fp
+        from vdocs.stages.fetch.policy import load_gate_policy
 
         inventory = EnrichedInventory.model_validate_json(
             ctx.cfg.gold_inventory_json.read_text(encoding="utf-8")
         )
-        targets = fp.select_fetch_targets(inventory.records, self.selection)
+        # The always-on admission gate (app scope + doc-type policy): out-of-scope apps and
+        # omitted doc-types never enter the corpus, regardless of the operator's selection.
+        policy = load_gate_policy(ctx.cfg.registries)
+        targets = fp.select_fetch_targets(inventory.records, self.selection, policy)
 
         store = Cas(ctx.cfg.bronze_raw)
         # Merge into the existing index so a selective re-fetch never drops previously-fetched docs

@@ -96,8 +96,56 @@ class Selection:
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+@dataclass(frozen=True)
+class GatePolicy:
+    """The corpus admission gate — which *(app, doc-type)* documents may enter gold at all.
+
+    Two declarative axes, both from ``registries/inventory/`` (loaded by
+    :func:`vdocs.stages.fetch.policy.load_gate_policy`):
+
+    - **app scope** (``scope-policy.yaml``): ``system_type`` must start with an allowed prefix
+      (so ``"VistA + GUI"`` matches ``"VistA"``) **and** ``app_status`` must not be denied. Pure
+      COTS / web / VA-enterprise-service apps and decommissioned packages are out.
+    - **doc-type policy** (``doctype-policy.yaml``): a ``doc_code`` in ``omitted_doc_codes`` is
+      excluded (Tiers B/C/D — install runbooks, changelog, fragments); everything else is kept.
+
+    Enforced by :func:`select_fetch_targets` as a third **always-on** narrowing, alongside the
+    noise (§9.5) and DOCX-scope (§1) invariants — independent of the operator's selection, so even
+    ``--all`` never pulls an out-of-scope or omitted document into the corpus.
+    """
+
+    allowed_system_prefixes: tuple[str, ...]
+    denied_app_status: frozenset[str]
+    omitted_doc_codes: frozenset[str]
+
+    def app_in_scope(self, rec: EnrichedRecord) -> bool:
+        """Active VistA (M-based) app: allowed ``system_type`` prefix and a non-denied status."""
+        if not any(rec.system_type.startswith(p) for p in self.allowed_system_prefixes):
+            return False
+        return rec.app_status not in self.denied_app_status
+
+    def doctype_kept(self, rec: EnrichedRecord) -> bool:
+        """The doc-type is admitted (not on the omit list — Tiers B/C/D)."""
+        return rec.doc_code not in self.omitted_doc_codes
+
+    def admits(self, rec: EnrichedRecord) -> bool:
+        """Both gates pass: an in-scope app AND a kept doc-type."""
+        return self.app_in_scope(rec) and self.doctype_kept(rec)
+
+    def fingerprint(self) -> str:
+        """Order-independent signature, so a policy edit re-runs ``fetch`` (SKIP_IF_UNCHANGED)."""
+        payload = "\n".join(
+            [
+                "sys=" + ",".join(self.allowed_system_prefixes),  # ordered tuple, kept as-is
+                "status=" + ",".join(sorted(self.denied_app_status)),
+                "omit=" + ",".join(sorted(self.omitted_doc_codes)),
+            ]
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def select_fetch_targets(
-    records: list[EnrichedRecord], selection: Selection
+    records: list[EnrichedRecord], selection: Selection, policy: GatePolicy | None = None
 ) -> list[EnrichedRecord]:
     """The documents ``fetch`` will download for ``selection`` — one target per logical document
     version (same ``doc_slug``), the DOCX representation.
@@ -105,17 +153,25 @@ def select_fetch_targets(
     Pipeline (each step only narrows or completes, never widens past the invariants):
 
     1. **Always-on narrowing** (§5.6 invariants, independent of the selection): genuine rows only
-       (``noise_type`` set ⇒ chrome/forms, excluded §9.5) and in-scope only (``out_of_scope_reason``
-       set ⇒ a non-DOCX representation, §1 — a PDF-only logical document yields no target).
+       (``noise_type`` set ⇒ chrome/forms, excluded §9.5), in-scope only (``out_of_scope_reason``
+       set ⇒ a non-DOCX representation, §1 — a PDF-only logical document yields no target), and —
+       when a ``policy`` is given — **admitted by the gate only** (in-scope VistA app + kept
+       doc-type; ``GatePolicy``). ``policy=None`` skips the gate (programmatic/back-compat callers);
+       the real pipeline (fetch stage + CLI) always passes the loaded policy.
     2. **Selection predicate**: keep the genuine in-scope rows the selection matches.
     3. **Version completeness** (§5.6 invariant 2): pull in every genuine in-scope row sharing an
        ``anchor_key`` with a matched row, so a filter can never silently drop patches of a selected
        logical document — the historical bodies are what ``push`` replays. (Rows with no resolved
-       ``anchor_key`` are matched as singletons.)
+       ``anchor_key`` are matched as singletons.) Gated-out rows are already absent from the genuine
+       set, so the gate can never be re-widened by anchor completeness.
     4. **DOCX dedup**: one target per ``doc_slug`` (a PDF/DOCX pair shares it; only the in-scope
        DOCX survives step 1, and distinct versions keep distinct slugs → every version is a target).
     """
-    genuine = [r for r in records if not r.noise_type and not r.out_of_scope_reason]
+    genuine = [
+        r
+        for r in records
+        if not r.noise_type and not r.out_of_scope_reason and (policy is None or policy.admits(r))
+    ]
     matched_ids = {id(r) for r in genuine if selection.matches(r)}
     anchors = {r.anchor_key for r in genuine if id(r) in matched_ids and r.anchor_key}
     best: dict[str, EnrichedRecord] = {}

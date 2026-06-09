@@ -28,10 +28,10 @@ SECTION1_HTML = """
 # RELATIVE doc hrefs, exactly as live VDL serves them — must resolve against the app-page URL.
 APP_HTML = """
 <table>
-  <tr><td>DG*5.3*1057 Deployment, Installation, Back-Out, and Rollback Guide</td>
-      <td><a href="documents/Clinical/ADT/dg_5_3_1057_dibr.docx">DOCX</a></td><td>03/2024</td></tr>
-  <tr><td>DG*5.3*1057 Deployment, Installation, Back-Out, and Rollback Guide</td>
-      <td><a href="documents/Clinical/ADT/dg_5_3_1057_dibr.pdf">PDF</a></td><td>03/2024</td></tr>
+  <tr><td>DG*5.3*1057 User Manual</td>
+      <td><a href="documents/Clinical/ADT/dg_5_3_1057_um.docx">DOCX</a></td><td>03/2024</td></tr>
+  <tr><td>DG*5.3*1057 User Manual</td>
+      <td><a href="documents/Clinical/ADT/dg_5_3_1057_um.pdf">PDF</a></td><td>03/2024</td></tr>
 </table>
 """
 
@@ -42,7 +42,7 @@ PAGES = {
     "https://vdl.test/application.asp?appid=55": APP_HTML,
 }
 # relative href resolves against the app-page URL (.../application.asp?appid=55)
-DOCX_URL = "https://vdl.test/documents/Clinical/ADT/dg_5_3_1057_dibr.docx"
+DOCX_URL = "https://vdl.test/documents/Clinical/ADT/dg_5_3_1057_um.docx"
 DOC_BYTES = {DOCX_URL: b"PK\x03\x04 fake docx bytes"}
 
 
@@ -86,9 +86,9 @@ def test_bronze_dag_runs_end_to_end(bronze_ctx):
     inv = EnrichedInventory.model_validate_json(ctx.cfg.catalog_enriched.read_text())
     assert len(inv.records) == 2
     assert {r.patch_id for r in inv.records} == {"DG*5.3*1057"}
-    assert {r.doc_code for r in inv.records} == {"DIBR"}
+    assert {r.doc_code for r in inv.records} == {"UM"}
     assert {r.group_key for r in inv.records} == {"ADT:DG:5.3"}  # v1 version key
-    assert {r.anchor_key for r in inv.records} == {"ADT:DG:DIBR"}  # version-free (vdocs §9.4)
+    assert {r.anchor_key for r in inv.records} == {"ADT:DG:UM"}  # version-free (vdocs §9.4)
     assert all(r.noise_type == "" for r in inv.records)
 
     # fetch stored one logical doc (DOCX preferred) into the CAS + wrote the index
@@ -101,7 +101,7 @@ def test_bronze_dag_runs_end_to_end(bronze_ctx):
     assert list(ctx.cfg.bronze_raw.glob("*.docx"))  # the content-addressed file exists
 
     # fetch recorded the per-document acquisition status (§5.5) keyed by doc_id
-    acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_dibr")
+    acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_um")
     assert acq is not None and acq.status == "fetched"
     assert acq.sha256 and acq.bytes and acq.fetched_at
 
@@ -145,13 +145,13 @@ def test_fetch_accrues_attempts_across_retries(bronze_ctx):
     Orchestrator([FetchStage(fetch_bytes=failing, selection=Selection(all_=True))]).run(
         ctx, force=True
     )
-    first = ctx.state.get_acquisition("ADT:dg_5_3_1057_dibr")
+    first = ctx.state.get_acquisition("ADT:dg_5_3_1057_um")
     assert first.status == "failed" and first.attempts == 1
 
     Orchestrator([FetchStage(fetch_bytes=failing, selection=Selection(all_=True))]).run(
         ctx, force=True
     )
-    second = ctx.state.get_acquisition("ADT:dg_5_3_1057_dibr")
+    second = ctx.state.get_acquisition("ADT:dg_5_3_1057_um")
     # attempts accrue; first_attempt_at is preserved, last_attempt_at advances (§5.5)
     assert second.attempts == 2
     assert second.first_attempt_at == first.first_attempt_at
@@ -202,7 +202,7 @@ def test_fetch_does_not_fall_back_to_pdf(bronze_ctx):
 
     assert ctx.state.get("fetch").counts == {"targets": 1, "fetched": 0, "failed": 1}
     assert json.loads(ctx.cfg.raw_index.read_text()) == {}  # the PDF was never stored
-    acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_dibr")
+    acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_um")
     assert acq is not None and acq.status == "failed"
 
 
@@ -219,6 +219,6 @@ def test_fetch_records_failure_when_docx_unavailable(bronze_ctx):
     ).run(ctx, force=True)
 
     assert ctx.state.get("fetch").counts == {"targets": 1, "fetched": 0, "failed": 1}
-    acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_dibr")
+    acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_um")
     assert acq is not None and acq.status == "failed" and acq.error == "docx unavailable"
     assert json.loads(ctx.cfg.raw_index.read_text()) == {}
