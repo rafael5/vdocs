@@ -68,9 +68,25 @@ VistA-based. Only *pure* COTS/web/enterprise-service apps are excluded.
   logged, queryable reason — verified against the 83-app `_excluded` baseline.
 - `app_in_scope` is visible in the inventory, the index, and gold frontmatter.
 
+## Related follow-up — Class II via the VA SAC list (importance filtering)
+
+`app-profiles.yaml` already carries a deterministic `software_class`: **`I` (national)** by default
+(every in-scope app is in the VDL, which only catalogs nationally-released software), with a single
+**`III`** override (NUPA — explicit own-doc reclassification). **`II`** is deliberately *not*
+assigned: the field-developed / nationally-distributed-but-optional middle tier is not separable
+from the Monograph or doc text (doc-level class mentions are component-level and noisy — 24/142 apps,
+self-contradicting). To pull the true Class II apps out of the `I` default, the only authoritative
+source is the VA **SAC/SACC class designations** or **FORUM National Patch Module / PACKAGE file
+(#9.4)** — neither is in the corpus. When that list is available, seed a curated
+`registries/inventory/software-class.yaml` (by namespace, same pattern as `package-master.yaml`) and
+join it in the profile build to overwrite the default. Until then `software_class` stays I/III only.
+This pairs with the gate: `software_class` + `vasi_status` are the per-app *importance* gradient the
+gate's in/out decision doesn't capture on its own.
+
 ## References
 
-- `registries/inventory/app-profiles.yaml` (draft) — `_excluded` / `_needs_fallback` blocks.
+- `registries/inventory/app-profiles.yaml` (draft) — `_excluded` / `_needs_fallback` blocks;
+  `software_class` / `software_class_basis` / `vasi_status` fields.
 - `scripts/seed_app_profiles.py` — `classify_scope`, `_distinct_apps` (the seed logic + signals).
 - `src/vdocs/models/catalog.py` — `EnrichedRecord` (where `out_of_scope_reason` lives; add the
   app-level fields beside it).
