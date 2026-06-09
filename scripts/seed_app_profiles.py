@@ -121,6 +121,38 @@ def derive_audience(product_line: str, business_owner: str) -> str:
     return _PRODUCT_LINE_AUDIENCE.get(product_line.strip(), "needs-review")
 
 
+# Reviewed per-app overrides (2026-06-09). All 15 were SPM "Health Informatics" — a mixed
+# management bucket that the product-line map deliberately leaves as 'needs-review'. Resolved from
+# each app's Brief Description + VHA Business Owner. Rulings: registries -> clinical-admin applied
+# uniformly; PCE -> clinical. Value = (primary, secondary | None, basis).
+_APP_AUDIENCE_OVERRIDE: dict[str, tuple[str, str | None, str]] = {
+    "ADT": ("clinical-admin", None, "registration/MAS clerks (administrative ADT functions)"),
+    "DGJ": ("clinical-admin", None, "HIM incomplete-records tracking"),
+    "DI": ("developer", None, "VistA DBMS (FileMan) — programmers"),
+    "SQLI": ("developer", None, "FileMan SQL access — programmers"),
+    "HL7": ("developer", None, "messaging/interface engine — interface engineers"),
+    "KMPD": ("sysadmin", None, "purpose names 'IRM and system administrators'"),
+    "IBD": ("clinical-admin", None, "encounter-form printing / data entry — clinic clerks"),
+    "ONC": ("clinical-admin", None, "Cancer Registrars (registry abstraction)"),
+    "ROI": ("clinical-admin", None, "HIM Release-of-Information clerks"),
+    "RT": ("clinical-admin", None, "chart/film file-room tracking — HIM"),
+    "TBI": ("clinical-admin", None, "registry (registries rule applied uniformly)"),
+    "ROR": ("clinical-admin", None, "registry (registries rule applied uniformly)"),
+    "PX": ("clinical", "clinical-admin", "clinical encounter documentation; workload entry 2nd"),
+    "XM": ("sysadmin", None, "messaging infrastructure (MailMan) — OIT/IRM"),
+    "XU": ("sysadmin", "developer", "system/user/menu/TaskMan mgmt; developer APIs 2nd"),
+}
+
+
+def resolve_audience(
+    abbrev: str, product_line: str, business_owner: str
+) -> tuple[str, str | None, str]:
+    """(primary, secondary, basis). A reviewed per-app override wins over the product-line map."""
+    if abbrev in _APP_AUDIENCE_OVERRIDE:
+        return _APP_AUDIENCE_OVERRIDE[abbrev]
+    return derive_audience(product_line, business_owner), None, f"SPM product line: {product_line}"
+
+
 def classify_scope(system_type: str, app_status: str, vasi_status: str) -> tuple[bool, str]:
     """In-scope = active VistA (M-based) app. COTS/web/non-VistA and decommissioned/inactive out."""
     if not system_type.startswith("VistA"):
@@ -186,19 +218,27 @@ def build_profiles(entries: list[dict], inv: EnrichedInventory) -> dict:
         if not ok:
             excluded[abbrev] = f"{app['name']} — {reason}"
             continue
-        profiles[abbrev] = {
+        primary, secondary, basis = resolve_audience(
+            abbrev, entry["product_line"], entry["business_owner"]
+        )
+        profile = {
             "name": app["name"],
             "purpose": entry["brief_description"],
             "purpose_long": entry["full_description"],
             "function_category": entry["product_line"],
             "business_owner": entry["business_owner"],
-            "audience_primary": derive_audience(entry["product_line"], entry["business_owner"]),
+            "audience_primary": primary,
+            "audience_basis": basis,
             "features": entry["features"],
             "namespace": entry["namespace"],
             "source": "monograph",
+            "reviewed": abbrev in _APP_AUDIENCE_OVERRIDE,
             "evidence": {"doc": _MON_DOC, "line": entry["line"], "match": method},
             "confidence": "high" if method == "appid" else "medium",
         }
+        if secondary:
+            profile["audience_secondary"] = secondary
+        profiles[abbrev] = profile
 
     return {
         "profiles": profiles,

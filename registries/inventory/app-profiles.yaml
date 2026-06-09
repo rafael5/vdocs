@@ -16,6 +16,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​Audiology and Speech Pathology
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Provides automatic transmission of visit data to the Patient Care Encounter (PCE) program in order
       to incorporate QUASAR visit data in Ambulatory Care Reporting Program (ACRP) and in the Decision
@@ -32,6 +33,7 @@ profiles:
     - ICD-10 code compliant
     namespace: ACKQ
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 7352
@@ -62,7 +64,8 @@ profiles:
     function_category: Health Informatics
     business_owner: Office of Performance Improvement and Reporting and the Health Information Management
       Council
-    audience_primary: needs-review
+    audience_primary: clinical-admin
+    audience_basis: registration/MAS clerks (administrative ADT functions)
     features:
     - Provides on-line patient registration and disposition of applications for medical care
     - Tracks patient movements during inpatient stays
@@ -86,6 +89,7 @@ profiles:
       on active duty
     namespace: DG
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 576
@@ -104,9 +108,11 @@ profiles:
     function_category: VistA Office (VO) Technical Reference
     business_owner: VHA
     audience_primary: developer
+    audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
     features: []
     namespace: OR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 686
@@ -122,6 +128,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: Rehabilitation and Prosthetic Services
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Visual Impairment Service Teams (VIST) Coordinators
     - Blind Rehabilitation Centers (BRCs)
@@ -151,6 +158,7 @@ profiles:
     - Transmits to the Health Data Repository
     namespace: ANRV
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 1002
@@ -166,6 +174,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Provides inventory management capabilities for clinical care locations and drug crash carts.
     - Allows easy drug item inactivation for inventory locations
@@ -186,6 +195,7 @@ profiles:
       maintenance of the system
     namespace: PSGW
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 6386
@@ -207,6 +217,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - Defines, populates, and retrieves information about user classes. User classes can be defined hospital-wide
       or more narrowly for a specific service and can be used across VistA to replace and/or complement
@@ -219,6 +230,7 @@ profiles:
     - Allows infinite hierarchies of subclasses
     namespace: USR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 1808
@@ -237,9 +249,11 @@ profiles:
     function_category: Clinical Services
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features: &id001 []
     namespace: OR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 9120
@@ -257,9 +271,11 @@ profiles:
     function_category: Patient Care Services
     business_owner: Patient Care Services (PCS)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features: []
     namespace: CRHD
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 7902
@@ -287,6 +303,7 @@ profiles:
     function_category: VHA Front Office
     business_owner: ​ Veterans Transportation Program
     audience_primary: clinical-admin
+    audience_basis: 'SPM product line: VHA Front Office'
     features:
     - Automatically computes amount payable for claims with account type of Compensation and Pension
     - Allows each site to define and edit site-specific beneficiary travel parameters
@@ -294,6 +311,7 @@ profiles:
     - Provides ability to reprint the standard pre-formatted beneficiary travel form for cash reimbursement
     namespace: DGBT
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 960
@@ -311,7 +329,8 @@ profiles:
       display and can be edited.
     function_category: Health Informatics
     business_owner: ​Not Applicable
-    audience_primary: needs-review
+    audience_primary: clinical-admin
+    audience_basis: HIM incomplete-records tracking
     features:
     - Provides the ability to enter a new or edit an existing incomplete record in the IRT tracking system,
       edit a completed IRT record, and delete an IRT entry
@@ -319,6 +338,7 @@ profiles:
     - Produces a variety of statistical reports for a specified date range
     namespace: DGJ
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 4081
@@ -334,7 +354,8 @@ profiles:
       and Technology Architecture (VistA) environment.
     function_category: Health Informatics
     business_owner: ​VHA
-    audience_primary: needs-review
+    audience_primary: developer
+    audience_basis: VistA DBMS (FileMan) — programmers
     features: &id005
     - Standalone user interface for adding, editing, printing, and searching data
     - Form-based editing
@@ -351,6 +372,7 @@ profiles:
     - Native support for Keys and compound cross references
     namespace: DI
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 8430
@@ -374,6 +396,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​Veterans Health Administration - Dental
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - 'Chart/Treatment: This replaces the DRM Encounter Note tab and features the Treatment & Exam and
       the Periodontal Chart views. Features include head & neck findings, advanced graphics & sequencing'
@@ -407,6 +430,7 @@ profiles:
       information within the VA EHR environment with a user-friendly graphical user interface (GUI)
     namespace: DENT
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 1970
@@ -425,6 +449,7 @@ profiles:
     function_category: Compensation and Pension
     business_owner: ​VHA Office of Disability and OIT Medical Assessment and VBA Compensation
     audience_primary: business-admin
+    audience_basis: 'SPM product line: Compensation and Pension'
     features:
     - Provides access to local databases for identification of a veteran’s admission, discharge, outpatient
       treatment, patient care, and other information that may require adjudicative actions
@@ -439,6 +464,7 @@ profiles:
     - Provides tracking of insufficiently completed compensation and pension examinations
     namespace: DVBA
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 769
@@ -458,6 +484,7 @@ profiles:
     function_category: VHA Finance
     business_owner: Managerial Cost Accounting Office (MCAO)
     audience_primary: business-admin
+    audience_basis: 'SPM product line: VHA Finance'
     features:
     - The patient to whom they were delivered
     - The provider requesting the service or procedure
@@ -482,6 +509,7 @@ profiles:
     - Defect remediation and updates
     namespace: EC
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 2808
@@ -507,6 +535,7 @@ profiles:
     function_category: VHA Finance
     business_owner: ​Financial Technology Service (FTS)
     audience_primary: business-admin
+    audience_basis: 'SPM product line: VHA Finance'
     features:
     - Creation of outpatient pharmacy electronic claims for real-time submission to third party insurance
       companies for adjudication utilizing billing activities within the VHA prescription fill process
@@ -525,6 +554,7 @@ profiles:
     - Additional Information can be found in the online version
     namespace: BPS
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 2176
@@ -543,6 +573,7 @@ profiles:
     function_category: VHA Finance
     business_owner: ​Managerial Cost Accounting Office (MCAO)
     audience_primary: business-admin
+    audience_basis: 'SPM product line: VHA Finance'
     features:
     - Admissions (ADM)
     - Bar Code Medication Administration (BCM)
@@ -565,6 +596,7 @@ profiles:
     - Uses VA Mailman to transmit data to commercial software resident at the AITC
     namespace: ECX
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 1892
@@ -589,6 +621,7 @@ profiles:
     function_category: VHA Front Office
     business_owner: ​Emergency Medicine, Specialty Care Services
     audience_primary: clinical-admin
+    audience_basis: 'SPM product line: VHA Front Office'
     features:
     - Addition of emergency department patients to the application’s display board
     - Viewing of information about patients on the display board
@@ -601,6 +634,7 @@ profiles:
       Departments
     namespace: EDP
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 2310
@@ -621,6 +655,7 @@ profiles:
     function_category: Healthcare Environment and Logistics
     business_owner: ​VHA Procurement and Logistics Office (PLO)
     audience_primary: clinical-admin
+    audience_basis: 'SPM product line: Healthcare Environment and Logistics'
     features:
     - Manages electronic work orders. Staff throughout a facility can electronically enter work requests.
       These requests are promptly reviewed by Engineering personnel and assigned to the appropriate maintenance
@@ -636,6 +671,7 @@ profiles:
       Fixed Assets subsystem (FAP) of the Financial Management System (FMS)
     namespace: EN
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 2462
@@ -656,6 +692,7 @@ profiles:
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​Pathology and Laboratory Medicine Service (P&LMS)
     audience_primary: developer
+    audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
     features:
     - Identify Emerging Pathogens
     - Extract specific data associated with the Emerging Pathogen
@@ -663,6 +700,7 @@ profiles:
     - Create national SAS data sets for Infectious Diseases Program Office access
     namespace: LR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 2356
@@ -680,6 +718,7 @@ profiles:
     function_category: VHA Finance
     business_owner: ​Office of Delivery Operations/Office of Performance Improvement and Reporting
     audience_primary: business-admin
+    audience_basis: 'SPM product line: VHA Finance'
     features:
     - Performs entire fee for service process, both authorized and unauthorized, for Outpatient Medical
       Fee, Civilian Hospital, Community Nursing Home, and Pharmacy Fee
@@ -721,6 +760,7 @@ profiles:
     - Updated data dictionary will be expanded to accept additional payment methodologies from FBCS
     namespace: FB
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 2938
@@ -747,6 +787,7 @@ profiles:
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​VHA Chief Business Office
     audience_primary: developer
+    audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
     features:
     - VistA Changes
     - Security Controls
@@ -755,6 +796,7 @@ profiles:
     - Issues
     namespace: DGFFP
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 3130
@@ -776,6 +818,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​Nutrition and Food Service
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - ​Allows the building of a site-specific listing of patient food preferences that can be incorporated
       in meal production calculations and the printed diet card and tray tickets programs
@@ -805,6 +848,7 @@ profiles:
       goes into effect at the time of diet order entry and changes automatically with new orders
     namespace: FH
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 5736
@@ -826,6 +870,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​Not Applicable
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Functional Independence Measurement (FIM) Graphical User Interface (GUI) front-end programmed in
       Delphi to allow multiple clinicians to input FIM data for a given patient
@@ -838,6 +883,7 @@ profiles:
     - FIM Windows 10 Updates
     namespace: RMIM
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 3174
@@ -859,6 +905,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - Allows one problem list for a given patient
     - Requires minimal data entry
@@ -879,6 +926,7 @@ profiles:
       depending upon the date when the code for the problem was last edited
     namespace: GMPL
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 9152
@@ -900,6 +948,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​ONS (Office of Nursing Service)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - The I&O package allows users to users electronically document patient intake (e.g., oral fluids,
       tube feedings, intravenous fluids, irrigations, and other types of intakes defined by the facility)
@@ -921,6 +970,7 @@ profiles:
       on the coversheet of the CPRS GUI in the Vital Signs box
     namespace: GMRY
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 4190
@@ -940,6 +990,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​VHA Pharmacy Benefits Management (PBM)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Documents patient allergy and adverse drug reaction data
     - Provides the functionality for other VistA modules to extract and add patient reaction data
@@ -965,6 +1016,7 @@ profiles:
     - Contains an online reference guide
     namespace: GMRA
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 1744
@@ -985,6 +1037,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - ​Allows direct access to Consults functions through menu options in CPRS
     - Uses Consults' own menu options for managing the system, generating reports, tracking consults,
@@ -1004,6 +1057,7 @@ profiles:
     - COVID Toolbox allows documentation of COVID-19 exposure and status
     namespace: GMRC
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 8976
@@ -1025,6 +1079,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​Patient Care Services (PCS)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Provides a Graphical User Interface (GUI) to make collecting and viewing of data easier
     - Supports documentation of a patient's vital signs (e.g., temperature, pulse, and respiration)
@@ -1048,6 +1103,7 @@ profiles:
       to know if other applications are currently running, and which patients are selected in those applications
     namespace: GMRV
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 10036
@@ -1065,6 +1121,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - Admission Discharge Transfer (ADT)/Registration
     - Clinical Procedures/Medicine
@@ -1098,6 +1155,7 @@ profiles:
       progress notes and all the entries associated with the interdisciplinary notes
     namespace: GMTS
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 9036
@@ -1117,6 +1175,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​VHA Office of Geriatrics and Extended Care
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Provides for the entry and editing of patient evaluations and admission/discharge data
     - Provides automatic transmission of data to the central database
@@ -1134,6 +1193,7 @@ profiles:
       for MFH charges
     namespace: HBH
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 3671
@@ -1154,10 +1214,12 @@ profiles:
       (TCP).
     function_category: Health Informatics
     business_owner: ​VHA
-    audience_primary: needs-review
+    audience_primary: developer
+    audience_basis: messaging/interface engine — interface engineers
     features: []
     namespace: HL
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 3637
@@ -1183,6 +1245,7 @@ profiles:
     function_category: VHA Finance
     business_owner: ​Not Applicable
     audience_primary: business-admin
+    audience_basis: 'SPM product line: VHA Finance'
     features:
     - Tracks events requiring insurance company reviews from the time of the actual event until final
       payment is resolved
@@ -1209,6 +1272,7 @@ profiles:
     - Further information can be found in the online version for this application
     namespace: IB
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 4272
@@ -1235,7 +1299,8 @@ profiles:
       data automatically transmitted to the VistA server, or clerks can key in data from forms.
     function_category: Health Informatics
     business_owner: VHA Public Health
-    audience_primary: needs-review
+    audience_primary: clinical-admin
+    audience_basis: encounter-form printing / data entry — clinic clerks
     features:
     - Provides a form design utility that allows creation of attractive and easy to use forms for each
       clinic
@@ -1252,6 +1317,7 @@ profiles:
     - Manual data entry options available to allow data to be entered by clerk & passed to PCE to be stored
     namespace: IBD
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 723
@@ -1277,6 +1343,7 @@ profiles:
     function_category: VistA Office (VO) VistA Infrastructure
     business_owner: ​OIT & VHA
     audience_primary: sysadmin
+    audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
     features: &id006
     - Is a standard of the HL7 standards body
     - Provides coordination among client healthcare applications, allowing them to synchronize around
@@ -1284,6 +1351,7 @@ profiles:
     - Ensures secure and consistent context management
     namespace: XU
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 7934
@@ -1306,7 +1374,8 @@ profiles:
       data is displayed graphically on the Capacity Planning Statistics Web page located at: REDACTED'
     function_category: Health Informatics
     business_owner: VHA & OIT
-    audience_primary: needs-review
+    audience_primary: sysadmin
+    audience_basis: purpose names 'IRM and system administrators'
     features:
     - Provides access to local databases for identification of a veteran’s admission, discharge, outpatient
       treatment, patient care, and other information that may require adjudicative actions
@@ -1321,6 +1390,7 @@ profiles:
     - Provides tracking of insufficiently completed compensation and pension examinations
     namespace: KMPD
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 1088
@@ -1340,9 +1410,11 @@ profiles:
     function_category: VistA Office (VO) VistA Infrastructure
     business_owner: ​VHA & OIT
     audience_primary: sysadmin
+    audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
     features: &id003 []
     namespace: KMPR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 7808
@@ -1363,6 +1435,7 @@ profiles:
     function_category: VistA Office (VO) VistA Infrastructure
     business_owner: ​VHA & OIT
     audience_primary: sysadmin
+    audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
     features: &id004
     - The collection task obtains information on the production global, software, and file information
       from the site and automatically transfers this data via network mail to the Capacity Planning (CP)
@@ -1372,6 +1445,7 @@ profiles:
       growth trends of their database, software, and files
     namespace: KMPS
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 8164
@@ -1394,9 +1468,11 @@ profiles:
     function_category: Clinical Services
     business_owner: ​Patient Care Services (VHA-12)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features: []
     namespace: LA
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 9618
@@ -1413,9 +1489,11 @@ profiles:
     function_category: Clinical Services
     business_owner: ​Pathology and Laboratory Medicine Service (P&LMS)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features: []
     namespace: LR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 9542
@@ -1433,6 +1511,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​Pathology and Laboratory Medicine Service (P&LMS)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - Anatomic Pathology (including Surgical Pathology, and Electron Microscopy)
     - Electronic Data Interchange (LEDI)
@@ -1477,6 +1556,7 @@ profiles:
     - ICD-10 code compliant
     namespace: LR and LA
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 9312
@@ -1502,6 +1582,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​Chief Consultant, Diagnostic Services
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - Core Infrastructure
     - Document and Ancillary Imaging
@@ -1635,6 +1716,7 @@ profiles:
       & locations. In case of disasters, the images of displaced patients are available at other VA facilities
     namespace: MAG
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 9732
@@ -1652,6 +1734,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​Not Applicable
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - Provides a Summary of Patient Procedures for all procedures performed on a particular patient with
       simple drill downs for further information. Reports for all procedures are menu options
@@ -1675,6 +1758,7 @@ profiles:
     - ICD-10 code compliant
     namespace: MC
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 5000
@@ -1702,6 +1786,7 @@ profiles:
     function_category: Clinical Services
     business_owner: Not Applicable
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - Allows clinicians to enter, review, interpret, and sign CP orders through one application, CPRS
     - Accepts a variety of file types for result report files
@@ -1717,6 +1802,7 @@ profiles:
     - Improves medical record keeping
     namespace: MD
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 1506
@@ -1737,9 +1823,11 @@ profiles:
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​VHA Office of Primary Care Operations
     audience_primary: developer
+    audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
     features: []
     namespace: MMRS
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 5172
@@ -1754,9 +1842,11 @@ profiles:
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​VHA
     audience_primary: developer
+    audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
     features: []
     namespace: XDR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 2128
@@ -1776,6 +1866,7 @@ profiles:
     function_category: VistA Office (VO) VistA Infrastructure
     business_owner: ​Not Applicable
     audience_primary: sysadmin
+    audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
     features:
     - 'Programming Language: MUMPS'
     - 'Deployment Infrastructure: Varies by location'
@@ -1790,6 +1881,7 @@ profiles:
     - VistA Blood Establishment Computer Software (VBECS)
     namespace: MXML
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 10214
@@ -1805,6 +1897,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​ONS (Office of Nursing Service)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - '​Simple User Interface: Users simply select the data type (Clinical or only Pharmacy data) and
       the amount of patient data they would like returned (all data or 12 months only), and then enter
@@ -1882,6 +1975,7 @@ profiles:
       discharging patients before the system is made available to the user
     namespace: NUR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 5572
@@ -1907,7 +2001,8 @@ profiles:
       review, and Data Use Agreements.
     function_category: Health Informatics
     business_owner: ​Office of the Assistant Deputy Under Secretary for Health for Patient Care Services
-    audience_primary: needs-review
+    audience_primary: clinical-admin
+    audience_basis: Cancer Registrars (registry abstraction)
     features:
     - ​The software supports multi-divisional sites
     - The program automatically finds cases by searching the database from Anatomical Pathology (Surgery,
@@ -1933,6 +2028,7 @@ profiles:
       function if the case being abstracted fulfills the selection criteria for the PCE
     namespace: ONC
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 5940
@@ -1951,9 +2047,11 @@ profiles:
     function_category: Clinical Services
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features: *id001
     namespace: OR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 9120
@@ -1975,6 +2073,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​Pathology and Laboratory Medicine Service (P&LMS)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - Identifies testing facility’s name and address for every POC test on the laboratory report
     - Tags each result to identify the person performing the testing on the laboratory report
@@ -1985,6 +2084,7 @@ profiles:
       responsible for the patient’s care
     namespace: LR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 9574
@@ -2010,6 +2110,7 @@ profiles:
     function_category: VHA Finance
     business_owner: ​VHA Procurement and Logistics Office
     audience_primary: business-admin
+    audience_basis: 'SPM product line: VHA Finance'
     features:
     - Allows users in different services to view the same document on-screen
     - Automates funds distribution, request for goods and services, purchase orders, funds obligations,
@@ -2050,6 +2151,7 @@ profiles:
       System (eCMS) location at the (AITC) in Austin, TX
     namespace: PRC
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 4328
@@ -2068,6 +2170,7 @@ profiles:
     function_category: VHA Finance
     business_owner: ACFO Finance Operations & Support and Revenue Operations
     audience_primary: business-admin
+    audience_basis: 'SPM product line: VHA Finance'
     features:
     - Provides a generic billing system used to generate standardized bills
     - Receives patient and third-party billing information passed automatically from the Integrated Billing
@@ -2122,6 +2225,7 @@ profiles:
     - Additional information can be found in the online version
     namespace: PRCA
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 484
@@ -2142,6 +2246,7 @@ profiles:
     function_category: Healthcare Environment and Logistics
     business_owner: ​VHA Procurement and Logistics Office (PLO)
     audience_primary: clinical-admin
+    audience_basis: 'SPM product line: Healthcare Environment and Logistics'
     features:
     - The Consolidated Memorandum of Receipt (CMR) official is ultimately responsible for new and existing
       equipment located at the medical facilities
@@ -2162,6 +2267,7 @@ profiles:
     - Warehouse
     namespace: PRCN
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 2740
@@ -2185,6 +2291,7 @@ profiles:
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​VHA Chief Business Office (CBO)
     audience_primary: developer
+    audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
     features:
     - ​Flags missing or wandering patients
     - Flags patients with behavioral risks
@@ -2198,6 +2305,7 @@ profiles:
       related to Patient Record Flags
     namespace: DGPF
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 6228
@@ -2218,6 +2326,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features: &id002
     - Allows immediate entry of pre-defined sets of unit dose orders
     - Provides computerized pick lists, which include pre-calculated doses for pharmacists
@@ -2228,6 +2337,7 @@ profiles:
       be performed for Pharmacy users
     namespace: PSA
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 6750
@@ -2248,6 +2358,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​OIA/BCMA and PBM
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Medication Tabs on a patient’s Virtual Due List (VDL) are for separating and viewing the different
       types of active Unit Dose, IV Push, IV Piggyback, and large-volume IV medication orders. Each Tab
@@ -2285,6 +2396,7 @@ profiles:
       that have been identified as immunizations
     namespace: PSB
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 6440
@@ -2305,6 +2417,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Monitors/tracks the receipt, inventory, and dispensing of controlled substances
     - Allows management inspections to automatically identify discrepancies in stock levels
@@ -2324,6 +2437,7 @@ profiles:
     - Provides an HL7 interface to Narcotic Dispensing Equipment systems
     namespace: PSB
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 6496
@@ -2344,9 +2458,11 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features: *id002
     namespace: PSA
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 6750
@@ -2367,6 +2483,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Standardizes drug file information
     - Standardizes drug classifications
@@ -2391,6 +2508,7 @@ profiles:
     - Manage FDA Medication Guides
     namespace: PSN
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 6870
@@ -2409,6 +2527,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Allows the Action Profile to be used as a quick renew/cancel request form by clinic providers when
       electronic notifications are not available, or the site is not fully automated
@@ -2462,6 +2581,7 @@ profiles:
     - Inbound ePrescribing - able to receive and process prescriptions from providers outside the VA
     namespace: PSO
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 6930
@@ -2482,6 +2602,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Enable/Disable Vendor Database Link
     - Other Language Translation Setup
@@ -2489,6 +2610,7 @@ profiles:
     - Enable/Disable Dosing Order Checks
     namespace: PSS
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 7078
@@ -2511,6 +2633,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Breakout of Inpatient Medications IV and Unit Dose, Outpatient Pharmacy, and Controlled Substance
       modules by dispensing occurrence
@@ -2528,6 +2651,7 @@ profiles:
     - Extraction of data to the PBM national database monthly
     namespace: PSU
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 7026
@@ -2544,6 +2668,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​Patient Care Services
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Patients submit medication requests via telephone, mail, or in person at each medical facility.
       When necessary, pharmacy personnel enter the orders into the patient database
@@ -2557,6 +2682,7 @@ profiles:
     - All prescriptions are automatically screened by the CMOP software and set for transmission if appropriate
     namespace: PSX
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 1700
@@ -2579,7 +2705,8 @@ profiles:
     function_category: Health Informatics
     business_owner: ​Office of Performance Improvement and Reporting and the Health Information Management
       Council
-    audience_primary: needs-review
+    audience_primary: clinical
+    audience_basis: clinical encounter documentation; workload entry 2nd
     features:
     - ​Acts as VA’s long-term clinical repository, documenting encounters from local and non-VA facilities
     - Provides primary & secondary clinical visit management utility based on appointments and services
@@ -2588,11 +2715,13 @@ profiles:
     - 'Supports capture of outpatient encounter data. Data collection methods include:'
     namespace: PX
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 6054
       match: appid
     confidence: high
+    audience_secondary: clinical-admin
   PXRM:
     name: Clinical Reminders
     purpose: ​Clinical Reminders may be used for both clinical and administrative purposes. However, the
@@ -2608,6 +2737,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - ​Inform clinicians when a patient is due to receive clinical activity
     - Target the clinicians who can manage and resolve the clinical activity most appropriately
@@ -2620,6 +2750,7 @@ profiles:
     - ICD-10 code compliant
     namespace: PXRM
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 8926
@@ -2644,6 +2775,7 @@ profiles:
     function_category: VistA Office (VO) Technical Reference
     business_owner: VHA CBO
     audience_primary: developer
+    audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
     features:
     - Provides the user with the ability to design a monitor that will auto enroll cases that meet the
       user's defined criteria/conditions from VistA
@@ -2656,6 +2788,7 @@ profiles:
     - Allows the user to manually enter cases
     namespace: QAM
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 1460
@@ -2678,6 +2811,7 @@ profiles:
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​Office of Patient Care Services
     audience_primary: developer
+    audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
     features:
     - Scheduled readmission
     - Prior discharge AMA (against medical advice) or Irregular
@@ -2711,6 +2845,7 @@ profiles:
     - Produces the Semi-Annual Summary of Occurrence Screening
     namespace: QAO
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 5836
@@ -2728,9 +2863,11 @@ profiles:
     function_category: VHA Front Office
     business_owner: ​Office of Medical-Legal Risk Management (17QM7)
     audience_primary: clinical-admin
+    audience_basis: 'SPM product line: VHA Front Office'
     features: []
     namespace: QAQ
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 7396
@@ -2748,6 +2885,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​VHA
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - Functionality is screened by Imaging Type to make it look as if there are separate sub-packages. 
       Many options are also screened by or allow selection by division and/or imaging location
@@ -2776,6 +2914,7 @@ profiles:
     - Secondary diagnosis allowed from studies that are imported into VistA
     namespace: RA
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 7432
@@ -2802,6 +2941,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​VHA HQ Geriatrics and Extended Care
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - Admissions module with demographic and patient movement information interfaced from VistA
     - Assessments module based on the MDS, a core set of preliminary screening and assessment elements
@@ -2810,6 +2950,7 @@ profiles:
     - Electronic transmission of assessments to AITC
     namespace: DGRU
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 7768
@@ -2830,6 +2971,7 @@ profiles:
     function_category: Patient Care Services
     business_owner: ​VHA Office of Patient Care Services Programs
     audience_primary: clinical
+    audience_basis: 'SPM product line: Patient Care Services'
     features:
     - The Purchasing module interfaces with IFCAP (Integrated Funds, Distribution, Control Point Activity,
       Accounting and Procurement).  Users enter requests to purchase and repair items or services using
@@ -2852,6 +2994,7 @@ profiles:
     - The Delayed Order Report (DOR) functionality is available through the Prosthetic VistA Suite GUI
     namespace: RMPR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 7304
@@ -2871,7 +3014,8 @@ profiles:
       are automatically populated (or filled-in) ensuring data accuracy.
     function_category: Health Informatics
     business_owner: ​Not Applicable
-    audience_primary: needs-review
+    audience_primary: clinical-admin
+    audience_basis: HIM Release-of-Information clerks
     features:
     - Prevent ROI request backlogs
     - Track ROI requests by patient and/or requestor
@@ -2883,6 +3027,7 @@ profiles:
     - Comply with HIPAA requirements
     namespace: DSIR
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 7556
@@ -2898,7 +3043,8 @@ profiles:
       registry if they have a positive result specific HIV lab test.
     function_category: Health Informatics
     business_owner: VHA Population Health Services
-    audience_primary: needs-review
+    audience_primary: clinical-admin
+    audience_basis: registry (registries rule applied uniformly)
     features:
     - Improved graphical user interface (GUI)
     - Robust reporting capability, using both process and patient outcome measures, that allows for tailored
@@ -2913,6 +3059,7 @@ profiles:
     - Automates extraction of data to the national registry
     namespace: ROR
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 1322
@@ -2930,7 +3077,8 @@ profiles:
     function_category: Health Informatics
     business_owner: ​Executive Director, Health Information Governance Office of the Assistant Deputy
       Under Secretary for Health for Policy and Planning
-    audience_primary: needs-review
+    audience_primary: clinical-admin
+    audience_basis: chart/film file-room tracking — HIM
     features:
     - Creation of new records/volumes
     - Charge-out/check-in of records
@@ -2954,6 +3102,7 @@ profiles:
       retirement
     namespace: RT
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 7496
@@ -2973,9 +3122,11 @@ profiles:
     function_category: VistA Office (VO) VistA Infrastructure
     business_owner: ​VHA & OIT
     audience_primary: sysadmin
+    audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
     features: *id003
     namespace: KMPR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 7808
@@ -2996,9 +3147,11 @@ profiles:
     function_category: VistA Office (VO) VistA Infrastructure
     business_owner: ​VHA & OIT
     audience_primary: sysadmin
+    audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
     features: *id004
     namespace: KMPS
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 8164
@@ -3014,10 +3167,12 @@ profiles:
       and Technology Architecture (VistA) environment.
     function_category: Health Informatics
     business_owner: ​VHA
-    audience_primary: needs-review
+    audience_primary: developer
+    audience_basis: FileMan SQL access — programmers
     features: *id005
     namespace: DI
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 8430
@@ -3040,6 +3195,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​National Surgery Office
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - Allows a surgeon to generate requests for surgical procedures
     - Allows operating room scheduling managers to assign operating rooms and time slots and generates
@@ -3076,6 +3232,7 @@ profiles:
     - Prints follow-up letters to patients 30 days after a procedure
     namespace: SR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 8200
@@ -3101,9 +3258,11 @@ profiles:
     function_category: VistA Office (VO) VistA Infrastructure
     business_owner: ​OIT & VHA
     audience_primary: sysadmin
+    audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
     features: *id006
     namespace: XU
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 7934
@@ -3123,7 +3282,8 @@ profiles:
       have a traumatic brain injury to provide early medical intervention.”
     function_category: Health Informatics
     business_owner: ​VHA
-    audience_primary: needs-review
+    audience_primary: clinical-admin
+    audience_basis: registry (registries rule applied uniformly)
     features:
     - TBI System Management Guide
     - TBI Application User Manual
@@ -3145,6 +3305,7 @@ profiles:
     - World Health Organization Disability Assessment Schedule
     namespace: TBI
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 8354
@@ -3167,6 +3328,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - Interfaces with the Computerized Patient Record System (CPRS) template utilities in the GUI version
       of CPRS allowing speedy point-and-click composition of notes, consults, and summaries
@@ -3210,6 +3372,7 @@ profiles:
       in the TIU text events file
     namespace: TIU
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 9206
@@ -3224,6 +3387,7 @@ profiles:
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​VHA
     audience_primary: developer
+    audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
     features:
     - Display a list of items to the user
     - Allow the user to browse back and forth through the items one at a time or by screen
@@ -3232,6 +3396,7 @@ profiles:
     - Call List Manager again as part of an action
     namespace: VALM
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 4794
@@ -3258,6 +3423,7 @@ profiles:
     function_category: VistA Office (VO) Technical Reference
     business_owner: VHA
     audience_primary: developer
+    audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
     features:
     - ​Electronic data requests for selected patient from other facility/facilities
     - Automatic processing, and allows for manual processing for certain records, e.g., those flagged
@@ -3271,6 +3437,7 @@ profiles:
       data into the local site file
     namespace: VAQ
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 6174
@@ -3292,6 +3459,7 @@ profiles:
     function_category: Clinical Services
     business_owner: ​Pathology and Laboratory Medicine Service (P&LMS)
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - Interfaces with BCE-PPI Transfusion Verification, VistA Laboratory, CPRS order dialog and reports,
       DSS, and ADT
@@ -3302,6 +3470,7 @@ profiles:
     - Provides barcode scanning capability for patient safety and technologist efficiency
     namespace: VBEC
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 8836
@@ -3320,9 +3489,11 @@ profiles:
     function_category: VistA Office (VO) VistA Infrastructure
     business_owner: ​VHA & OIT
     audience_primary: sysadmin
+    audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
     features: []
     namespace: VDEF
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 9702
@@ -3342,9 +3513,11 @@ profiles:
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​Not Applicable
     audience_primary: developer
+    audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
     features: []
     namespace: VPR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 8806
@@ -3362,12 +3535,14 @@ profiles:
     function_category: Clinical Services
     business_owner: ​Women's Health Services
     audience_primary: clinical
+    audience_basis: 'SPM product line: Clinical Services'
     features:
     - Patient Management
     - Management Reports
     - Manager's Functions
     namespace: WV
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 9268
@@ -3389,7 +3564,8 @@ profiles:
       set of Mailman Application Program Interfaces (API) for the developer.
     function_category: Health Informatics
     business_owner: ​VHA and OIT Infrastructure and Security Services (ISS)
-    audience_primary: needs-review
+    audience_primary: sysadmin
+    audience_basis: messaging infrastructure (MailMan) — OIT/IRM
     features:
     - Delivery options set by user (e.g., individuals, mail groups, devices, staggered delivery)
     - Chained responses, managed automatically and available for review by all recipients
@@ -3410,6 +3586,7 @@ profiles:
       system)
     namespace: XM
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 4836
@@ -3427,6 +3604,7 @@ profiles:
     function_category: VistA Office (VO) VistA Infrastructure
     business_owner: ​VHA
     audience_primary: sysadmin
+    audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
     features:
     - Client/Server connectivity from Java client to M
     - J2EE Application Server connectivity to M—Supports applications and services running on a J2EE application
@@ -3436,6 +3614,7 @@ profiles:
       System (PATS), Veterans Personal Finance System (VPFS) and Blind Rehabilitation
     namespace: XOBV
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 9924
@@ -3450,6 +3629,7 @@ profiles:
     function_category: VistA Office (VO) VistA Infrastructure
     business_owner: ​VHA
     audience_primary: sysadmin
+    audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
     features:
     - Provisions have been made to allow additional building blocks to be placed at the item level of
       the node. Their purpose is to allow modifying actions to be executed and thus increase the flexibility
@@ -3459,6 +3639,7 @@ profiles:
     - Provide PARAMETERS file (#8989.5) for user-specific to system-level tracking of parameter values
     namespace: XQOR
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 4626
@@ -3479,7 +3660,8 @@ profiles:
       sign on once when accessing multiple VistA applications on the same workstation.'
     function_category: Health Informatics
     business_owner: ​VHA
-    audience_primary: needs-review
+    audience_primary: sysadmin
+    audience_basis: system/user/menu/TaskMan mgmt; developer APIs 2nd
     features:
     - 'ZOSF/ZOSV Operating System Interface: The core of Kernel’s portability layer. Insulates applications
       from being tied to any hardware platform, operating system, or M implementation'
@@ -3507,11 +3689,13 @@ profiles:
       data with VistA M Servers (e.g., alerts and date/time)'
     namespace: XU
     source: monograph
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 4440
       match: appid
     confidence: high
+    audience_secondary: developer
   XWB:
     name: Remote Procedure Call (RPC) Broker
     purpose: The ADR is a transactional data repository which serves as the authoritative source for selected
@@ -3525,9 +3709,11 @@ profiles:
     function_category: Eligibility and Enrollment
     business_owner: ​Veterans Experience Office
     audience_primary: clinical-admin
+    audience_basis: 'SPM product line: Eligibility and Enrollment'
     features: []
     namespace: Multiple Namespace
     source: monograph
+    reviewed: false
     evidence:
       doc: vista_monograph_0723_r
       line: 7696

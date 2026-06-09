@@ -16,6 +16,7 @@ from scripts.seed_app_profiles import (  # noqa: E402
     classify_scope,
     derive_audience,
     parse_monograph_entries,
+    resolve_audience,
 )
 
 _FIXTURE = """\
@@ -116,6 +117,24 @@ def test_derive_audience_from_product_line() -> None:
     assert derive_audience("VistA Office (VO) VistA Infrastructure", "") == "sysadmin"
     # unknown product line falls through to a review sentinel, never a guess
     assert derive_audience("Some New Line", "") == "needs-review"
+
+
+def test_resolve_audience_applies_reviewed_overrides() -> None:
+    # PCE -> clinical (with clinical-admin secondary); registries -> clinical-admin uniformly
+    prim, sec, _ = resolve_audience("PX", "Health Informatics", "")
+    assert (prim, sec) == ("clinical", "clinical-admin")
+    for reg in ("ONC", "TBI", "ROR"):
+        prim, sec, _ = resolve_audience(reg, "Health Informatics", "")
+        assert prim == "clinical-admin", reg
+    # KMPD's own purpose names IRM/sysadmins
+    assert resolve_audience("KMPD", "Health Informatics", "")[0] == "sysadmin"
+
+
+def test_resolve_audience_falls_through_to_product_line_map() -> None:
+    # an app with no override uses the SPM product-line mapping
+    prim, sec, basis = resolve_audience("PSO", "Clinical Services", "")
+    assert (prim, sec) == ("clinical", None)
+    assert "Clinical Services" in basis
 
 
 def test_classify_scope_excludes_non_vista_and_decommissioned() -> None:
