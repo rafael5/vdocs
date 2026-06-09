@@ -1,0 +1,68 @@
+# registries/inventory/doctype-policy.yaml
+# =========================================================================================
+# DECLARATIVE doc-type admission policy for the gold vdocs library (the document-level
+# companion to the app-level scope gate). It decides, per FileMan-style doc_type code,
+# whether documents of that type are admitted to gold.
+#
+# DECISION (2026-06-09): keep the Tier-A *reference core*; explicitly OMIT Tiers B, C, D.
+# Rationale: vdocs is a lexical-first, offline, human/developer REFERENCE library — its value
+# is durable "how it works / how to use / how to administer" manuals. Version-delta changelog,
+# install/deploy runbooks, and document fragments flood the index with ephemeral, version-bound
+# content (~63% of in-scope docs) that goes stale and drowns the reference manuals in search.
+#
+# THIS IS A REVERSIBLE TOGGLE. Nothing here is deleted from the lake — omitted types are simply
+# not promoted to gold. To re-admit a category (e.g. someone needs install guides), flip its
+# `decision: omit` -> `decision: keep` and re-run the pipeline from `serve-inventory`. Per-code
+# `reason` records WHY it was omitted so the trade-off is explicit at the toggle.
+#
+# `default: keep` is fail-safe: an unmapped/new doc_type is admitted (and surfaces for triage)
+# rather than silently dropped.
+# =========================================================================================
+
+default: keep
+
+# Counts are in-scope docx docs as of 2026-06-09 (total 3728): keep ~1390 (37%), omit ~2338 (63%).
+doctypes:
+
+  # ---- Tier A — reference core (KEEP): the durable how-it-works / how-to manuals ----
+  UM:     {tier: A, decision: keep, label: User Manual,                    reason: reference core}
+  UG:     {tier: A, decision: keep, label: User Guide,                     reason: reference core}
+  TM:     {tier: A, decision: keep, label: Technical Manual,               reason: reference core (developer)}
+  DG:     {tier: A, decision: keep, label: Developer Guide,                reason: reference core (developer)}
+  API:    {tier: A, decision: keep, label: API Manual,                     reason: reference core (developer)}
+  INT:    {tier: A, decision: keep, label: Interface Specification,        reason: reference core (integration)}
+  REF:    {tier: A, decision: keep, label: Interface Toolkit,              reason: reference core (integration)}
+  AG:     {tier: A, decision: keep, label: Administrator's Guide,          reason: reference core (admin)}
+  SM:     {tier: A, decision: keep, label: Systems Management Guide,       reason: reference core (admin)}
+  SG:     {tier: A, decision: keep, label: Security Guide,                 reason: reference core (security model)}
+  TG:     {tier: A, decision: keep, label: Technical Guide,                reason: reference core}
+  QRG:    {tier: A, decision: keep, label: Quick Reference Guide,          reason: durable quick reference}
+  TRG:    {tier: A, decision: keep, label: Training Guide,                 reason: durable user training}
+  FAQ:    {tier: A, decision: keep, label: Frequently Asked Questions,     reason: durable reference}
+
+  # ---- Tier B — install/deploy/operational runbooks (OMIT): version-specific procedure ----
+  DIBR:   {tier: B, decision: omit, label: Deploy/Install/Back-Out/Rollback, reason: version-specific install runbook, not reference (largest after RN)}
+  IG:     {tier: B, decision: omit, label: Installation Guide,            reason: version-specific install procedure}
+  IG-IMP: {tier: B, decision: omit, label: Implementation Guide,          reason: version-specific rollout procedure}
+  POM:    {tier: B, decision: omit, label: Production Operations Manual,   reason: site operations runbook, not reference}
+  CFG:    {tier: B, decision: omit, label: Setup and Configuration Guide,  reason: setup procedure, not reference}
+  SG-SET: {tier: B, decision: omit, label: Security Setup Guide,          reason: setup procedure (distinct from the SG security model, which is kept)}
+  RS:     {tier: B, decision: omit, label: Requirements Specification,    reason: pre-build, version/project-specific planning doc, not reference}
+
+  # ---- Tier C — ephemeral version-delta / changelog (OMIT): describes a release, not the system ----
+  RN:     {tier: C, decision: omit, label: Release Notes,                 reason: ephemeral version-delta changelog (largest single type, 796 docs)}
+  CRU:    {tier: C, decision: omit, label: Clinical Reminder Update,      reason: version-specific content/data delta}
+  VDD:    {tier: C, decision: omit, label: Version Description Document,   reason: pure version metadata}
+  PDD:    {tier: C, decision: omit, label: Patch Description Document,     reason: per-patch changelog}
+  WF:     {tier: C, decision: omit, label: Workflow Guide,                reason: in practice patch-bound workflow-change notes (DVBA*/CAPRI), version-specific}
+
+  # ---- Tier D — fragments / non-standalone (OMIT) ----
+  SUP:    {tier: D, decision: omit, label: Supplement,                    reason: addendum fragment, not standalone}
+  APX:    {tier: D, decision: omit, label: Appendix,                      reason: fragment, not standalone}
+  DESC:   {tier: D, decision: omit, label: Description Document,          reason: marginal/stub}
+  CVG:    {tier: D, decision: omit, label: Conversion Guide,             reason: one-off version-conversion procedure}
+
+# Already handled upstream (NOT doc-type policy, listed for completeness):
+#   noise_type: vba_form (1192) · va_ref (149) · test_document (2)   -> registries/inventory/noise-domains.yaml
+#   FORM (VBA Form)                                                  -> noise (vba_form)
+#   non-docx format                                                 -> EnrichedRecord.out_of_scope_reason (§1)

@@ -43,6 +43,30 @@ VistA-based. Only *pure* COTS/web/enterprise-service apps are excluded.
 - Signals available on every inventory row: `system_type`, `cots_dependent`, `app_status`,
   `app_name_abbrev`, `pkg_ns`; plus Monograph `VASI System Status` where the app joins.
 
+## Two gates, one job
+
+The gatekeeper has **two orthogonal axes**, both "what's allowed into gold," both declared-as-data:
+- **App-level scope** (this doc's main subject): active VistA only — `registries/inventory/scope-policy.yaml`.
+- **Document-level type policy**: which *doc types* are reference-worthy —
+  **`registries/inventory/doctype-policy.yaml`** (already drafted). A doc is admitted only if **both**
+  its app is in-scope **and** its doc-type `decision: keep`.
+
+### Document-level type policy (already drafted — wire it in)
+
+`doctype-policy.yaml` declares, per doc_type code, `decision: keep|omit` with a `tier` and a `reason`.
+**Decision (2026-06-09): keep Tier-A reference core; explicitly OMIT Tiers B, C, D** — this drops the
+in-scope corpus from 3728 → **1390 kept (37%)**, omitting 2338:
+- **B** install/deploy/operational runbooks (DIBR 668, IG 405, IG-IMP, POM, CFG, SG-SET, RS) — version-specific procedure;
+- **C** ephemeral version-delta changelog (RN 796, CRU 168, VDD, PDD, WF) — describes a release, not the system;
+- **D** fragments (SUP, APX, DESC, CVG) — not standalone.
+
+**It is a reversible toggle, by design** — omitted docs are NOT deleted from the lake, just not
+promoted to gold. To re-admit a category, flip its `decision: omit` → `keep` and re-run from
+`serve-inventory`; the per-code `reason` makes the trade-off explicit at the toggle. `default: keep`
+is fail-safe (a new/unmapped doc_type is admitted + surfaces for triage, never silently dropped).
+Enforce it at the same gate as app-scope (skip + log omitted docs in `state.db`); expose `doc_kept`
++ the policy `tier` as an `index.db` facet; regression-fixture the 1390/2338 split so it can't drift.
+
 ## The task (TDD — test first, per CLAUDE.md)
 
 1. **Declare the policy as data**, not code: add `registries/inventory/scope-policy.yaml` —
@@ -101,6 +125,8 @@ ONCO (→ `Oncology` package) and optionally record each sub-prefix app's **pare
 
 - `registries/inventory/app-profiles.yaml` (draft) — `_excluded` / `_needs_fallback` blocks;
   `software_class` / `software_class_basis` / `vasi_status` fields.
+- `registries/inventory/doctype-policy.yaml` (draft) — the document-level keep/omit policy
+  (Tier A kept; B/C/D omitted, reversible per-code toggle).
 - `scripts/seed_app_profiles.py` — `classify_scope`, `_distinct_apps` (the seed logic + signals).
 - `src/vdocs/models/catalog.py` — `EnrichedRecord` (where `out_of_scope_reason` lives; add the
   app-level fields beside it).
