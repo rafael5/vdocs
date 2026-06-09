@@ -2,6 +2,10 @@
 # Per-application purpose / function category / operator audience, transcribed from the
 # VistA Monograph July 2023 §4 and joined to the gold inventory. Regenerate with
 #   python scripts/seed_app_profiles.py
+# 'software_class': I (national) by default — the VDL only catalogs nationally-released
+# software; III only on an explicit app-level reclassification in the app's docs; II needs
+# the VA SAC list (not assigned). 'vasi_status' (Production / Technical Reference Only / Not
+# A System …) is the Monograph's per-app importance gradient ('unknown' for fallback apps).
 # Every 'profiles' entry cites its Monograph source line. 'audience_primary: needs-review'
 # and medium-confidence/namespace matches need a human pass. 'fallback_profiles' = in-scope
 # VistA apps absent from the 2023 Monograph, curated from their own docs (source: manual,
@@ -19,6 +23,9 @@ profiles:
     business_owner: ​Audiology and Speech Pathology
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Provides automatic transmission of visit data to the Patient Care Encounter (PCE) program in order
       to incorporate QUASAR visit data in Ambulatory Care Reporting Program (ACRP) and in the Decision
@@ -68,6 +75,9 @@ profiles:
       Council
     audience_primary: clinical-admin
     audience_basis: registration/MAS clerks (administrative ADT functions)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Provides on-line patient registration and disposition of applications for medical care
     - Tracks patient movements during inpatient stays
@@ -111,6 +121,9 @@ profiles:
     business_owner: VHA
     audience_primary: developer
     audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features: []
     namespace: OR
     source: monograph
@@ -131,6 +144,9 @@ profiles:
     business_owner: Rehabilitation and Prosthetic Services
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Visual Impairment Service Teams (VIST) Coordinators
     - Blind Rehabilitation Centers (BRCs)
@@ -177,6 +193,9 @@ profiles:
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Provides inventory management capabilities for clinical care locations and drug crash carts.
     - Allows easy drug item inactivation for inventory locations
@@ -220,6 +239,9 @@ profiles:
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Defines, populates, and retrieves information about user classes. User classes can be defined hospital-wide
       or more narrowly for a specific service and can be used across VistA to replace and/or complement
@@ -252,6 +274,9 @@ profiles:
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features: &id001 []
     namespace: OR
     source: monograph
@@ -274,6 +299,9 @@ profiles:
     business_owner: Patient Care Services (PCS)
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features: []
     namespace: CRHD
     source: monograph
@@ -306,6 +334,9 @@ profiles:
     business_owner: ​ Veterans Transportation Program
     audience_primary: clinical-admin
     audience_basis: 'SPM product line: VHA Front Office'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Automatically computes amount payable for claims with account type of Compensation and Pension
     - Allows each site to define and edit site-specific beneficiary travel parameters
@@ -333,6 +364,9 @@ profiles:
     business_owner: ​Not Applicable
     audience_primary: clinical-admin
     audience_basis: HIM incomplete-records tracking
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Not A System
     features:
     - Provides the ability to enter a new or edit an existing incomplete record in the IRT tracking system,
       edit a completed IRT record, and delete an IRT entry
@@ -358,6 +392,9 @@ profiles:
     business_owner: ​VHA
     audience_primary: developer
     audience_basis: VistA DBMS (FileMan) — programmers
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features: &id005
     - Standalone user interface for adding, editing, printing, and searching data
     - Form-based editing
@@ -399,6 +436,9 @@ profiles:
     business_owner: ​Veterans Health Administration - Dental
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - 'Chart/Treatment: This replaces the DRM Encounter Note tab and features the Treatment & Exam and
       the Periodontal Chart views. Features include head & neck findings, advanced graphics & sequencing'
@@ -452,6 +492,9 @@ profiles:
     business_owner: ​VHA Office of Disability and OIT Medical Assessment and VBA Compensation
     audience_primary: business-admin
     audience_basis: 'SPM product line: Compensation and Pension'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Provides access to local databases for identification of a veteran’s admission, discharge, outpatient
       treatment, patient care, and other information that may require adjudicative actions
@@ -487,6 +530,9 @@ profiles:
     business_owner: Managerial Cost Accounting Office (MCAO)
     audience_primary: business-admin
     audience_basis: 'SPM product line: VHA Finance'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - The patient to whom they were delivered
     - The provider requesting the service or procedure
@@ -538,6 +584,9 @@ profiles:
     business_owner: ​Financial Technology Service (FTS)
     audience_primary: business-admin
     audience_basis: 'SPM product line: VHA Finance'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Creation of outpatient pharmacy electronic claims for real-time submission to third party insurance
       companies for adjudication utilizing billing activities within the VHA prescription fill process
@@ -576,6 +625,9 @@ profiles:
     business_owner: ​Managerial Cost Accounting Office (MCAO)
     audience_primary: business-admin
     audience_basis: 'SPM product line: VHA Finance'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Admissions (ADM)
     - Bar Code Medication Administration (BCM)
@@ -624,6 +676,9 @@ profiles:
     business_owner: ​Emergency Medicine, Specialty Care Services
     audience_primary: clinical-admin
     audience_basis: 'SPM product line: VHA Front Office'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Addition of emergency department patients to the application’s display board
     - Viewing of information about patients on the display board
@@ -658,6 +713,9 @@ profiles:
     business_owner: ​VHA Procurement and Logistics Office (PLO)
     audience_primary: clinical-admin
     audience_basis: 'SPM product line: Healthcare Environment and Logistics'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Manages electronic work orders. Staff throughout a facility can electronically enter work requests.
       These requests are promptly reviewed by Engineering personnel and assigned to the appropriate maintenance
@@ -695,6 +753,9 @@ profiles:
     business_owner: ​Pathology and Laboratory Medicine Service (P&LMS)
     audience_primary: developer
     audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Not A System
     features:
     - Identify Emerging Pathogens
     - Extract specific data associated with the Emerging Pathogen
@@ -721,6 +782,9 @@ profiles:
     business_owner: ​Office of Delivery Operations/Office of Performance Improvement and Reporting
     audience_primary: business-admin
     audience_basis: 'SPM product line: VHA Finance'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Performs entire fee for service process, both authorized and unauthorized, for Outpatient Medical
       Fee, Civilian Hospital, Community Nursing Home, and Pharmacy Fee
@@ -790,6 +854,9 @@ profiles:
     business_owner: ​VHA Chief Business Office
     audience_primary: developer
     audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Not A System
     features:
     - VistA Changes
     - Security Controls
@@ -821,6 +888,9 @@ profiles:
     business_owner: ​Nutrition and Food Service
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - ​Allows the building of a site-specific listing of patient food preferences that can be incorporated
       in meal production calculations and the printed diet card and tray tickets programs
@@ -873,6 +943,9 @@ profiles:
     business_owner: ​Not Applicable
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Functional Independence Measurement (FIM) Graphical User Interface (GUI) front-end programmed in
       Delphi to allow multiple clinicians to input FIM data for a given patient
@@ -908,6 +981,9 @@ profiles:
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Allows one problem list for a given patient
     - Requires minimal data entry
@@ -951,6 +1027,9 @@ profiles:
     business_owner: ​ONS (Office of Nursing Service)
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - The I&O package allows users to users electronically document patient intake (e.g., oral fluids,
       tube feedings, intravenous fluids, irrigations, and other types of intakes defined by the facility)
@@ -993,6 +1072,9 @@ profiles:
     business_owner: ​VHA Pharmacy Benefits Management (PBM)
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Documents patient allergy and adverse drug reaction data
     - Provides the functionality for other VistA modules to extract and add patient reaction data
@@ -1040,6 +1122,9 @@ profiles:
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - ​Allows direct access to Consults functions through menu options in CPRS
     - Uses Consults' own menu options for managing the system, generating reports, tracking consults,
@@ -1082,6 +1167,9 @@ profiles:
     business_owner: ​Patient Care Services (PCS)
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Provides a Graphical User Interface (GUI) to make collecting and viewing of data easier
     - Supports documentation of a patient's vital signs (e.g., temperature, pulse, and respiration)
@@ -1124,6 +1212,9 @@ profiles:
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Admission Discharge Transfer (ADT)/Registration
     - Clinical Procedures/Medicine
@@ -1178,6 +1269,9 @@ profiles:
     business_owner: ​VHA Office of Geriatrics and Extended Care
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Provides for the entry and editing of patient evaluations and admission/discharge data
     - Provides automatic transmission of data to the central database
@@ -1218,6 +1312,9 @@ profiles:
     business_owner: ​VHA
     audience_primary: developer
     audience_basis: messaging/interface engine — interface engineers
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features: []
     namespace: HL
     source: monograph
@@ -1248,6 +1345,9 @@ profiles:
     business_owner: ​Not Applicable
     audience_primary: business-admin
     audience_basis: 'SPM product line: VHA Finance'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Tracks events requiring insurance company reviews from the time of the actual event until final
       payment is resolved
@@ -1303,6 +1403,9 @@ profiles:
     business_owner: VHA Public Health
     audience_primary: clinical-admin
     audience_basis: encounter-form printing / data entry — clinic clerks
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Provides a form design utility that allows creation of attractive and easy to use forms for each
       clinic
@@ -1346,6 +1449,9 @@ profiles:
     business_owner: ​OIT & VHA
     audience_primary: sysadmin
     audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features: &id006
     - Is a standard of the HL7 standards body
     - Provides coordination among client healthcare applications, allowing them to synchronize around
@@ -1378,6 +1484,9 @@ profiles:
     business_owner: VHA & OIT
     audience_primary: sysadmin
     audience_basis: purpose names 'IRM and system administrators'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Not A System
     features:
     - Provides access to local databases for identification of a veteran’s admission, discharge, outpatient
       treatment, patient care, and other information that may require adjudicative actions
@@ -1413,6 +1522,9 @@ profiles:
     business_owner: ​VHA & OIT
     audience_primary: sysadmin
     audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features: &id003 []
     namespace: KMPR
     source: monograph
@@ -1438,6 +1550,9 @@ profiles:
     business_owner: ​VHA & OIT
     audience_primary: sysadmin
     audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features: &id004
     - The collection task obtains information on the production global, software, and file information
       from the site and automatically transfers this data via network mail to the Capacity Planning (CP)
@@ -1471,6 +1586,9 @@ profiles:
     business_owner: ​Patient Care Services (VHA-12)
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Not A System
     features: []
     namespace: LA
     source: monograph
@@ -1492,6 +1610,9 @@ profiles:
     business_owner: ​Pathology and Laboratory Medicine Service (P&LMS)
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Not A System
     features: []
     namespace: LR
     source: monograph
@@ -1514,6 +1635,9 @@ profiles:
     business_owner: ​Pathology and Laboratory Medicine Service (P&LMS)
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Anatomic Pathology (including Surgical Pathology, and Electron Microscopy)
     - Electronic Data Interchange (LEDI)
@@ -1585,6 +1709,9 @@ profiles:
     business_owner: ​Chief Consultant, Diagnostic Services
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Core Infrastructure
     - Document and Ancillary Imaging
@@ -1737,6 +1864,9 @@ profiles:
     business_owner: ​Not Applicable
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Provides a Summary of Patient Procedures for all procedures performed on a particular patient with
       simple drill downs for further information. Reports for all procedures are menu options
@@ -1789,6 +1919,9 @@ profiles:
     business_owner: Not Applicable
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Allows clinicians to enter, review, interpret, and sign CP orders through one application, CPRS
     - Accepts a variety of file types for result report files
@@ -1826,6 +1959,9 @@ profiles:
     business_owner: ​VHA Office of Primary Care Operations
     audience_primary: developer
     audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features: []
     namespace: MMRS
     source: monograph
@@ -1845,6 +1981,9 @@ profiles:
     business_owner: ​VHA
     audience_primary: developer
     audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features: []
     namespace: XDR
     source: monograph
@@ -1869,6 +2008,9 @@ profiles:
     business_owner: ​Not Applicable
     audience_primary: sysadmin
     audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Not A System
     features:
     - 'Programming Language: MUMPS'
     - 'Deployment Infrastructure: Varies by location'
@@ -1900,6 +2042,9 @@ profiles:
     business_owner: ​ONS (Office of Nursing Service)
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - '​Simple User Interface: Users simply select the data type (Clinical or only Pharmacy data) and
       the amount of patient data they would like returned (all data or 12 months only), and then enter
@@ -2005,6 +2150,9 @@ profiles:
     business_owner: ​Office of the Assistant Deputy Under Secretary for Health for Patient Care Services
     audience_primary: clinical-admin
     audience_basis: Cancer Registrars (registry abstraction)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - ​The software supports multi-divisional sites
     - The program automatically finds cases by searching the database from Anatomical Pathology (Surgery,
@@ -2050,6 +2198,9 @@ profiles:
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features: *id001
     namespace: OR
     source: monograph
@@ -2076,6 +2227,9 @@ profiles:
     business_owner: ​Pathology and Laboratory Medicine Service (P&LMS)
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Not A System
     features:
     - Identifies testing facility’s name and address for every POC test on the laboratory report
     - Tags each result to identify the person performing the testing on the laboratory report
@@ -2113,6 +2267,9 @@ profiles:
     business_owner: ​VHA Procurement and Logistics Office
     audience_primary: business-admin
     audience_basis: 'SPM product line: VHA Finance'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Allows users in different services to view the same document on-screen
     - Automates funds distribution, request for goods and services, purchase orders, funds obligations,
@@ -2173,6 +2330,9 @@ profiles:
     business_owner: ACFO Finance Operations & Support and Revenue Operations
     audience_primary: business-admin
     audience_basis: 'SPM product line: VHA Finance'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Provides a generic billing system used to generate standardized bills
     - Receives patient and third-party billing information passed automatically from the Integrated Billing
@@ -2249,6 +2409,9 @@ profiles:
     business_owner: ​VHA Procurement and Logistics Office (PLO)
     audience_primary: clinical-admin
     audience_basis: 'SPM product line: Healthcare Environment and Logistics'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - The Consolidated Memorandum of Receipt (CMR) official is ultimately responsible for new and existing
       equipment located at the medical facilities
@@ -2294,6 +2457,9 @@ profiles:
     business_owner: ​VHA Chief Business Office (CBO)
     audience_primary: developer
     audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features:
     - ​Flags missing or wandering patients
     - Flags patients with behavioral risks
@@ -2329,6 +2495,9 @@ profiles:
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features: &id002
     - Allows immediate entry of pre-defined sets of unit dose orders
     - Provides computerized pick lists, which include pre-calculated doses for pharmacists
@@ -2361,6 +2530,9 @@ profiles:
     business_owner: ​OIA/BCMA and PBM
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Medication Tabs on a patient’s Virtual Due List (VDL) are for separating and viewing the different
       types of active Unit Dose, IV Push, IV Piggyback, and large-volume IV medication orders. Each Tab
@@ -2420,6 +2592,9 @@ profiles:
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Monitors/tracks the receipt, inventory, and dispensing of controlled substances
     - Allows management inspections to automatically identify discrepancies in stock levels
@@ -2461,6 +2636,9 @@ profiles:
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features: *id002
     namespace: PSA
     source: monograph
@@ -2486,6 +2664,9 @@ profiles:
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Standardizes drug file information
     - Standardizes drug classifications
@@ -2530,6 +2711,9 @@ profiles:
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Allows the Action Profile to be used as a quick renew/cancel request form by clinic providers when
       electronic notifications are not available, or the site is not fully automated
@@ -2605,6 +2789,9 @@ profiles:
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Enable/Disable Vendor Database Link
     - Other Language Translation Setup
@@ -2636,6 +2823,9 @@ profiles:
     business_owner: ​Pharmacy Benefits Management (PBM)
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Breakout of Inpatient Medications IV and Unit Dose, Outpatient Pharmacy, and Controlled Substance
       modules by dispensing occurrence
@@ -2671,6 +2861,9 @@ profiles:
     business_owner: ​Patient Care Services
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Patients submit medication requests via telephone, mail, or in person at each medical facility.
       When necessary, pharmacy personnel enter the orders into the patient database
@@ -2709,6 +2902,9 @@ profiles:
       Council
     audience_primary: clinical
     audience_basis: clinical encounter documentation; workload entry 2nd
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - ​Acts as VA’s long-term clinical repository, documenting encounters from local and non-VA facilities
     - Provides primary & secondary clinical visit management utility based on appointments and services
@@ -2740,6 +2936,9 @@ profiles:
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - ​Inform clinicians when a patient is due to receive clinical activity
     - Target the clinicians who can manage and resolve the clinical activity most appropriately
@@ -2778,6 +2977,9 @@ profiles:
     business_owner: VHA CBO
     audience_primary: developer
     audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Not A System
     features:
     - Provides the user with the ability to design a monitor that will auto enroll cases that meet the
       user's defined criteria/conditions from VistA
@@ -2814,6 +3016,9 @@ profiles:
     business_owner: ​Office of Patient Care Services
     audience_primary: developer
     audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Not A System
     features:
     - Scheduled readmission
     - Prior discharge AMA (against medical advice) or Irregular
@@ -2866,6 +3071,9 @@ profiles:
     business_owner: ​Office of Medical-Legal Risk Management (17QM7)
     audience_primary: clinical-admin
     audience_basis: 'SPM product line: VHA Front Office'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features: []
     namespace: QAQ
     source: monograph
@@ -2888,6 +3096,9 @@ profiles:
     business_owner: ​VHA
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Functionality is screened by Imaging Type to make it look as if there are separate sub-packages. 
       Many options are also screened by or allow selection by division and/or imaging location
@@ -2944,6 +3155,9 @@ profiles:
     business_owner: ​VHA HQ Geriatrics and Extended Care
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Admissions module with demographic and patient movement information interfaced from VistA
     - Assessments module based on the MDS, a core set of preliminary screening and assessment elements
@@ -2974,6 +3188,9 @@ profiles:
     business_owner: ​VHA Office of Patient Care Services Programs
     audience_primary: clinical
     audience_basis: 'SPM product line: Patient Care Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - The Purchasing module interfaces with IFCAP (Integrated Funds, Distribution, Control Point Activity,
       Accounting and Procurement).  Users enter requests to purchase and repair items or services using
@@ -3018,6 +3235,9 @@ profiles:
     business_owner: ​Not Applicable
     audience_primary: clinical-admin
     audience_basis: HIM Release-of-Information clerks
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Prevent ROI request backlogs
     - Track ROI requests by patient and/or requestor
@@ -3047,6 +3267,9 @@ profiles:
     business_owner: VHA Population Health Services
     audience_primary: clinical-admin
     audience_basis: registry (registries rule applied uniformly)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Improved graphical user interface (GUI)
     - Robust reporting capability, using both process and patient outcome measures, that allows for tailored
@@ -3081,6 +3304,9 @@ profiles:
       Under Secretary for Health for Policy and Planning
     audience_primary: clinical-admin
     audience_basis: chart/film file-room tracking — HIM
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Creation of new records/volumes
     - Charge-out/check-in of records
@@ -3125,6 +3351,9 @@ profiles:
     business_owner: ​VHA & OIT
     audience_primary: sysadmin
     audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features: *id003
     namespace: KMPR
     source: monograph
@@ -3150,6 +3379,9 @@ profiles:
     business_owner: ​VHA & OIT
     audience_primary: sysadmin
     audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features: *id004
     namespace: KMPS
     source: monograph
@@ -3171,6 +3403,9 @@ profiles:
     business_owner: ​VHA
     audience_primary: developer
     audience_basis: FileMan SQL access — programmers
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features: *id005
     namespace: DI
     source: monograph
@@ -3198,6 +3433,9 @@ profiles:
     business_owner: ​National Surgery Office
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Allows a surgeon to generate requests for surgical procedures
     - Allows operating room scheduling managers to assign operating rooms and time slots and generates
@@ -3261,6 +3499,9 @@ profiles:
     business_owner: ​OIT & VHA
     audience_primary: sysadmin
     audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features: *id006
     namespace: XU
     source: monograph
@@ -3286,6 +3527,9 @@ profiles:
     business_owner: ​VHA
     audience_primary: clinical-admin
     audience_basis: registry (registries rule applied uniformly)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Not a System
     features:
     - TBI System Management Guide
     - TBI Application User Manual
@@ -3331,6 +3575,9 @@ profiles:
     business_owner: ​VHA Office of Health Informatics
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Interfaces with the Computerized Patient Record System (CPRS) template utilities in the GUI version
       of CPRS allowing speedy point-and-click composition of notes, consults, and summaries
@@ -3390,6 +3637,9 @@ profiles:
     business_owner: ​VHA
     audience_primary: developer
     audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features:
     - Display a list of items to the user
     - Allow the user to browse back and forth through the items one at a time or by screen
@@ -3426,6 +3676,9 @@ profiles:
     business_owner: VHA
     audience_primary: developer
     audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Not A System
     features:
     - ​Electronic data requests for selected patient from other facility/facilities
     - Automatic processing, and allows for manual processing for certain records, e.g., those flagged
@@ -3462,6 +3715,9 @@ profiles:
     business_owner: ​Pathology and Laboratory Medicine Service (P&LMS)
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Interfaces with BCE-PPI Transfusion Verification, VistA Laboratory, CPRS order dialog and reports,
       DSS, and ADT
@@ -3492,6 +3748,9 @@ profiles:
     business_owner: ​VHA & OIT
     audience_primary: sysadmin
     audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features: []
     namespace: VDEF
     source: monograph
@@ -3516,6 +3775,9 @@ profiles:
     business_owner: ​Not Applicable
     audience_primary: developer
     audience_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features: []
     namespace: VPR
     source: monograph
@@ -3538,6 +3800,9 @@ profiles:
     business_owner: ​Women's Health Services
     audience_primary: clinical
     audience_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Patient Management
     - Management Reports
@@ -3568,6 +3833,9 @@ profiles:
     business_owner: ​VHA and OIT Infrastructure and Security Services (ISS)
     audience_primary: sysadmin
     audience_basis: messaging infrastructure (MailMan) — OIT/IRM
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - Delivery options set by user (e.g., individuals, mail groups, devices, staggered delivery)
     - Chained responses, managed automatically and available for review by all recipients
@@ -3607,6 +3875,9 @@ profiles:
     business_owner: ​VHA
     audience_primary: sysadmin
     audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Not A System
     features:
     - Client/Server connectivity from Java client to M
     - J2EE Application Server connectivity to M—Supports applications and services running on a J2EE application
@@ -3632,6 +3903,9 @@ profiles:
     business_owner: ​VHA
     audience_primary: sysadmin
     audience_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Technical Reference Only
     features:
     - Provisions have been made to allow additional building blocks to be placed at the item level of
       the node. Their purpose is to allow modifying actions to be executed and thus increase the flexibility
@@ -3664,6 +3938,9 @@ profiles:
     business_owner: ​VHA
     audience_primary: sysadmin
     audience_basis: system/user/menu/TaskMan mgmt; developer APIs 2nd
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features:
     - 'ZOSF/ZOSV Operating System Interface: The core of Kernel’s portability layer. Insulates applications
       from being tied to any hardware platform, operating system, or M implementation'
@@ -3712,6 +3989,9 @@ profiles:
     business_owner: ​Veterans Experience Office
     audience_primary: clinical-admin
     audience_basis: 'SPM product line: Eligibility and Enrollment'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Production
     features: []
     namespace: Multiple Namespace
     source: monograph
@@ -3730,6 +4010,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: clinical-admin
     audience_basis: encounter SC/NSC classification — eligibility/MAS
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: ASCD
     source: manual
     status: have-docs
@@ -3745,6 +4028,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: developer
     audience_basis: VA/DoD health-data exchange infrastructure
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: CHDS
     source: manual
     status: have-docs
@@ -3760,6 +4046,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: clinical-admin
     audience_basis: registry (registries rule)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: EFR
     source: manual
     status: have-docs
@@ -3776,6 +4065,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: sysadmin
     audience_basis: IRM data-transmission utility (low confidence; could be business-admin)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: GEN
     source: manual
     status: have-docs
@@ -3790,6 +4082,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: developer
     audience_basis: HL7 standard files/tables — infrastructure (prior)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: ''
     source: manual
     status: pending-fetch
@@ -3804,6 +4099,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: clinical-admin
     audience_basis: eligibility/means-test processing
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: IVMB
     source: manual
     status: have-docs
@@ -3819,6 +4117,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: sysadmin
     audience_basis: capacity monitoring — IRM
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: KMPV
     source: manual
     status: have-docs
@@ -3833,6 +4134,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: needs-review
     audience_basis: Bar Code Expansion — function unclear without docs
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: ''
     source: manual
     status: pending-fetch
@@ -3847,6 +4151,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: clinical-admin
     audience_basis: registry (registries rule)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: NCR
     source: manual
     status: have-docs
@@ -3862,6 +4169,10 @@ fallback_profiles:
     function_category: ''
     audience_primary: clinical
     audience_basis: nursing assessment documentation
+    software_class: III
+    software_class_basis: 'own doc: ''package status changed to Class 3 Software… no longer supported
+      nationally'''
+    vasi_status: unknown
     namespace: NUPA
     source: manual
     status: have-docs
@@ -3876,6 +4187,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: clinical-admin
     audience_basis: registry platform (registries rule, prior)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: ''
     source: manual
     status: pending-fetch
@@ -3890,6 +4204,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: clinical-admin
     audience_basis: scheduling/appointment data transmission
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: PAIT
     source: manual
     status: have-docs
@@ -3904,6 +4221,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: clinical
     audience_basis: pharmacy (prior)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: ''
     source: manual
     status: pending-fetch
@@ -3918,6 +4238,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: clinical
     audience_basis: pharmacists (purpose names them)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: PREA
     source: manual
     status: have-docs
@@ -3933,6 +4256,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: business-admin
     audience_basis: agent cashier / patient-funds accounting
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: PRPF
     source: manual
     status: have-docs
@@ -3947,6 +4273,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: clinical-admin
     audience_basis: breast cancer registry (registries rule, prior)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: ROEB
     source: manual
     status: pending-fetch
@@ -3960,6 +4289,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: clinical-admin
     audience_basis: MS surveillance registry (registries rule, prior)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: ROEG
     source: manual
     status: pending-fetch
@@ -3974,6 +4306,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: clinical-admin
     audience_basis: registry (registries rule)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: ROEV
     source: manual
     status: have-docs
@@ -3990,6 +4325,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: clinical
     audience_basis: surgical clinical nurse reviewers (VASQIP)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: SRA
     source: manual
     status: have-docs
@@ -4004,6 +4342,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: sysadmin
     audience_basis: single sign-on / user context — authentication infra (prior)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: XUSC
     source: manual
     status: pending-fetch
@@ -4017,6 +4358,9 @@ fallback_profiles:
     function_category: ''
     audience_primary: developer
     audience_basis: Name Standardization — HealtheVet identity infra (prior)
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: unknown
     namespace: ''
     source: manual
     status: pending-fetch

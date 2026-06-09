@@ -153,6 +153,25 @@ def resolve_audience(
     return derive_audience(product_line, business_owner), None, f"SPM product line: {product_line}"
 
 
+# VistA software class (SAC I/II/III). Deterministic, traceable derivation:
+#  - default "I": every in-scope app is documented in the VDL, which only publishes *nationally
+#    released* software. (VDL membership establishes national distribution = Class I or II; II is
+#    not separable from this corpus without the VA SAC/NPM PACKAGE #9.4 list, so we default to I.)
+#  - "III" override: apps whose OWN docs carry an explicit app-level reclassification statement.
+#    Component-level "Class III tool/option" mentions are deliberately NOT used (too noisy).
+#  - "II" (field-developed, nationally distributed but optional) is NOT assigned — needs SAC list.
+_CLASS_III_APPS: dict[str, str] = {
+    "NUPA": "own doc: 'package status changed to Class 3 Software… no longer supported nationally'",
+}
+
+
+def software_class(abbrev: str) -> tuple[str, str]:
+    """(class, basis). Default 'I' from VDL national-catalog membership; explicit 'III' override."""
+    if abbrev in _CLASS_III_APPS:
+        return "III", _CLASS_III_APPS[abbrev]
+    return "I", "VDL national catalog membership (nationally released)"
+
+
 def classify_scope(system_type: str, app_status: str, vasi_status: str) -> tuple[bool, str]:
     """In-scope = active VistA (M-based) app. COTS/web/non-VistA and decommissioned/inactive out."""
     if not system_type.startswith("VistA"):
@@ -369,12 +388,16 @@ _FALLBACK_PROFILES: dict[str, dict] = {
 def _fallback_profile(abbrev: str, app: dict) -> dict:
     """A curated fallback profile (manual/corpus-derived) for an app absent from the Monograph."""
     c = _FALLBACK_PROFILES[abbrev]
+    cls, cls_basis = software_class(abbrev)
     return {
         "name": app["name"],
         "purpose": c["purpose"],
         "function_category": "",  # no SPM product line off-Monograph
         "audience_primary": c["audience_primary"],
         "audience_basis": c["audience_basis"],
+        "software_class": cls,
+        "software_class_basis": cls_basis,
+        "vasi_status": "unknown",  # not in the Monograph
         "namespace": app["pkg_ns"],
         "source": "manual",
         "status": c["status"],
@@ -419,6 +442,7 @@ def build_profiles(entries: list[dict], inv: EnrichedInventory) -> dict:
         primary, secondary, basis = resolve_audience(
             abbrev, entry["product_line"], entry["business_owner"]
         )
+        cls, cls_basis = software_class(abbrev)
         profile = {
             "name": app["name"],
             "purpose": entry["brief_description"],
@@ -427,6 +451,9 @@ def build_profiles(entries: list[dict], inv: EnrichedInventory) -> dict:
             "business_owner": entry["business_owner"],
             "audience_primary": primary,
             "audience_basis": basis,
+            "software_class": cls,
+            "software_class_basis": cls_basis,
+            "vasi_status": entry["vasi_status"],
             "features": entry["features"],
             "namespace": entry["namespace"],
             "source": "monograph",
@@ -451,6 +478,10 @@ _HEADER = (
     "# Per-application purpose / function category / operator audience, transcribed from the\n"
     "# VistA Monograph July 2023 §4 and joined to the gold inventory. Regenerate with\n"
     "#   python scripts/seed_app_profiles.py\n"
+    "# 'software_class': I (national) by default — the VDL only catalogs nationally-released\n"
+    "# software; III only on an explicit app-level reclassification in the app's docs; II needs\n"
+    "# the VA SAC list (not assigned). 'vasi_status' (Production / Technical Reference Only / Not\n"
+    "# A System …) is the Monograph's per-app importance gradient ('unknown' for fallback apps).\n"
     "# Every 'profiles' entry cites its Monograph source line. 'audience_primary: needs-review'\n"
     "# and medium-confidence/namespace matches need a human pass. 'fallback_profiles' = in-scope\n"
     "# VistA apps absent from the 2023 Monograph, curated from their own docs (source: manual,\n"

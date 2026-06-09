@@ -19,6 +19,7 @@ from scripts.seed_app_profiles import (  # noqa: E402
     derive_audience,
     parse_monograph_entries,
     resolve_audience,
+    software_class,
 )
 from vdocs.models.catalog import EnrichedInventory, EnrichedRecord  # noqa: E402
 
@@ -161,6 +162,33 @@ def test_curated_fallback_emitted_for_in_scope_app_absent_from_monograph() -> No
     assert fb["audience_primary"] == _FALLBACK_PROFILES["SRA"]["audience_primary"]
     assert fb["purpose"]  # curated purpose text present
     assert draft["_needs_fallback"] == {}, "every fallback app is curated -> none left unhandled"
+
+
+def test_software_class_default_national_with_explicit_iii_override() -> None:
+    # default: VDL membership -> Class I (national)
+    cls, basis = software_class("PSO")
+    assert cls == "I" and "VDL" in basis
+    # explicit app-level reclassification -> III (local)
+    cls, basis = software_class("NUPA")
+    assert cls == "III" and basis
+
+
+def test_monograph_profile_carries_class_and_vasi_status() -> None:
+    inv = EnrichedInventory(
+        records=[
+            EnrichedRecord(
+                app_name_abbrev="PRCA",
+                app_name_full="Accounts Receivable (AR)",
+                pkg_ns="PRCA",
+                system_type="VistA",
+                app_status="archive",
+                app_url="https://www.va.gov/vdl/application.asp?appid=29",
+            )
+        ]
+    )
+    prof = build_profiles(parse_monograph_entries(_FIXTURE), inv)["profiles"]["PRCA"]
+    assert prof["software_class"] == "I"
+    assert prof["vasi_status"] == "Production"
 
 
 def test_classify_scope_excludes_non_vista_and_decommissioned() -> None:
