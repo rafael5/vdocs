@@ -81,7 +81,7 @@ admission decision · **prov** provenance.
 | `*_url` (app/doc/companion/github) | INV | crawl | prov | 🟢 |
 | `source_sha256` / `source_url` | DOC | fetch CAS | prov | 🟢 |
 | `published` / `version` / `tool_ver` | DOC | normalize/enrich | prov | 🟢 |
-| `app_purpose` *(profile)* | PROF | Monograph Brief Description / manual extract | class, search | 🟢/🔴 |
+| `purpose` / `purpose_long` *(profile)* | PROF | Monograph Brief Description / manual extract | class, search | 🟢/🔴 |
 | `function_category` *(SPM Product Line)* | PROF | Monograph | class, filter | 🟢 |
 | `app_user_primary` / `_secondary` | PROF | SPM line → persona map (reviewed) | **class, filter (who operates the app)** | 🟡 |
 | `software_class` (I/II/III) | PROF | VDL membership (I) / doc reclass (III) | class, filter | 🟢/🔴 |
@@ -225,12 +225,13 @@ July 2023** §4, 21 curated fallback, 83 excluded). Each profile:
 |---|---|---|---|
 | `purpose` / `purpose_long` | Monograph *Brief Description* / *Full Description*; else manual extract | the app's reason-for-existing; search | 🟢 monograph / 🔴 manual |
 | `function_category` | Monograph *SPM Product Line* (19-value VA taxonomy) | functional grouping, filter | 🟢 |
-| `app_user_primary` / `app_user_secondary` | SPM line → operator persona (reviewed map + 15 per-app overrides) | **who operates the app** (Axis 1); filter | 🟡 |
+| `app_user_primary` / `app_user_secondary` | SPM line → operator persona (82 rule-derived: 77 SPM-line + 5 registries-rule; 31 per-app overrides) | **who operates the app** (Axis 1); filter | 🟡 |
 | `software_class` (I/II/III) | VDL membership ⇒ **I**; explicit own-doc reclass ⇒ **III**; **II** = needs VA SAC list | national/local importance | 🟢 I / 🔴 II,III |
 | `vasi_status` | Monograph (Production / Technical Reference Only / Not A System / Inactive) | lifecycle importance gradient | 🟢 |
 | `business_owner` | Monograph | ownership, audience tie-breaker | 🟢 |
 | `parent_package` | FileMan #9.4 roster (sub-prefix/sub-product rollup) | rollup (KMP*→KMP, DGFFP→DG…) | 🟢 |
 | `namespace` | Monograph + #9.4 enrichment | join to inventory `pkg_ns` | 🟢 |
+| `app_user_basis` | the rule/override behind the persona (SPM line, registries rule, or per-app note) | persona auditability | 🟢 |
 | `evidence` / `source` / `reviewed` / `confidence` | provenance | auditability | 🟢 |
 
 ### Persona model — two axes, one vocabulary
@@ -242,13 +243,17 @@ There is **one** persona vocabulary (5 personas), used by **two orthogonal axes*
 
 - **Axis 1 — `app_user`** (per app, `app-profiles.yaml` `app_user_primary/secondary`): **who operates
   the application.** Derived from `function_category` (one reviewed decision per ~19 SPM product
-  lines) + per-app overrides where a line mixes personas (e.g. all of SPM "Health Informatics").
+  lines, covering 82 apps) + per-app overrides (31 apps) where a line mixes personas or a single app
+  needs a hand-set persona; `app_user_basis` records which rule or note drove each.
 - **Axis 2 — `doc_user`** (per document, `doc-user.yaml`, computed at index/query time): **who reads
   this document.** `doc_code` is the predictor — but with a twist: operator-facing doc-types
-  (`UM, UG, QRG, TRG, FAQ`) carry the value `operator`, which **delegates to the doc's app's
-  `app_user`**; role-fixed doc-types map straight to a persona (`TM/DG/API/INT/REF → developer`;
-  `AG/SM/SG/IG/DIBR/… → sysadmin`). Formula:
+  (`UM, UG, QRG, TRG, FAQ` — plus the omitted release-notes family `RN/CRU/VDD/SUP/APX/DESC`, 11
+  in all) carry the value `operator`, which **delegates to the doc's app's `app_user`**; role-fixed
+  doc-types map straight to a persona (`TM/DG/API/INT/REF/TG → developer`;
+  `AG/SM/SG/IG/IG-IMP/DIBR/CFG/SG-SET/POM/CVG → sysadmin`). Formula:
   `doc_user(doc) = app_user_primary(doc.app) if map[doc_code]==operator else map[doc_code]`.
+  Consequence: `clinical`, `clinical-admin`, and `business-admin` are **never role-fixed** — they
+  reach a document only via operator delegation; only `developer` and `sysadmin` are assigned directly.
 
 This is why a *Scheduling* User Manual resolves to **clinical-admin** (not a generic "clinical"), a
 *CPRS* User Manual to **clinical**, and any **Technical Manual** to **developer** regardless of app.
@@ -303,7 +308,7 @@ VA SAC list (future `software-class.yaml`, joined by namespace).
 
 ## 10. Open items & proposed next steps
 
-1. **Bake the new tags into the document plane.** Add `app_audience`, `software_class`,
+1. **Bake the new tags into the document plane.** Add `app_user`, `software_class`,
    `function_category`, `app_in_scope`, `doc_kept`/`tier` to gold frontmatter **and** `index.db`
    facets (today they live only in the inventory/profiles; search can't filter on them offline). The
    pure predicate already exists (`GatePolicy`, `app-profiles.yaml`) — promote it to a baked field in
