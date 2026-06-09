@@ -53,6 +53,7 @@ CREATE TABLE documents (
   app_code      TEXT, doc_type TEXT, section TEXT, pkg_ns TEXT,
   version       TEXT, patch_id TEXT, anchor_key TEXT, group_key TEXT,
   title         TEXT, doc_label TEXT,
+  app_user      TEXT, doc_user TEXT, software_class TEXT, function_category TEXT,
   word_count    INTEGER, section_count INTEGER, is_latest INTEGER NOT NULL,
   template_id   TEXT, source_sha256 TEXT, source_url TEXT
 );
@@ -82,6 +83,7 @@ CREATE TABLE entity_mentions (
 );
 -- facet indices (LF.5): instant narrow-by-facet for focused search (perf only, no shape change)
 CREATE INDEX idx_documents_facets ON documents(is_latest, doc_type, app_code, pkg_ns);
+CREATE INDEX idx_documents_persona ON documents(is_latest, app_user, doc_user);
 CREATE INDEX idx_entity_mentions_eid ON entity_mentions(entity_id);
 CREATE VIEW quality AS
   SELECT d.doc_key, d.doc_id, d.is_latest, d.word_count, d.section_count,
@@ -91,8 +93,9 @@ CREATE VIEW quality AS
 
 _DOC_COLUMNS = (
     "doc_key", "doc_id", "app_code", "doc_type", "section", "pkg_ns", "version", "patch_id",
-    "anchor_key", "group_key", "title", "doc_label", "word_count", "section_count", "is_latest",
-    "template_id", "source_sha256", "source_url",
+    "anchor_key", "group_key", "title", "doc_label",
+    "app_user", "doc_user", "software_class", "function_category",
+    "word_count", "section_count", "is_latest", "template_id", "source_sha256", "source_url",
 )  # fmt: skip
 
 
@@ -102,9 +105,10 @@ class IndexStage(Stage):
     requires = [TEXT_NORMALIZED, CONSOLIDATED, DOC_META_STAGED]
     produces = [INDEX_DOCUMENTS, INDEX_SECTIONS, INDEX_CHUNKS, INDEX_ENTITIES]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
-    # v2 (L1.2): chunks_fts gained a `doc_title` column (the doc-defining-token search fix). The
-    # bump folds into consumers' inputs_fp so a re-run rebuilds the FTS surface.
-    contract_ver = 2
+    # v2 (L1.2): chunks_fts gained a `doc_title` column (the doc-defining-token search fix).
+    # v3 (§7 bake): documents gained app_user/doc_user/software_class/function_category columns +
+    # the persona facet index. The bump folds into consumers' inputs_fp so a re-run rebuilds.
+    contract_ver = 3
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
@@ -280,6 +284,11 @@ def _doc_row(doc_key, doc_id, meta, staged, is_latest, word_count, section_count
         s("group_key"),
         str(meta.get("title", "") or s("doc_title")),
         s("doc_label"),
+        # §7 profile tags: baked into the body FM by `enrich`, read straight off `meta`
+        str(meta.get("app_user", "")),
+        str(meta.get("doc_user", "")),
+        str(meta.get("software_class", "")),
+        str(meta.get("function_category", "")),
         word_count,
         section_count,
         int(is_latest),

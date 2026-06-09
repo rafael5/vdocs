@@ -82,13 +82,14 @@ admission decision · **prov** provenance.
 | `source_sha256` / `source_url` | DOC | fetch CAS | prov | 🟢 |
 | `published` / `version` / `tool_ver` | DOC | normalize/enrich | prov | 🟢 |
 | `purpose` / `purpose_long` *(profile)* | PROF | Monograph Brief Description / manual extract | class, search | 🟢/🔴 |
-| `function_category` *(SPM Product Line)* | PROF | Monograph | class, filter | 🟢 |
+| `function_category` *(SPM Product Line)* | PROF→DOC | Monograph (baked into gold + `index.db`) | class, filter, facet | 🟢 |
 | `app_user_primary` / `_secondary` | PROF | SPM line → persona map (reviewed) | **class, filter (who operates the app)** | 🟡 |
-| `software_class` (I/II/III) | PROF | VDL membership (I) / doc reclass (III) | class, filter | 🟢/🔴 |
+| `app_user` *(baked tag)* | PROF→DOC | `app_user_primary` → gold FM + `index.db` column | **filter, facet (who operates the app)** | 🟡 |
+| `software_class` (I/II/III) | PROF→DOC | VDL membership (I) / doc reclass (III); baked | class, filter, facet | 🟢/🔴 |
 | `vasi_status` | PROF | Monograph (Production/Inactive/…) | class, filter (importance) | 🟢 |
 | `business_owner` | PROF | Monograph | class | 🟢 |
 | `parent_package` | PROF | FileMan #9.4 roster | id (rollup) | 🟢 |
-| `doc_user` (5-persona, computed) | search facet | `doc-user.yaml` (operator→app_user) | **filter, search (who reads the doc)** | 🟡 |
+| `doc_user` (5-persona) | PROF→DOC | `doc-user.yaml` (operator→`app_user`), baked at `enrich` | **filter, facet (who reads the doc)** | 🟡 |
 | `app_in_scope` *(proposed field)* | GATE | scope-policy (system_type+status) | **gate** | 🟢 |
 | `doc_kept` / `tier` *(proposed field)* | GATE | doctype-policy | **gate, filter** | 🟢 |
 
@@ -195,7 +196,8 @@ see §9 quality note), `doc_layer`(anchor/patch/plain), `doc_labelling`(code/man
 
 ## 6. Document enrichments (gold frontmatter)
 
-Baked onto each consolidated `body.md` by the `enrich`/`normalize`/`consolidate` stages. 11 keys:
+Baked onto each consolidated `body.md` by the `enrich`/`normalize`/`consolidate` stages. 15 keys
+(11 identity/provenance + the 4 **profile tags** baked from the registries by `enrich`, §7):
 
 | Key | Source | Use | Conf |
 |---|---|---|---|
@@ -207,13 +209,22 @@ Baked onto each consolidated `body.md` by the `enrich`/`normalize`/`consolidate`
 | `section` | inventory `section_code` | filter | 🟢 |
 | `published` | revision/cover date | recency | 🟡 |
 | `version` | doc metadata | display | 🟡 |
+| `app_user` *(profile)* | `kernel.personas` ← `app-profiles.yaml` `app_user_primary` | **filter, facet (who operates the app)** | 🟡 |
+| `doc_user` *(profile)* | `kernel.personas` ← `doc-user.yaml` (operator→`app_user`) | **filter, facet (who reads the doc)** | 🟡 |
+| `software_class` *(profile)* | `app-profiles.yaml` `software_class` | filter, facet | 🟢/🔴 |
+| `function_category` *(profile)* | `app-profiles.yaml` `function_category` | filter, facet | 🟢 |
 | `source_url` | fetch | provenance | 🟢 |
 | `source_sha256` | fetch CAS | provenance, dedupe | 🟢 |
 | `tool_ver` | pipeline | reproducibility | 🟢 |
 
-> **Gap (open item):** the frontmatter does **not** yet carry the *app_user*,
-> *software_class*, *function_category*, or *app_in_scope/doc_kept* tags. Those live only in the
-> inventory/profiles today; baking them into frontmatter + `index.db` facets is the next step (§10).
+The 4 profile tags are resolved **once** in `kernel.personas` (the single home of the two-axis
+rule, §7) and merged into the body frontmatter at `enrich`; they flow through `normalize` →
+`consolidate` verbatim into gold, and `index` reads them off the frontmatter into matching
+**`documents` columns** (`app_user`, `doc_user`, `software_class`, `function_category`) + a persona
+index, so the offline search tool filters on them without the registries present. Empties are
+dropped (a doc whose app has no profile carries no profile keys). The admission-gate flags
+`app_in_scope`/`doc_kept`/`tier` are **not** baked here — they are constant within gold (every gold
+doc already cleared G3/G4), so they belong to the inventory plane (§10 item 2), not the document.
 
 ---
 
@@ -330,11 +341,15 @@ Measured on 2,889 in-scope VistA genuine docs:
 
 ## 10. Open items & proposed next steps
 
-1. **Bake the new tags into the document plane.** Add `app_user`, `software_class`,
-   `function_category`, `app_in_scope`, `doc_kept`/`tier` to gold frontmatter **and** `index.db`
-   facets (today they live only in the inventory/profiles; search can't filter on them offline). The
-   pure predicate already exists (`GatePolicy`, `app-profiles.yaml`) — promote it to a baked field in
-   `catalog`/`enrich` + a join in `consolidate`/`manifest`.
+1. ✅ **DONE (2026-06-09) — bake the profile tags into the document plane.** `app_user`, `doc_user`,
+   `software_class`, `function_category` are now resolved once in **`kernel.personas`** (the single
+   home of the two-axis rule) and baked into gold `body.md` frontmatter by `enrich` (§6); they flow
+   through `normalize`/`consolidate` verbatim and `index` lands them as **`documents` columns** +
+   a persona index, so `server.facets` filters on the baked columns offline (no registries needed at
+   serve time). Scoped to the 4 tags that *vary* in gold; `app_in_scope`/`doc_kept`/`tier` are
+   constant within gold (G3/G4 already removed the rest) → they belong to the inventory plane (item 2),
+   not the document. Tests: `kernel/test_personas`, `test_enrich_doc_pure`, `test_index_stage`,
+   `test_facets`. **Remaining:** backfill the lake (item 5) so the columns populate for real.
 2. **Materialize the app-scope gate as an inventory field** (`app_in_scope` + `app_scope_reason`) and
    `state.db` skip-logging, with a regression fixture locking the 1,390/2,338 + 83-`_excluded` splits.
    See `docs/prompts/scope-gatekeeper-kickoff.md`.

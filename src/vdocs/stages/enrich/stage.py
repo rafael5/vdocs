@@ -17,7 +17,7 @@ from vdocs.contracts.registry import (
     TEXT_CONVERTED,
     TEXT_ENRICHED,
 )
-from vdocs.kernel import cas, db, frontmatter
+from vdocs.kernel import cas, db, frontmatter, personas
 from vdocs.kernel.text import safe_component
 from vdocs.models.catalog import EnrichedInventory, EnrichedRecord
 from vdocs.models.stage import Idempotency, RunResult
@@ -40,6 +40,7 @@ class EnrichStage(Stage):
             ctx.cfg.catalog_enriched.read_text(encoding="utf-8")
         ).records
         by_path = _index_by_bundle_path(records)
+        profile_maps = personas.load_profile_maps(ctx.cfg.registries)
 
         converted_root = ctx.cfg.silver_converted
         enriched_root = ctx.cfg.silver_enriched
@@ -56,6 +57,7 @@ class EnrichStage(Stage):
                 continue
             body = body_path.read_text(encoding="utf-8")
             fm = ep.identity_frontmatter(record, tool_ver=ctx.cfg.tool_ver)
+            fm.update(ep.profile_frontmatter(record, profile_maps))  # §7 profile tags
             cas.atomic_write(
                 enriched_root / rel / "body.md", frontmatter.emit(fm, body).encode("utf-8")
             )

@@ -25,6 +25,12 @@ _IDENTITY_ORDER = (
     "pkg_ns",
     "version",
     "published",
+    # profile tags (§7) — who operates the app / reads the doc, plus class & function (baked by
+    # `enrich` from app-profiles.yaml + doc-user.yaml so gold + index.db are self-describing)
+    "app_user",
+    "doc_user",
+    "software_class",
+    "function_category",
     "source_url",
     "source_sha256",
     "converter",

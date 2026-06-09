@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from vdocs.kernel import personas
 from vdocs.models.catalog import EnrichedRecord
 from vdocs.stages.enrich import enrich_pure as ep
 
@@ -49,6 +50,27 @@ def test_identity_frontmatter_omits_empty_identity_fields():
     fm = ep.identity_frontmatter(_rec(pkg_ns="", patch_ver="", patch_id=""), tool_ver="0.1.0")
     assert "pkg_ns" not in fm and "version" not in fm and "patch_id" not in fm
     assert fm["title"] and fm["tool_ver"] == "0.1.0"  # populated keys remain
+
+
+def test_profile_frontmatter_resolves_the_four_tags():
+    maps = personas.ProfileMaps(
+        app_user={"ADT": "clinical-admin"},
+        software_class={"ADT": "I"},
+        function_category={"ADT": "Health Informatics"},
+        doc_user={"DIBR": "sysadmin", "UM": "operator"},
+    )
+    # DIBR is role-fixed sysadmin (independent of the app's clinical-admin app_user)
+    assert ep.profile_frontmatter(_rec(), maps) == {
+        "app_user": "clinical-admin",
+        "doc_user": "sysadmin",
+        "software_class": "I",
+        "function_category": "Health Informatics",
+    }
+    # a UM delegates to the app's app_user; an operator doc of an un-profiled app yields no tags
+    assert ep.profile_frontmatter(_rec(doc_code="UM"), maps)["doc_user"] == "clinical-admin"
+    assert ep.profile_frontmatter(_rec(app_name_abbrev="ZZZ", doc_code="UM"), maps) == {}
+    # but a role-fixed doc_type still resolves doc_user even when the app has no profile
+    assert ep.profile_frontmatter(_rec(app_name_abbrev="ZZZ"), maps) == {"doc_user": "sysadmin"}
 
 
 def test_staged_row_carries_identity_plus_computed():

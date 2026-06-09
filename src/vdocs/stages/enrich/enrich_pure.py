@@ -12,10 +12,17 @@ from __future__ import annotations
 
 import re
 
+from vdocs.kernel import personas
 from vdocs.kernel.ids import doc_id
 from vdocs.models.catalog import EnrichedRecord
 
-__all__ = ["doc_id", "identity_frontmatter", "staged_row", "word_count"]
+__all__ = [
+    "doc_id",
+    "identity_frontmatter",
+    "profile_frontmatter",
+    "staged_row",
+    "word_count",
+]
 
 _WORD_RE = re.compile(r"\S+")
 
@@ -44,6 +51,14 @@ def identity_frontmatter(record: EnrichedRecord, *, tool_ver: str) -> dict[str, 
     fm = {k: v for k, v in fm.items() if v}
     fm["tool_ver"] = tool_ver
     return fm
+
+
+def profile_frontmatter(record: EnrichedRecord, maps: personas.ProfileMaps) -> dict[str, str]:
+    """The Monograph/#9.4 **profile** frontmatter for a record — the two-axis persona tags plus
+    software-class and function-category, resolved from the registries (§7). Empties are dropped,
+    so a doc whose app has no profile carries no profile keys. Baked alongside identity (§6.3) so
+    the gold corpus + ``index.db`` are self-describing offline."""
+    return personas.profile_tags(record.app_name_abbrev, record.doc_code, maps)
 
 
 def staged_row(record: EnrichedRecord, *, body: str, bundle_path: str) -> dict[str, object]:

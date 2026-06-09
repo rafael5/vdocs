@@ -38,6 +38,18 @@ def test_emit_orders_identity_keys_first():
     assert keys_in_order.index("version") < keys_in_order.index("word_count")
 
 
+def test_emit_orders_profile_tags_after_identity_before_provenance():
+    # the §7 profile tags emit in canonical order: after version/published, before source_*/tool_ver
+    meta = {
+        "title": "T", "version": "1.0", "tool_ver": "0.1.0", "source_url": "u",
+        "app_user": "clinical", "doc_user": "developer", "software_class": "I",
+        "function_category": "Patient Care Services",
+    }  # fmt: skip
+    keys = [ln.split(":")[0] for ln in fm.emit(meta, "b\n").splitlines() if ":" in ln]
+    assert keys.index("version") < keys.index("app_user") < keys.index("function_category")
+    assert keys.index("function_category") < keys.index("source_url") < keys.index("tool_ver")
+
+
 def test_round_trip_preserves_meta_and_body():
     meta = {"title": "Résumé “quoted”", "app_code": "PSO", "version": "2.1"}
     body = "# Heading\n\nSome prose with a — dash.\n"

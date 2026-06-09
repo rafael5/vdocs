@@ -56,6 +56,11 @@ def _seed_bundle(ctx, app, slug, patch_id, body):
             "pkg_ns": "OR",
             "version": "3.0",
             "patch_id": patch_id,
+            # §7 profile tags baked by enrich into the body FM — index reads them off `meta`
+            "app_user": "clinical",
+            "doc_user": "sysadmin",
+            "software_class": "I",
+            "function_category": "Health Informatics",
             "tool_ver": "0.1.0",
         },  # fmt: skip
         body,
@@ -125,6 +130,14 @@ def test_index_builds_documents_sections_entities(ctx):
         # is_latest flagging from consolidated: the v566 anchor is latest, v190 is not
         latest = dict(conn.execute("SELECT doc_id, is_latest FROM documents").fetchall())
         assert latest[new] == 1 and latest[old] == 0
+
+        # §7 profile tags baked into the body FM land as documents columns (filterable offline)
+        prof = conn.execute(
+            "SELECT app_user, doc_user, software_class, function_category "
+            "FROM documents WHERE doc_id = ?",
+            (new,),
+        ).fetchone()
+        assert tuple(prof) == ("clinical", "sysadmin", "I", "Health Informatics")
 
         # ALL sections present (both docs), each carrying is_latest
         n_sections = conn.execute("SELECT count(*) FROM doc_sections").fetchone()[0]

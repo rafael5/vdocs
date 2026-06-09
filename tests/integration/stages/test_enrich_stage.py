@@ -87,6 +87,10 @@ def test_enrich_bakes_frontmatter_and_stages_meta(ctx):
     assert meta["title"] == "DG*5.3*1057 Deployment Guide"
     assert meta["doc_type"] == "DIBR" and meta["app_code"] == "ADT" and meta["section"] == "CLI"
     assert meta["version"] == "5.3" and meta["source_url"].endswith(".docx")  # docx preferred
+    # §7 profile tags baked from the real registries: ADT is a clinical-admin / Class I app; DIBR
+    # is a role-fixed sysadmin doc-type (so doc_user resolves regardless of the app's app_user)
+    assert meta["app_user"] == "clinical-admin" and meta["doc_user"] == "sysadmin"
+    assert meta["software_class"] == "I" and meta["function_category"] == "Health Informatics"
     assert "word_count" not in meta  # computed fields never baked into the body (§6.3)
     assert body.strip() == "# DG Deployment\n\nInstall steps here.".strip()
 

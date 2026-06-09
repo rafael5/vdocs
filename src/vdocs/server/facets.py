@@ -6,71 +6,44 @@ that collapse the corpus to a tiny homogeneous set, then run BM25 over the restr
 A serving-layer read over columns the pipeline already produces — no pipeline/indexing change. The
 within-facet ranking reuses `search_pure`, so it matches `vdocs ask`. Read-only.
 
-**Two persona facets, one vocabulary** (see `facets_pure`): `app_user` (who operates the app, from
-`app-profiles.yaml`) and `doc_user` (who reads the doc, from `doc-user.yaml`, with operator-facing
-doc-types delegating to the app's `app_user`).
+**Two persona facets, one vocabulary** (see `facets_pure`): `app_user` (who operates the app) and
+`doc_user` (who reads the doc) — both **baked columns** on `documents` (resolved at `enrich` from
+app-profiles.yaml + doc-user.yaml; see `kernel.personas`), alongside `software_class` /
+`function_category`. The serving layer reads the columns, so the registries aren't needed offline.
 """
 
 from __future__ import annotations
 
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
-
-import yaml
 
 from vdocs.kernel import db
 from vdocs.server import facets_pure as fp
 from vdocs.server import ids
 from vdocs.server import search_pure as sp
 
-_REGISTRIES = Path(__file__).resolve().parents[3] / "registries" / "inventory"
 _BM25 = sp.bm25_expr("chunks_fts")
 _BODY_COL = sp.FTS_COLUMNS.index("body")
 
-
-@lru_cache(maxsize=1)
-def default_doc_user() -> dict[str, str]:
-    """The `doc_type → doc_user` map (`operator` | persona), loaded once; `{}` if absent."""
-    f = _REGISTRIES / "doc-user.yaml"
-    if not f.is_file():
-        return {}
-    data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
-    return {str(k): str(v) for k, v in (data.get("doc_user") or {}).items()}
-
-
-@lru_cache(maxsize=1)
-def default_app_user() -> dict[str, str]:
-    """The `app_code → app_user_primary` map (who operates each app), from app-profiles.yaml."""
-    f = _REGISTRIES / "app-profiles.yaml"
-    if not f.is_file():
-        return {}
-    data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
-    out: dict[str, str] = {}
-    for section in ("profiles", "fallback_profiles"):
-        for app, prof in (data.get(section) or {}).items():
-            user = (prof or {}).get("app_user_primary", "")
-            if user and user != "needs-review":
-                out[str(app)] = str(user)
-    return out
-
-
-def resolve_doc_user(
-    doc_type: str, app_code: str, doc_user_map: dict[str, str], app_user_map: dict[str, str]
-) -> str:
-    """Who reads one doc: the role-fixed persona, or — for `operator` doc-types — the app's
-    `app_user`. Empty string if neither resolves."""
-    who = doc_user_map.get(doc_type, "")
-    return app_user_map.get(app_code, "") if who == "operator" else who
+# the navigable facets, each a baked `documents` column counted by #latest-docs
+_CATALOG_COLUMNS = (
+    "doc_type",
+    "app_code",
+    "pkg_ns",
+    "app_user",
+    "doc_user",
+    "software_class",
+    "function_category",
+)
 
 
 def facet_catalog(index_db: Path) -> dict[str, list[tuple[str, int]]]:
-    """The navigable facets (value → #latest-docs) the UI/CLI presents so a user picks, not guesses:
-    `doc_type`, `app_code`, `pkg_ns`, derived `audience`, `entity_type`. One GROUP BY per facet."""
+    """The navigable facets (value → #latest-docs) the UI/CLI presents so a user picks, not
+    guesses: the structured/persona/profile columns + `entity_type`. One GROUP BY per facet."""
     conn = db.connect(index_db, read_only=True)
     try:
         out: dict[str, list[tuple[str, int]]] = {}
-        for col in ("doc_type", "app_code", "pkg_ns"):
+        for col in _CATALOG_COLUMNS:
             out[col] = [
                 (r[0], r[1])
                 for r in conn.execute(
@@ -78,22 +51,6 @@ def facet_catalog(index_db: Path) -> dict[str, list[tuple[str, int]]]:
                     f"WHERE is_latest = 1 AND {col} <> '' GROUP BY {col} ORDER BY c DESC, {col}"
                 )
             ]
-        # persona facets: app_user (per app) and doc_user (per doc, operator→app_user delegation)
-        du_map, au_map = default_doc_user(), default_app_user()
-        app_user: dict[str, int] = {}
-        doc_user: dict[str, int] = {}
-        for dt, ac, c in conn.execute(
-            "SELECT doc_type, app_code, COUNT(*) FROM documents WHERE is_latest = 1 "
-            "GROUP BY doc_type, app_code"
-        ):
-            au = au_map.get(ac, "")
-            if au:
-                app_user[au] = app_user.get(au, 0) + c
-            du = resolve_doc_user(dt, ac, du_map, au_map)
-            if du:
-                doc_user[du] = doc_user.get(du, 0) + c
-        out["app_user"] = sorted(app_user.items(), key=lambda x: (-x[1], x[0]))
-        out["doc_user"] = sorted(doc_user.items(), key=lambda x: (-x[1], x[0]))
         out["entity_type"] = [
             (r[0], r[1])
             for r in conn.execute(
@@ -111,27 +68,27 @@ def faceted_search(
     doc_type: list[str] | None = None,
     app: list[str] | None = None,
     pkg_ns: list[str] | None = None,
-    app_user: str | None = None,
-    doc_user: str | None = None,
+    app_user: list[str] | None = None,
+    doc_user: list[str] | None = None,
+    software_class: list[str] | None = None,
+    function_category: list[str] | None = None,
     entity: str | None = None,
     query: str | None = None,
     k: int = 10,
-    app_user_map: dict[str, str] | None = None,
-    doc_user_map: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Narrow by facets (layers 1–3) then content-search (layer 4). Returns
     `{candidate_docs, hits}` — `hits` are ranked, pre-cited chunk hits when `query` is given, else
-    the narrowed doc list. The two persona facets narrow as extra ANDed clauses: `app_user` to apps
-    with that operator, `doc_user` to docs read by that persona (role-fixed ∪ operator→app_user)."""
-    au_map = default_app_user() if app_user_map is None else app_user_map
-    du_map = default_doc_user() if doc_user_map is None else doc_user_map
-    where, params = fp.narrow_clause(doc_type=doc_type, app=app, pkg_ns=pkg_ns)
-    if app_user:
-        clause, p = fp.app_user_clause(app_user, au_map)
-        where, params = f"{where} AND {clause}", params + p
-    if doc_user:
-        clause, p = fp.doc_user_clause(doc_user, du_map, au_map)
-        where, params = f"{where} AND {clause}", params + p
+    the narrowed doc list. Every facet (structured, the two persona axes, and the profile
+    attributes) is a baked `documents` column, ANDed by `narrow_clause`."""
+    where, params = fp.narrow_clause(
+        doc_type=doc_type,
+        app=app,
+        pkg_ns=pkg_ns,
+        app_user=app_user,
+        doc_user=doc_user,
+        software_class=software_class,
+        function_category=function_category,
+    )
     conn = db.connect(index_db, read_only=True)
     try:
         doc_keys = [
