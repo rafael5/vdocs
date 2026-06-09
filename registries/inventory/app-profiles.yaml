@@ -3,9 +3,11 @@
 # VistA Monograph July 2023 §4 and joined to the gold inventory. Regenerate with
 #   python scripts/seed_app_profiles.py
 # Every 'profiles' entry cites its Monograph source line. 'audience_primary: needs-review'
-# and medium-confidence/namespace matches need a human pass. '_needs_fallback' = in-scope
-# VistA apps absent from the 2023 Monograph (manual-extraction path). '_excluded' = out of
-# scope (COTS/web/non-VistA or decommissioned/inactive) — not fetched, analysed, or in gold.
+# and medium-confidence/namespace matches need a human pass. 'fallback_profiles' = in-scope
+# VistA apps absent from the 2023 Monograph, curated from their own docs (source: manual,
+# confidence: low) — status 'have-docs' carries a purpose from the corpus; 'pending-fetch'
+# has no docs yet (empty purpose, audience a prior). '_excluded' = out of scope (COTS/web/
+# non-VistA or decommissioned/inactive) — not fetched, analysed, or included in gold.
 profiles:
   ACKQ:
     name: Quality Audiology and Speech Analysis and Reporting (QUASAR)
@@ -3719,28 +3721,310 @@ profiles:
       line: 7696
       match: appid
     confidence: high
-_needs_fallback:
-  ASCD: Automated Service Connected Designation — not in Monograph 2023 (needs manual extraction)
-  CHDS: Clinical/Health Data Repository — not in Monograph 2023 (needs manual extraction)
-  EFR: 'Registry: Embedded Fragments — not in Monograph 2023 (needs manual extraction)'
-  GEN: Generic Code Sheet (GCS) — not in Monograph 2023 (needs manual extraction)
-  HL: Standard Files and Tables — not in Monograph 2023 (needs manual extraction)
-  IVMB: Health Eligibility Center (HEC) — not in Monograph 2023 (needs manual extraction)
-  KMPV: VistA System Monitor (VSM) — not in Monograph 2023 (needs manual extraction)
-  MJCF: Bar Code Expansion (BCE) — not in Monograph 2023 (needs manual extraction)
-  NCR: 'Registry: National Clozapine Coordination — not in Monograph 2023 (needs manual extraction)'
-  NUPA: Patient Assessment Documentation Package (PADP) — not in Monograph 2023 (needs manual extraction)
-  ONCO: Registries — not in Monograph 2023 (needs manual extraction)
-  PAIT: Patient Appointment Info. Transmission — not in Monograph 2023 (needs manual extraction)
-  PPP: 'Pharmacy: Prescription Practices — not in Monograph 2023 (needs manual extraction)'
-  PREA: 'Pharmacy: Advanced Medication Platform — not in Monograph 2023 (needs manual extraction)'
-  PRPF: Integrated Patient Funds — not in Monograph 2023 (needs manual extraction)
-  ROEB: 'Registry: Breast Cancer (BCR) — not in Monograph 2023 (needs manual extraction)'
-  ROEG: 'Registry: Multiple Sclerosis Surveillance (MSSR) — not in Monograph 2023 (needs manual extraction)'
-  ROEV: 'Registry: Military Eye Vision Injury (MEVIR) — not in Monograph 2023 (needs manual extraction)'
-  SRA: Surgery Risk Assessment — not in Monograph 2023 (needs manual extraction)
-  SSO/UC: Single Signon/User Context — not in Monograph 2023 (needs manual extraction)
-  XOB: Name Standardization — not in Monograph 2023 (needs manual extraction)
+fallback_profiles:
+  ASCD:
+    name: Automated Service Connected Designation
+    purpose: Automatically determines and assigns Service Connected (SC) / Non-Service Connected (NSC)
+      status for patient encounters in the PCE and Scheduling packages, from available disability-rating
+      information.
+    function_category: ''
+    audience_primary: clinical-admin
+    audience_basis: encounter SC/NSC classification — eligibility/MAS
+    namespace: ASCD
+    source: manual
+    status: have-docs
+    reviewed: true
+    needs_review: true
+    evidence:
+      doc: ascd_um
+    confidence: low
+  CHDS:
+    name: Clinical/Health Data Repository
+    purpose: The Clinical Data Repository/Health Data Repository (CHDR) exchanges standards-based, computable
+      electronic health record data between VA (VistA) and DoD.
+    function_category: ''
+    audience_primary: developer
+    audience_basis: VA/DoD health-data exchange infrastructure
+    namespace: CHDS
+    source: manual
+    status: have-docs
+    reviewed: true
+    needs_review: true
+    evidence:
+      doc: chds_dibr
+    confidence: low
+  EFR:
+    name: 'Registry: Embedded Fragments'
+    purpose: The Embedded Fragment Registry (EFRA) maintains local and national registries for clinical
+      and resource tracking of care for Veterans with embedded-fragment injuries.
+    function_category: ''
+    audience_primary: clinical-admin
+    audience_basis: registry (registries rule)
+    namespace: EFR
+    source: manual
+    status: have-docs
+    reviewed: true
+    needs_review: true
+    evidence:
+      doc: efr_um
+    confidence: low
+  GEN:
+    name: Generic Code Sheet (GCS)
+    purpose: The Generic Code Sheet (GCS) package provides a generic facility to define, build, and transmit
+      code sheets (electronic data records) to external systems such as the Austin Information Technology
+      Center.
+    function_category: ''
+    audience_primary: sysadmin
+    audience_basis: IRM data-transmission utility (low confidence; could be business-admin)
+    namespace: GEN
+    source: manual
+    status: have-docs
+    reviewed: true
+    needs_review: true
+    evidence:
+      doc: gen_ig
+    confidence: low
+  HL:
+    name: Standard Files and Tables
+    purpose: ''
+    function_category: ''
+    audience_primary: developer
+    audience_basis: HL7 standard files/tables — infrastructure (prior)
+    namespace: ''
+    source: manual
+    status: pending-fetch
+    reviewed: true
+    needs_review: true
+    evidence: {}
+    confidence: low
+  IVMB:
+    name: Health Eligibility Center (HEC)
+    purpose: 'Supports the Health Eligibility Center (HEC): income-verification / means-test processing
+      using HUD geographic income thresholds to determine Veteran eligibility.'
+    function_category: ''
+    audience_primary: clinical-admin
+    audience_basis: eligibility/means-test processing
+    namespace: IVMB
+    source: manual
+    status: have-docs
+    reviewed: true
+    needs_review: true
+    evidence:
+      doc: ivmb_ig
+    confidence: low
+  KMPV:
+    name: VistA System Monitor (VSM)
+    purpose: VistA System Monitor (VSM) collects Cache and VistA metrics on system capacity and business
+      usage via timed and event collectors, for capacity planning and monitoring.
+    function_category: ''
+    audience_primary: sysadmin
+    audience_basis: capacity monitoring — IRM
+    namespace: KMPV
+    source: manual
+    status: have-docs
+    reviewed: true
+    needs_review: true
+    evidence:
+      doc: kmpv_um
+    confidence: low
+  MJCF:
+    name: Bar Code Expansion (BCE)
+    purpose: ''
+    function_category: ''
+    audience_primary: needs-review
+    audience_basis: Bar Code Expansion — function unclear without docs
+    namespace: ''
+    source: manual
+    status: pending-fetch
+    reviewed: true
+    needs_review: true
+    evidence: {}
+    confidence: low
+  NCR:
+    name: 'Registry: National Clozapine Coordination'
+    purpose: 'National Clozapine Coordination registry support within VistA Mental Health: implements
+      VistA clozapine monitoring logic (lab-result-gated dispensing).'
+    function_category: ''
+    audience_primary: clinical-admin
+    audience_basis: registry (registries rule)
+    namespace: NCR
+    source: manual
+    status: have-docs
+    reviewed: true
+    needs_review: true
+    evidence:
+      doc: ncr_tm
+    confidence: low
+  NUPA:
+    name: Patient Assessment Documentation Package (PADP)
+    purpose: Patient Assessment Documentation Package (PADP) provides nursing assessment/reassessment
+      documentation templates. (Class 3 software, no longer nationally supported.)
+    function_category: ''
+    audience_primary: clinical
+    audience_basis: nursing assessment documentation
+    namespace: NUPA
+    source: manual
+    status: have-docs
+    reviewed: true
+    needs_review: true
+    evidence:
+      doc: nupa_um
+    confidence: low
+  ONCO:
+    name: Registries
+    purpose: ''
+    function_category: ''
+    audience_primary: clinical-admin
+    audience_basis: registry platform (registries rule, prior)
+    namespace: ''
+    source: manual
+    status: pending-fetch
+    reviewed: true
+    needs_review: true
+    evidence: {}
+    confidence: low
+  PAIT:
+    name: Patient Appointment Info. Transmission
+    purpose: Patient Appointment Information Transmission (PAIT) extracts and transmits VistA patient
+      appointment data (released in patch SD*5.3).
+    function_category: ''
+    audience_primary: clinical-admin
+    audience_basis: scheduling/appointment data transmission
+    namespace: PAIT
+    source: manual
+    status: have-docs
+    reviewed: true
+    needs_review: true
+    evidence:
+      doc: pait_um
+    confidence: low
+  PPP:
+    name: 'Pharmacy: Prescription Practices'
+    purpose: ''
+    function_category: ''
+    audience_primary: clinical
+    audience_basis: pharmacy (prior)
+    namespace: ''
+    source: manual
+    status: pending-fetch
+    reviewed: true
+    needs_review: true
+    evidence: {}
+    confidence: low
+  PREA:
+    name: 'Pharmacy: Advanced Medication Platform'
+    purpose: The Advanced Medication Platform (AMPL GUI) gives pharmacists a single point of access to
+      a patient's medical data across all VistA Pharmacy packages.
+    function_category: ''
+    audience_primary: clinical
+    audience_basis: pharmacists (purpose names them)
+    namespace: PREA
+    source: manual
+    status: have-docs
+    reviewed: true
+    needs_review: true
+    evidence:
+      doc: prea_ug
+    confidence: low
+  PRPF:
+    name: Integrated Patient Funds
+    purpose: The Patient Funds (PFOP) system manages the private/personal finances of VA patients hospitalized
+      at VA facilities (electronic equivalent of VA Form 10-1083).
+    function_category: ''
+    audience_primary: business-admin
+    audience_basis: agent cashier / patient-funds accounting
+    namespace: PRPF
+    source: manual
+    status: have-docs
+    reviewed: true
+    needs_review: true
+    evidence:
+      doc: prpf_um
+    confidence: low
+  ROEB:
+    name: 'Registry: Breast Cancer (BCR)'
+    purpose: ''
+    function_category: ''
+    audience_primary: clinical-admin
+    audience_basis: breast cancer registry (registries rule, prior)
+    namespace: ROEB
+    source: manual
+    status: pending-fetch
+    reviewed: true
+    needs_review: true
+    evidence: {}
+    confidence: low
+  ROEG:
+    name: 'Registry: Multiple Sclerosis Surveillance (MSSR)'
+    purpose: ''
+    function_category: ''
+    audience_primary: clinical-admin
+    audience_basis: MS surveillance registry (registries rule, prior)
+    namespace: ROEG
+    source: manual
+    status: pending-fetch
+    reviewed: true
+    needs_review: true
+    evidence: {}
+    confidence: low
+  ROEV:
+    name: 'Registry: Military Eye Vision Injury (MEVIR)'
+    purpose: VA Eye Injury Data Store (VA EIDS, formerly MEVIR) transfers Veteran eye-injury data into
+      the joint DoD/VA Eye Injury and Vision Registry (DVEIVR).
+    function_category: ''
+    audience_primary: clinical-admin
+    audience_basis: registry (registries rule)
+    namespace: ROEV
+    source: manual
+    status: have-docs
+    reviewed: true
+    needs_review: true
+    evidence:
+      doc: roev_ug
+    confidence: low
+  SRA:
+    name: Surgery Risk Assessment
+    purpose: The Surgery Risk Assessment package collects non-cardiac surgical risk-assessment and case
+      data from VA medical centers (VASQIP/NSQIP) to document, organize, and transmit surgery case data
+      for quality reporting.
+    function_category: ''
+    audience_primary: clinical
+    audience_basis: surgical clinical nurse reviewers (VASQIP)
+    namespace: SRA
+    source: manual
+    status: have-docs
+    reviewed: true
+    needs_review: true
+    evidence:
+      doc: sra_um
+    confidence: low
+  SSO/UC:
+    name: Single Signon/User Context
+    purpose: ''
+    function_category: ''
+    audience_primary: sysadmin
+    audience_basis: single sign-on / user context — authentication infra (prior)
+    namespace: XUSC
+    source: manual
+    status: pending-fetch
+    reviewed: true
+    needs_review: true
+    evidence: {}
+    confidence: low
+  XOB:
+    name: Name Standardization
+    purpose: ''
+    function_category: ''
+    audience_primary: developer
+    audience_basis: Name Standardization — HealtheVet identity infra (prior)
+    namespace: ''
+    source: manual
+    status: pending-fetch
+    reviewed: true
+    needs_review: true
+    evidence: {}
+    confidence: low
+_needs_fallback: {}
 _excluded:
   ACR: Ambulatory Care Reporting — inactive (VASI status)
   AFJX: Network Health Exchange (NHE) — non-vista (system_type=Integration middleware)

@@ -13,11 +13,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from scripts.seed_app_profiles import (  # noqa: E402
+    _FALLBACK_PROFILES,
+    build_profiles,
     classify_scope,
     derive_audience,
     parse_monograph_entries,
     resolve_audience,
 )
+from vdocs.models.catalog import EnrichedInventory, EnrichedRecord  # noqa: E402
 
 _FIXTURE = """\
 ## 3. Resources
@@ -135,6 +138,29 @@ def test_resolve_audience_falls_through_to_product_line_map() -> None:
     prim, sec, basis = resolve_audience("PSO", "Clinical Services", "")
     assert (prim, sec) == ("clinical", None)
     assert "Clinical Services" in basis
+
+
+def test_curated_fallback_emitted_for_in_scope_app_absent_from_monograph() -> None:
+    # SRA is in-scope VistA, absent from the Monograph fixture, and has a curated fallback profile.
+    inv = EnrichedInventory(
+        records=[
+            EnrichedRecord(
+                app_name_abbrev="SRA",
+                app_name_full="Surgery Risk Assessment",
+                pkg_ns="SRA",
+                system_type="VistA",
+                app_status="archive",
+                app_url="https://www.va.gov/vdl/application.asp?appid=999",
+            )
+        ]
+    )
+    draft = build_profiles(parse_monograph_entries(_FIXTURE), inv)
+    assert "SRA" not in draft["profiles"], "no Monograph match -> not a monograph profile"
+    fb = draft["fallback_profiles"]["SRA"]
+    assert fb["source"] == "manual"
+    assert fb["audience_primary"] == _FALLBACK_PROFILES["SRA"]["audience_primary"]
+    assert fb["purpose"]  # curated purpose text present
+    assert draft["_needs_fallback"] == {}, "every fallback app is curated -> none left unhandled"
 
 
 def test_classify_scope_excludes_non_vista_and_decommissioned() -> None:
