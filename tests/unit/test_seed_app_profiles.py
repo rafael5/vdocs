@@ -161,7 +161,7 @@ def test_curated_fallback_emitted_for_in_scope_app_absent_from_monograph() -> No
     assert "SRA" not in draft["profiles"], "no Monograph match -> not a monograph profile"
     fb = draft["fallback_profiles"]["SRA"]
     assert fb["source"] == "manual"
-    assert fb["audience_primary"] == _FALLBACK_PROFILES["SRA"]["audience_primary"]
+    assert fb["app_user_primary"] == _FALLBACK_PROFILES["SRA"]["audience_primary"]
     assert fb["purpose"]  # curated purpose text present
     assert draft["_needs_fallback"] == {}, "every fallback app is curated -> none left unhandled"
 

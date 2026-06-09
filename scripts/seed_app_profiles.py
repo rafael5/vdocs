@@ -425,8 +425,8 @@ def _fallback_profile(abbrev: str, app: dict) -> dict:
         "name": app["name"],
         "purpose": c["purpose"],
         "function_category": "",  # no SPM product line off-Monograph
-        "audience_primary": c["audience_primary"],
-        "audience_basis": c["audience_basis"],
+        "app_user_primary": c["audience_primary"],
+        "app_user_basis": c["audience_basis"],
         "software_class": cls,
         "software_class_basis": cls_basis,
         "vasi_status": "unknown",  # not in the Monograph
@@ -484,8 +484,8 @@ def build_profiles(entries: list[dict], inv: EnrichedInventory) -> dict:
             "purpose_long": entry["full_description"],
             "function_category": entry["product_line"],
             "business_owner": entry["business_owner"],
-            "audience_primary": primary,
-            "audience_basis": basis,
+            "app_user_primary": primary,
+            "app_user_basis": basis,
             "software_class": cls,
             "software_class_basis": cls_basis,
             "vasi_status": entry["vasi_status"],
@@ -497,7 +497,7 @@ def build_profiles(entries: list[dict], inv: EnrichedInventory) -> dict:
             "confidence": "high" if method == "appid" else "medium",
         }
         if secondary:
-            profile["audience_secondary"] = secondary
+            profile["app_user_secondary"] = secondary
         if parent_package(abbrev):
             profile["parent_package"] = parent_package(abbrev)
         profiles[abbrev] = profile
@@ -551,7 +551,7 @@ def main() -> None:
 
     p, fbp = draft["profiles"], draft["fallback_profiles"]
     fb, ex = draft["_needs_fallback"], draft["_excluded"]
-    needs_review = sum(1 for v in p.values() if v["audience_primary"] == "needs-review")
+    needs_review = sum(1 for v in p.values() if v["app_user_primary"] == "needs-review")
     have_docs = sum(1 for v in fbp.values() if v["status"] == "have-docs")
     print(f"Monograph §4 entries parsed: {len(entries)}")
     print(f"  in-scope profiles:   {len(p)}  (audience needs-review: {needs_review})")

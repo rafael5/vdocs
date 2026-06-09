@@ -62,6 +62,8 @@ def test_facet_catalog_counts_latest_docs_by_facet(tmp_path):
     assert dict(cat["doc_type"]) == {"UM": 1, "TM": 1, "UG": 1}  # old RA/um excluded (is_latest=0)
     assert dict(cat["app_code"]) == {"RA": 1, "XU": 1, "LR": 1}
     assert ("fileman_file", 1) in cat["entity_type"]
+    # persona facets exist (values depend on app-profiles; just assert the keys are present)
+    assert "app_user" in cat and "doc_user" in cat
 
 
 def test_faceted_search_narrows_by_doc_type_and_app_then_searches(tmp_path):
@@ -72,18 +74,45 @@ def test_faceted_search_narrows_by_doc_type_and_app_then_searches(tmp_path):
     assert [h["section_id"] for h in res["hits"]] == ["RA/um/cancel"]
 
 
-def test_faceted_search_audience_resolves_to_doc_types(tmp_path):
+def test_faceted_search_doc_user_developer_resolves_role_fixed_doc_types(tmp_path):
     index_db = tmp_path / "index.db"
     _build(index_db)
-    # 'technical' audience → TM; only the Kernel doc qualifies
+    # doc_user=developer → role-fixed TM (any app); only the Kernel TM qualifies
     res = facets.faceted_search(
         index_db,
-        audience="technical",
+        doc_user="developer",
         query="callable",
-        audiences={"TM": "technical", "UM": "clinical"},
+        doc_user_map={"TM": "developer", "UM": "operator", "UG": "operator"},
+        app_user_map={"RA": "clinical", "XU": "developer", "LR": "clinical"},
     )
     assert res["candidate_docs"] == 1
     assert [h["section_id"] for h in res["hits"]] == ["XU/tm/api"]
+
+
+def test_faceted_search_doc_user_delegates_operator_docs_to_app_user(tmp_path):
+    index_db = tmp_path / "index.db"
+    _build(index_db)
+    # doc_user=clinical → operator-facing UM/UG of clinical-operated apps (RA, LR), not the TM
+    res = facets.faceted_search(
+        index_db,
+        doc_user="clinical",
+        doc_user_map={"TM": "developer", "UM": "operator", "UG": "operator"},
+        app_user_map={"RA": "clinical", "XU": "developer", "LR": "clinical"},
+    )
+    assert res["candidate_docs"] == 2  # RA/um + LR/ug (latest), not XU/tm
+    assert sorted(h["doc_key"] for h in res["hits"]) == ["LR/ug", "RA/um"]
+
+
+def test_faceted_search_app_user_narrows_to_operator_apps(tmp_path):
+    index_db = tmp_path / "index.db"
+    _build(index_db)
+    # app_user=developer → docs of developer-operated apps (XU), regardless of doc_type
+    res = facets.faceted_search(
+        index_db,
+        app_user="developer",
+        app_user_map={"RA": "clinical", "XU": "developer", "LR": "clinical"},
+    )
+    assert [h["doc_key"] for h in res["hits"]] == ["XU/tm"]
 
 
 def test_faceted_search_entity_facet_restricts_to_mentioning_docs(tmp_path):
@@ -102,6 +131,12 @@ def test_faceted_search_no_query_browses_the_narrowed_docs(tmp_path):
     assert [h["doc_key"] for h in res["hits"]] == ["RA/um"]
 
 
-def test_default_audiences_loads_the_registry():
-    aud = facets.default_audiences()
-    assert aud.get("TM") == "technical" and aud.get("UM") == "clinical"
+def test_default_doc_user_loads_the_registry():
+    du = facets.default_doc_user()
+    assert du.get("TM") == "developer" and du.get("UM") == "operator"
+
+
+def test_default_app_user_loads_the_registry():
+    au = facets.default_app_user()
+    # a known clinical app from app-profiles (CPRS = OR namespace abbrev)
+    assert au and all(v != "needs-review" for v in au.values())

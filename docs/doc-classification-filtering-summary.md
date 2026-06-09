@@ -83,17 +83,19 @@ admission decision · **prov** provenance.
 | `published` / `version` / `tool_ver` | DOC | normalize/enrich | prov | 🟢 |
 | `app_purpose` *(profile)* | PROF | Monograph Brief Description / manual extract | class, search | 🟢/🔴 |
 | `function_category` *(SPM Product Line)* | PROF | Monograph | class, filter | 🟢 |
-| `audience_primary` / `_secondary` | PROF | SPM line → persona map (reviewed) | **class, filter** | 🟡 |
+| `app_user_primary` / `_secondary` | PROF | SPM line → persona map (reviewed) | **class, filter (who operates the app)** | 🟡 |
 | `software_class` (I/II/III) | PROF | VDL membership (I) / doc reclass (III) | class, filter | 🟢/🔴 |
 | `vasi_status` | PROF | Monograph (Production/Inactive/…) | class, filter (importance) | 🟢 |
 | `business_owner` | PROF | Monograph | class | 🟢 |
 | `parent_package` | PROF | FileMan #9.4 roster | id (rollup) | 🟢 |
-| `reader_audience` (clinical/technical/admin/any) | search facet | doc-type → audiences.yaml | **filter, search** | 🟡 |
+| `doc_user` (5-persona, computed) | search facet | `doc-user.yaml` (operator→app_user) | **filter, search (who reads the doc)** | 🟡 |
 | `app_in_scope` *(proposed field)* | GATE | scope-policy (system_type+status) | **gate** | 🟢 |
 | `doc_kept` / `tier` *(proposed field)* | GATE | doctype-policy | **gate, filter** | 🟢 |
 
-> Two audience axes — keep them distinct: **`reader_audience`** (who reads *this doc type* — a facet
-> over `doc_code`) vs **`audience_primary`** (who operates *the app* — a profile attribute). See §8.
+> **Two persona axes, ONE vocabulary** (`clinical · clinical-admin · business-admin · developer ·
+> sysadmin`) — keep them distinct: **`app_user`** (who *operates the app* — a profile attribute) vs
+> **`doc_user`** (who *reads the doc* — computed per-doc from `doc_code`, where operator-facing
+> doc-types delegate to the doc's app's `app_user`). See §8 for the full model.
 
 ---
 
@@ -208,7 +210,7 @@ Baked onto each consolidated `body.md` by the `enrich`/`normalize`/`consolidate`
 | `source_sha256` | fetch CAS | provenance, dedupe | 🟢 |
 | `tool_ver` | pipeline | reproducibility | 🟢 |
 
-> **Gap (open item):** the frontmatter does **not** yet carry the *operator-audience*,
+> **Gap (open item):** the frontmatter does **not** yet carry the *app_user*,
 > *software_class*, *function_category*, or *app_in_scope/doc_kept* tags. Those live only in the
 > inventory/profiles today; baking them into frontmatter + `index.db` facets is the next step (§10).
 
@@ -223,7 +225,7 @@ July 2023** §4, 21 curated fallback, 83 excluded). Each profile:
 |---|---|---|---|
 | `purpose` / `purpose_long` | Monograph *Brief Description* / *Full Description*; else manual extract | the app's reason-for-existing; search | 🟢 monograph / 🔴 manual |
 | `function_category` | Monograph *SPM Product Line* (19-value VA taxonomy) | functional grouping, filter | 🟢 |
-| `audience_primary` / `audience_secondary` | SPM line → operator persona (reviewed map + 15 per-app overrides) | **who operates the app**; filter | 🟡 |
+| `app_user_primary` / `app_user_secondary` | SPM line → operator persona (reviewed map + 15 per-app overrides) | **who operates the app** (Axis 1); filter | 🟡 |
 | `software_class` (I/II/III) | VDL membership ⇒ **I**; explicit own-doc reclass ⇒ **III**; **II** = needs VA SAC list | national/local importance | 🟢 I / 🔴 II,III |
 | `vasi_status` | Monograph (Production / Technical Reference Only / Not A System / Inactive) | lifecycle importance gradient | 🟢 |
 | `business_owner` | Monograph | ownership, audience tie-breaker | 🟢 |
@@ -231,10 +233,28 @@ July 2023** §4, 21 curated fallback, 83 excluded). Each profile:
 | `namespace` | Monograph + #9.4 enrichment | join to inventory `pkg_ns` | 🟢 |
 | `evidence` / `source` / `reviewed` / `confidence` | provenance | auditability | 🟢 |
 
-**Operator-audience taxonomy (5):** `clinical` (physicians/nurses/pharmacists/lab) · `clinical-admin`
-(MAS/clerks/registrars/HIM) · `business-admin` (billing/fiscal/HR) · `developer` (programmers/API) ·
-`sysadmin` (IRM/installers). Derived from `function_category` (one reviewed decision per ~19 product
-lines), with per-app overrides where a line mixes personas (e.g. all of SPM "Health Informatics").
+### Persona model — two axes, one vocabulary
+
+There is **one** persona vocabulary (5 personas), used by **two orthogonal axes**:
+
+`clinical` (physicians/nurses/pharmacists/lab) · `clinical-admin` (MAS/clerks/registrars/HIM) ·
+`business-admin` (billing/fiscal/HR) · `developer` (programmers/API) · `sysadmin` (IRM/installers).
+
+- **Axis 1 — `app_user`** (per app, `app-profiles.yaml` `app_user_primary/secondary`): **who operates
+  the application.** Derived from `function_category` (one reviewed decision per ~19 SPM product
+  lines) + per-app overrides where a line mixes personas (e.g. all of SPM "Health Informatics").
+- **Axis 2 — `doc_user`** (per document, `doc-user.yaml`, computed at index/query time): **who reads
+  this document.** `doc_code` is the predictor — but with a twist: operator-facing doc-types
+  (`UM, UG, QRG, TRG, FAQ`) carry the value `operator`, which **delegates to the doc's app's
+  `app_user`**; role-fixed doc-types map straight to a persona (`TM/DG/API/INT/REF → developer`;
+  `AG/SM/SG/IG/DIBR/… → sysadmin`). Formula:
+  `doc_user(doc) = app_user_primary(doc.app) if map[doc_code]==operator else map[doc_code]`.
+
+This is why a *Scheduling* User Manual resolves to **clinical-admin** (not a generic "clinical"), a
+*CPRS* User Manual to **clinical**, and any **Technical Manual** to **developer** regardless of app.
+It supersedes the retired coarse `reader_audience` (clinical/technical/admin/any), which both
+mis-labelled non-clinical user manuals and collapsed the sysadmin/clinical-admin/business-admin
+distinction. Both axes are search facets (`facets_pure.app_user_clause` / `doc_user_clause`).
 
 **Software-class derivation (verified via the `vista` CLI):** FileMan file #9.4 PACKAGE has **no class
 field** — class I/II/III is a SAC/FORUM attribute. So: **I** (national) is the deterministic default
@@ -251,8 +271,9 @@ VA SAC list (future `software-class.yaml`, joined by namespace).
 | **section_code** | CLI · FIN · GUI · INF · MON (5) | `section-codes.yaml` | editorial / functional area |
 | **doc_code** | 29 codes (UM,UG,TM,DG,API,DIBR,IG,RN,…) | `doc-types.yaml` | what kind of document |
 | **doc-type tier** | A (keep) · B/C/D (omit) | `doctype-policy.yaml` | admission value |
-| **reader_audience** | clinical · technical · admin · any | `audiences.yaml` (by doc_code) | who reads *the doc* |
-| **operator-audience** | clinical · clinical-admin · business-admin · developer · sysadmin | `app-profiles.yaml` (by app) | who runs *the app* |
+| **persona** (shared) | clinical · clinical-admin · business-admin · developer · sysadmin | — | the one vocabulary for both axes |
+| **app_user** (Axis 1) | the 5 personas | `app-profiles.yaml` (by app) | who **operates the app** |
+| **doc_user** (Axis 2) | the 5 personas (`operator`→delegates) | `doc-user.yaml` (by doc_code) | who **reads the doc** |
 | **system_type** | VistA(+GUI/COTS/middleware) · Web client · COTS product · VA enterprise service · Integration middleware · VBA system · Data patch · Program documentation (11) | `system-types.yaml` | platform / scope |
 | **function_category** | 19 SPM Product Lines (Patient Care Services, Clinical Services, VHA Finance, …) | Monograph | what the app does |
 | **software_class** | I (national) · II (field/national-optional) · III (local) | Monograph + (future) SAC list | distribution scope |
@@ -267,7 +288,8 @@ VA SAC list (future `software-class.yaml`, joined by namespace).
 |---|---|
 | VDL `(CODE)` is the app abbreviation source; gaps need backfill | `abbrev-fallback.yaml` + `package-master.yaml`, then `pkg_ns` |
 | Title alone can't tell you an app's purpose/audience | Derive purpose from the **VistA Monograph §4** (parse, not synthesize); audience follows purpose |
-| Section ("Clinical") ≠ who operates the app | Two audience axes: `reader_audience` (doc) vs `operator-audience` (app) |
+| Section ("Clinical") ≠ who operates the app | Two persona axes, one vocabulary: `app_user` (app) vs `doc_user` (doc) |
+| `audience_primary` was mis-named; `reader_audience` too coarse & mislabelled UM | Renamed → `app_user`; replaced `audiences.yaml` with `doc-user.yaml` (operator→app_user delegation) |
 | "Clinical" must split care-staff vs clerical | 5-persona operator taxonomy; registries→clinical-admin uniformly; PCE→clinical |
 | Class I/II/III asked for, but #9.4 has no class field (vista-CLI verified) | `software_class` = I default (VDL) + III on explicit reclass; II deferred to VA SAC list |
 | COTS/web/decommissioned shouldn't enter gold | **G3 app-scope gate** (`scope-policy.yaml`), enforced at fetch |

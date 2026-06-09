@@ -1,0 +1,54 @@
+# registries/inventory/doc-user.yaml — the DOC-USER axis (who READS a given document).
+# ============================================================================================
+# Supersedes the coarse audiences.yaml (clinical/technical/admin/any). One shared 5-persona
+# vocabulary serves BOTH persona axes — there is no separate "reader" vocabulary:
+#   clinical · clinical-admin · business-admin · developer · sysadmin
+#
+# This map keys each doc_type code to who reads it, with two kinds of value:
+#   operator    → the doc is read by the APP's operators; resolve to that app's app_user_primary
+#                 (app-profiles.yaml). So a *Scheduling* User Manual → clinical-admin, a *CPRS*
+#                 User Manual → clinical, an *IFCAP* User Guide → business-admin. The doc-user of a
+#                 user-facing manual is NOT a fixed persona — it is whoever runs the app.
+#   <persona>   → role-fixed reader, the same regardless of which app the doc belongs to (a
+#                 Technical Manual is read by developers whether the app is clinical or financial).
+#
+# Axis 1 (app_user, per app)  lives in app-profiles.yaml: who OPERATES the application.
+# Axis 2 (doc_user, per doc)  is THIS map, resolved at index/query time (not stored): who READS it.
+# doc_user(doc) = app_user_primary(doc.app)  if map[doc_code] == operator  else map[doc_code]
+# ============================================================================================
+
+doc_user:
+  # --- operator-facing → delegate to the app's app_user_primary ---
+  UM: operator        # User Manual
+  UG: operator        # User Guide
+  QRG: operator       # Quick Reference Guide
+  TRG: operator       # Training Guide
+  FAQ: operator       # FAQ
+  RN: operator        # Release Notes (read by the app's users) — Tier-C omitted, mapped for completeness
+  CRU: operator       # Clinical Reminder Update — omitted
+  VDD: operator       # Version Description Document — omitted
+  SUP: operator       # Supplement — omitted
+  APX: operator       # Appendix — omitted
+  DESC: operator      # Description — omitted
+
+  # --- developer-facing (role-fixed) ---
+  TM: developer       # Technical Manual
+  DG: developer       # Developer's Guide
+  API: developer      # API Manual
+  INT: developer      # Interface Specification
+  REF: developer      # Interface Toolkit / Reference
+  TG: developer       # Technical Guide
+  PDD: developer      # Patch Description Document — omitted
+  RS: developer       # Requirements Specification — omitted
+
+  # --- sysadmin-facing (role-fixed; mostly Tier-B install/ops, omitted) ---
+  AG: sysadmin        # Administrator's Guide
+  SM: sysadmin        # Site / Systems Management Guide
+  SG: sysadmin        # Security Guide
+  IG: sysadmin        # Installation Guide — omitted
+  IG-IMP: sysadmin    # Implementation Guide — omitted
+  DIBR: sysadmin      # Deployment/Install/Back-Out/Rollback — omitted
+  CFG: sysadmin       # Configuration Guide — omitted
+  SG-SET: sysadmin    # Security Setup — omitted
+  POM: sysadmin       # Production Operations Manual — omitted
+  CVG: sysadmin       # Conversion Guide — omitted
