@@ -66,8 +66,8 @@ admission decision · **prov** provenance.
 | `cots_dependent` | INV | system-types registry | class | 🟡 |
 | `app_status` | INV | VDL ("decommissioned …") | **gate (app-scope)** | 🟢 |
 | `doc_code` | INV/DOC(`doc_type`) | doc-types regex over title | **class, filter, gate (doctype)** | 🟡 |
-| `doc_label` | INV | doc-types registry label | class | 🟡 |
-| `doc_subject` / `doc_subtitle` | INV | title minus boilerplate | search | 🟡 |
+| `doc_label` | INV | doc-types registry label (1:1 w/ `doc_code`) | class — clean but **redundant** with `doc_code` | 🟢 |
+| `doc_subject` / `doc_subtitle` | INV | title residual (after patch+label strip) | *latent* — computed, **no consumer**; ~45% noisy (§9) | 🔴 |
 | `doc_search_aliases` | INV | typo-correction aliases | search | 🟡 |
 | `doc_layer` (anchor\|patch\|plain) | INV | patch parse | class | 🟡 |
 | `doc_labelling` (code\|manual) | INV | manual-slugs registry | class | 🟡 |
@@ -181,9 +181,10 @@ yields `unclassified` (surfaced by the HARD GATE).
 ordering (consolidate) and lineage. 🟡 (parse-dependent) / 🟢 (`anchor_key` formula).
 
 **Document identity / classification** — `doc_code`·`doc_label` (doc-type, regex over title; **the G4
-lever**, also a search facet), `doc_subtitle`·`doc_subject` (cleaned title for search),
-`doc_layer`(anchor/patch/plain), `doc_labelling`(code/manual), `doc_title`, `doc_filename`,
-`doc_slug` (+ derived `slug_stem`), `doc_format` (**the G2 lever**). 🟡/🟢.
+lever**, also a search facet — `doc_label` is a clean 1:1 of `doc_code`, so *redundant*; its
+drift-capture `doc_subtitle` fires on only 19 rows), `doc_subject` (title residual — **latent/noisy**,
+see §9 quality note), `doc_layer`(anchor/patch/plain), `doc_labelling`(code/manual), `doc_title`,
+`doc_filename`, `doc_slug` (+ derived `slug_stem`), `doc_format` (**the G2 lever**). 🟡/🟢.
 
 **Filter/gate flags** — `noise_type` (**G1**), `out_of_scope_reason` (**G2**, auto-derived: non-docx
 ⇒ out). 🟡/🟢.
@@ -303,6 +304,27 @@ VA SAC list (future `software-class.yaml`, joined by namespace).
 | Omitted doc-types are also the version-churners | G4 removes ~66% of consolidation collapse-work automatically |
 | `anchor_key` over-groups distinct docs (B1) | Fold logical-doc **stem** into `anchor_key`/`anchor_relpath` |
 | `--latest-only` looked like 71% savings | Illusory on the broken key (would delete 324 docs); ~40% safe **after** B1 |
+| `doc_subject` had a hidden 7% audience-qualifier signal — feed into `doc_user`? | **No** — under scrutiny it shrank to ~6 disambiguating cases, ~45% false positives; keep `doc_user` deterministic (see quality note below) |
+
+### Quality note — `doc_label` & `doc_subject` (2026-06-09 analysis)
+
+Measured on 2,889 in-scope VistA genuine docs:
+
+- **`doc_label`** — 🟢 100% coverage, **0 label drift** (clean 1:1 with `doc_code`). But therefore
+  **redundant** — it carries nothing beyond `doc_code`; its drift-capture `doc_subtitle` fires on only
+  19 rows (0.7%). Keep (free), don't invest.
+- **`doc_subject`** — 🔴 61% coverage and **consumed by no stage** (latent). Of the 1,787 non-empty:
+  19% start with a stray version fragment (`.0 DIBR` — an `extract_subject` bug that leaves the
+  patch-version decimal), 14% carry `(Updated …PATCH…)` noise, 19% double-spaced, 14% ALLCAPS —
+  ~45% noisy overall.
+- **Persona-signal verdict** — 165 subjects (6%) carry an audience qualifier (`Nurse's`,
+  `Pharmacist's`, `Supervisor`, `Developer's`). Tempting to refine `doc_user` with it, but: only **6**
+  `(app, doc_code)` groups actually split across reader sub-personas (PSD/PSJ/PSO:UM, PXRM:UG,
+  PCMM:RN, XU:UG); the rest **echo** what `doc_user` already derives; and precision is ~50% — the
+  regex catches domain concepts, not readers (`Primary Care Physician` = a report *about* physicians;
+  `Provider Role Tool`; `Developer's Guide` is already `doc_code` DG). **Decision: do not automate
+  `doc_subject → doc_user`** — it would inject noise into a clean deterministic axis. If the 6 split
+  apps ever matter, use a tiny **curated per-`doc_slug` `doc_user` override**, not an extraction rule.
 
 ---
 
@@ -325,3 +347,8 @@ VA SAC list (future `software-class.yaml`, joined by namespace).
    ~324 recovered documents actually land in gold (the fix is code-only until then).
 6. **`scope-policy.yaml` manual overrides** — per-app allow/deny with rationale, for edge cases the
    `system_type`/`app_status` rule misses (e.g. Class-3/unsupported `NUPA`).
+7. **`doc_subject` — fix or deprecate.** It's latent (no consumer) and ~45% noisy (§9). If we want it
+   as a search/display subtitle: fix `extract_subject` (strip trailing `.N` version fragments — the
+   19% leak; drop `(Updated …PATCH…)` parentheticals; collapse whitespace; normalize case) and wire
+   the cleaned value into the index/result display. Otherwise stop computing it. **Not** a `doc_user`
+   input (see §9 verdict). `doc_label`/`doc_subtitle` need no work (clean; redundant).
