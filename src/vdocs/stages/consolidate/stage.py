@@ -25,6 +25,7 @@ from vdocs.contracts.registry import ASSETS, CONSOLIDATED, TEXT_NORMALIZED
 from vdocs.kernel import bundle, cas, frontmatter
 from vdocs.kernel import ids as kids
 from vdocs.kernel import registry as kregistry
+from vdocs.kernel.docloop import DocLoop
 from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
 from vdocs.stages.consolidate import consolidate_pure as cp
@@ -54,12 +55,13 @@ class ConsolidateStage(Stage):
         flag_bytes: dict[str, bytes] = {}  # doc_id → the member's flags.yaml (fidelity signals)
         toc_bytes: dict[str, bytes] = {}  # doc_id → the member's toc.yaml (original paper TOC)
         capture_bytes: dict[str, bytes] = {}  # doc_id → the member's capture.yaml (§6.4)
-        n_errors = 0
+        # Per-document error isolation (R6): one unreadable/malformed bundle is logged + counted +
+        # skipped; the batch continues. doc_error_gate fails the stage only if systemic. The shared
+        # guard lives in kernel.docloop (§9.2).
+        loop = DocLoop("consolidate", log)
         for body_path in body_files:
             rel = body_path.parent.relative_to(normalized_root)  # <app>/<slug>
-            # Per-document error isolation (R6): one unreadable/malformed bundle is logged + counted
-            # + skipped; the batch continues. doc_error_gate fails the stage only if systemic.
-            try:
+            with loop.guard(str(rel)):
                 raw = body_path.read_bytes()
                 meta, _ = frontmatter.parse(raw.decode("utf-8"))
                 member = _member_from(meta, rel.parts[1], raw, bodies, body_path.parent)
@@ -74,9 +76,6 @@ class ConsolidateStage(Stage):
                 capture_path = body_path.parent / "capture.yaml"
                 if capture_path.is_file():
                     capture_bytes[member.doc_id] = capture_path.read_bytes()
-            except Exception as exc:  # noqa: BLE001 — isolate one bad doc, never abort the batch
-                n_errors += 1
-                log.warning("consolidate-doc-failed", doc=str(rel), error=str(exc))
 
         groups = cp.group_by_anchor_key(members)
         kept: set[str] = set()
@@ -131,15 +130,16 @@ class ConsolidateStage(Stage):
                     stale.unlink()
 
         n_pruned = cas.prune_bundles(consolidated_root, kept)
-        self._errors, self._total = n_errors, len(body_files)
+        self._errors, self._total = loop.errors, loop.total
         return RunResult(
             counts={
                 "groups": len(groups),
                 "documents": len(members),
                 "retained_bodies": len({m.body_sha256 for m in members}),
-                "errors": n_errors,
+                "errors": loop.errors,
                 "pruned": n_pruned,
-            }
+            },
+            warnings=loop.warnings(action="consolidate"),
         )
 
     def deep_gate(self, ctx: StageContext) -> PostflightResult:

@@ -30,6 +30,7 @@ import yaml
 from vdocs.contracts.registry import RAW_INDEX, REGISTRIES, TEXT_ENRICHED, TEXT_NORMALIZED
 from vdocs.kernel import cas, frontmatter
 from vdocs.kernel import registry as kregistry
+from vdocs.kernel.docloop import DocLoop
 from vdocs.kernel.text import safe_component
 from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -71,17 +72,21 @@ class NormalizeStage(Stage):
 
         enriched_root = ctx.cfg.silver_enriched
         normalized_root = ctx.cfg.silver_normalized
-        n_docs = n_revision = n_tables = n_refs = n_boiler = n_template = n_errors = 0
+        n_docs = n_revision = n_tables = n_refs = n_boiler = n_template = 0
         n_published = n_titlepage = n_titleimg = n_flags = n_toc = 0
         n_capture = n_absent_unexpected = 0
         body_files = sorted(enriched_root.rglob("body.md"))
         kept = {p.parent.relative_to(enriched_root).as_posix() for p in body_files}
-        for body_path in body_files:
+        # Per-document error isolation (R6): a single bad doc is logged + counted + skipped so one
+        # failure never abandons the batch; doc_error_gate fails the stage only if the error *rate*
+        # is systemic. The shared guard lives in kernel.docloop (§9.2).
+        loop = DocLoop("normalize", log)
+        total = len(body_files)
+        for n, body_path in enumerate(body_files, 1):
+            if n % 25 == 0 or n == total:
+                ctx.progress(f"{n}/{total} normalized")
             rel = body_path.parent.relative_to(enriched_root)  # <app>/<slug>
-            # Per-document error isolation (R6): a single bad doc is logged + counted + skipped so
-            # one failure never abandons the batch; doc_error_gate fails the stage only if the
-            # error *rate* is systemic.
-            try:
+            with loop.guard(str(rel)):
                 meta, body = frontmatter.parse(body_path.read_text(encoding="utf-8"))
                 sha = sha_by_path.get((rel.parts[0], rel.parts[1]))
                 if sha:
@@ -218,12 +223,9 @@ class NormalizeStage(Stage):
                 if capture.has_unexpected_absence(manifest):
                     n_absent_unexpected += 1
                 n_docs += 1
-            except Exception as exc:
-                n_errors += 1
-                log.warning("normalize-doc-failed", doc=str(rel), error=str(exc))
 
         n_pruned = cas.prune_bundles(normalized_root, kept)
-        self._errors, self._total = n_errors, len(body_files)
+        self._errors, self._total = loop.errors, loop.total
         return RunResult(
             counts={
                 "documents": n_docs,
@@ -240,9 +242,10 @@ class NormalizeStage(Stage):
                 "capture_sidecars": n_capture,
                 "absent_unexpected": n_absent_unexpected,
                 "phrases": len(phrases),
-                "errors": n_errors,
+                "errors": loop.errors,
                 "pruned": n_pruned,
-            }
+            },
+            warnings=loop.warnings(action="normalize"),
         )
 
     def deep_gate(self, ctx: StageContext) -> PostflightResult:

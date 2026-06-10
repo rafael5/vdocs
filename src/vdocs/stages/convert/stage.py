@@ -19,6 +19,7 @@ from vdocs.contracts.registry import ASSETS, RAW_INDEX, RAW_TREE, TEXT_CONVERTED
 from vdocs.kernel import cas
 from vdocs.kernel import registry as kregistry
 from vdocs.kernel.cas import Cas
+from vdocs.kernel.docloop import DocLoop
 from vdocs.kernel.text import safe_component
 from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -54,21 +55,22 @@ class ConvertStage(Stage):
         raw = Cas(ctx.cfg.bronze_raw)
         assets = Cas(ctx.cfg.assets)
 
-        n_docs = n_assets = n_docling = n_errors = 0
+        n_docs = n_assets = n_docling = 0
         kept: set[str] = set()  # <app>/<slug> bundles in this run's input set (R5 pruning)
         total = len(index)
+        # Per-document error isolation (R6): a single bad doc is logged + counted + skipped so one
+        # failure never abandons the batch; the postflight gate fails the stage only if the error
+        # *rate* is systemic (doc_error_gate). The shared guard lives in kernel.docloop (§9.2).
+        loop = DocLoop("convert", log)
         for n, (sha, entry) in enumerate(index.items(), 1):
             if n % 25 == 0 or n == total:
                 ctx.progress(f"{n}/{total} converted")
-            kept.add(f"{safe_component(entry['app_code'])}/{safe_component(entry['doc_slug'])}")
-            # Per-document error isolation (R6): a single bad doc is logged + counted + skipped so
-            # one failure never abandons the batch; the postflight gate fails the stage only if the
-            # error *rate* is systemic (doc_error_gate).
-            try:
+            # route by bundle identity (safe app / safe slug) — Docling for the curated
+            # bare-marker-explosion allowlist (ADR-010, §9.6), Pandoc otherwise
+            key = f"{safe_component(entry['app_code'])}/{safe_component(entry['doc_slug'])}"
+            kept.add(key)
+            with loop.guard(key):
                 ext = entry["ext"]
-                # route by bundle identity (safe app / safe slug) — Docling for the curated
-                # bare-marker-explosion allowlist (ADR-010, §9.6), Pandoc otherwise
-                key = f"{safe_component(entry['app_code'])}/{safe_component(entry['doc_slug'])}"
                 use_docling = key in routing
                 doc = (docling if use_docling else pandoc)(raw.get(sha, ext=ext), ext)
                 n_docling += use_docling
@@ -89,26 +91,18 @@ class ConvertStage(Stage):
                 )
                 cas.atomic_write(bundle / "body.md", body.encode("utf-8"))
                 n_docs += 1
-            except Exception as exc:
-                n_errors += 1
-                log.warning(
-                    "convert-doc-failed",
-                    sha=sha,
-                    app=entry.get("app_code"),
-                    slug=entry.get("doc_slug"),
-                    error=str(exc),
-                )
 
         n_pruned = cas.prune_bundles(ctx.cfg.silver_converted, kept)
-        self._errors, self._total = n_errors, len(index)
+        self._errors, self._total = loop.errors, loop.total
         return RunResult(
             counts={
                 "documents": n_docs,
                 "assets": n_assets,
                 "docling": n_docling,
-                "errors": n_errors,
+                "errors": loop.errors,
                 "pruned": n_pruned,
-            }
+            },
+            warnings=loop.warnings(action="convert"),
         )
 
     def deep_gate(self, ctx: StageContext) -> PostflightResult:

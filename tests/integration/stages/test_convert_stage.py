@@ -161,6 +161,24 @@ def test_convert_isolates_a_single_doc_failure(ctx):
     assert not (ctx.cfg.silver_converted / "ADT" / "bad" / "body.md").exists()
 
 
+def test_convert_surfaces_an_isolated_failure_as_a_warning(ctx):
+    # the isolated failure must not be silent — it surfaces as a WARN in the run summary (the
+    # shared kernel.docloop guard feeds RunResult.warnings → the reporter), naming the bad doc.
+    from vdocs.orchestrator.report import RunReporter, Status
+
+    _seed_many(ctx, ["aaa", "bad", "ccc"])
+
+    def conv(data: bytes, ext: str) -> ConvertedDoc:
+        if b"bad" in data:
+            raise ValueError("boom")
+        return ConvertedDoc(markdown="# ok\n")
+
+    rep = RunReporter(echo=lambda _s: None)
+    Orchestrator([ConvertStage(convert=conv)]).run(ctx, reporter=rep)
+    assert rep.reports[-1].status is Status.WARN
+    assert any("failed to convert" in w and "ADT/bad" in w for w in rep.reports[-1].warnings)
+
+
 def test_convert_fails_the_stage_when_error_rate_is_systemic(ctx):
     # every doc fails (100% > the 50% limit) → postflight fails the stage, not a silent pass
     _seed_many(ctx, ["aaa", "bbb"])
