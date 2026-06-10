@@ -78,6 +78,31 @@ PASS/FAIL per check and the final GREEN/RED. Be adversarial — *try to find cor
   `doc_type=UM`, an entity facet (e.g. a known routine/file) — each returns a sane candidate set.
 - `facet_catalog` returns non-empty `app_user`/`doc_user`/`doc_type`/`entity_type` value→count maps.
 
+### B5. Registry coverage vs the FULL corpus (the curated-input completeness check)
+> **Why this matters:** the curated registries (`phrases`, `boilerplate`, `structures`, `templates`,
+> `glossary`, `entities`) were built against the *dev sample*. The de-novo full corpus (~1,036 real
+> docs) will contain patterns they don't cover yet — and the pipeline does **not** auto-learn them. It
+> only *proposes* them: `discover` emits candidates to `reports/patterns`; a human promotes them into
+> `registries/`; `normalize` then subtracts the *curated* ones. **Uncurated patterns pass straight
+> through** — boilerplate not stripped, acronyms missing from the glossary, entities unrecognised —
+> which directly degrades the gold corpus the TUI sits on. This is a *fidelity* check, distinct from
+> B2 (which only checks the registries load/are-consistent).
+
+- **Review `~/data/vdocs/reports/patterns`** (the `discover` output) for high-grade candidates the
+  registries don't yet contain: recurring boilerplate blocks, dead phrases, acronyms/glossary terms,
+  structural conventions, `(doc_type, era)` templates. Quantify: how many high-confidence candidates
+  are **un-promoted**?
+- **Coverage signals (sample the corpus):** residual boilerplate left in normalized bodies (the same
+  block repeated across many gold docs → a missed `boilerplate.yaml` entry); acronyms in bodies not in
+  the glossary; entity-types whose mention counts look implausibly low for the corpus (e.g. far fewer
+  `routine`/`option` mentions than the ~1,036 technical docs should yield → `entities.yaml` patterns
+  too narrow for the full corpus's naming).
+- **Disposition:** if material gaps exist, **promote the high-grade candidates into `registries/`**
+  (the human curation gate) and **re-run `normalize → index`** before declaring GREEN — the registries
+  are the bedrock, so the corpus must be normalized against *curated* (not sample-era) patterns.
+- If coverage is already adequate (few/low-grade un-promoted candidates, no gross residual
+  boilerplate), record that and pass.
+
 ---
 
 ## Acceptance — the GREEN gate
