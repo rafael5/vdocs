@@ -8,6 +8,7 @@ and *how* to address it.
 """
 
 import hashlib
+from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from urllib.parse import urlparse
@@ -210,6 +211,37 @@ def select_fetch_targets(
         if id(rec) in matched_ids or (rec.anchor_key and rec.anchor_key in anchors):
             best.setdefault(rec.doc_slug, rec)
     return list(best.values())
+
+
+@dataclass(frozen=True)
+class GateSummary:
+    """How the effective :class:`GatePolicy` partitions the current inventory — the data behind
+    ``vdocs gate`` (the "see the gate before you run it" surface)."""
+
+    genuine: int  # in-scope, non-noise rows the gate is applied to (the universe before the gate)
+    admitted: int  # fetch targets that pass the gate (deduped — matches `fetch --all --dry-run`)
+    excluded_app_scope: int  # genuine rows whose app is out of scope (wrong system-type / status)
+    excluded_doctype: int  # in-scope-app rows whose doc-type is omitted (Tier B/C/D)
+    admitted_by_doctype: dict[str, int]  # admitted target count per kept doc_code
+    excluded_doctype_by_code: dict[str, int]  # excluded count per omitted doc_code
+
+
+def summarize_gate(records: list[EnrichedRecord], policy: GatePolicy) -> GateSummary:
+    """Partition ``records`` by the gate for the operator-facing explain (no I/O). ``admitted`` is
+    the real deduped fetch-target count (:func:`select_fetch_targets`); the exclusion buckets are
+    over the genuine rows so the operator sees *why* documents were dropped."""
+    genuine = [r for r in records if not r.noise_type and not r.out_of_scope_reason]
+    targets = select_fetch_targets(records, Selection(all_=True), policy)
+    excluded_app = [r for r in genuine if not policy.app_in_scope(r)]
+    excluded_dt = [r for r in genuine if policy.app_in_scope(r) and not policy.doctype_kept(r)]
+    return GateSummary(
+        genuine=len(genuine),
+        admitted=len(targets),
+        excluded_app_scope=len(excluded_app),
+        excluded_doctype=len(excluded_dt),
+        admitted_by_doctype=dict(Counter(r.doc_code for r in targets)),
+        excluded_doctype_by_code=dict(Counter(r.doc_code for r in excluded_dt)),
+    )
 
 
 def index_entry(

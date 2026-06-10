@@ -120,6 +120,26 @@ def _seed_gold_inventory(tmp_path):
     return cfg
 
 
+def test_gate_explains_policy_without_inventory(tmp_path):
+    # `vdocs gate` prints the effective admission policy even before any inventory exists.
+    result = runner.invoke(app, ["gate"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 0, result.stdout
+    assert "admission gate" in result.stdout
+    assert "KEPT doc-types" in result.stdout and "OMITTED doc-types" in result.stdout
+    assert "UM" in result.stdout  # a Tier-A kept code is listed
+    assert "fail-safe" in result.stdout  # the untyped default is explained
+    assert "serve-inventory" in result.stdout  # how to get admitted counts
+
+
+def test_gate_reports_admitted_counts_against_inventory(tmp_path):
+    cfg = _seed_gold_inventory(tmp_path)  # one genuine DOCX (UM), a PDF twin, a noise row
+    result = runner.invoke(app, ["gate"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 0, result.stdout
+    assert "ADMITTED (fetch targets):     1" in result.stdout
+    assert "admitted by doc-type" in result.stdout
+    assert cfg.gold_inventory_json.exists()
+
+
 def test_fetch_no_selection_fetches_nothing_and_reports_count(tmp_path):
     _seed_gold_inventory(tmp_path)
     env = {"DATA_DIR": str(tmp_path)}

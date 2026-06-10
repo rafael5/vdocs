@@ -75,6 +75,29 @@ def _rec(
     )
 
 
+def test_summarize_gate_counts_admitted_and_excluded():
+    # the `vdocs gate` explain surface: how the effective policy partitions the inventory.
+    policy = fp.GatePolicy(
+        allowed_system_prefixes=("VistA",),
+        denied_app_status=frozenset(),
+        omitted_doc_codes=frozenset({"DIBR"}),
+    )
+    vista = lambda r: r.model_copy(update={"system_type": "VistA"})  # noqa: E731
+    web = lambda r: r.model_copy(update={"system_type": "Web client"})  # noqa: E731
+    records = [
+        vista(_rec("um1", doc_code="UM", anchor_key="ADT:DG:UM:um1")),
+        vista(_rec("dibr1", doc_code="DIBR", anchor_key="ADT:DG:DIBR:dibr1")),  # doc-type omitted
+        web(_rec("um2", doc_code="UM", anchor_key="X:Y:UM:um2")),  # app out of scope
+        _rec("form", doc_code="UM", noise="vba_form"),  # non-genuine (chrome/forms)
+    ]
+    s = fp.summarize_gate(records, policy)
+    assert s.genuine == 3  # the noise row is excluded before the gate
+    assert s.admitted == 1  # only the in-scope VistA UM is a fetch target
+    assert s.excluded_app_scope == 1 and s.excluded_doctype == 1
+    assert s.admitted_by_doctype == {"UM": 1}
+    assert s.excluded_doctype_by_code == {"DIBR": 1}
+
+
 # --- the admission gate (app scope + doc-type policy) ---
 
 _VISTA_GATE = fp.GatePolicy(

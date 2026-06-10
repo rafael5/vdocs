@@ -198,6 +198,59 @@ def fetch(
 
 
 @app.command()
+def gate(
+    counts: bool = typer.Option(
+        True, "--counts/--no-counts", help="also show admitted counts against the gold inventory"
+    ),
+) -> None:
+    """Explain the corpus **admission gate** — what gets fetched into (and promoted to) gold.
+
+    Prints the effective, assembled policy in plain terms (app-scope prefixes + denied statuses,
+    the kept vs omitted doc-types, and the fail-safe for untyped docs) so an operator can see and
+    change the gate without reading code. With a gold inventory present it also reports how the gate
+    partitions it (admitted vs excluded, with a per-doc-type breakdown). See docs/gate-reference.md.
+    """
+    from vdocs.models.catalog import EnrichedInventory
+    from vdocs.stages.fetch import fetch_pure as fp
+    from vdocs.stages.fetch.policy import load_gate_config, load_gate_policy
+
+    cfg = Settings()
+    cfgd = load_gate_config(cfg.registries)
+
+    typer.echo("=== vdocs corpus admission gate ===")
+    typer.echo("App scope (registries/inventory/scope-policy.yaml):")
+    typer.echo(f"  allowed system-type prefixes: {', '.join(cfgd.allowed_system_prefixes) or '—'}")
+    typer.echo(f"  denied app statuses:          {', '.join(cfgd.denied_app_status) or '—'}")
+    typer.echo("Doc-type policy (registries/inventory/doctype-policy.yaml):")
+    safe = "  (fail-safe → admitted, surfaces for triage)" if cfgd.default_doctype == "keep" else ""
+    typer.echo(f"  untyped/unmapped default:     {cfgd.default_doctype.upper()}{safe}")
+    typer.echo(f"  KEPT doc-types ({len(cfgd.kept)}):")
+    for d in cfgd.kept:
+        typer.echo(f"    {d.code:<5} {d.label}")
+    typer.echo(f"  OMITTED doc-types ({len(cfgd.omitted)}):")
+    for d in cfgd.omitted:
+        typer.echo(f"    {d.code:<5} {d.label}  — {d.reason}")
+
+    if not counts:
+        return
+    if not cfg.gold_inventory_json.exists():
+        typer.echo("\n(no gold inventory yet — run `vdocs serve-inventory` to see admitted counts)")
+        return
+    records = EnrichedInventory.model_validate_json(
+        cfg.gold_inventory_json.read_text(encoding="utf-8")
+    ).records
+    s = fp.summarize_gate(records, load_gate_policy(cfg.registries))
+    typer.echo("\nAgainst the current gold inventory:")
+    typer.echo(f"  genuine in-scope documents:   {s.genuine}")
+    typer.echo(f"  ADMITTED (fetch targets):     {s.admitted}")
+    typer.echo(f"  excluded — app out of scope:  {s.excluded_app_scope}")
+    typer.echo(f"  excluded — doc-type omitted:  {s.excluded_doctype}")
+    typer.echo("  admitted by doc-type:")
+    for code, n in sorted(s.admitted_by_doctype.items(), key=lambda kv: (-kv[1], kv[0])):
+        typer.echo(f"    {code or '(untyped)':<10} {n}")
+
+
+@app.command()
 def convert(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Convert fetched documents to markdown bundles (text@converted) + extract images."""
     _drive(only="convert", force=force)
