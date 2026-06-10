@@ -11,7 +11,8 @@ import typer
 
 from vdocs.config import Settings
 from vdocs.orchestrator.engine import Orchestrator, StageFailed
-from vdocs.orchestrator.stage import Stage, StageContext
+from vdocs.orchestrator.report import RunReporter
+from vdocs.orchestrator.stage import PostflightError, Stage, StageContext
 from vdocs.orchestrator.state import StateStore
 from vdocs.stages.catalog.stage import CatalogStage
 from vdocs.stages.consolidate.stage import ConsolidateStage
@@ -58,24 +59,29 @@ def _drive(
     only: str | None = None,
     force: bool = False,
     verify: bool = False,
+    strict: bool = False,
     stages: list[Stage] | None = None,
 ) -> None:
     cfg = Settings()
     cfg.lake.mkdir(parents=True, exist_ok=True)
     store = StateStore.open(cfg.state_db)
     ctx = StageContext(cfg=cfg, state=store, verify=verify)
+    reporter = RunReporter()
+    failed = False
     try:
-        results = Orchestrator(stages or build_stages()).run(
-            ctx, from_=from_stage, to=to_stage, only=only, force=force
+        Orchestrator(stages or build_stages()).run(
+            ctx, from_=from_stage, to=to_stage, only=only, force=force, reporter=reporter
         )
-    except StageFailed as exc:
-        typer.echo(f"FAILED: {exc}")
-        raise typer.Exit(code=1) from exc
+    except (StageFailed, PostflightError):
+        # the reporter already recorded the ERROR outcome; render a clean summary (no traceback)
+        # and exit per the contract — exit_code() resolves the recorded ERROR to 1.
+        failed = True
     finally:
         store.close()
-    for result in results:
-        if result is not None:
-            typer.echo(f"{result.stage}: ok {result.counts}")
+    reporter.render_summary()
+    code = reporter.exit_code(strict=strict)
+    if failed or code != 0:
+        raise typer.Exit(code=code or 1)
 
 
 @app.command()
@@ -315,9 +321,17 @@ def run(
     only: str = typer.Option(None, "--only", help="run only this stage"),
     force: bool = typer.Option(False, "--force", "-f", help="re-run even if unchanged"),
     verify: bool = typer.Option(False, "--verify", help="use strong content-hash fingerprints"),
+    strict: bool = typer.Option(False, "--strict", help="exit non-zero (10) if any stage WARNs"),
 ) -> None:
     """Run the pipeline DAG (optionally a slice) through the generic orchestrator."""
-    _drive(from_stage=from_stage, to_stage=to_stage, only=only, force=force, verify=verify)
+    _drive(
+        from_stage=from_stage,
+        to_stage=to_stage,
+        only=only,
+        force=force,
+        verify=verify,
+        strict=strict,
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover

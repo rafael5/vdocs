@@ -224,6 +224,107 @@ def test_upstream_contract_ver_bump_invalidates_consumer(ctx):
     assert len(cons_runs) == 2  # consumer re-ran on the upstream contract_ver change
 
 
+def test_upstream_record_optional_proceeds_on_present_artifact(ctx):
+    # F4: a stage that trusts a present, valid upstream artifact even without an ok stage_run —
+    # so wiping state.db (losing the producer's run record) does not force re-running the producer
+    # when the artifact is still on disk. Default stages keep the strict behavior (test above).
+    cas.atomic_write(DEP.locate(ctx.cfg).path, b"present-on-disk")
+
+    class Trusting(Stage):
+        name = "trusting"
+        requires = [DEP]
+        produces = [_file("trusted", producer="trusting")]
+        requires_upstream_record = False
+
+        def run(self, ctx, force):  # pragma: no cover - only preflight matters here
+            return RunResult()
+
+    pf = Trusting().preflight(ctx, force=False)
+    assert pf.decision is Decision.PROCEED  # present artifact trusted; no producer record needed
+
+
+def test_run_drives_reporter_with_green_outcome(ctx):
+    from vdocs.orchestrator.report import RunReporter, Status
+
+    class Always(Stage):
+        name = "always"
+        requires = [VDL]
+        produces = [OUT]
+        idempotency = Idempotency.ALWAYS_RERUN
+
+        def run(self, ctx, force):
+            cas.atomic_write(OUT.locate(ctx.cfg).path, b"x")
+            return RunResult(counts={"did": 1})
+
+    rep = RunReporter(echo=lambda _s: None)
+    Orchestrator([Always()]).run(ctx, reporter=rep)
+    assert rep.reports[-1].status is Status.GREEN
+    assert rep.reports[-1].counts == {"did": 1}
+    assert rep.verdict() is Status.GREEN
+
+
+def test_run_records_warn_outcome_when_stage_emits_warnings(ctx):
+    from vdocs.orchestrator.report import RunReporter, Status
+
+    class Warner(Stage):
+        name = "warner"
+        requires = [VDL]
+        produces = [OUT]
+        idempotency = Idempotency.ALWAYS_RERUN
+
+        def run(self, ctx, force):
+            cas.atomic_write(OUT.locate(ctx.cfg).path, b"x")
+            return RunResult(counts={"ok": 1}, warnings=["1 thing needs a look"])
+
+    rep = RunReporter(echo=lambda _s: None)
+    Orchestrator([Warner()]).run(ctx, reporter=rep)
+    assert rep.reports[-1].status is Status.WARN
+    assert rep.reports[-1].warnings == ["1 thing needs a look"]
+    assert rep.verdict() is Status.WARN
+
+
+def test_run_reports_error_outcome_on_postflight_failure(ctx):
+    from vdocs.orchestrator.report import RunReporter, Status
+
+    class Gated(Stage):
+        name = "gated"
+        requires = [VDL]
+        produces = [OUT]
+
+        def run(self, ctx, force):
+            cas.atomic_write(OUT.locate(ctx.cfg).path, b"x")
+            return RunResult()
+
+        def deep_gate(self, ctx):
+            from vdocs.models.stage import PostflightResult
+
+            return PostflightResult(ok=False, reason="synthetic gate failure")
+
+    rep = RunReporter(echo=lambda _s: None)
+    with pytest.raises(PostflightError):  # the type still propagates (stop-on-first-error)
+        Orchestrator([Gated()]).run(ctx, reporter=rep)
+    assert rep.reports[-1].status is Status.ERROR  # but the reporter recorded the ERROR first
+    assert rep.verdict() is Status.ERROR
+
+
+def test_run_reports_error_outcome_on_preflight_failure(ctx):
+    from vdocs.orchestrator.report import RunReporter, Status
+
+    class Consumer(Stage):
+        name = "consumer"
+        requires = [DEP]  # absent → preflight FAIL
+        produces = [_file("c", producer="consumer")]
+
+        def run(self, ctx, force):  # pragma: no cover - preflight fails first
+            return RunResult()
+
+    rep = RunReporter(echo=lambda _s: None)
+    with pytest.raises(StageFailed):
+        Orchestrator([Consumer()]).run(ctx, reporter=rep)
+    assert rep.reports[-1].status is Status.ERROR
+    assert rep.reports[-1].remediation == "Run: vdocs producer"
+
+
 def test_orchestrator_run_raises_stage_failed_with_remediation(ctx):
     # A consumer whose required input is simply absent → run() surfaces StageFailed.
     class Consumer(Stage):

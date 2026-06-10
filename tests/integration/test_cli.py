@@ -189,10 +189,54 @@ def test_run_only_catalog(tmp_path):
 
 
 def test_failure_exits_nonzero_with_remediation(tmp_path):
-    # no catalog.raw present → catalog preflight FAILs
+    # no catalog.raw present → catalog preflight FAILs (step 1: required input missing)
     result = runner.invoke(app, ["catalog"], env={"DATA_DIR": str(tmp_path)})
     assert result.exit_code == 1
     assert "crawl" in result.stdout  # remediation mentions the upstream stage
+
+
+def test_catalog_runs_from_present_raw_without_a_crawl_record(tmp_path):
+    # F4: place catalog.raw on disk but record NO `crawl` stage_run (as if state.db was wiped).
+    # catalog must still run off the present, valid artifact — no cryptic "crawl not completed ok".
+    cfg = Settings(data_dir=tmp_path)
+    cfg.catalog_raw.parent.mkdir(parents=True, exist_ok=True)
+    cfg.catalog_raw.write_text(json.dumps(RAW_CATALOG))
+    result = runner.invoke(app, ["catalog"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 0, result.stdout
+    assert cfg.catalog_enriched.exists()
+
+
+def test_postflight_failure_exits_one_without_traceback(tmp_path, monkeypatch):
+    # A deep-gate/postflight failure must render a clean ERROR + exit 1, never a raw Python
+    # traceback (the §2.6 defect: PostflightError used to escape _drive uncaught).
+    from vdocs.contracts.registry import VDL
+    from vdocs.kernel import cas
+    from vdocs.models.artifact import ArtifactContract, Kind, StorageClass
+    from vdocs.models.stage import PostflightResult, RunResult
+    from vdocs.orchestrator.stage import Stage
+
+    out = ArtifactContract(
+        key="solo", kind=Kind.FILE, storage_class=StorageClass.TEXT_VERSIONED,
+        produced_by="gated", relpath="solo.bin",
+    )  # fmt: skip
+
+    class Gated(Stage):
+        name = "gated"
+        requires = [VDL]
+        produces = [out]
+
+        def run(self, ctx, force):
+            cas.atomic_write(out.locate(ctx.cfg).path, b"x")
+            return RunResult()
+
+        def deep_gate(self, ctx):
+            return PostflightResult(ok=False, reason="synthetic gate failure")
+
+    monkeypatch.setattr("vdocs.cli.app.build_stages", lambda: [Gated()])
+    result = runner.invoke(app, ["run", "--only", "gated"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 1
+    assert "Traceback" not in result.stdout
+    assert "gated" in result.stdout
 
 
 # --- crawl + fetch commands, driven with faked network via build_stages ------

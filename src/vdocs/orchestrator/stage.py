@@ -8,6 +8,7 @@ to orchestration: there is no second code path, and no stage re-implements gatin
 
 from __future__ import annotations
 
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -48,6 +49,9 @@ class StageContext:
     scope: str = ""
     verify: bool = False
     clock: Callable[[], str] = field(default=_utc_now)
+    # a monotonic clock for elapsed-time measurement (wall ``clock`` is for recorded timestamps);
+    # injectable so the reporter's per-stage elapsed is deterministic in tests.
+    mono: Callable[[], float] = field(default=time.monotonic)
 
 
 class PostflightError(RuntimeError):
@@ -63,6 +67,12 @@ class Stage(ABC):
     produces: list[ArtifactContract] = []
     idempotency: Idempotency = Idempotency.SKIP_IF_UNCHANGED
     contract_ver: int = 1
+    # When True (default), an internal upstream must have an ``ok`` ``state.db`` run record or
+    # preflight FAILs (an orphan file on disk is untrusted — it could be a partial write). Stages
+    # set this False to **trust a present, valid upstream artifact** even with no run record, so a
+    # wiped ``state.db`` does not force re-running the producer (F4 — e.g. ``catalog`` off a
+    # surviving ``catalog.raw.json``). Drift is still checked when a record *does* exist.
+    requires_upstream_record: bool = True
 
     # --- the work (the only thing a concrete stage must implement) ---
     @abstractmethod
@@ -116,6 +126,10 @@ class Stage(ABC):
                 continue
             up = ctx.state.get(c.produced_by, ctx.scope)
             if up is None or up.status != "ok":
+                # F4: with no ok run record, trust the present, valid artifact if this stage opts
+                # in (the artifact's presence was already checked in step 1); otherwise FAIL.
+                if not self.requires_upstream_record:
+                    continue
                 return PreflightResult.fail(
                     f"upstream {c.produced_by} has not completed ok for scope {ctx.scope!r}",
                     remediation=f"Run: vdocs {c.produced_by}",

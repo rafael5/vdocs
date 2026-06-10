@@ -53,9 +53,13 @@ class PreflightResult(BaseModel):
 
 
 class RunResult(BaseModel):
-    """What a stage's ``run`` reports — counts of work done (§7.2 ``counts``)."""
+    """What a stage's ``run`` reports — counts of work done (§7.2 ``counts``) plus any
+    operator-facing ``warnings``. A non-empty ``warnings`` list does **not** fail the stage
+    (postflight still gates correctness); it surfaces as a WARN in the run summary so the
+    operator sees "completed, but look at this" diagnostics without reading the logs."""
 
     counts: dict[str, int] = Field(default_factory=dict)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class PostflightResult(BaseModel):

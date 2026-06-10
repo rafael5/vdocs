@@ -11,7 +11,8 @@ from __future__ import annotations
 import structlog
 
 from vdocs.models.stage import Decision, StageRun
-from vdocs.orchestrator.stage import Stage, StageContext
+from vdocs.orchestrator.report import RunReporter, Status
+from vdocs.orchestrator.stage import PostflightError, Stage, StageContext
 
 log = structlog.get_logger(__name__)
 
@@ -88,21 +89,42 @@ class Orchestrator:
         to: str | None = None,
         only: str | None = None,
         force: bool = False,
+        reporter: RunReporter | None = None,
     ) -> list[StageRun | None]:
-        """Run the selected stages in order. Returns a StageRun per stage (None if skipped)."""
+        """Run the selected stages in order. Returns a StageRun per stage (None if skipped).
+
+        ``reporter`` (optional) receives a per-stage outcome so the operator gets a GREEN/WARN/ERROR
+        summary + exit code; failures are reported **before** the exception re-raises (so the run
+        summary is complete even when a stage stops the run), and the original exception type
+        (``StageFailed`` / ``PostflightError``) still propagates for the stop-on-first-error
+        contract."""
+        rep = reporter or RunReporter(echo=lambda _s: None)
         results: list[StageRun | None] = []
-        for stage in self._select(from_, to, only):
+        selected = self._select(from_, to, only)
+        total = len(selected)
+        for i, stage in enumerate(selected, 1):
             pf = stage.preflight(ctx, force)
             if pf.decision is Decision.FAIL:
                 log.error("stage-preflight-failed", stage=stage.name, reason=pf.reason)
+                rep.stage_error(i, total, stage.name, pf.reason, pf.remediation)
                 raise StageFailed(stage.name, pf.reason, pf.remediation)
             if pf.decision is Decision.SKIP:
                 log.info("stage-skipped", stage=stage.name, reason=pf.reason)
+                rep.stage_skipped(i, total, stage.name, pf.reason)
                 results.append(None)
                 continue
             started_at = ctx.clock()
-            run = stage.run(ctx, force)
-            sr = stage.postflight(ctx, run, started_at)
+            t0 = ctx.mono()
+            try:
+                run = stage.run(ctx, force)
+                sr = stage.postflight(ctx, run, started_at)
+            except PostflightError as exc:
+                log.error("stage-postflight-failed", stage=stage.name, reason=str(exc))
+                rep.stage_error(i, total, stage.name, str(exc), "")
+                raise
+            elapsed = ctx.mono() - t0
+            status = Status.WARN if run.warnings else Status.GREEN
+            rep.stage_done(i, total, stage.name, status, sr.counts, run.warnings, elapsed)
             log.info("stage-ok", stage=stage.name, counts=sr.counts)
             results.append(sr)
         return results
