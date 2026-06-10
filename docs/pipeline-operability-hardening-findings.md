@@ -329,3 +329,45 @@ defaults below. **DECIDED** marks a locked answer.
     fetch path required.
 14. **Runbook authority?** → **Rewrite `de-novo-run.md` as the canonical runbook; add a short in-tool
     `vdocs help run` pointer.**
+
+---
+
+## 9. Closure — implementation status (2026-06-10)
+
+All nine commits landed on `master`, each TDD-first and green (`make check` ≥95 %; ended at ~98.2 %,
+857 tests). The §7 work breakdown, with SHAs:
+
+| # | Commit | SHA |
+|---|---|---|
+| 1 | delete the descoped semantic/vector path (fixes F1) | `4228b1c` |
+| 2 | status model + run reporter + exit codes; fix F4 | `391154e` |
+| 3 | Rich run output — banners, live status, summary table | `98ef5ee` |
+| 4 | `fetch` idempotent resume + failure classification + heartbeats (F2/F3/F9) | `88ca3a9` |
+| 5 | shared `kernel.docloop` per-doc guard + per-doc WARN surfacing (§2.4) | `f24121c` |
+| 6 | `vdocs gate` explain + `docs/gate-reference.md` | `3dc4308` |
+| 7 | `vdocs doctor` — `GOLD LIBRARY: GREEN|RED` soundness gate + `doctor-policy.yaml` (F5/F6/F8) | `dab73c4` |
+| 8 | `vdocs build [--fresh --yes]` guided from-scratch path (F9) | `ea18bde` |
+| 9 | rewrite `docs/de-novo-run.md` as the accurate runbook | *(this commit)* |
+
+**Acceptance criteria (kickoff §"graduated") — met:**
+1. **Configure & preview** — three operator-facing registries + `vdocs gate` shows the effective gate
+   and admitted counts before any run; `docs/gate-reference.md` documents them. ✅
+2. **Run** — `vdocs build` (or any slice via `vdocs run`) prints per-stage banner → live progress →
+   `GREEN/WARN/ERROR` result + a final summary table + verdict + a documented exit code. ✅
+3. **Troubleshoot from messages** — WARN/ERROR lines carry what/where/why/next-action (permanent-missing
+   URLs, isolated-doc keys, remediation hints); no `state.db` spelunking. ✅
+4. **Trust** — `vdocs doctor` emits `GOLD LIBRARY: GREEN|RED` with BY-DESIGN gaps separated from
+   defects; it is the authoritative gate. ✅
+5. **Semantic/vector code gone.** ✅
+6. **`make check` green, TDD throughout, console output tested** (snapshot/captured-output). ✅; the
+   runbook now matches actual behavior.
+
+**Flagged issues F1–F11:** all addressed — F1 (delete embed), F2/F3/F9 (fetch idempotence +
+classification + `--refetch`), F4 (catalog preflight decoupled), F5 (untyped docs surfaced in
+`doctor`), F6 (BY-DESIGN bucket + `doctor-policy.yaml`), F7 (gate drift visible via `gate` + run
+counts), F8 (`doctor`), F10 (`AR/WS:p13` in the accepted-edge-case allow-list), F11 (`build --fresh`
+clears stray clutter). **F12** (`fidelity/` pure kernels) — left in place as future `doctor --deep`
+inputs, not wired as a stage (Open Q12 default).
+
+**Deferred / future (not blocking GREEN):** `doctor --deep` (lake-body frontmatter checks, B3);
+`run --doctor` auto-tail; folding `fidelity/compliance_pure`+`overstrip_pure` into `doctor`.

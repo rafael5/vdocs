@@ -1,112 +1,141 @@
-# De-Novo Pipeline Run — Gated Full Corpus via Real VDL Fetch
+# De-Novo Pipeline Run — the operator runbook
 
-> **Purpose:** rebuild the entire `~/data/vdocs` lake from scratch with **all current logic applied**
-> — the admission gates (app-scope G3 + doc-type G4), the B1 anchor-key fix, and the persona bake —
-> by **really fetching every gate-admitted document from the live VDL**. No `seed_from_v1` shortcut,
-> no mocks, no offline gap: **all 1,036 gate-admitted docs** end up in the corpus.
+> **This is the canonical, accurate runbook** (rewritten 2026-06-10 after the operability-hardening
+> work). It supersedes the pre-hardening copy archived under `docs/historical/`, which **misstated**
+> fetch idempotence and the retry loop — do not follow that one.
+>
+> **The whole build is three commands:**
+> ```bash
+> vdocs gate                 # 1. PREVIEW — see exactly what will be fetched/promoted (no run)
+> vdocs build --fresh --yes  # 2. BUILD   — crawl → … → manifest → doctor, one command
+> vdocs doctor               # 3. TRUST   — re-check the corpus → GOLD LIBRARY: GREEN|RED
+> ```
+> (`vdocs build` already runs `doctor` at the end; step 3 is for re-checking later.)
 
-**Requires network** (downloads from `https://www.va.gov/vdl/`).
-**Shared-lake rule:** before running, confirm no operator run is live —
-`pgrep -af "vdocs run"` and check `~/data/vdocs/reports/*.log`. This is the big destructive operation.
+The pipeline narrates itself: every stage prints a `[k/N] stage — …` banner, a live
+`GREEN/WARN/ERROR` result line with counts + elapsed, progress heartbeats for the long stages
+(`fetch`/`convert`), and an end-of-run summary table with an overall verdict and exit code. You do
+**not** need to read `state.db` or write validation scripts — the tool reports what happened.
 
 ---
 
-## What it produces
+## 0. Prerequisites
 
-| | count | why |
+- **Network** is needed for `crawl` + `fetch` (they pull from `https://www.va.gov/vdl/`). Everything
+  after `fetch` runs **offline** (see §6 for the airgapped split).
+- **Shared lake.** `~/data/vdocs` (`$DATA_DIR`) is shared. `vdocs build` **refuses to start if another
+  vdocs pipeline process is active** (it would race `state.db`/`index.db`/the CAS). If you see that
+  message, wait for the other run (check `reports/*.log`) — don't force past it.
+- No ML / vector dependencies, no `embed` stage — the corpus is lexical-first and offline.
+
+## 1. Preview the gate (no run, no network)
+
+```bash
+vdocs gate
+```
+Prints the effective admission policy — allowed app system-types, denied statuses, the **KEPT** vs
+**OMITTED** doc-types, and the untyped fail-safe — plus, if a gold inventory already exists, how many
+documents are **ADMITTED** vs excluded (with a per-doc-type breakdown). To change what's admitted,
+edit the registries and re-preview; see [`gate-reference.md`](gate-reference.md).
+
+## 2. Build the corpus
+
+```bash
+vdocs build --fresh --yes
+```
+- `--fresh` does the from-scratch wipe of **derived** lake data — `documents/` (incl. the bronze CAS),
+  `index.db`, **`state.db`**, `reports/`, and the inventory silver+gold. It **keeps**
+  `inventory/bronze/catalog.raw.json` (so `--skip-crawl` can reuse it) and the repo registries. The
+  wipe **refuses without `--yes`**.
+  - *Why state.db is wiped:* `fetch` is now idempotent (it skips documents already in the CAS). If the
+    CAS is wiped but `state.db` is kept, fetch would "skip" documents whose bytes are gone. A clean
+    build wipes both so every gate-admitted document is re-downloaded.
+- Without `--fresh` it builds in place (re-running is cheap — unchanged stages skip, and `fetch` only
+  re-attempts what's missing).
+- `--skip-crawl` reuses the saved `catalog.raw.json` instead of re-crawling (faster; skip a fresh VDL
+  scrape). `catalog` runs off the on-disk `catalog.raw.json` even with no crawl record — a wiped
+  `state.db` no longer forces a re-crawl.
+
+`build` runs, in one orchestrated pass: `crawl → catalog → serve-inventory → fetch (--all) → convert →
+discover → enrich → normalize → consolidate → index → validate → relate → manifest`, then `doctor`. It
+exits **non-zero** if any stage ERRORs or the corpus comes out **RED**.
+
+## 3. Trust the result
+
+`build` ends with the `doctor` table + verdict. To re-check any time:
+```bash
+vdocs doctor
+```
+It reads `index.db` and reports each check as **PASS / BY-DESIGN / WARN / FAIL**, then
+`GOLD LIBRARY: GREEN|RED` (exit 1 on RED). **BY-DESIGN** and **WARN** never make it RED — only a real
+**FAIL** does. See §5 for what each bucket means.
+
+---
+
+## 4. Reading the run output (status + exit codes)
+
+| Token | Meaning | Blocks? |
 |---|---|---|
-| gate-admitted fetch targets | **1,036** | VistA apps only (G3) + Tier-A doc-types only (G4); `fetch --all` selects all of them |
-| really downloaded | **1,036** | live VDL fetch, content-addressed into the bronze CAS (idempotent; re-runnable) |
-| gold (is_latest) docs | ~800–900 | after B1 version-collapse (one anchor per logical doc) |
-| persona coverage | **100%** of gold apps | `app_user`/`doc_user`/`software_class`/`function_category` baked into frontmatter + index |
+| `GREEN` | the stage did its work, no caveats | no |
+| `WARN`  | completed, but look — e.g. some documents are permanently unavailable upstream, or a doc failed to convert and was isolated | **no** |
+| `ERROR` | a preflight/postflight gate failed; the run stopped here | **yes** |
 
-`vdocs fetch --all --dry-run` prints `selection matches 1036 of 1036` — the gate is already wired in.
+**Exit codes:** `0` = all GREEN (or WARN, by default) · `1` = an ERROR stopped the run, or `doctor`
+is RED · `10` = `vdocs run --strict` and there were WARNs (opt-in; lets CI treat WARNs as failures).
+
+## 5. The two non-defects you'll see (and why they're fine)
+
+- **"N documents permanently unavailable" (a fetch WARN).** A few VDL documents return a persistent
+  HTTP 500/404 upstream. `fetch` retries each across runs and, after the attempt cap, marks it
+  `permanent_missing` and **stops re-attempting it**, listing the URLs in a WARN. This is an upstream
+  availability gap, **not** a pipeline defect — the build proceeds GREEN/WARN. (The old runbook told you
+  to "re-run until `failed=0`"; that's **unreachable** for these and would loop forever. Don't.)
+- **`function_category` below 100% (a doctor BY-DESIGN row).** The fallback-profile apps carry no
+  Monograph SPM line, so they legitimately have no `function_category`. `doctor-policy.yaml` encodes
+  the expected floor, so this shows as **BY-DESIGN**, not a FAIL.
+
+## 6. Retrying / resuming (idempotent — this is the big change)
+
+`fetch` is a cheap, honest resume: re-running **does not** re-download what's already in the CAS.
+
+```bash
+vdocs fetch --all --force      # re-attempt ONLY the docs that failed last time (CAS hits are skipped)
+vdocs fetch --all --refetch    # force a full re-download (ignore the CAS) — rarely needed
+```
+- A transient failure is retried on the next `--force` run; after the attempt cap it becomes
+  `permanent_missing` and is no longer attempted (so the loop terminates).
+- After topping up fetches, finish the document plane: `vdocs run --from convert --to manifest` then
+  `vdocs doctor`.
+
+## 7. Airgapped build (network only at the fetch boundary)
+
+`fetch` is the only step past `crawl` that needs the network. To build offline:
+
+1. **On a connected box:** `vdocs crawl && vdocs catalog && vdocs serve-inventory && vdocs fetch --all`
+   (downloads every gate-admitted document into the bronze CAS).
+2. **Copy the lake** (`~/data/vdocs` — at minimum `documents/bronze/`, `inventory/`, and `state.db`)
+   to the airgapped box.
+3. **On the airgapped box (offline):** `vdocs run --from convert --to manifest && vdocs doctor`.
+
+Everything from `convert` onward is pure local computation — no network, no ML.
+
+## 8. Verify (optional manual cross-check)
+
+`vdocs doctor` is the shipped check, but you can spot-check the index directly:
+```bash
+vdocs ask "how to add a new patient" --k 5    # ranked, pre-cited gold hits
+vdocs inventory --status                       # per-document fetch status (fetched/permanent_missing/…)
+```
 
 ---
 
-## 1. Wipe the lake (destructive)
+## What changed from the pre-hardening runbook
 
-```bash
-cd ~/data/vdocs
-rm -rf documents index.db index.db-* inventory.db reports
-rm -f  inventory/silver/* inventory/gold/*
-# keep inventory/bronze/catalog.raw.json (or re-crawl in step 2) and state.db
-```
-*(A re-fetch re-downloads bytes, so the old bronze CAS is not worth keeping — wipe `documents/` fully.)*
-
-## 2. Rebuild the inventory (control plane)
-
-Fresh crawl (most complete — picks up any new VDL docs), or reuse the saved `catalog.raw.json`:
-
-```bash
-cd ~/projects/vdocs
-.venv/bin/vdocs crawl --force            # OPTION A: fresh VDL catalog (network). Skip to reuse catalog.raw.json.
-.venv/bin/vdocs catalog --force          # catalog.raw → catalog.enriched (B1 anchor_key, doc_code, scope signals)
-.venv/bin/vdocs serve-inventory --force  # → gold inventory.{json,csv,db} + the HARD GATE (the fetch gate)
-```
-
-## 3. Confirm registries are current (already committed)
-
-```bash
-.venv/bin/python scripts/seed_app_profiles.py   # → app-profiles.yaml (104 profiles, 100% gold coverage); no-op if unchanged
-```
-
-## 4. REAL fetch — every gate-admitted document (network)
-
-```bash
-.venv/bin/vdocs fetch --all
-# select_fetch_targets applies the always-on gate (noise §9.5 + DOCX §1 + app-scope G3 + doc-type G4)
-# → downloads all 1036 gated docx from the VDL into the content-addressed bronze CAS.
-# Idempotent: re-run to retry any failures (recorded in state.db acquisitions as status='failed').
-```
-
-After it finishes, check for any failed downloads:
-```bash
-.venv/bin/python -c "import sqlite3; c=sqlite3.connect('$HOME/data/vdocs/state.db'); \
-print('fetched:', c.execute(\"SELECT COUNT(*) FROM acquisitions WHERE status='fetched'\").fetchone()[0], \
-'failed:', c.execute(\"SELECT COUNT(*) FROM acquisitions WHERE status='failed'\").fetchone()[0])"
-# re-run 'vdocs fetch --all' to retry failures (CAS hits are skipped, only failures re-attempt).
-```
-
-## 5. Process the document plane → gold + index
-
-```bash
-.venv/bin/vdocs run --from convert --to index --force
-# convert → discover → enrich (bakes personas) → normalize → consolidate (B1 grouping) → index (persona columns)
-# add --to manifest for the full gold deliverable (relate + manifest)
-```
-
-## 6. Verify
-
-```bash
-.venv/bin/python - <<'PY'
-import sqlite3, collections
-c = sqlite3.connect("/home/rafael/data/vdocs/index.db")
-n = c.execute("SELECT COUNT(*) FROM documents WHERE is_latest=1").fetchone()[0]
-print("gold (is_latest) docs:", n)
-for col in ("app_user","doc_user","software_class","function_category"):
-    k = c.execute(f"SELECT COUNT(*) FROM documents WHERE is_latest=1 AND {col}<>''").fetchone()[0]
-    print(f"  {col:18} {k}/{n}")
-print("doc_type spread:", dict(collections.Counter(r[0] for r in
-      c.execute("SELECT doc_type FROM documents WHERE is_latest=1"))))
-print("XU:XU:UG distinct anchors:",
-      c.execute("SELECT COUNT(DISTINCT anchor_key) FROM documents WHERE anchor_key LIKE 'XU:XU:UG%'").fetchone()[0])
-PY
-```
-
-Expect: **only Tier-A doc_types** (UM/UG/TM/DG/API/INT/AG/SM/SG/QRG/TRG/REF/FAQ/TG) — no DIBR/IG/RN/SUP;
-persona columns populated for ~100% of gold; many distinct XU:XU:UG anchors (B1 fix working).
-
----
-
-## Notes
-
-- **`vdocs run` won't fetch on its own** (no blind download — empty default selection). The corpus
-  comes from the explicit `vdocs fetch --all` in step 4.
-- **Idempotent + retryable:** the CAS dedupes by content hash, so re-running `vdocs fetch --all`
-  only re-attempts `failed` acquisitions; successful ones are CAS hits. Run it until `failed: 0`.
-- **`seed_from_v1.py --all`** remains as an *offline* alternative (now gate-aware too) for dev without
-  network — but it caps at the ~929 docs the v1 tree happens to hold. This runbook uses the real
-  fetch precisely to get all 1,036 with no omissions and no mocks.
-- **Reversible gate:** to widen to the ungated ~2,778 (all doc-types) for stress-testing, flip the
-  `doctype-policy.yaml` decisions to `keep` and re-run from `serve-inventory` → `fetch --all`.
+The archived `docs/historical/de-novo-run.md` is **wrong** on these points (now fixed):
+- it claimed re-running `fetch` "skips CAS hits, only failures re-attempt" — that was false then
+  (every run re-GET everything); it is **true now** (idempotent resume).
+- it said loop "until `failed=0`" — unreachable for the persistent upstream 500s; now they become
+  `permanent_missing` and the run completes with a WARN.
+- it had you hand-sequence `--only` stages and dodge the OOM-prone `embed` stage; `embed` is **gone**
+  and `vdocs build` sequences everything for you.
+- wiping `state.db` used to force a cryptic re-crawl; `catalog` now runs off `catalog.raw.json`.
