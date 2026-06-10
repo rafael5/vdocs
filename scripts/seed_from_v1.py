@@ -9,9 +9,15 @@ bronze CAS, writes ``raw/index.json`` + ``acquisitions``, and records a ``fetch`
 so ``vdocs convert`` (and downstream) can run on actual documents, entirely offline.
 
 Usage:
-    python scripts/seed_from_v1.py [--per-app N] [--full APP[,APP...]] [--v1-raw PATH]
+    python scripts/seed_from_v1.py [--all] [--per-app N] [--full APP[,APP...]] [--v1-raw PATH]
 
 Requires a populated gold inventory (``vdocs crawl/catalog/serve-inventory`` first).
+
+**Admission gate:** this offline seed applies the SAME always-on gate as the live ``fetch`` stage
+(``fetch_pure.select_fetch_targets`` + ``GatePolicy``): noise §9.5 + DOCX §1 + app-scope (G3) +
+doc-type policy (G4). So a de-novo offline seed produces exactly the gated corpus a real fetch would
+— out-of-scope apps and omitted doc-types never get seeded. ``--all`` seeds the whole gated set;
+``--per-app``/``--full`` sample it for a small dev corpus.
 """
 
 from __future__ import annotations
@@ -27,11 +33,16 @@ from vdocs.kernel.cas import Cas, atomic_write
 from vdocs.models.catalog import EnrichedInventory
 from vdocs.models.stage import Acquisition, StageRun
 from vdocs.orchestrator.state import StateStore
+from vdocs.stages.fetch import fetch_pure as fp
+from vdocs.stages.fetch.policy import load_gate_policy
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--per-app", type=int, default=3, help="docs per app (breadth)")
+    ap.add_argument(
+        "--all", action="store_true", help="seed the WHOLE gate-admitted corpus (de-novo)"
+    )
+    ap.add_argument("--per-app", type=int, default=3, help="docs per app (ignored with --all)")
     ap.add_argument("--full", default="CPRS", help="comma-separated apps taken in full")
     ap.add_argument(
         "--v1-raw",
@@ -45,13 +56,17 @@ def main() -> None:
     cfg = Settings()
     inv = EnrichedInventory.model_validate_json(cfg.gold_inventory_json.read_text(encoding="utf-8"))
 
-    # dedup to logical docx docs that have a real v1 file (genuine rows only)
-    logical: dict[tuple[str, str], object] = {}
-    for r in inv.records:
-        if r.noise_type or r.doc_format != "docx":
-            continue
-        if (args.v1_raw / r.app_name_abbrev / r.doc_filename).is_file():
-            logical.setdefault((r.app_name_abbrev, r.doc_slug), r)
+    # Apply the live fetch stage's always-on admission gate, so the seed == what a real gated fetch
+    # would select (one DOCX target per logical doc; out-of-scope apps + omitted doc-types dropped).
+    policy = load_gate_policy(cfg.registries)
+    targets = fp.select_fetch_targets(inv.records, fp.Selection(all_=True), policy)
+
+    # keep gate-admitted docs that have a real v1 file
+    logical = {
+        (t.app_name_abbrev, t.doc_slug): t
+        for t in targets
+        if (args.v1_raw / t.app_name_abbrev / t.doc_filename).is_file()
+    }
 
     by_app: dict[str, list] = defaultdict(list)
     for r in logical.values():
@@ -59,7 +74,7 @@ def main() -> None:
     sample = []
     for app, recs in by_app.items():
         recs.sort(key=lambda r: (r.doc_code, r.doc_slug))
-        sample.extend(recs if app in full_apps else recs[: args.per_app])
+        sample.extend(recs if (args.all or app in full_apps) else recs[: args.per_app])
 
     store = StateStore.open(cfg.state_db)
     raw_cas = Cas(cfg.bronze_raw)
