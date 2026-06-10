@@ -336,6 +336,35 @@ def ask(
 
 
 @app.command()
+def doctor() -> None:
+    """Check the gold corpus and emit GOLD LIBRARY: GREEN|RED — the shipped soundness gate (B1–B5).
+
+    Reads index.db and reports each check as PASS / BY-DESIGN / WARN / FAIL: persona + identity
+    coverage (against doctor-policy.yaml floors), anchor integrity, gate fidelity (only Tier-A
+    doc-types in gold), the FTS search surface, and the entity graph. By-design gaps (e.g. the
+    fallback-profile function_category) are separated from real defects. Exits 1 on RED.
+    """
+    from vdocs.kernel import db
+    from vdocs.server import doctor as doc
+    from vdocs.stages.fetch.policy import load_gate_config
+
+    cfg = Settings()
+    if not cfg.index_db.exists():
+        typer.echo("no index.db yet — run: vdocs index (then relate, manifest), or vdocs build")
+        raise typer.Exit(code=1)
+    kept = frozenset(r.code for r in load_gate_config(cfg.registries).kept)
+    policy = doc.load_doctor_policy(cfg.registries)
+    conn = db.connect(cfg.index_db, read_only=True)
+    try:
+        report = doc.diagnose(conn, kept_doctypes=kept, policy=policy)
+    finally:
+        conn.close()
+    doc.render_report(report, typer.echo)
+    if report.verdict() == "RED":
+        raise typer.Exit(code=1)
+
+
+@app.command()
 def validate(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Sidecar-verification HARD GATE: typed absence (capture.yaml) + count reconciliation +
     refs.yaml ref-resolution. Fails loudly on a silent detector miss, an implausible corpus

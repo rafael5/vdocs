@@ -392,6 +392,50 @@ def _seed_index_for_ask(tmp_path):
     conn.close()
 
 
+def _seed_sound_index(tmp_path):
+    """A minimal sound gold index.db: one fully-populated Tier-A (UM) anchor + FTS + an entity."""
+    from vdocs.kernel import db
+    from vdocs.stages.index.stage import _SCHEMA
+
+    cfg = Settings(data_dir=tmp_path)
+    cfg.lake.mkdir(parents=True, exist_ok=True)
+    conn = db.connect(cfg.index_db)
+    conn.executescript(_SCHEMA)
+    cols = (
+        "doc_key, doc_id, app_code, doc_type, section, pkg_ns, version, patch_id, anchor_key, "
+        "group_key, title, doc_label, app_user, doc_user, software_class, function_category, "
+        "word_count, section_count, is_latest, template_id, source_sha256, source_url"
+    )
+    conn.execute(
+        f"INSERT INTO documents ({cols}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        ("ADT/um1", "ADT:um1", "ADT", "UM", "CLIN", "DG", "5.3", "DG*5.3*1", "ADT:DG:UM:um1",
+         "ADT:DG:5.3", "OR UM", "User Manual", "clinical", "developer", "vista", "registration",
+         100, 4, 1, "", "abc", "https://va.gov/d/x.docx"),
+    )  # fmt: skip
+    conn.execute(
+        "INSERT INTO chunks_fts (chunk_id, section_id, doc_key, title, doc_title, section_path, "
+        "body) VALUES ('ADT/um1/s','ADT/um1/s','ADT/um1','Intro','OR UM','OR','registration text')"
+    )
+    conn.execute("INSERT INTO entities VALUES ('routine:XL','routine','XL',2)")
+    conn.execute("INSERT INTO entity_mentions VALUES ('routine:XL','ADT/um1','ADT/um1/s')")
+    conn.commit()
+    conn.close()
+
+
+def test_doctor_without_index_errors(tmp_path):
+    result = runner.invoke(app, ["doctor"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 1
+    assert "vdocs index" in result.stdout or "vdocs build" in result.stdout
+
+
+def test_doctor_reports_green_on_a_sound_index(tmp_path):
+    _seed_sound_index(tmp_path)
+    result = runner.invoke(app, ["doctor"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 0, result.stdout
+    assert "GOLD LIBRARY: GREEN" in result.stdout
+    assert "gold corpus soundness" in result.stdout
+
+
 def test_ask_without_index_errors(tmp_path):
     result = runner.invoke(app, ["ask", "what is KAAJEE"], env={"DATA_DIR": str(tmp_path)})
     assert result.exit_code == 1

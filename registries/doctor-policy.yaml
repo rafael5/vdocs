@@ -1,0 +1,30 @@
+# registries/doctor-policy.yaml
+# =========================================================================================
+# Policy for `vdocs doctor` — the shipped GOLD LIBRARY: GREEN|RED soundness gate.
+#
+# It encodes what separates a BY-DESIGN gap (expected-empty, not a defect) from a real FAIL,
+# so the operator never mistakes a known/by-design shortfall for corruption (F6), and a real
+# regression is never hidden behind a lenient threshold.
+#
+#   coverage.<field>.min_pct   — the FAIL floor: gold coverage below this is a defect (RED).
+#   coverage.<field>.by_design — if set, a below-100% (but >= min_pct) result is reported as
+#                                BY-DESIGN with this explanation, not a failure.
+#
+# Tighten a floor to 100 to demand full coverage; add a by_design note to bless a known gap.
+# =========================================================================================
+
+coverage:
+  # the persona bake + identity — 100% expected on every gold (is_latest) document …
+  app_user:          {min_pct: 100}
+  doc_user:          {min_pct: 100}
+  software_class:    {min_pct: 100}
+  doc_type:          {min_pct: 100}   # an empty doc_type breaks anchoring/faceting → triage it
+  # … except function_category: the fallback-profile apps carry no Monograph SPM line, so a small
+  # gap here is BY-DESIGN, not corruption (2026-06-10 run: 94.3%; 0/104 main profiles affected).
+  function_category: {min_pct: 90, by_design: "fallback-profile apps have no Monograph SPM line"}
+
+# Gold documents whose anchor_key is not the canonical 4-part form (app:pkg:type:stem) but are
+# accepted as known/documented edge cases — listed by doc_id so `doctor` WARNs on *new* anchor
+# corruption while staying quiet about these.
+accepted_anchor_edge_cases:
+  - "AR/WS:p13"   # PSGW*2.3*13 "…User Manual Change Pages" — bare patch-token slug, no version stem
