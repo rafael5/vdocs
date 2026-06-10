@@ -103,6 +103,7 @@ def test_rich_renderer_renders_stages_and_verdict():
     r.stage_start(1, 4, "crawl", "crawl the VDL")
     r.stage_done(1, 4, "crawl", Status.GREEN, {"docs": 8907}, [], 1.2)
     r.stage_skipped(2, 4, "catalog", "inputs unchanged")
+    r.stage_progress(3, 4, "fetch", "500/1040 processed")  # the heartbeat for a long stage
     r.stage_done(3, 4, "fetch", Status.WARN, {"fetched": 1040}, ["2 docs missing"], 99.5)
     r.stage_error(4, 4, "validate", "1 severed ref", "fix refs.yaml then re-run validate")
     r.render_summary()
@@ -113,6 +114,7 @@ def test_rich_renderer_renders_stages_and_verdict():
     assert "VERDICT" in out.upper()
     assert "refs.yaml" in out  # the remediation reaches the operator
     assert "2 docs missing" in out  # the warning reaches the operator
+    assert "500/1040 processed" in out  # the heartbeat reaches the operator
     assert r.verdict() is Status.ERROR  # data model unchanged by the renderer
 
 

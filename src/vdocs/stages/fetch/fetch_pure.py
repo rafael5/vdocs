@@ -9,10 +9,41 @@ and *how* to address it.
 
 import hashlib
 from dataclasses import dataclass
+from enum import Enum
 from urllib.parse import urlparse
 
 from vdocs.kernel.ids import doc_id
 from vdocs.models.catalog import EnrichedRecord
+
+#: how many times ``fetch`` re-attempts a document across runs before declaring it permanently
+#: unavailable (F3). The HTTP layer already retries 5xx/429 within a single attempt; this caps the
+#: *cross-run* re-attempts so a re-run loop terminates instead of re-GETting broken URLs forever.
+MAX_FETCH_ATTEMPTS = 3
+
+
+class FetchAction(Enum):
+    """What ``fetch`` should do with one selected target, given its prior acquisition (F2/F3/F9)."""
+
+    FETCH = "fetch"  # download it (never attempted, a transient retry, or --refetch)
+    SKIP_PRESENT = "skip_present"  # already in the CAS — don't re-GET (idempotent resume)
+    SKIP_PERMANENT = "skip_permanent"  # gave up after the attempt cap — don't re-GET, just report
+
+
+def decide_fetch_action(prior: object | None, *, refetch: bool) -> FetchAction:
+    """Decide whether to download a target, given its prior acquisition row (``None`` if never
+    attempted). The default is a cheap, honest resume: already-``fetched`` docs are CAS hits we
+    skip, ``permanent_missing`` docs we don't re-GET, and everything else (never attempted or a
+    transient ``failed``/``pending``) is (re)fetched. ``--refetch`` forces a re-GET of everything.
+
+    ``prior`` is duck-typed (anything with ``.status``) so this stays pure and import-light."""
+    if refetch or prior is None:
+        return FetchAction.FETCH
+    status = getattr(prior, "status", "")
+    if status == "fetched":
+        return FetchAction.SKIP_PRESENT
+    if status == "permanent_missing":
+        return FetchAction.SKIP_PERMANENT
+    return FetchAction.FETCH
 
 
 def url_ext(url: str) -> str:

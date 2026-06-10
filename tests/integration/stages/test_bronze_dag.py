@@ -93,7 +93,13 @@ def test_bronze_dag_runs_end_to_end(bronze_ctx):
 
     # fetch stored one logical doc (DOCX preferred) into the CAS + wrote the index
     fetch_run = ctx.state.get("fetch")
-    assert fetch_run.counts == {"targets": 1, "fetched": 1, "failed": 0}
+    assert fetch_run.counts == {
+        "targets": 1,
+        "fetched": 1,
+        "skipped": 0,
+        "failed": 0,
+        "permanent_missing": 0,
+    }
     index = json.loads(ctx.cfg.raw_index.read_text())
     assert len(index) == 1
     (entry,) = index.values()
@@ -125,12 +131,14 @@ def test_fetch_reruns_when_selection_changes(bronze_ctx):
     same = Orchestrator([FetchStage(fetch_bytes=fake_bytes, selection=Selection(all_=True))])
     assert same.run(ctx) == [None]
 
-    # a DIFFERENT selection changes fetch's input fingerprint (§5.6) → it re-runs, not skips
+    # a DIFFERENT selection changes fetch's input fingerprint (§5.6) → the stage re-runs (not an
+    # orchestrator skip), but the doc is already in the CAS so it's skipped, not re-downloaded (F2).
     narrowed = Orchestrator(
         [FetchStage(fetch_bytes=fake_bytes, selection=Selection(apps=frozenset({"ADT"})))]
     )
     (sr,) = narrowed.run(ctx)
-    assert sr is not None and sr.status == "ok" and sr.counts["fetched"] == 1
+    assert sr is not None and sr.status == "ok"
+    assert sr.counts["fetched"] == 0 and sr.counts["skipped"] == 1  # idempotent resume
 
 
 def test_fetch_accrues_attempts_across_retries(bronze_ctx):
@@ -156,6 +164,83 @@ def test_fetch_accrues_attempts_across_retries(bronze_ctx):
     assert second.attempts == 2
     assert second.first_attempt_at == first.first_attempt_at
     assert second.last_attempt_at > first.last_attempt_at
+
+
+def _inventory_only(ctx):
+    Orchestrator([CrawlStage(page_fetcher=fake_page), CatalogStage(), ServeInventoryStage()]).run(
+        ctx, force=True
+    )
+
+
+def test_fetch_skips_already_present_doc_on_forced_rerun(bronze_ctx):
+    # F2: a forced re-run must NOT re-download a doc already in the CAS — the byte fetcher is not
+    # called a second time; the doc is counted skipped, not fetched.
+    ctx = bronze_ctx
+    _inventory_only(ctx)
+    calls: list[str] = []
+
+    def counting(u: str) -> bytes | None:
+        calls.append(u)
+        return DOC_BYTES.get(u)
+
+    sel = Selection(all_=True)
+    Orchestrator([FetchStage(fetch_bytes=counting, selection=sel)]).run(ctx, force=True)
+    assert len(calls) == 1  # fetched once
+    (sr,) = Orchestrator([FetchStage(fetch_bytes=counting, selection=sel)]).run(ctx, force=True)
+    assert len(calls) == 1  # forced re-run did NOT re-GET — CAS hit
+    assert sr.counts["skipped"] == 1 and sr.counts["fetched"] == 0
+
+
+def test_refetch_redownloads_already_present_doc(bronze_ctx):
+    ctx = bronze_ctx
+    _inventory_only(ctx)
+    calls: list[str] = []
+
+    def counting(u: str) -> bytes | None:
+        calls.append(u)
+        return DOC_BYTES.get(u)
+
+    sel = Selection(all_=True)
+    Orchestrator([FetchStage(fetch_bytes=counting, selection=sel)]).run(ctx, force=True)
+    (sr,) = Orchestrator([FetchStage(fetch_bytes=counting, selection=sel, refetch=True)]).run(
+        ctx, force=True
+    )
+    assert len(calls) == 2  # --refetch re-downloaded the CAS-present doc
+    assert sr.counts["fetched"] == 1 and sr.counts["skipped"] == 0
+
+
+def test_fetch_gives_up_after_attempt_cap_and_warns(bronze_ctx):
+    # F3: a persistently-unavailable DOCX becomes permanent_missing after MAX_FETCH_ATTEMPTS, the
+    # run WARNs (with the URL), and subsequent runs no longer re-attempt it (the loop terminates).
+    from vdocs.orchestrator.report import RunReporter, Status
+    from vdocs.stages.fetch.fetch_pure import MAX_FETCH_ATTEMPTS
+
+    ctx = bronze_ctx
+    _inventory_only(ctx)
+    failing = lambda _u: None  # noqa: E731
+    sel = Selection(all_=True)
+    rep = RunReporter(echo=lambda _s: None)
+    for _ in range(MAX_FETCH_ATTEMPTS):
+        Orchestrator([FetchStage(fetch_bytes=failing, selection=sel)]).run(
+            ctx, force=True, reporter=rep
+        )
+
+    acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_um")
+    assert acq.status == "permanent_missing" and acq.attempts == MAX_FETCH_ATTEMPTS
+    assert rep.reports[-1].status is Status.WARN
+    assert any("permanently unavailable" in w for w in rep.reports[-1].warnings)
+    assert any(DOCX_URL in w for w in rep.reports[-1].warnings)  # the operator gets the URL
+
+    # a further forced run does NOT re-attempt the permanently-missing doc
+    calls: list[str] = []
+
+    def counting(u: str) -> bytes | None:
+        calls.append(u)
+        return None
+
+    (sr,) = Orchestrator([FetchStage(fetch_bytes=counting, selection=sel)]).run(ctx, force=True)
+    assert calls == []  # skipped permanent — no GET
+    assert sr.counts["permanent_missing"] == 1
 
 
 def test_fetch_merges_into_existing_raw_index(bronze_ctx):
@@ -200,7 +285,10 @@ def test_fetch_does_not_fall_back_to_pdf(bronze_ctx):
         ]
     ).run(ctx, force=True)
 
-    assert ctx.state.get("fetch").counts == {"targets": 1, "fetched": 0, "failed": 1}
+    assert (
+        ctx.state.get("fetch").counts["failed"] == 1
+        and ctx.state.get("fetch").counts["fetched"] == 0
+    )
     assert json.loads(ctx.cfg.raw_index.read_text()) == {}  # the PDF was never stored
     acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_um")
     assert acq is not None and acq.status == "failed"
@@ -218,7 +306,7 @@ def test_fetch_records_failure_when_docx_unavailable(bronze_ctx):
         ]
     ).run(ctx, force=True)
 
-    assert ctx.state.get("fetch").counts == {"targets": 1, "fetched": 0, "failed": 1}
+    assert ctx.state.get("fetch").counts["failed"] == 1
     acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_um")
     assert acq is not None and acq.status == "failed" and acq.error == "docx unavailable"
     assert json.loads(ctx.cfg.raw_index.read_text()) == {}

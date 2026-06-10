@@ -130,6 +130,9 @@ def fetch(
     select_file: str = typer.Option(None, "--select", help="file of doc_ids, one per line"),
     all_: bool = typer.Option(False, "--all", help="select the whole genuine inventory"),
     dry_run: bool = typer.Option(False, "--dry-run", help="report the match count, fetch nothing"),
+    refetch: bool = typer.Option(
+        False, "--refetch", help="re-download even docs already in the CAS (default: skip them)"
+    ),
     force: bool = typer.Option(False, "--force", "-f"),
 ) -> None:
     """Download a **selection** of documents into the content-addressed bronze raw store (§5.6).
@@ -187,8 +190,11 @@ def fetch(
     for stage in stages:
         if stage.name == "fetch":
             stage.selection = selection  # type: ignore[attr-defined]
+            stage.refetch = refetch  # type: ignore[attr-defined]
     typer.echo(f"fetching {len(targets)} of {available} genuine in-scope documents…")
-    _drive(only="fetch", stages=stages, force=force)
+    # --refetch means "actually re-download now", so it implies --force (else an unchanged
+    # selection would SKIP_IF_UNCHANGED before the stage runs).
+    _drive(only="fetch", stages=stages, force=force or refetch)
 
 
 @app.command()

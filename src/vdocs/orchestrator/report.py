@@ -88,6 +88,7 @@ class Renderer:
     """How run progress + the summary reach the operator. Two implementations: plain and Rich."""
 
     def stage_start(self, index: int, total: int, name: str, description: str) -> None: ...
+    def stage_progress(self, index: int, total: int, name: str, message: str) -> None: ...
     def stage_result(self, report: StageReport) -> None: ...
     def summary(self, reports: Sequence[StageReport], verdict: Status) -> None: ...
 
@@ -100,6 +101,9 @@ class PlainRenderer(Renderer):
 
     def stage_start(self, index: int, total: int, name: str, description: str) -> None:
         self.echo(f"[{index}/{total}] {name} — {description}")
+
+    def stage_progress(self, index: int, total: int, name: str, message: str) -> None:
+        self.echo(f"      … {name}: {message}")
 
     def stage_result(self, r: StageReport) -> None:
         if r.status is Status.SKIPPED:
@@ -151,6 +155,9 @@ class RichRenderer(Renderer):
 
     def stage_start(self, index: int, total: int, name: str, description: str) -> None:
         self._print(f"[bold cyan]\\[{index}/{total}][/] [bold]{name}[/] [dim]— {description}[/]")
+
+    def stage_progress(self, index: int, total: int, name: str, message: str) -> None:
+        self._print(f"      [dim]… {name}: {message}[/]")
 
     def stage_result(self, r: StageReport) -> None:
         style = _STYLE[r.status]
@@ -233,6 +240,9 @@ class RunReporter:
     # --- hooks the orchestrator calls, one per stage ---
     def stage_start(self, index: int, total: int, name: str, description: str) -> None:
         self.renderer.stage_start(index, total, name, description)
+
+    def stage_progress(self, index: int, total: int, name: str, message: str) -> None:
+        self.renderer.stage_progress(index, total, name, message)
 
     def stage_done(
         self,

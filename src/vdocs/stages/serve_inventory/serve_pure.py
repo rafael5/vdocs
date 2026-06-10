@@ -79,7 +79,15 @@ def evaluate_gate(records: list[EnrichedRecord], crawl_documents: int | None) ->
 # deterministic-artifact contract (§5.5). This join is computed at query time for the
 # operator-facing `vdocs inventory --status` report; the gold artifact never embeds fetch status.
 
-_STATUS_ORDER = ("fetched", "pending", "failed", "withdrawn", "not_acquired", "out_of_scope")
+_STATUS_ORDER = (
+    "fetched",
+    "pending",
+    "failed",
+    "permanent_missing",
+    "withdrawn",
+    "not_acquired",
+    "out_of_scope",
+)
 
 
 @dataclass(frozen=True)

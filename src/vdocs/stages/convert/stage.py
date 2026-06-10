@@ -56,7 +56,10 @@ class ConvertStage(Stage):
 
         n_docs = n_assets = n_docling = n_errors = 0
         kept: set[str] = set()  # <app>/<slug> bundles in this run's input set (R5 pruning)
-        for sha, entry in index.items():
+        total = len(index)
+        for n, (sha, entry) in enumerate(index.items(), 1):
+            if n % 25 == 0 or n == total:
+                ctx.progress(f"{n}/{total} converted")
             kept.add(f"{safe_component(entry['app_code'])}/{safe_component(entry['doc_slug'])}")
             # Per-document error isolation (R6): a single bad doc is logged + counted + skipped so
             # one failure never abandons the batch; the postflight gate fails the stage only if the

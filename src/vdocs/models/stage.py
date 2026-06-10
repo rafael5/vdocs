@@ -93,7 +93,9 @@ class Acquisition(BaseModel):
 
     doc_id: str
     source_url: str
-    status: Literal["pending", "fetched", "failed", "withdrawn"]
+    # ``failed`` is a transient miss (will be retried); ``permanent_missing`` is a doc that gave up
+    # after MAX_FETCH_ATTEMPTS cross-run attempts (F3) — reported, never re-GET.
+    status: Literal["pending", "fetched", "failed", "permanent_missing", "withdrawn"]
     sha256: str | None = None
     bytes: int | None = None
     http_status: int | None = None

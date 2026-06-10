@@ -8,6 +8,8 @@ list anywhere (tenet #8).
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import structlog
 
 from vdocs.models.stage import Decision, StageRun
@@ -15,6 +17,15 @@ from vdocs.orchestrator.report import RunReporter, Status
 from vdocs.orchestrator.stage import PostflightError, Stage, StageContext
 
 log = structlog.get_logger(__name__)
+
+
+def _progress_sink(rep: RunReporter, index: int, total: int, name: str) -> Callable[[str], None]:
+    """A per-stage heartbeat callable bound to the reporter (so a long stage shows progress)."""
+
+    def progress(message: str) -> None:
+        rep.stage_progress(index, total, name, message)
+
+    return progress
 
 
 class OrchestratorError(RuntimeError):
@@ -116,6 +127,7 @@ class Orchestrator:
                 continue
             started_at = ctx.clock()
             t0 = ctx.mono()
+            ctx.progress = _progress_sink(rep, i, total, stage.name)
             try:
                 run = stage.run(ctx, force)
                 sr = stage.postflight(ctx, run, started_at)

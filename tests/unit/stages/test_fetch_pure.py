@@ -16,6 +16,35 @@ def test_url_ext():
     assert fp.url_ext("https://va.gov/a/b") == ""
 
 
+class _Acq:
+    def __init__(self, status: str) -> None:
+        self.status = status
+
+
+def test_decide_fetch_action_fetches_when_never_attempted():
+    assert fp.decide_fetch_action(None, refetch=False) is fp.FetchAction.FETCH
+
+
+def test_decide_fetch_action_skips_already_fetched():
+    # F2/F9: a doc already in the CAS is not re-GET — cheap, honest resume.
+    assert fp.decide_fetch_action(_Acq("fetched"), refetch=False) is fp.FetchAction.SKIP_PRESENT
+
+
+def test_decide_fetch_action_skips_permanent_missing():
+    # F3: a doc we gave up on after the attempt cap is reported, never re-attempted.
+    got = fp.decide_fetch_action(_Acq("permanent_missing"), refetch=False)
+    assert got is fp.FetchAction.SKIP_PERMANENT
+
+
+def test_decide_fetch_action_retries_transient_failed():
+    assert fp.decide_fetch_action(_Acq("failed"), refetch=False) is fp.FetchAction.FETCH
+
+
+def test_decide_fetch_action_refetch_forces_download_of_everything():
+    for status in ("fetched", "permanent_missing", "failed"):
+        assert fp.decide_fetch_action(_Acq(status), refetch=True) is fp.FetchAction.FETCH
+
+
 def _rec(
     slug,
     fmt="docx",

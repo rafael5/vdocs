@@ -34,6 +34,10 @@ def _utc_now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def _noop_progress(_message: str) -> None:
+    """The default progress sink — does nothing until the orchestrator binds the reporter."""
+
+
 # A per-document stage isolates a single bad doc (WARN + count + continue) but **fails** when the
 # failure *rate* exceeds this limit — a systemic problem, not one bad document (§9.5, R6). Explicit,
 # not a silent swallow: the count is always surfaced in ``RunResult.counts['errors']``.
@@ -52,6 +56,9 @@ class StageContext:
     # a monotonic clock for elapsed-time measurement (wall ``clock`` is for recorded timestamps);
     # injectable so the reporter's per-stage elapsed is deterministic in tests.
     mono: Callable[[], float] = field(default=time.monotonic)
+    # a heartbeat sink for long stages (``fetch``/``convert``) — the orchestrator binds it to the
+    # run reporter so the operator sees progress instead of a silent loop; no-op by default.
+    progress: Callable[[str], None] = field(default=_noop_progress)
 
 
 class PostflightError(RuntimeError):
