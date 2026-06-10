@@ -354,7 +354,7 @@ Measured on 2,889 in-scope VistA genuine docs:
    `test_facets`. **Remaining:** backfill the lake (item 5) so the columns populate for real.
 2. **Materialize the app-scope gate as an inventory field** (`app_in_scope` + `app_scope_reason`) and
    `state.db` skip-logging, with a regression fixture locking the 1,390/2,338 + 71-`_excluded` splits.
-   See `docs/prompts/scope-gatekeeper-kickoff.md`.
+   See `docs/prompts/historical/scope-gatekeeper-kickoff.md`.
 3. **Class II via the VA SAC list** — seed `registries/inventory/software-class.yaml` by namespace to
    split true Class II out of the Class I default.
 4. **Version-depth gate (G6 `--latest-only`)** — now unblocked by the B1 fix; ~40% fewer
