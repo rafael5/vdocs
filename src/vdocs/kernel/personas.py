@@ -88,9 +88,19 @@ def load_profile_maps(registries_dir: Path) -> ProfileMaps:
     return ProfileMaps(
         app_user=_app_field(profiles, "app_user_primary", drop={_NEEDS_REVIEW}),
         software_class=_app_field(profiles, "software_class"),
-        function_category=_app_field(profiles, "function_category"),
+        # function_category is the curated functional taxonomy (function-domains.yaml),
+        # NOT the Monograph SPM product line (an ownership axis kept in app-profiles for
+        # provenance). See docs/function-domain-taxonomy.md.
+        function_category=_load_function_domains(inv / "function-domains.yaml"),
         doc_user=_load_doc_user(inv / "doc-user.yaml"),
     )
+
+
+def _load_function_domains(path: Path) -> dict[str, str]:
+    """``app_code → functional domain`` from ``function-domains.yaml`` (``apps:``)."""
+    data = _load_yaml(path)
+    apps = data.get("apps") or {}
+    return {str(k): str(v) for k, v in apps.items() if v}
 
 
 def app_names(registries_dir: Path) -> dict[str, str]:

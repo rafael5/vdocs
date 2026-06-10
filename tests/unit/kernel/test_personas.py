@@ -59,10 +59,12 @@ def test_load_profile_maps_from_real_registries():
     maps = personas.load_profile_maps(Settings().registries)
     # doc-user.yaml: role-fixed + operator delegation
     assert maps.doc_user["TM"] == "developer" and maps.doc_user["UM"] == "operator"
-    # app-profiles.yaml: ADT is a clinical-admin (Health Informatics), Class I app
+    # app-profiles.yaml: ADT is a clinical-admin, Class I app
     assert maps.app_user["ADT"] == "clinical-admin"
     assert maps.software_class["ADT"] == "I"
-    assert maps.function_category["ADT"] == "Health Informatics"
+    # function_category now comes from function-domains.yaml (the functional taxonomy),
+    # NOT the Monograph SPM line: ADT (registration) → "Registration & scheduling".
+    assert maps.function_category["ADT"] == "Registration & scheduling"
     # the needs-review sentinel is never surfaced as an app_user value
     assert "needs-review" not in set(maps.app_user.values())
 

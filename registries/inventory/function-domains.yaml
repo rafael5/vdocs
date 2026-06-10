@@ -1,0 +1,173 @@
+# Functional taxonomy for the `function` facet (replaces the Monograph "SPM
+# Product Line", which is a VA ownership/portfolio axis, not a "what does it do"
+# axis — see docs/function-domain-taxonomy.md). One coherent, mutually-exclusive
+# domain per application. `kernel.personas` reads `apps:` as the function_category
+# tag baked into gold frontmatter + index.db; `domains:` carries the definitions.
+#
+# This is curated data (tenet #13): edit an app's domain here and re-run
+# `vdocs run --only index` — no code change.
+
+domains:
+  Clinical care:
+    definition: >-
+      The clinician's record — orders, notes, problems, consults, reminders,
+      allergies, vitals, encounters, and bedside documentation.
+  Pharmacy:
+    definition: >-
+      Medication ordering, dispensing, bar-code administration, and drug data
+      management.
+  Diagnostics & ancillary:
+    definition: >-
+      Laboratory, blood bank, radiology/imaging, surgery, and other diagnostic
+      and procedural services.
+  Specialty care:
+    definition: >-
+      Condition- and population-specific clinical programs, registries, and
+      specialty services (mental health, oncology, prosthetics, dentistry,
+      women's health, …).
+  Registration & scheduling:
+    definition: >-
+      Patient registration, eligibility/enrollment, appointments, and
+      primary-care panel management.
+  Billing & finance:
+    definition: >-
+      Revenue, claims, fee/travel pay, fiscal accounting, acquisition, and
+      payroll.
+  Infrastructure:
+    definition: >-
+      The VistA platform — Kernel security, FileMan database, messaging
+      (HL7/MailMan), interfaces (RPC Broker/VistALink), data exchange, and
+      system monitoring.
+  Admin & quality:
+    definition: >-
+      Operations, health-information management (records, release of
+      information), quality/safety surveillance, patient advocacy, and
+      facilities/logistics.
+
+# app_code → domain. Every application present in app-profiles.yaml is mapped.
+apps:
+  ACKQ: Diagnostics & ancillary
+  ACR: Clinical care
+  ADT: Registration & scheduling
+  AMT: Clinical care
+  ANRV: Specialty care
+  AR/WS: Pharmacy
+  ASCD: Registration & scheduling
+  ASU: Clinical care
+  CHDS: Infrastructure
+  CPRS: Clinical care
+  CRHD: Clinical care
+  DGBT: Billing & finance
+  DGJ: Admin & quality
+  DI: Infrastructure
+  DRM+: Specialty care
+  DVBA: Specialty care
+  EC: Billing & finance
+  ECME: Billing & finance
+  ECX: Billing & finance
+  EDIS: Clinical care
+  EFR: Specialty care
+  EN: Admin & quality
+  EPI: Diagnostics & ancillary
+  FB: Billing & finance
+  FFP: Billing & finance
+  FH: Specialty care
+  FIM: Clinical care
+  GEN: Billing & finance
+  GMPL: Clinical care
+  GMR: Clinical care
+  GMRA: Clinical care
+  GMRC: Clinical care
+  GMRV: Clinical care
+  GMTS: Clinical care
+  HBPC: Clinical care
+  HL: Infrastructure
+  HL7: Infrastructure
+  IB: Billing & finance
+  IBD: Clinical care
+  IFR: Infrastructure
+  IVMB: Registration & scheduling
+  KMPD: Infrastructure
+  KMPR: Infrastructure
+  KMPS: Infrastructure
+  KMPV: Infrastructure
+  LA: Diagnostics & ancillary
+  LEDI: Diagnostics & ancillary
+  LR: Diagnostics & ancillary
+  MAG: Diagnostics & ancillary
+  MC: Clinical care
+  MD: Clinical care
+  MJCF: Pharmacy
+  MMRS: Specialty care
+  MPIF: Infrastructure
+  MXML: Infrastructure
+  NCR: Specialty care
+  NUPA: Clinical care
+  NUR: Clinical care
+  ONC: Specialty care
+  ONCO: Specialty care
+  OOPS: Admin & quality
+  OR: Clinical care
+  PAIT: Registration & scheduling
+  PCMM: Registration & scheduling
+  POC: Diagnostics & ancillary
+  PPP: Pharmacy
+  PRC: Billing & finance
+  PRCA: Billing & finance
+  PRCN: Admin & quality
+  PREA: Pharmacy
+  PRF: Clinical care
+  PRPF: Billing & finance
+  PRS: Billing & finance
+  PSA: Pharmacy
+  PSB: Pharmacy
+  PSD: Pharmacy
+  PSJ: Pharmacy
+  PSN: Pharmacy
+  PSO: Pharmacy
+  PSS: Pharmacy
+  PSU: Pharmacy
+  PSX: Pharmacy
+  PX: Clinical care
+  PXRM: Clinical care
+  QAC: Admin & quality
+  QAM: Admin & quality
+  QAO: Admin & quality
+  QAP: Admin & quality
+  QMIM: Admin & quality
+  RA: Diagnostics & ancillary
+  RMDS: Clinical care
+  RMPR: Specialty care
+  ROEB: Specialty care
+  ROEG: Specialty care
+  ROEV: Specialty care
+  ROI: Admin & quality
+  ROR: Specialty care
+  RT: Admin & quality
+  RUM: Infrastructure
+  SAGG: Infrastructure
+  SD: Registration & scheduling
+  SPN: Specialty care
+  SQLI: Infrastructure
+  SR: Diagnostics & ancillary
+  SRA: Diagnostics & ancillary
+  SSO: Infrastructure
+  SSO/UC: Infrastructure
+  TBI: Specialty care
+  TIU: Clinical care
+  VALM: Infrastructure
+  VAQ: Infrastructure
+  VBECS: Diagnostics & ancillary
+  VDEF: Infrastructure
+  VPR: Infrastructure
+  WII: Specialty care
+  WV: Specialty care
+  XM: Infrastructure
+  XOB: Infrastructure
+  XOBV: Infrastructure
+  XQOR: Infrastructure
+  XT: Infrastructure
+  XU: Infrastructure
+  XWB: Infrastructure
+  YS: Specialty care
+  ZSLOT: Infrastructure

@@ -90,7 +90,9 @@ def test_enrich_bakes_frontmatter_and_stages_meta(ctx):
     # §7 profile tags baked from the real registries: ADT is a clinical-admin / Class I app; DIBR
     # is a role-fixed sysadmin doc-type (so doc_user resolves regardless of the app's app_user)
     assert meta["app_user"] == "clinical-admin" and meta["doc_user"] == "sysadmin"
-    assert meta["software_class"] == "I" and meta["function_category"] == "Health Informatics"
+    # function_category is the functional domain (function-domains.yaml): ADT → registration
+    assert meta["software_class"] == "I"
+    assert meta["function_category"] == "Registration & scheduling"
     assert "word_count" not in meta  # computed fields never baked into the body (§6.3)
     assert body.strip() == "# DG Deployment\n\nInstall steps here.".strip()
 
