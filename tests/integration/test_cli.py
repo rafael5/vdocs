@@ -422,6 +422,113 @@ def _seed_sound_index(tmp_path):
     conn.close()
 
 
+def test_build_fresh_refuses_without_yes(tmp_path):
+    # the destructive wipe must not happen without explicit confirmation
+    result = runner.invoke(app, ["build", "--fresh"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 1
+    assert "--fresh --yes" in result.stdout
+    assert "DELETE" in result.stdout
+
+
+def test_build_aborts_when_another_vdocs_is_running(tmp_path, monkeypatch):
+    # the shared-lake guard: refuse to start while another pipeline process is active
+    monkeypatch.setattr("vdocs.cli.app._other_vdocs_running", lambda: True)
+    result = runner.invoke(app, ["build"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 1
+    assert "another vdocs" in result.stdout
+
+
+def test_wipe_lake_removes_derived_keeps_catalog_raw(tmp_path):
+    from vdocs.cli.app import _wipe_lake
+
+    cfg = Settings(data_dir=tmp_path)
+    # derived artifacts that must go …
+    (cfg.documents / "bronze" / "raw").mkdir(parents=True)
+    (cfg.documents / "bronze" / "raw" / "x.docx").write_bytes(b"x")
+    cfg.index_db.write_text("idx")
+    cfg.state_db.write_text("state")
+    cfg.reports.mkdir(parents=True)
+    (cfg.reports / "r.log").write_text("log")
+    cfg.inventory_gold.mkdir(parents=True)
+    (cfg.inventory_gold / "inventory.json").write_text("[]")
+    (cfg.lake / "select-dev.txt").write_text("ids")
+    # … and the crawl evidence that must survive
+    cfg.catalog_raw.parent.mkdir(parents=True, exist_ok=True)
+    cfg.catalog_raw.write_text("{}")
+
+    _wipe_lake(cfg)
+
+    assert not cfg.documents.exists() and not cfg.index_db.exists() and not cfg.state_db.exists()
+    assert not cfg.reports.exists() and not cfg.inventory_gold.exists()
+    assert not (cfg.lake / "select-dev.txt").exists()
+    assert cfg.catalog_raw.exists()  # kept so --skip-crawl can reuse it
+
+
+def test_build_sequences_pipeline_then_doctor(tmp_path, monkeypatch):
+    # build drives one crawl→manifest run with the fetch selection set to --all, then doctor.
+    calls: dict = {}
+
+    def fake_drive(**kw):
+        calls["drive"] = kw
+
+    monkeypatch.setattr("vdocs.cli.app._other_vdocs_running", lambda: False)
+    monkeypatch.setattr("vdocs.cli.app._drive", fake_drive)
+    monkeypatch.setattr(
+        "vdocs.cli.app._emit_doctor", lambda cfg: calls.setdefault("doctor", "GREEN")
+    )
+
+    result = runner.invoke(app, ["build"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 0, result.stdout
+    assert calls["drive"]["from_stage"] == "crawl" and calls["drive"]["to_stage"] == "manifest"
+    assert calls["drive"]["force"] is True
+    fetch_stage = next(s for s in calls["drive"]["stages"] if s.name == "fetch")
+    assert fetch_stage.selection.all_ is True  # build fetches the whole gated inventory
+    assert calls["doctor"] == "GREEN"
+
+
+def test_build_skip_crawl_starts_at_catalog(tmp_path, monkeypatch):
+    calls: dict = {}
+    monkeypatch.setattr("vdocs.cli.app._other_vdocs_running", lambda: False)
+    monkeypatch.setattr("vdocs.cli.app._drive", lambda **kw: calls.update(kw))
+    monkeypatch.setattr("vdocs.cli.app._emit_doctor", lambda cfg: "GREEN")
+    result = runner.invoke(app, ["build", "--skip-crawl"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 0
+    assert calls["from_stage"] == "catalog"
+
+
+def test_other_vdocs_running_detects_a_foreign_process(monkeypatch):
+    import subprocess
+
+    from vdocs.cli.app import _other_vdocs_running
+
+    class _R:
+        stdout = "99999 /home/x/.venv/bin/vdocs build --fresh\n"  # a different pid running build
+
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: _R())
+    assert _other_vdocs_running() is True
+
+
+def test_build_fresh_yes_wipes_then_builds(tmp_path, monkeypatch):
+    cfg = Settings(data_dir=tmp_path)
+    cfg.lake.mkdir(parents=True, exist_ok=True)
+    cfg.index_db.write_text("stale")
+    monkeypatch.setattr("vdocs.cli.app._other_vdocs_running", lambda: False)
+    monkeypatch.setattr("vdocs.cli.app._drive", lambda **kw: None)
+    monkeypatch.setattr("vdocs.cli.app._emit_doctor", lambda c: "GREEN")
+    result = runner.invoke(app, ["build", "--fresh", "--yes"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 0, result.stdout
+    assert not cfg.index_db.exists()  # the stale derived data was wiped
+    assert "wiped derived lake data" in result.stdout
+
+
+def test_build_exits_red_when_doctor_fails(tmp_path, monkeypatch):
+    monkeypatch.setattr("vdocs.cli.app._other_vdocs_running", lambda: False)
+    monkeypatch.setattr("vdocs.cli.app._drive", lambda **kw: None)
+    monkeypatch.setattr("vdocs.cli.app._emit_doctor", lambda cfg: "RED")
+    result = runner.invoke(app, ["build"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 1
+
+
 def test_doctor_without_index_errors(tmp_path):
     result = runner.invoke(app, ["doctor"], env={"DATA_DIR": str(tmp_path)})
     assert result.exit_code == 1

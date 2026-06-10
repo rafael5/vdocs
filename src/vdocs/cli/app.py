@@ -335,6 +335,27 @@ def ask(
         typer.echo(f"   {h['snippet']}")
 
 
+def _emit_doctor(cfg: Settings) -> str:
+    """Run the doctor checks against index.db, render the report, and return the verdict (shared by
+    the ``doctor`` command and ``build``). Returns ``"RED"`` if there is no index.db to check."""
+    from vdocs.kernel import db
+    from vdocs.server import doctor as doc
+    from vdocs.stages.fetch.policy import load_gate_config
+
+    if not cfg.index_db.exists():
+        typer.echo("no index.db to check — run `vdocs build` (or vdocs index, relate, manifest).")
+        return "RED"
+    kept = frozenset(r.code for r in load_gate_config(cfg.registries).kept)
+    policy = doc.load_doctor_policy(cfg.registries)
+    conn = db.connect(cfg.index_db, read_only=True)
+    try:
+        report = doc.diagnose(conn, kept_doctypes=kept, policy=policy)
+    finally:
+        conn.close()
+    doc.render_report(report, typer.echo)
+    return report.verdict()
+
+
 @app.command()
 def doctor() -> None:
     """Check the gold corpus and emit GOLD LIBRARY: GREEN|RED — the shipped soundness gate (B1–B5).
@@ -344,23 +365,8 @@ def doctor() -> None:
     doc-types in gold), the FTS search surface, and the entity graph. By-design gaps (e.g. the
     fallback-profile function_category) are separated from real defects. Exits 1 on RED.
     """
-    from vdocs.kernel import db
-    from vdocs.server import doctor as doc
-    from vdocs.stages.fetch.policy import load_gate_config
-
     cfg = Settings()
-    if not cfg.index_db.exists():
-        typer.echo("no index.db yet — run: vdocs index (then relate, manifest), or vdocs build")
-        raise typer.Exit(code=1)
-    kept = frozenset(r.code for r in load_gate_config(cfg.registries).kept)
-    policy = doc.load_doctor_policy(cfg.registries)
-    conn = db.connect(cfg.index_db, read_only=True)
-    try:
-        report = doc.diagnose(conn, kept_doctypes=kept, policy=policy)
-    finally:
-        conn.close()
-    doc.render_report(report, typer.echo)
-    if report.verdict() == "RED":
+    if _emit_doctor(cfg) == "RED":
         raise typer.Exit(code=1)
 
 
@@ -420,6 +426,102 @@ def run(
         verify=verify,
         strict=strict,
     )
+
+
+def _other_vdocs_running() -> bool:
+    """Honor the shared-lake rule: is another vdocs pipeline process active? (Two orchestrators race
+    state.db/index.db/CAS.) Heuristic over ``pgrep``; treats a missing/erroring pgrep as 'no'."""
+    import os
+    import subprocess
+
+    try:
+        out = subprocess.run(
+            ["pgrep", "-af", "vdocs"], capture_output=True, text=True, timeout=5
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return False
+    mypid = str(os.getpid())
+    verbs = (" build", " run", " fetch", " crawl", " catalog", " serve-inventory")
+    for line in out.splitlines():
+        pid, _, rest = line.partition(" ")
+        if pid != mypid and any(v in f" {rest}" for v in verbs):
+            return True
+    return False
+
+
+def _wipe_lake(cfg: Settings) -> None:
+    """The from-scratch wipe (F9/F11): delete every DERIVED artifact so the build is truly de-novo.
+
+    Removes documents/ (incl. the bronze CAS), index.db, **state.db** (so fetch re-downloads — the
+    idempotent resume must not skip-present bytes that were wiped), reports/, the inventory
+    silver+gold, and stray lake clutter (select-*.txt, leftover vectors.db tmp). KEEPS
+    inventory/bronze/catalog.raw.json (so --skip-crawl reuses it) and the repo registries."""
+    import shutil
+
+    for tree in (cfg.documents, cfg.reports, cfg.inventory_silver, cfg.inventory_gold):
+        if tree.exists():
+            shutil.rmtree(tree)
+    for pattern in ("index.db*", "state.db*", "vectors.db*", ".vectors.db.tmp*", "select-*.txt"):
+        for f in cfg.lake.glob(pattern):
+            f.unlink()
+
+
+@app.command()
+def build(
+    fresh: bool = typer.Option(
+        False, "--fresh", help="wipe derived lake data and rebuild de-novo (destructive)"
+    ),
+    yes: bool = typer.Option(False, "--yes", help="confirm the destructive --fresh wipe"),
+    skip_crawl: bool = typer.Option(
+        False, "--skip-crawl", help="reuse the saved catalog.raw.json instead of re-crawling"
+    ),
+) -> None:
+    """Guided from-scratch build: crawl → … → manifest → doctor, in one command with run messaging.
+
+    The operator-facing "build the corpus" path — it sequences the whole pipeline (the descoped
+    `embed` stage is gone, so it can't be pulled in), fetches every gate-admitted document, and ends
+    with the GOLD LIBRARY: GREEN|RED verdict. `--fresh` wipes the derived lake first (requires
+    `--yes`). Refuses to run while another vdocs process is active on the shared lake. Needs network
+    (crawl + fetch); everything after fetch is offline.
+    """
+    from vdocs.stages.fetch.fetch_pure import Selection
+
+    cfg = Settings()
+    if _other_vdocs_running():
+        typer.echo(
+            "another vdocs pipeline process appears to be active on the shared lake — aborting "
+            "(check reports/*.log; two orchestrators race state.db/index.db/CAS)."
+        )
+        raise typer.Exit(code=1)
+    if fresh:
+        if not yes:
+            typer.echo(
+                "--fresh will DELETE all derived data under "
+                f"{cfg.lake} (documents/, index.db, state.db, reports/, inventory silver+gold). "
+                "Re-run with `--fresh --yes` to confirm."
+            )
+            raise typer.Exit(code=1)
+        _wipe_lake(cfg)
+        typer.echo(
+            f"wiped derived lake data under {cfg.lake} (registries + catalog.raw.json kept)."
+        )
+
+    cfg.lake.mkdir(parents=True, exist_ok=True)
+    stages = build_stages()
+    for stage in stages:
+        if stage.name == "fetch":
+            stage.selection = Selection(all_=True)  # type: ignore[attr-defined]
+    # one orchestrator run, crawl→manifest (includes validate); force so a de-novo build re-runs.
+    _drive(
+        from_stage="catalog" if skip_crawl else "crawl",
+        to_stage="manifest",
+        force=True,
+        stages=stages,
+    )
+
+    typer.echo("")
+    if _emit_doctor(cfg) == "RED":
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":  # pragma: no cover
