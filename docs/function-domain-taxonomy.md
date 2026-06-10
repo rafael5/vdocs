@@ -20,15 +20,15 @@
 The SPM line is retained in `app-profiles.yaml` (`function_category`) for provenance, but
 the facet now uses a curated **functional** taxonomy: *what the software does*.
 
-## The nine domains
+## The domains
 
 | Domain | Definition |
 |---|---|
 | **Clinical care** | The clinician's record — orders, notes, problems, consults, reminders, allergies, vitals, encounters, bedside documentation. |
 | **Pharmacy** | Medication ordering, dispensing, bar-code administration, and drug data management. |
 | **Laboratory** | Clinical laboratory, blood bank, point-of-care testing, and lab data interfaces (`LR`, `LA`, `LEDI`, `POC`, `EPI`, `VBECS`). |
-| **Diagnostics & ancillary** | Radiology/imaging, surgery, audiology, and other (non-laboratory) diagnostic and procedural services. |
-| **Specialty care** | Condition- and population-specific clinical programs, registries, and specialty services (mental health, oncology, prosthetics, dentistry, women's health, …). |
+| **Radiology & imaging** | Radiology, nuclear medicine, and VistA Imaging (`RA`, `MAG`). |
+| **Specialty care** | Condition-/population-specific clinical programs and specialty services — surgery (`SR`, `SRA`), audiology (`ACKQ`), mental health, oncology, prosthetics, dentistry, women's health, registries, …. |
 | **Registration & scheduling** | Patient registration, eligibility/enrollment, appointments, primary-care panel management. |
 | **Billing & finance** | Revenue, claims, fee/travel pay, fiscal accounting, acquisition, payroll. |
 | **Infrastructure** | The VistA platform — Kernel security, FileMan database, messaging (HL7/MailMan), interfaces (RPC Broker/VistALink), data exchange, system monitoring. |

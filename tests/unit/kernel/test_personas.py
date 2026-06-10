@@ -66,6 +66,8 @@ def test_load_profile_maps_from_real_registries():
     # NOT the Monograph SPM line: ADT (registration) → "Registration & scheduling".
     assert maps.function_category["ADT"] == "Registration & scheduling"
     assert maps.function_category["LR"] == "Laboratory"  # lab is its own domain
+    assert maps.function_category["RA"] == "Radiology & imaging"
+    assert maps.function_category["SR"] == "Specialty care"  # surgery → specialty
     # the needs-review sentinel is never surfaced as an app_user value
     assert "needs-review" not in set(maps.app_user.values())
 

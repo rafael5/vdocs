@@ -21,15 +21,15 @@ domains:
     definition: >-
       Clinical laboratory, blood bank, point-of-care testing, and lab data
       interfaces.
-  Diagnostics & ancillary:
+  Radiology & imaging:
     definition: >-
-      Radiology/imaging, surgery, audiology, and other (non-laboratory)
-      diagnostic and procedural services.
+      Radiology, nuclear medicine, and VistA Imaging (document/diagnostic
+      image capture and display).
   Specialty care:
     definition: >-
-      Condition- and population-specific clinical programs, registries, and
-      specialty services (mental health, oncology, prosthetics, dentistry,
-      women's health, …).
+      Condition- and population-specific clinical programs and specialty
+      services — surgery, audiology, mental health, oncology, prosthetics,
+      dentistry, women's health, registries, …
   Registration & scheduling:
     definition: >-
       Patient registration, eligibility/enrollment, appointments, and
@@ -51,7 +51,7 @@ domains:
 
 # app_code → domain. Every application present in app-profiles.yaml is mapped.
 apps:
-  ACKQ: Diagnostics & ancillary
+  ACKQ: Specialty care
   ACR: Clinical care
   ADT: Registration & scheduling
   AMT: Clinical care
@@ -99,7 +99,7 @@ apps:
   LA: Laboratory
   LEDI: Laboratory
   LR: Laboratory
-  MAG: Diagnostics & ancillary
+  MAG: Radiology & imaging
   MC: Clinical care
   MD: Clinical care
   MJCF: Pharmacy
@@ -140,7 +140,7 @@ apps:
   QAO: Admin & quality
   QAP: Admin & quality
   QMIM: Admin & quality
-  RA: Diagnostics & ancillary
+  RA: Radiology & imaging
   RMDS: Clinical care
   RMPR: Specialty care
   ROEB: Specialty care
@@ -154,8 +154,8 @@ apps:
   SD: Registration & scheduling
   SPN: Specialty care
   SQLI: Infrastructure
-  SR: Diagnostics & ancillary
-  SRA: Diagnostics & ancillary
+  SR: Specialty care
+  SRA: Specialty care
   SSO: Infrastructure
   SSO/UC: Infrastructure
   TBI: Specialty care
