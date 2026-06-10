@@ -57,11 +57,13 @@ _PRODUCT_LINE_AUDIENCE: dict[str, str] = {
     "IT Infrastructure Operations and Services": "sysadmin",
     "Identity Access Management": "sysadmin",
     "Customer Master Data Management": "sysadmin",
-    "VistA Office (VO) Technical Reference": "developer",
     "Data and Analytics": "developer",
     # deliberately review-only (mixed audiences under one SPM management grouping):
     "Health Informatics": "needs-review",
     "Digital Experience": "needs-review",
+    # "Technical Reference" is an SPM *product-management* grouping, not a who-uses-it signal — it
+    # lumps clinical apps (Mental Health, Anticoagulation, MRSA…) with dev/infra utilities. Review.
+    "VistA Office (VO) Technical Reference": "needs-review",
 }
 
 
@@ -141,6 +143,28 @@ _APP_AUDIENCE_OVERRIDE: dict[str, tuple[str, str | None, str]] = {
     "PX": ("clinical", "clinical-admin", "clinical encounter documentation; workload entry 2nd"),
     "XM": ("sysadmin", None, "messaging infrastructure (MailMan) — OIT/IRM"),
     "XU": ("sysadmin", "developer", "system/user/menu/TaskMan mgmt; developer APIs 2nd"),
+    # Reviewed 2026-06-09: the 16 "VistA Office (VO) Technical Reference" apps (a mixed SPM bucket),
+    # resolved from each app's actual function.
+    "AMT": ("clinical", None, "anticoagulation dosing/management — anticoag clinic staff"),
+    "EPI": ("clinical", None, "lab emerging-pathogens surveillance — lab"),
+    "FFP": ("clinical-admin", None, "fugitive-felon benefits eligibility — eligibility/MAS"),
+    "MMRS": ("clinical", None, "MRSA infection control — infection-control nurses"),
+    "MPIF": (
+        "clinical-admin",
+        "developer",
+        "Master Patient Index: MPI coordinators (HIM); infra 2nd",
+    ),
+    "OOPS": ("clinical-admin", None, "employee safety-incident (ASISTS) tracking — safety/QM"),
+    "PRF": ("clinical", None, "clinical patient-record flags/alerts — clinicians"),
+    "QAC": ("clinical-admin", None, "Patient Advocate Tracking (PATS) — patient advocates"),
+    "QAM": ("clinical", None, "clinical quality monitoring — clinical staff"),
+    "QAO": ("clinical-admin", None, "occurrence screening / risk management — QM"),
+    "QAP": ("clinical-admin", None, "survey generator — QM/admin"),
+    "VALM": ("developer", None, "List Manager — Kernel scrolling-list dev framework"),
+    "VAQ": ("clinical-admin", None, "Patient Data Exchange (PDX) — HIM/ROI clerks"),
+    "VPR": ("clinical", "developer", "Virtual Patient Record (clinical data); API-consumed 2nd"),
+    "WII": ("clinical-admin", None, "wounded-warrior care coordination/tracking"),
+    "YS": ("clinical", None, "Mental Health — mental-health clinicians"),
 }
 
 

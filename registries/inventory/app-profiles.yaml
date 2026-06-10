@@ -141,15 +141,15 @@ profiles:
       connected with patient anticoagulation management.
     function_category: VistA Office (VO) Technical Reference
     business_owner: VHA
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical
+    app_user_basis: anticoagulation dosing/management — anticoag clinic staff
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Technical Reference Only
     features: []
     namespace: OR
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 686
@@ -773,8 +773,8 @@ profiles:
       with denominator data related to workload. VAHQ data retrieval and analysis can then be accomplished.
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​Pathology and Laboratory Medicine Service (P&LMS)
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical
+    app_user_basis: lab emerging-pathogens surveillance — lab
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Not A System
@@ -785,7 +785,7 @@ profiles:
     - Create national SAS data sets for Infectious Diseases Program Office access
     namespace: LR
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 2356
@@ -874,8 +874,8 @@ profiles:
       from Scheduling and Registration options.'
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​VHA Chief Business Office
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical-admin
+    app_user_basis: fugitive-felon benefits eligibility — eligibility/MAS
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Not A System
@@ -887,7 +887,7 @@ profiles:
     - Issues
     namespace: DGFFP
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 3130
@@ -1983,15 +1983,15 @@ profiles:
       be run for all the locations in a division or a specific location.'
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​VHA Office of Primary Care Operations
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical
+    app_user_basis: MRSA infection control — infection-control nurses
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Technical Reference Only
     features: []
     namespace: MMRS
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 5172
@@ -2005,20 +2005,21 @@ profiles:
     purpose_long: '​The overall process is broken down into these phases:'
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​VHA
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical-admin
+    app_user_basis: 'Master Patient Index: MPI coordinators (HIM); infra 2nd'
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Technical Reference Only
     features: []
     namespace: XDR
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 2128
       match: appid
     confidence: high
+    app_user_secondary: developer
   MXML:
     name: XML Parser (VistA)
     purpose: The VistA Extensible Markup Language (XML) Parser is a full-featured, validating XML parser
@@ -2224,8 +2225,8 @@ profiles:
       VistA Office Technical Reference item since it is Monograph Legacy information.
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​ VHA Public Health
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical-admin
+    app_user_basis: employee safety-incident (ASISTS) tracking — safety/QM
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Inactive
@@ -2246,7 +2247,7 @@ profiles:
       and graphical representation of the incident reports
     namespace: OOPS
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 815
@@ -2545,8 +2546,8 @@ profiles:
       of quality safe health care.
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​VHA Chief Business Office (CBO)
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical
+    app_user_basis: clinical patient-record flags/alerts — clinicians
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Technical Reference Only
@@ -2563,7 +2564,7 @@ profiles:
       related to Patient Record Flags
     namespace: DGPF
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 6228
@@ -3084,8 +3085,8 @@ profiles:
       services.
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​National Veteran Service and Advocacy Program (NVSAP)
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical-admin
+    app_user_basis: Patient Advocate Tracking (PATS) — patient advocates
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Inactive
@@ -3096,7 +3097,7 @@ profiles:
     - Printing various lists, statistical reports, and ad hoc reports
     namespace: QAC
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 6276
@@ -3120,8 +3121,8 @@ profiles:
       be queued to run manually or nightly.
     function_category: VistA Office (VO) Technical Reference
     business_owner: VHA CBO
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical
+    app_user_basis: clinical quality monitoring — clinical staff
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Not A System
@@ -3137,7 +3138,7 @@ profiles:
     - Allows the user to manually enter cases
     namespace: QAM
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 1460
@@ -3159,8 +3160,8 @@ profiles:
       criteria for screens 101.1, 102, 107, and 109. The identified data is called "fallout".
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​Office of Patient Care Services
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical-admin
+    app_user_basis: occurrence screening / risk management — QM
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Not A System
@@ -3197,7 +3198,7 @@ profiles:
     - Produces the Semi-Annual Summary of Occurrence Screening
     namespace: QAO
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 5836
@@ -3215,15 +3216,15 @@ profiles:
       and does not require any exceptional skills on the user's part.
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​VHA
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical-admin
+    app_user_basis: survey generator — QM/admin
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Inactive
     features: []
     namespace: QAP
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 8276
@@ -3853,7 +3854,7 @@ profiles:
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​VHA
     app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_basis: List Manager — Kernel scrolling-list dev framework
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Technical Reference Only
@@ -3865,7 +3866,7 @@ profiles:
     - Call List Manager again as part of an action
     namespace: VALM
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 4794
@@ -3891,8 +3892,8 @@ profiles:
       files and is available for terminal display or printing.
     function_category: VistA Office (VO) Technical Reference
     business_owner: VHA
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical-admin
+    app_user_basis: Patient Data Exchange (PDX) — HIM/ROI clerks
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Not A System
@@ -3909,7 +3910,7 @@ profiles:
       data into the local site file
     namespace: VAQ
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 6174
@@ -3990,20 +3991,21 @@ profiles:
       record JSON data export capability. VDIF also uses VPR routines for its data pulls.
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​Not Applicable
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical
+    app_user_basis: Virtual Patient Record (clinical data); API-consumed 2nd
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Technical Reference Only
     features: []
     namespace: VPR
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 8806
       match: appid
     confidence: high
+    app_user_secondary: developer
   WII:
     name: Wounded Ill and Injured Warriors
     purpose: Wounded Injured and Ill Warriors (WII) module was developed to provide accurate and timely
@@ -4026,15 +4028,15 @@ profiles:
       report. Staff will review and process those potential active-duty cases.
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​ Software Product Management Office
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical-admin
+    app_user_basis: wounded-warrior care coordination/tracking
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Inactive
     features: []
     namespace: WII
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 10184
@@ -4304,8 +4306,8 @@ profiles:
       workstations throughout medical facilities.
     function_category: VistA Office (VO) Technical Reference
     business_owner: ​Mental Health
-    app_user_primary: developer
-    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    app_user_primary: clinical
+    app_user_basis: Mental Health — mental-health clinicians
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Inactive
@@ -4338,7 +4340,7 @@ profiles:
     - Helps clarify diagnoses and provides empirical measures for treatment outcomes
     namespace: YS
     source: monograph
-    reviewed: false
+    reviewed: true
     evidence:
       doc: vista_monograph_0723_r
       line: 5052
