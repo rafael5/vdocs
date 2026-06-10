@@ -8,6 +8,13 @@
 
 ## Verdict
 
+# `GOLD LIBRARY: GREEN`
+
+**Signed off by the operator (Rafael), 2026-06-10**, after the TM-abbreviation fix landed and B1–B5
+re-validated clean. GREEN authorizes `docs/prompts/tui-build-kickoff.md`.
+
+---
+
 **Validator's assessment: GREEN-eligible.** The original 4-doc doc-type regex gap was **FIXED** this
 run (bare-`TM` abbreviation pattern added to `doc-types.yaml`, TDD, `make check` green, re-indexed) —
 the 3 SD PIMS docs now classify as TM and version-collapse correctly. Post-fix B1 has **no anchor /
