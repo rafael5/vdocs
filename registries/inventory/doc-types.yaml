@@ -170,6 +170,11 @@ doc_type_patterns:
 - pattern: (?:Application|Form)\s+\d{2}-\d+
   code: FORM
   label: VBA Form
+# Last-resort: a bare "TM" token (e.g. "SD PIMS Version 5.3 TM ADDENDUM 941") means Technical
+# Manual. Kept LAST so every full-phrase pattern (User Manual, etc.) wins first — avoids over-match.
+- pattern: \bTM\b
+  code: TM
+  label: Technical Manual
 slug_suffix_map:
   rn:
     code: RN

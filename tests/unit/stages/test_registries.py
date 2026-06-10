@@ -27,7 +27,7 @@ def test_section_codes():
 def test_doc_type_patterns_are_ordered_and_specific_first():
     reg = _load()
     codes = [p.code for p in reg.doc_type_patterns]
-    assert len(reg.doc_type_patterns) == 57  # verbatim from v1 (spec's "47" was an estimate)
+    assert len(reg.doc_type_patterns) == 58  # 57 from v1 + bare "TM" abbreviation (last-resort)
     # DIBR must precede the generic Installation Guide; User Manual before User Guide.
     assert codes.index("DIBR") < codes.index("IG")
     assert codes.index("UM") < codes.index("UG")
@@ -177,5 +177,5 @@ def test_load_registries_reads_subdir_layout():
     same load-bearing values (the reshape is a move, not a content change)."""
     reg = _load()
     assert reg.section_code["Clinical"] == "CLI"
-    assert len(reg.doc_type_patterns) == 57
+    assert len(reg.doc_type_patterns) == 58  # +1: bare "TM" abbreviation (last-resort)
     assert reg.packages  # package-master resolved from inventory/

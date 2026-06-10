@@ -92,6 +92,10 @@ def test_doc_type_ordering_traps(compiled):
     assert ep.classify_doc_type("User Manual", compiled)[0] == "UM"
     assert ep.classify_doc_type("User's Guide", compiled)[0] == "UG"  # possessive
     assert ep.classify_doc_type("nothing here", compiled) == ("", "")
+    # bare "TM" abbreviation (last-resort) → Technical Manual (e.g. "… TM ADDENDUM 941")
+    assert ep.classify_doc_type("SD PIMS Version 5.3 TM ADDENDUM 941", compiled)[0] == "TM"
+    # …but a full-phrase doc-type still wins over the bare abbrev (ordering safety)
+    assert ep.classify_doc_type("Foo TM User Manual", compiled)[0] == "UM"
 
 
 def test_filename_suffix_tg_is_training_not_technical(reg):
