@@ -27,21 +27,19 @@ DEFAULT_TOC_DEPTH = (2, 3)
 # constants: only a leaf body larger than OVERSIZED_CHUNK_CHARS is split; each window aims for
 # ~CHUNK_TARGET_CHARS, with a one-block overlap so a cross-boundary passage holds.
 #
-# A1 (§9a) aligned these to the chosen embedder, **bge-m3 (8192-token context)**: the worst case a
-# leaf can reach is a single unsplittable block (a wide table/fence forms its own over-target
-# window), and the largest such chunk on the golden set is ~14.3k chars ≈ 5.7k tokens — comfortably
-# inside 8192. So no chunk is truncated at embed time; `embed` asserts this per-chunk
-# (`embed_pure.assert_within_budget`) as a hard gate. (The originally-planned bge-small had a
-# 512-token cap that these sizes would have blown — that mismatch is what A1 resolved.)
+# These bound the lexical FTS5 chunk: the worst case a leaf can reach is a single unsplittable
+# block (a wide table/fence forms its own over-target window), and the largest such chunk on the
+# golden set is ~14.3k chars — well-formed, self-contained retrieval units for snippet context.
+# (The semantic/vector path that originally drove the exact token sizing was descoped; the corpus
+# is lexical-first and offline, so these are tuned for FTS chunking, not an embedder budget.)
 OVERSIZED_CHUNK_CHARS = 8000
 CHUNK_TARGET_CHARS = 4000
 
-# A2b small-leaf merge — built and tested, but **gated off** pending Phase C. Merging adjacent small
-# leaves raises mean chunk substance (+53% on the golden set) and drives redundancy→0, but it costs
-# *lexical* citation precision: merged content is cited under the first leaf's anchor, so a
-# fine-grained section query resolves to the merge-anchor sibling (golden nDCG@10 0.395→0.223). That
-# trade only pays off for *semantic* retrieval (coherent embedding units), which isn't live until
-# Phase C. Re-enable here and measure merge ON vs OFF under hybrid retrieval in Phase C.
+# A2b small-leaf merge — built and tested, but **kept off**. Merging adjacent small leaves raises
+# mean chunk substance (+53% on the golden set) and drives redundancy→0, but it costs *lexical*
+# citation precision: merged content is cited under the first leaf's anchor, so a fine-grained
+# section query resolves to the merge-anchor sibling (golden nDCG@10 0.395→0.223). For the
+# lexical-first corpus that precision loss isn't worth it, so merging stays off.
 MERGE_SMALL_LEAVES = False
 
 
@@ -277,8 +275,8 @@ def split_oversized(
     repeated at the start of the next so a passage spanning the boundary is not lost. No content is
     dropped (every source block appears in some window). A single block larger than ``target``
     (e.g. a big table or fence) can't be split structurally, so a final guarantee pass
-    line/char-splits any window still over ``hard`` — so **no window exceeds ``hard``** (the embed
-    token budget holds even for an unextracted inline-HTML table with no blank-line boundaries)."""
+    line/char-splits any window still over ``hard`` — so **no window exceeds ``hard``** (the chunk
+    size bound holds even for an unextracted inline-HTML table with no blank-line boundaries)."""
     if len(text) <= hard:
         return [text]
     windows: list[str] = []

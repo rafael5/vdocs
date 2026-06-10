@@ -209,10 +209,6 @@ class Settings(BaseSettings):
         return self.lake / "index.db"
 
     @property
-    def vectors_db(self) -> Path:
-        return self.lake / "vectors.db"
-
-    @property
     def reports(self) -> Path:
         return self.lake / "reports"
 

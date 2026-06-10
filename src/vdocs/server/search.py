@@ -1,11 +1,10 @@
-"""Lexical retrieval over `index.db` — the live slice of the §14 hybrid engine, surfaced as
-`vdocs ask` and (later) the MCP `search()` tool.
+"""Lexical retrieval over `index.db` — the search engine behind `vdocs ask` (§14).
 
 FTS5 over `chunks_fts` (the `is_latest` search-chunk surface — prior versions and container/hollow
 sections are excluded at index time, §14.6), joined back to `documents`/`doc_sections` so every hit
 is **pre-cited**: the stable `section_id`/`doc_key`, the document + section titles, a snippet, a
 relevance score, and the resolved gold `body_path`. Read-only (opened via `db.connect` read-only,
-§14.5). Semantic fusion (RRF) lands when `embed` writes `vectors.db` (Phase 6).
+§14.5). Lexical-first and offline — no semantic/vector path.
 """
 
 from __future__ import annotations

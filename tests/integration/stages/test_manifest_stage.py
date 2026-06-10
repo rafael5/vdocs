@@ -1,7 +1,7 @@
 """manifest integration — index.db + consolidated → corpus-manifest.json + discovery.json (§14.4).
 Seeds a small index.db (documents/sections/entities/relations) + a consolidated bundle, runs
 ManifestStage through the orchestrator, and asserts the JSON schema, counts matching index.db, and
-the semantic-search-unavailable flag (no vectors.db, D3).
+the lexical/structured/graph capability manifest (the semantic/vector path is descoped).
 """
 
 from __future__ import annotations
@@ -101,11 +101,10 @@ def _seed(ctx):
         )
 
 
-def test_manifest_writes_both_json_with_counts_and_semantic_off(ctx):
+def test_manifest_writes_both_json_with_counts(ctx):
     _seed(ctx)
     (result,) = Orchestrator([ManifestStage()]).run(ctx)
     assert result.status == "ok"
-    assert result.counts["semantic_available"] == 0  # no vectors.db (D3)
 
     manifest = json.loads(ctx.cfg.corpus_manifest.read_text())
     assert manifest["counts"]["documents"] == 3
@@ -113,19 +112,18 @@ def test_manifest_writes_both_json_with_counts_and_semantic_off(ctx):
     assert manifest["counts"]["sections_searchable"] == 2
     assert manifest["counts"]["entities_by_type"] == {"build": 1, "global": 2}
     assert manifest["counts"]["relations_by_type"] == {"mentions": 1, "xref": 1}
-    # semantic search unavailable until embed (Phase 6); the other modes are live
+    # lexical/structured/graph are live off index.db; the semantic/vector path is descoped
     assert manifest["capabilities"] == {
         "lexical": True,
         "structured": True,
         "graph": True,
-        "semantic": False,
     }
-    assert manifest["embedding"] is None
+    assert "embedding" not in manifest
     assert "section_id" in manifest["id_scheme"]  # the stable-ID contract advertised
 
     discovery = json.loads(ctx.cfg.discovery_json.read_text())
     assert set(discovery["entity_types"]) == {"build", "global"}
-    assert discovery["capabilities"]["semantic"] is False
+    assert "semantic" not in discovery["capabilities"]
     assert discovery["counts"]["version_groups"] == 2
 
 
@@ -147,34 +145,6 @@ def test_manifest_writes_ai_corpus_card(ctx):
 
     md = ctx.cfg.corpus_card.read_text()
     assert "OR User Manual" in md and "never guess" in md.lower()
-
-
-def test_manifest_flips_semantic_on_when_vectors_present(ctx):
-    # D3: a Phase-6 vectors.db with an embedding_model row fills the embedding fields + turns
-    # semantic search on (the same manifest re-run, now with vectors present)
-    _seed(ctx)
-    vconn = db.connect(ctx.cfg.vectors_db)
-    vconn.executescript("CREATE TABLE embedding_model (model TEXT, version TEXT, dim INTEGER)")
-    vconn.execute("INSERT INTO embedding_model VALUES ('all-MiniLM-L6-v2', '2', 384)")
-    vconn.commit()
-    vconn.close()
-
-    (result,) = Orchestrator([ManifestStage()]).run(ctx)
-    assert result.counts["semantic_available"] == 1
-    manifest = json.loads(ctx.cfg.corpus_manifest.read_text())
-    assert manifest["capabilities"]["semantic"] is True
-    assert manifest["embedding"] == {"model": "all-MiniLM-L6-v2", "version": "2", "dim": 384}
-
-
-def test_manifest_treats_vectors_without_meta_as_unavailable(ctx):
-    # a vectors.db that exists but lacks the embedding_model table ⇒ semantic stays off (no crash)
-    _seed(ctx)
-    vconn = db.connect(ctx.cfg.vectors_db)
-    vconn.execute("CREATE TABLE other (x TEXT)")
-    vconn.commit()
-    vconn.close()
-    (result,) = Orchestrator([ManifestStage()]).run(ctx)
-    assert result.counts["semantic_available"] == 0
 
 
 def test_manifest_skips_on_unchanged_rerun(ctx):

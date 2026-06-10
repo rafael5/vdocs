@@ -1,8 +1,9 @@
 # vdocs
 
 A TDD Python pipeline that turns the VA VistA Document Library (DOCX/PDF manuals) into a clean,
-GitHub-native markdown corpus **and** a machine-discoverable knowledge base served over MCP
-(hybrid semantic + lexical + structured + graph search). Greenfield v2 rewrite of `vista-docs`.
+GitHub-native markdown corpus **and** a self-contained, offline knowledge base
+(lexical + structured + graph search over `index.db`, zero ML dependencies). Greenfield v2 rewrite
+of `vista-docs`.
 
 **Architecture is fully specified in [`docs/vdocs-design.md`](docs/vdocs-design.md)** (the single
 source of truth) with the QA companion [`docs/fidelity-framework.md`](docs/fidelity-framework.md).

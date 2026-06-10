@@ -1,7 +1,7 @@
 """SQLite helpers — the single place that knows connection pragmas (§9.2, ADR-004).
 
-Every store (``state.db``, ``index.db``, ``vectors.db``) is opened through here so
-WAL mode, foreign keys, and the row factory are configured in exactly one place.
+Every store (``state.db``, ``index.db``) is opened through here so WAL mode,
+foreign keys, and the row factory are configured in exactly one place.
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ def build_atomic(path: Path, build: Callable[[sqlite3.Connection], None]) -> Non
     raising ``build`` never leaves a half-written DB at the real path that preflight would mistake
     for complete. A leftover temp from a prior crash is discarded first. The single shared
     atomic-DB-build primitive (§9.2) for every stage that *rebuilds* a derived store
-    (``serve-inventory`` now; ``index``/``relate``/``embed`` next).
+    (``serve-inventory``, ``index``, ``relate``).
 
     WAL hardening (R7): the temp is built in ``journal_mode=DELETE`` so SQLite never creates a
     ``.<name>.tmp-wal``/``.tmp-shm`` sibling that the single-file ``os.replace`` would orphan; any

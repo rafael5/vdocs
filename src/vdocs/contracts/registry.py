@@ -201,7 +201,7 @@ INDEX_ENTITIES = ArtifactContract(
     db="index.db",
     table="entities",
 )
-# the retrieval units derived from sections (§5.5, A1) — the search surface `embed` consumes.
+# the retrieval units derived from sections (§5.5, A1) — the lexical FTS5 search surface.
 INDEX_CHUNKS = ArtifactContract(
     key="index.db:chunks",
     kind=Kind.SQLITE_TABLE,
@@ -222,7 +222,7 @@ RELATIONS = ArtifactContract(
     table="relations",
 )
 # `manifest`: the agent front door — corpus schema/counts/ID-scheme/capabilities (§14.4).
-# `vectors.db` is an OPTIONAL input (Phase 6); absent ⇒ semantic search marked unavailable (D3).
+# Lexical-first/offline: the capability manifest advertises lexical/structured/graph only.
 CORPUS_MANIFEST = ArtifactContract(
     key="gold/corpus-manifest.json",
     kind=Kind.FILE,
@@ -253,19 +253,6 @@ CORPUS_CARD = ArtifactContract(
     storage_class=StorageClass.STATE,
     produced_by="manifest",
     relpath="documents/gold/CORPUS.md",
-)
-
-
-# `embed` (Phase 6, §14.6): per-chunk embeddings + ANN index over the searchable is_latest chunks,
-# in `vectors.db` (sqlite-vec). The `embedding_model` meta row (model/version/dim) is what
-# `manifest` reads to flip semantic search on. produced_by="embed"; keyed by `chunk_id`.
-VECTORS_DB = ArtifactContract(
-    key="vectors.db:embedding_model",
-    kind=Kind.SQLITE_TABLE,
-    storage_class=StorageClass.STATE,
-    produced_by="embed",
-    db="vectors.db",
-    table="embedding_model",
 )
 
 
@@ -310,7 +297,6 @@ def default_registry() -> ArtifactRegistry:
         INDEX_ENTITIES,
         INDEX_CHUNKS,
         RELATIONS,
-        VECTORS_DB,
         CORPUS_MANIFEST,
         DISCOVERY_JSON,
         AI_MANIFEST,

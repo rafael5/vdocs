@@ -37,7 +37,6 @@ def test_derived_db_paths(tmp_path):
     cfg = Settings(data_dir=tmp_path)
     assert cfg.state_db == tmp_path / "state.db"
     assert cfg.index_db == tmp_path / "index.db"
-    assert cfg.vectors_db == tmp_path / "vectors.db"
 
 
 def test_all_lake_paths_are_under_lake(tmp_path):

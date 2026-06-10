@@ -1,11 +1,8 @@
 """The `manifest` stage — consolidated + index.db → corpus-manifest.json + discovery.json (§14.4).
 
-The agent front door: corpus counts, the stable-ID scheme, and the MCP capability manifest,
-assembled from the derived stores. Per D3, **`vectors.db` is an optional input** (produced by
-`embed` in Phase 6): built now against `consolidated` + `index.db` alone it omits the embedding
-model id+version and marks semantic search **unavailable**; a Phase-6 re-run once `vectors.db`
-exists fills the fields and flips the capability on (the "optional produces don't gate" rule, as
-`convert`'s `assets`).
+The agent front door: corpus counts, the stable-ID scheme, and the capability manifest, assembled
+from the derived stores. The corpus is lexical-first and offline, so the capability manifest
+advertises lexical/structured/graph only — the semantic/vector path was descoped.
 """
 
 from __future__ import annotations
@@ -46,14 +43,10 @@ class ManifestStage(Stage):
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
         counts = _gather_counts(cfg.index_db)
-        # D3: vectors.db is optional (Phase 6). Absent ⇒ no embedding info ⇒ semantic unavailable.
-        embedding = _read_embedding(cfg.vectors_db)
         generated_at = ctx.clock()
 
-        manifest = mp.corpus_manifest(
-            counts, tool_ver=cfg.tool_ver, generated_at=generated_at, embedding=embedding
-        )
-        discovery = mp.discovery_descriptor(counts, tool_ver=cfg.tool_ver, embedding=embedding)
+        manifest = mp.corpus_manifest(counts, tool_ver=cfg.tool_ver, generated_at=generated_at)
+        discovery = mp.discovery_descriptor(counts, tool_ver=cfg.tool_ver)
         cas.atomic_write(cfg.corpus_manifest, _dumps(manifest))
         cas.atomic_write(cfg.discovery_json, _dumps(discovery))
 
@@ -68,7 +61,6 @@ class ManifestStage(Stage):
             tool_ver=cfg.tool_ver,
             generated_at=generated_at,
             index_fingerprint=_index_fingerprint(cfg.index_db),
-            embedding=embedding,
         )
         cas.atomic_write(cfg.ai_manifest, _dumps(card))
         cas.atomic_write(cfg.corpus_card, (mp.corpus_card(card)).encode("utf-8"))
@@ -94,7 +86,6 @@ class ManifestStage(Stage):
                 "catalog_docs": len(catalog),
                 "shared_boilerplate": len(shared),
                 "glossary_terms": glossary.count("\n**"),
-                "semantic_available": int(embedding is not None),
             }
         )
 
@@ -186,18 +177,3 @@ def _index_fingerprint(index_db: Path) -> str:
         for block in iter(lambda: fh.read(1 << 20), b""):
             h.update(block)
     return h.hexdigest()
-
-
-def _read_embedding(vectors_db):  # type: ignore[no-untyped-def]
-    """The embedding-model id+version from `vectors.db`, or ``None`` when it doesn't exist yet (D3 —
-    `embed` is Phase 6). Phase 4 always returns ``None`` (semantic search unavailable)."""
-    if not vectors_db.exists():
-        return None
-    conn = db.connect(vectors_db, read_only=True)
-    try:
-        row = conn.execute("SELECT model, version, dim FROM embedding_model LIMIT 1").fetchone()
-    except Exception:  # noqa: BLE001 — a vectors.db without the meta table ⇒ treat as unavailable
-        return None
-    finally:
-        conn.close()
-    return {"model": row[0], "version": row[1], "dim": row[2]} if row else None

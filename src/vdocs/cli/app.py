@@ -18,7 +18,6 @@ from vdocs.stages.consolidate.stage import ConsolidateStage
 from vdocs.stages.convert.stage import ConvertStage
 from vdocs.stages.crawl.stage import CrawlStage
 from vdocs.stages.discover.stage import DiscoverStage
-from vdocs.stages.embed.stage import EmbedStage
 from vdocs.stages.enrich.stage import EnrichStage
 from vdocs.stages.fetch.stage import FetchStage
 from vdocs.stages.index.stage import IndexStage
@@ -47,7 +46,6 @@ def build_stages() -> list[Stage]:
         ConsolidateStage(),
         IndexStage(),
         RelateStage(),
-        EmbedStage(),
         ManifestStage(),
         ValidateStage(),
     ]
@@ -232,7 +230,7 @@ def relate(force: bool = typer.Option(False, "--force", "-f")) -> None:
 
 @app.command()
 def manifest(force: bool = typer.Option(False, "--force", "-f")) -> None:
-    """Assemble corpus-manifest.json + discovery.json — the MCP front door (semantic off now)."""
+    """Assemble corpus-manifest.json + discovery.json + the AI corpus card (agent front door)."""
     _drive(only="manifest", force=force)
 
 

@@ -1,10 +1,9 @@
-"""Pure assembler for `manifest` — corpus-manifest.json + discovery.json (§14.4, D3).
+"""Pure assembler for `manifest` — corpus-manifest.json + discovery.json (§14.4).
 
-The agent "front door": counts + the stable-ID scheme + the MCP capability manifest, assembled from
-corpus counts the driver gathers (no I/O here, and time is passed in). The load-bearing rule is the
-**optional `vectors.db`** (D3): with no embedding info the semantic capability is *off* and the
-embedding fields are omitted; once `embed` (Phase 6) writes `vectors.db`, a re-run passes the model
-info and flips semantic on — the same "optional produces don't gate" rule as `convert`'s `assets`.
+The agent "front door": counts + the stable-ID scheme + the capability manifest, assembled from
+corpus counts the driver gathers (no I/O here, and time is passed in). The corpus is lexical-first
+and offline, so the capability manifest advertises lexical/structured/graph only — the
+semantic/vector path was descoped (no `embedding` field, no `semantic` capability).
 """
 
 from __future__ import annotations
@@ -114,7 +113,7 @@ QUERY_RECIPE = {
     "command": 'vdocs ask "<your question>" --k 8 --json',
     "returns": "ranked hits: {section_id, doc_key, doc_title, section_title, snippet, score, "
     "body_path}",
-    "modes": "lexical FTS5 over the is_latest search chunks (semantic search added in Phase 6)",
+    "modes": "lexical FTS5 over the is_latest search chunks",
 }
 CITATION = {
     "format": "<doc_title> — §<section_title>  [vdocs://section/<section_id>]  (<body_path>)",
@@ -128,10 +127,10 @@ SOURCE_OF_TRUTH = (
 )
 
 
-def _capabilities(*, vectors: bool) -> dict[str, bool]:
-    """The four MCP retrieval modes (§14.1). Lexical/structured/graph are always available off
-    `index.db`; semantic depends on `vectors.db` (absent in Phase 4 ⇒ off, D3)."""
-    return {"lexical": True, "structured": True, "graph": True, "semantic": vectors}
+def _capabilities() -> dict[str, bool]:
+    """The retrieval modes available off `index.db` (§14.1): lexical (FTS5), structured (facets),
+    and graph (relations). The semantic/vector mode was descoped — lexical-first, offline."""
+    return {"lexical": True, "structured": True, "graph": True}
 
 
 def corpus_manifest(
@@ -139,18 +138,15 @@ def corpus_manifest(
     *,
     tool_ver: str,
     generated_at: str,
-    embedding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """The corpus manifest: counts, lineage, the ID scheme, and the capability manifest.
-    ``embedding`` is the model id+version when `vectors.db` exists, else ``None`` (semantic off)."""
+    """The corpus manifest: counts, lineage, the ID scheme, and the capability manifest."""
     return {
         "schema_version": 1,
         "tool_ver": tool_ver,
         "generated_at": generated_at,
         "counts": dict(counts),
         "id_scheme": ID_SCHEME,
-        "embedding": embedding,
-        "capabilities": _capabilities(vectors=embedding is not None),
+        "capabilities": _capabilities(),
     }
 
 
@@ -183,8 +179,7 @@ def _body_path(row: dict[str, Any]) -> str:
 # B3a (§8.2): ubiquitous low-signal entity types — globals dominate by count (≈½ of all entities)
 # but are noise for the headline/ranking. They are kept fully queryable in `index.db`; only their
 # slot count in the agent-facing headline is down-weighted so high-signal types (routines, RPCs,
-# options, FileMan files) surface. Already excluded from `xref` edges; semantic-boost de-weight is
-# Phase C.
+# options, FileMan files) surface. Already excluded from `xref` edges.
 LOW_SIGNAL_ENTITY_TYPES = frozenset({"global"})
 
 
@@ -216,7 +211,6 @@ def ai_manifest(
     tool_ver: str,
     generated_at: str,
     index_fingerprint: str,
-    embedding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """The AI corpus card (§14.7): a denormalized, self-describing descriptor an agent reads to
     answer "based on the vdocs gold corpus, …" questions without re-discovering the corpus — the
@@ -229,8 +223,7 @@ def ai_manifest(
         "index_fingerprint": index_fingerprint,
         "source_of_truth": SOURCE_OF_TRUTH,
         "usage": USAGE,
-        "capabilities": _capabilities(vectors=embedding is not None),
-        "embedding": embedding,
+        "capabilities": _capabilities(),
         "id_scheme": ID_SCHEME,
         "citation": CITATION,
         "query": QUERY_RECIPE,
@@ -297,9 +290,7 @@ def corpus_card(manifest: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def discovery_descriptor(
-    counts: dict[str, Any], *, tool_ver: str, embedding: dict[str, Any] | None = None
-) -> dict[str, Any]:
+def discovery_descriptor(counts: dict[str, Any], *, tool_ver: str) -> dict[str, Any]:
     """The machine discovery descriptor (`discovery.json`): corpus schema + entity-type vocabulary +
     the ID scheme + MCP capabilities — what an agent reads to understand the corpus without crawling
     it (§14.4)."""
@@ -314,6 +305,5 @@ def discovery_descriptor(
             "searchable_sections": counts.get("sections_searchable", 0),
             "entities": counts.get("entities", 0),
         },
-        "embedding": embedding,
-        "capabilities": _capabilities(vectors=embedding is not None),
+        "capabilities": _capabilities(),
     }

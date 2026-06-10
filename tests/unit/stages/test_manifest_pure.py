@@ -1,7 +1,7 @@
-"""Unit tests for `manifest`'s pure assembler (§14.4, D3) — corpus-manifest.json + discovery.json
-from corpus counts. Pure: counts + clock value in, JSON-ready dicts out. The key behaviour is the
-**optional `vectors.db`** rule — with no embedding info, semantic search is marked *unavailable* and
-the embedding fields are omitted; a Phase-6 re-run fills them and flips the capability on.
+"""Unit tests for `manifest`'s pure assembler (§14.4) — corpus-manifest.json + discovery.json
+from corpus counts. Pure: counts + clock value in, JSON-ready dicts out. The corpus is lexical-first
+and offline: the capability manifest advertises lexical/structured/graph only — the semantic/vector
+path was descoped (no `embedding` field, no `semantic` capability).
 """
 
 from __future__ import annotations
@@ -107,19 +107,13 @@ def test_manifest_counts_and_lineage():
     assert m["tool_ver"] == "0.1.0" and m["generated_at"] == "2026-06-02T00:00:00Z"
 
 
-def test_manifest_marks_semantic_unavailable_without_vectors():
+def test_manifest_capabilities_lexical_structured_graph_only():
     m = mp.corpus_manifest(_COUNTS, tool_ver="0.1.0", generated_at="t")
-    assert m["capabilities"]["semantic"] is False  # no vectors.db yet (D3)
     assert m["capabilities"]["lexical"] is True  # FTS5 over is_latest sections
     assert m["capabilities"]["structured"] is True and m["capabilities"]["graph"] is True
-    assert m["embedding"] is None  # embedding-model id+version omitted until embed lands
-
-
-def test_manifest_fills_embedding_when_vectors_present():
-    embedding = {"model": "all-MiniLM-L6-v2", "version": "2", "dim": 384}
-    m = mp.corpus_manifest(_COUNTS, tool_ver="0.1.0", generated_at="t", embedding=embedding)
-    assert m["capabilities"]["semantic"] is True
-    assert m["embedding"] == embedding
+    # the semantic/vector path is descoped — no semantic capability, no embedding field
+    assert "semantic" not in m["capabilities"]
+    assert "embedding" not in m
 
 
 def test_discovery_descriptor_schema_and_ids():
@@ -129,14 +123,10 @@ def test_discovery_descriptor_schema_and_ids():
     assert "entity_id" in d["id_scheme"]
     # the entity-type vocabulary is advertised
     assert set(d["entity_types"]) == {"build", "global", "fileman_file", "package_namespace"}
-    # capabilities mirror the manifest (semantic off without vectors)
-    assert d["capabilities"]["semantic"] is False
+    # capabilities mirror the manifest (lexical/structured/graph; no semantic)
     assert d["capabilities"]["graph"] is True
-
-
-def test_discovery_semantic_on_with_embedding():
-    d = mp.discovery_descriptor(_COUNTS, tool_ver="0.1.0", embedding={"model": "m", "dim": 8})
-    assert d["capabilities"]["semantic"] is True
+    assert "semantic" not in d["capabilities"]
+    assert "embedding" not in d
 
 
 # --- the AI corpus card (§14.7) -------------------------------------------------------------
@@ -202,7 +192,8 @@ def test_ai_manifest_assembles_card_with_recipe_and_fingerprint():
     assert "vdocs ask" in m["query"]["command"]
     assert "section_id" in m["citation"]["format"]
     assert m["documents"] == cat and m["entities"] == ents
-    assert m["capabilities"]["semantic"] is False  # no embedding → semantic off (D3)
+    assert "semantic" not in m["capabilities"]  # semantic/vector path descoped
+    assert "embedding" not in m
 
 
 def test_corpus_card_renders_usage_catalog_and_recipe():
