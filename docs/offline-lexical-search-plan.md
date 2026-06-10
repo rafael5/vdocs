@@ -5,11 +5,11 @@
 > (detailed L0–L4 steps, per-phase changelog/discoveries/risks/remediations/recommendations). This
 > document is the *what/why*.
 
-> **Successor to** [`vdocs-implementation-plan.md`](vdocs-implementation-plan.md), which is now
+> **Successor to** [`historical/vdocs-implementation-plan.md`](historical/vdocs-implementation-plan.md), which is now
 > **closed/frozen** (see its 🏁 Closure section). That effort was a spike; its decisive finding —
 > *the all-or-nothing embedding/vector path is not worth its cost on this corpus* — set the
 > direction this plan executes. The remediation audit
-> ([`vdocs-remediation-plan.md`](vdocs-remediation-plan.md)) remains useful as background; where it
+> ([`historical/vdocs-remediation-plan.md`](historical/vdocs-remediation-plan.md)) remains useful as background; where it
 > assumes a semantic/MCP finish, this plan supersedes it.
 
 ## Goal — one outcome
@@ -169,7 +169,7 @@ Search hits must resolve to a readable doc; ship the browsable corpus.
 
 ## Changelog
 
-- 2026-06-08 — **Plan opened.** Successor to the frozen `vdocs-implementation-plan.md`. Scope reframed
+- 2026-06-08 — **Plan opened.** Successor to the frozen `historical/vdocs-implementation-plan.md`. Scope reframed
   to offline, human, no-AI lexical search distributed to developers; semantic/vector (Phase C) parked
   and MCP/agent (Phase D) descoped per the spike's closure finding. Baseline carried forward:
   lexical nDCG@10 = 0.395.

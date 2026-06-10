@@ -23,10 +23,10 @@ Driven by the **go-forward plan** (with two frozen predecessors kept as record/b
 - **[`docs/offline-lexical-search-implementation-plan.md`](docs/offline-lexical-search-implementation-plan.md)**
   — the *how/status* tracker (detailed L0–L4 steps, per-phase changelog/discoveries/risks). **Update
   it as work lands** (TDD → `make check` → update tracker → commit, per step).
-- **[`docs/vdocs-implementation-plan.md`](docs/vdocs-implementation-plan.md)** — **frozen** spike
+- **[`docs/historical/vdocs-implementation-plan.md`](docs/historical/vdocs-implementation-plan.md)** — **frozen** spike
   execution record (per-phase status, discoveries, risks). See its 🏁 Closure section for the
   decisive embed-vs-lexical finding. Read for *why*; do not execute its C/D phases.
-- **[`docs/vdocs-remediation-plan.md`](docs/vdocs-remediation-plan.md)** — the original *what/why*
+- **[`docs/historical/vdocs-remediation-plan.md`](docs/historical/vdocs-remediation-plan.md)** — the original *what/why*
   audit. Background; superseded where it assumes a semantic/MCP finish.
 
 **If the code and the active plan disagree, the plan is the bug report.** Read it before changing

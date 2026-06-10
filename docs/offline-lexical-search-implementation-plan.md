@@ -6,8 +6,8 @@
 > implementable steps and records status, changelog, discoveries, risks, remediations, and
 > improvement recommendations as work lands.
 >
-> **Background:** [`vdocs-state-2026-06-08.md`](vdocs-state-2026-06-08.md) (as-is snapshot) ·
-> [`vdocs-implementation-plan.md`](vdocs-implementation-plan.md) (frozen spike record).
+> **Background:** [`historical/vdocs-state-2026-06-08.md`](historical/vdocs-state-2026-06-08.md) (as-is snapshot) ·
+> [`historical/vdocs-implementation-plan.md`](historical/vdocs-implementation-plan.md) (frozen spike record).
 
 ## Working protocol
 
