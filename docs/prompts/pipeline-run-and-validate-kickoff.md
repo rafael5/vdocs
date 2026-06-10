@@ -11,6 +11,30 @@ verdict. **GREEN is the gate that authorizes building the TUI** (see `tui-build-
 > project memory `app-profiles-monograph.md`. The corpus is the **gated full set (~1,036 admitted
 > docs)** built via a **real VDL fetch — no mocks, no omissions**.
 
+## Run mode — what may be automated vs. what needs human sign-off
+
+This is **semi-supervised**. Do **not** run it as a single fully-unsupervised goal/agent that builds
+*and* blesses the corpus — that defeats the gate's purpose.
+
+- **OK to automate / loop** (mechanical, deterministic): Part A's `fetch --all` **retry loop** until
+  `acquisitions failed = 0` (the one place a `/loop` genuinely helps — transient VDL failures);
+  `convert → … → index`; and the **B1–B4** checks (counts, schema, populated columns, FTS, gate
+  fidelity — assertions an agent can run and report).
+- **Requires HUMAN sign-off** (judgment — never auto-approve): **B5 registry promotion** (deciding
+  which `discover` candidates are real boilerplate/glossary/entities vs. content is the irreplaceable
+  curation step — auto-promotion would silently reshape the search corpus); and the final
+  **GREEN/RED verdict** (the kickoff demands honesty, not green-washing — a trustworthy GREEN is the
+  whole point).
+- **Operational caution:** this is a **destructive de-novo on the shared lake**. Run the shared-lake
+  check (`pgrep`) yourself; don't leave a destructive + network run wholly unattended (truncated VDL
+  docs, a thrashing retry loop if the VDL is down, a mid-run stage failure all need a human).
+
+**Recommended:** let an agent/loop do the mechanical build + B1–B4 + *draft* the report and the B5
+candidate list, then **stop and hand off** to a human for the registry-promotion decision and the
+final GREEN. The same run that builds the corpus must not be the one that blesses it.
+
+---
+
 ---
 
 ## Part A — Build the gold library (de-novo, gated, real fetch)
