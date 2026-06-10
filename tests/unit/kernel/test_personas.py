@@ -65,6 +65,7 @@ def test_load_profile_maps_from_real_registries():
     # function_category now comes from function-domains.yaml (the functional taxonomy),
     # NOT the Monograph SPM line: ADT (registration) → "Registration & scheduling".
     assert maps.function_category["ADT"] == "Registration & scheduling"
+    assert maps.function_category["LR"] == "Laboratory"  # lab is its own domain
     # the needs-review sentinel is never surfaced as an app_user value
     assert "needs-review" not in set(maps.app_user.values())
 

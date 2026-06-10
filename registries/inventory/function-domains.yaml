@@ -5,7 +5,8 @@
 # tag baked into gold frontmatter + index.db; `domains:` carries the definitions.
 #
 # This is curated data (tenet #13): edit an app's domain here and re-run
-# `vdocs run --only index` — no code change.
+# `vdocs run --from enrich --to index --force` (enrich bakes function_category into
+# gold frontmatter; index reads it from there) — no code change.
 
 domains:
   Clinical care:
@@ -16,10 +17,14 @@ domains:
     definition: >-
       Medication ordering, dispensing, bar-code administration, and drug data
       management.
+  Laboratory:
+    definition: >-
+      Clinical laboratory, blood bank, point-of-care testing, and lab data
+      interfaces.
   Diagnostics & ancillary:
     definition: >-
-      Laboratory, blood bank, radiology/imaging, surgery, and other diagnostic
-      and procedural services.
+      Radiology/imaging, surgery, audiology, and other (non-laboratory)
+      diagnostic and procedural services.
   Specialty care:
     definition: >-
       Condition- and population-specific clinical programs, registries, and
@@ -68,7 +73,7 @@ apps:
   EDIS: Clinical care
   EFR: Specialty care
   EN: Admin & quality
-  EPI: Diagnostics & ancillary
+  EPI: Laboratory
   FB: Billing & finance
   FFP: Billing & finance
   FH: Specialty care
@@ -91,9 +96,9 @@ apps:
   KMPR: Infrastructure
   KMPS: Infrastructure
   KMPV: Infrastructure
-  LA: Diagnostics & ancillary
-  LEDI: Diagnostics & ancillary
-  LR: Diagnostics & ancillary
+  LA: Laboratory
+  LEDI: Laboratory
+  LR: Laboratory
   MAG: Diagnostics & ancillary
   MC: Clinical care
   MD: Clinical care
@@ -110,7 +115,7 @@ apps:
   OR: Clinical care
   PAIT: Registration & scheduling
   PCMM: Registration & scheduling
-  POC: Diagnostics & ancillary
+  POC: Laboratory
   PPP: Pharmacy
   PRC: Billing & finance
   PRCA: Billing & finance
@@ -157,7 +162,7 @@ apps:
   TIU: Clinical care
   VALM: Infrastructure
   VAQ: Infrastructure
-  VBECS: Diagnostics & ancillary
+  VBECS: Laboratory
   VDEF: Infrastructure
   VPR: Infrastructure
   WII: Specialty care
