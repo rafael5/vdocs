@@ -36,7 +36,7 @@ from vdocs.contracts.registry import (
     INDEX_SECTIONS,
     TEXT_NORMALIZED,
 )
-from vdocs.kernel import db, frontmatter
+from vdocs.kernel import db, frontmatter, personas, titles
 from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -52,7 +52,7 @@ CREATE TABLE documents (
   doc_id        TEXT NOT NULL,
   app_code      TEXT, doc_type TEXT, section TEXT, pkg_ns TEXT,
   version       TEXT, patch_id TEXT, anchor_key TEXT, group_key TEXT,
-  title         TEXT, doc_label TEXT,
+  title         TEXT, title_source TEXT, app_name TEXT, doc_label TEXT,
   app_user      TEXT, doc_user TEXT, software_class TEXT, function_category TEXT,
   word_count    INTEGER, section_count INTEGER, is_latest INTEGER NOT NULL,
   template_id   TEXT, source_sha256 TEXT, source_url TEXT
@@ -93,7 +93,7 @@ CREATE VIEW quality AS
 
 _DOC_COLUMNS = (
     "doc_key", "doc_id", "app_code", "doc_type", "section", "pkg_ns", "version", "patch_id",
-    "anchor_key", "group_key", "title", "doc_label",
+    "anchor_key", "group_key", "title", "title_source", "app_name", "doc_label",
     "app_user", "doc_user", "software_class", "function_category",
     "word_count", "section_count", "is_latest", "template_id", "source_sha256", "source_url",
 )  # fmt: skip
@@ -107,14 +107,17 @@ class IndexStage(Stage):
     idempotency = Idempotency.SKIP_IF_UNCHANGED
     # v2 (L1.2): chunks_fts gained a `doc_title` column (the doc-defining-token search fix).
     # v3 (§7 bake): documents gained app_user/doc_user/software_class/function_category columns +
-    # the persona facet index. The bump folds into consumers' inputs_fp so a re-run rebuilds.
-    contract_ver = 3
+    # the persona facet index. v4 (title de-noise): documents gained `title_source` (raw title) +
+    # `app_name`, and `title` is now the version/patch-stripped display name (kernel.titles).
+    # The bump folds into consumers' inputs_fp so a re-run rebuilds.
+    contract_ver = 4
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
         staged_cols, staged_rows = _read_staged(cfg.index_db)
         by_path = {str(r["bundle_path"]): r for r in staged_rows}
         latest_ids = _latest_doc_ids(cfg.gold_consolidated)
+        app_name_map = personas.app_names(cfg.registries)  # app_code → name (title fallback)
         rules = ent.compile_rules(
             _load_entity_entries(cfg.registries / "entities" / "entities.yaml")
         )
@@ -142,7 +145,9 @@ class IndexStage(Stage):
             secs = ip.shred_sections(body, doc_key, toc_depth)
             word_count = int(staged.get("word_count") or ep.word_count(body))
             documents.append(
-                _doc_row(doc_key, doc_id, meta, staged, is_latest, word_count, len(secs))
+                _doc_row(
+                    doc_key, doc_id, meta, staged, is_latest, word_count, len(secs), app_name_map
+                )
             )
             for s in secs:
                 sections.append(
@@ -264,17 +269,24 @@ def _read_table_csv(path):  # type: ignore[no-untyped-def]
         return []
 
 
-def _doc_row(doc_key, doc_id, meta, staged, is_latest, word_count, section_count):  # type: ignore[no-untyped-def]
+def _doc_row(doc_key, doc_id, meta, staged, is_latest, word_count, section_count, app_names):  # type: ignore[no-untyped-def]
     """One `documents` row — inventory identity from the staged table, title/template/provenance
-    from the bundle FM (the keys `doc_meta_staged` doesn't carry)."""
+    from the bundle FM (the keys `doc_meta_staged` doesn't carry).
+
+    The display `title` is de-noised (version/patch stripped) via `kernel.titles`; the raw
+    title is preserved as `title_source`, and `app_name` (the app's canonical name) is the
+    fallback used when a title de-noises to only a doc-type label."""
 
     def s(key: str) -> str:
         return str(staged.get(key, "") or "")
 
+    app_code = s("app_code") or str(meta.get("app_code", ""))
+    raw_title = str(meta.get("title", "") or s("doc_title"))
+    app_name = app_names.get(app_code, "")
     return (
         doc_key,
         doc_id,
-        s("app_code") or str(meta.get("app_code", "")),
+        app_code,
         s("doc_code") or str(meta.get("doc_type", "")),
         s("section_code") or str(meta.get("section", "")),
         s("pkg_ns") or str(meta.get("pkg_ns", "")),
@@ -282,7 +294,9 @@ def _doc_row(doc_key, doc_id, meta, staged, is_latest, word_count, section_count
         s("patch_id") or str(meta.get("patch_id", "")),
         s("anchor_key"),
         s("group_key"),
-        str(meta.get("title", "") or s("doc_title")),
+        titles.clean_title(raw_title, app_name),
+        raw_title,
+        app_name,
         s("doc_label"),
         # §7 profile tags: baked into the body FM by `enrich`, read straight off `meta`
         str(meta.get("app_user", "")),

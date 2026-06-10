@@ -46,11 +46,11 @@ def _bless(ctx, stage, art):
     )
 
 
-def _seed_bundle(ctx, app, slug, patch_id, body):
+def _seed_bundle(ctx, app, slug, patch_id, body, title="Install Guide"):
     doc_id = f"{app}:{slug}"
     text = frontmatter.emit(
         {
-            "title": "Install Guide",
+            "title": title,
             "doc_type": "IG",
             "app_code": app,
             "pkg_ns": "OR",
@@ -178,6 +178,38 @@ def test_index_builds_documents_sections_entities(ctx):
         assert staged_n == 2
     finally:
         conn.close()
+
+
+def test_index_denoises_title_preserving_source_and_app_name(ctx):
+    # a title heavy with version/patch noise → `title` is de-noised (kernel.titles); the raw is
+    # preserved as `title_source`; `app_name` is the app's canonical name (the display fallback).
+    from vdocs.kernel import personas
+
+    raw = "QUASAR Version 3 User Manual (Updated ACKQ*3*21)"
+    body = "# UM\n\n## Use\n\nUse QUASAR.\n"
+    _seed_bundle(ctx, "ACKQ", "quasar_um", "ACKQ*3*21", body, title=raw)
+    _seed_staged(ctx, ["ACKQ:quasar_um"])
+    _seed_consolidated(ctx, latest_doc_id="ACKQ:quasar_um", all_doc_ids=["ACKQ:quasar_um"])
+    for stage, art in (
+        ("normalize", TEXT_NORMALIZED),
+        ("consolidate", CONSOLIDATED),
+        ("enrich", DOC_META_STAGED),
+    ):
+        _bless(ctx, stage, art)
+    (result,) = Orchestrator([IndexStage()]).run(ctx)
+    assert result.status == "ok"
+
+    expected_app = personas.app_names(ctx.cfg.registries).get("ACKQ", "")
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        title, src, app_name = conn.execute(
+            "SELECT title, title_source, app_name FROM documents WHERE doc_id = 'ACKQ:quasar_um'"
+        ).fetchone()
+    finally:
+        conn.close()
+    assert title == "QUASAR User Manual"  # "Version 3" + "(Updated ACKQ*3*21)" stripped
+    assert src == raw  # raw title preserved for provenance/search
+    assert app_name and app_name == expected_app  # canonical app name populated
 
 
 def test_chunks_fts_indexes_doc_title_so_title_only_tokens_match(ctx):

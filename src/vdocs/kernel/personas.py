@@ -28,7 +28,14 @@ import yaml
 
 log = structlog.get_logger(__name__)
 
-__all__ = ["PROFILE_TAGS", "ProfileMaps", "load_profile_maps", "profile_tags", "resolve_doc_user"]
+__all__ = [
+    "PROFILE_TAGS",
+    "ProfileMaps",
+    "app_names",
+    "load_profile_maps",
+    "profile_tags",
+    "resolve_doc_user",
+]
 
 # the four tags baked into gold frontmatter + index.db (in canonical frontmatter order)
 PROFILE_TAGS: tuple[str, ...] = ("app_user", "doc_user", "software_class", "function_category")
@@ -84,6 +91,15 @@ def load_profile_maps(registries_dir: Path) -> ProfileMaps:
         function_category=_app_field(profiles, "function_category"),
         doc_user=_load_doc_user(inv / "doc-user.yaml"),
     )
+
+
+def app_names(registries_dir: Path) -> dict[str, str]:
+    """``app_code → canonical application name`` from ``app-profiles.yaml`` (the ``name`` field).
+
+    Used by the ``index`` stage as the display-title app-name fallback (a title that de-noises
+    to only a doc-type label is prefixed with this). Missing file yields an empty map."""
+    profiles = _load_profiles(registries_dir / "inventory" / "app-profiles.yaml")
+    return {app: str(p["name"]) for app, p in profiles.items() if p.get("name")}
 
 
 def _load_yaml(path: Path) -> dict:
