@@ -286,11 +286,12 @@ golden set and kept only if it helps** (propose → measure → keep).
 scaffolding "Deployment, Installation, Back-Out, and Rollback Guide" spans ~40 titles. Globals
 dominate entities (2,359 distinct / 28,599 mentions, led by `^TMP`, `^DIC`).
 
-**Steps**
-- **L1.5a — Triage tables (✅).** Editable CSVs in **`docs/human validation/`** (one per table: title
+**Steps** *(L1.5 complete — the triage worksheets below were removed post-curation; the durable
+output lives in `registries/`.)*
+- **L1.5a — Triage tables (✅).** Editable CSVs in `docs/human validation/` (one per table: title
   tokens, boilerplate fragments, entity types, ambiguous terms, synonyms) + `HOW-TO-USE.md`; a
-  read-only overview is `docs/l1.5-curation-worksheet.md`. Generated from prod; each row has a
-  `decision` column.
+  read-only overview was `docs/l1.5-curation-worksheet.md`. Generated from prod; each row has a
+  `decision` column. *(worksheets now removed — see note above.)*
 - **L1.5b — Human triage.** Maintainer edits the `decision` column in the `docs/human validation/` CSVs
   (the irreplaceable step). *Blocking.*
 - **L1.5c — Weighted-field stoplist.** Encode the STOP tokens as a `registries/` list applied to the

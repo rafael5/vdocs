@@ -1,7 +1,0 @@
-term,issue,recommendation,decision,note
-order,clinical order vs sort order,KEEP,KEEP,"reviewed 2026-06-08: high-value clinical term (648 weighted section-titles); sort-order sense rare"
-note,TIU note vs 'Release Notes',KEEP,KEEP,"reviewed 2026-06-08: real TIU sense; 'Release Notes' noise handled by STOP-ing 'notes' in table 1"
-SD,Scheduling namespace vs 'standard',KEEP,KEEP,"reviewed 2026-06-08: real namespace, ~47 standalone occ, low noise; FTS5 caps-only not feasible"
-RA,Radiology namespace vs prose 'RA',KEEP,KEEP,"reviewed 2026-06-08: real namespace, ~112 standalone occ, modest noise"
-AR,AR/WS namespace vs the word 'are',KEEP,KEEP,"reviewed 2026-06-08: namespace AR/WS, ~29 occ; 'are' collision unavoidable in FTS5, rarely intended"
-PSS,Pharmacy Data Mgmt - unambiguous,KEEP,KEEP,"reviewed 2026-06-08: no common-word collision"
