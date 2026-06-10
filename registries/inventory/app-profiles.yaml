@@ -48,6 +48,28 @@ profiles:
       line: 7352
       match: namespace
     confidence: medium
+  ACR:
+    name: Ambulatory Care Reporting
+    purpose: Legacy Primary Care Management Module (PCMM GUI) is no longer in use and has been replaced
+      by Patient Centered Management Module (PCMM Web), VASI 1530.
+    purpose_long: 'Note: This product has been replaced by Patient Centered Management Module Web (PCMM
+      Web) so it will appear as an Inactive module in this & future versions of Monograph.'
+    function_category: Clinical Services
+    business_owner: ​Office of Primary Care Services
+    app_user_primary: clinical
+    app_user_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Inactive
+    features: &id002 []
+    namespace: SD
+    source: monograph
+    reviewed: false
+    evidence:
+      doc: vista_monograph_0723_r
+      line: 7270
+      match: namespace
+    confidence: medium
   ADT:
     name: Admission Discharge Transfer
     purpose: The Admission, Discharge, Transfer (ADT) module provides a comprehensive range of software
@@ -395,7 +417,7 @@ profiles:
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Production
-    features: &id005
+    features: &id006
     - Standalone user interface for adding, editing, printing, and searching data
     - Form-based editing
     - Flexible, extensive report module
@@ -1453,7 +1475,7 @@ profiles:
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Technical Reference Only
-    features: &id006
+    features: &id007
     - Is a standard of the HL7 standards body
     - Provides coordination among client healthcare applications, allowing them to synchronize around
       several CCOW subjects and share context (e.g., Patient, Encounter, and User Context)
@@ -1527,7 +1549,7 @@ profiles:
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Technical Reference Only
-    features: &id003 []
+    features: &id004 []
     namespace: KMPR
     source: monograph
     reviewed: false
@@ -1556,7 +1578,7 @@ profiles:
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Technical Reference Only
-    features: &id004
+    features: &id005
     - The collection task obtains information on the production global, software, and file information
       from the site and automatically transfers this data via network mail to the Capacity Planning (CP)
       National Database
@@ -2188,6 +2210,48 @@ profiles:
       line: 5940
       match: appid
     confidence: high
+  OOPS:
+    name: Automated Safety Incident Surveillance Tracking System
+    purpose: ​ Effective January 1, 2019, ASISTS is decommissioned. Patch OOPS\*2\*32 retired the ASISTS
+      (OOPS) v2 package. ASISTS has been replaced by Joint Patient Safety Reporting Web (JPSR-Web), but
+      VistA data remains available with read-only access to employees, supervisors, unions, & occupational
+      health. Access to Safety \[OOPS GUI SAFETY OFFICER MENU\] menu & Workers' Comp \[OOPS GUI WORKERS'
+      COMP MENU\] menu is still allowed for designated users. These 2 menus will remain active, so case
+      info is available for Safety for 5 years and WC for 3 years. All other options have been disabled.
+      ASISTS has been replaced with the Employee's Compensation Operations and Management Portal (ECOMP)
+      program.
+    purpose_long: Effective January 1, 2019, ASISTS has been decommissioned. It has been labeled as a
+      VistA Office Technical Reference item since it is Monograph Legacy information.
+    function_category: VistA Office (VO) Technical Reference
+    business_owner: ​ VHA Public Health
+    app_user_primary: developer
+    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Inactive
+    features:
+    - Electronic signature is used extensively throughout this program. All three forms (VA Form 2162,
+      CA-1, and CA-2) require appropriate signatures including that of the employee for the CA-1 and CA-2,
+      which is used when electronically transferring the date to the Department of Labor
+    - Bulletins alert employee health and infection control of any exposures to blood borne pathogens.
+      The employee's supervisor, the safety officer, Human Resources Management, and union representatives
+      are notified of every incident. Electronic signatures trigger bulletins from the employee to the
+      supervisor and union representatives and from the supervisor to the safety officer, alerting the
+      recipient of action that should be taken
+    - 'All medical center employees have access to a menu structured specifically to their level of involvement
+      in the process: employee health, supervisor, safety officer, union representative, workers’ compensation
+      personnel, and employee'
+    - The graphical user interface (GUI) for ASISTS facilitates the input and processing of accident reports
+      and claims and improves the reporting functionality, including a revised OSHA and Needle stick log
+      and graphical representation of the incident reports
+    namespace: OOPS
+    source: monograph
+    reviewed: false
+    evidence:
+      doc: vista_monograph_0723_r
+      line: 815
+      match: appid
+    confidence: high
   OR:
     name: Order Entry / CPRS
     purpose: ​Order Entry/Results Reporting (OERR) is a VistA product that evolved into the more comprehensive
@@ -2214,6 +2278,28 @@ profiles:
       line: 9120
       match: namespace
     confidence: medium
+  PCMM:
+    name: Primary Care Management Module
+    purpose: Legacy Primary Care Management Module (PCMM GUI) is no longer in use and has been replaced
+      by Patient Centered Management Module (PCMM Web), VASI 1530.
+    purpose_long: 'Note: This product has been replaced by Patient Centered Management Module Web (PCMM
+      Web) so it will appear as an Inactive module in this & future versions of Monograph.'
+    function_category: Clinical Services
+    business_owner: ​Office of Primary Care Services
+    app_user_primary: clinical
+    app_user_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Inactive
+    features: *id002
+    namespace: SD
+    source: monograph
+    reviewed: false
+    evidence:
+      doc: vista_monograph_0723_r
+      line: 7270
+      match: appid
+    confidence: high
   POC:
     name: 'Laboratory: Point of Care'
     purpose: 'Moved to System Component/Application for 1381: VistA - Laboratory'
@@ -2484,6 +2570,29 @@ profiles:
       match: appid
     confidence: high
     parent_package: DG
+  PRS:
+    name: Personnel and Accounting Integrated Data (PAID)
+    purpose: PAID is a mainframe-based system which was retired in January of 2022 and is now awaiting
+      decommissioning. Former PAID functionality has been provided by HR-PAS.
+    purpose_long: PAID was retired January 2022 and downloads to VistA are now provided by HR-PAS (Human
+      Resources and Payroll Application System). Enhanced Time and Attendance is no longer in use - it
+      has been replaced by VA Time and Attendance System.
+    function_category: Financial Management
+    business_owner: ​Office of Financial Management
+    app_user_primary: business-admin
+    app_user_basis: 'SPM product line: Financial Management'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Inactive
+    features: []
+    namespace: PRS
+    source: monograph
+    reviewed: false
+    evidence:
+      doc: vista_monograph_0723_r
+      line: 6318
+      match: appid
+    confidence: high
   PSA:
     name: 'Pharmacy: Drug Accountability'
     purpose: The Unit Dose (UD) module of Inpatient Medications provides a standard computerized system
@@ -2503,7 +2612,7 @@ profiles:
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Production
-    features: &id002
+    features: &id003
     - Allows immediate entry of pre-defined sets of unit dose orders
     - Provides computerized pick lists, which include pre-calculated doses for pharmacists
     - Provides an interface to automated dispensing equipment
@@ -2644,7 +2753,7 @@ profiles:
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Production
-    features: *id002
+    features: *id003
     namespace: PSA
     source: monograph
     reviewed: false
@@ -2962,6 +3071,37 @@ profiles:
       line: 8926
       match: namespace
     confidence: medium
+  QAC:
+    name: Patient Advocate Tracking System (PATS)
+    purpose: PATREP is no longer identified as a system. It was replaced by PATS, VASI ID \#1492.
+    purpose_long: Supports Patient Advocate with the collection and categorization of complaints and compliments
+      that give the medical center an opportunity to meet and exceed the customer’s expectations. The
+      issue codes provide the opportunity to track types of complaints and provide trends of specific
+      complaints. Included within the issue codes are the Customer Service Standards. A recent reliability
+      study of the codes has revealed an exceptionally high reliability in the selection of appropriate
+      codes. To help with improving perceptions, the tracking program can also extract data specific for
+      women veterans by eras of service (i.e., Gulf War, Vietnam) as well as clinic, product line, or
+      services.
+    function_category: VistA Office (VO) Technical Reference
+    business_owner: ​National Veteran Service and Advocacy Program (NVSAP)
+    app_user_primary: developer
+    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Inactive
+    features:
+    - ​Entering and editing contact information
+    - Sending Reports of Contact via the Alert system
+    - Tracking contacts that have responses due
+    - Printing various lists, statistical reports, and ad hoc reports
+    namespace: QAC
+    source: monograph
+    reviewed: false
+    evidence:
+      doc: vista_monograph_0723_r
+      line: 6276
+      match: appid
+    confidence: high
   QAM:
     name: Clinical Monitoring System
     purpose: ​VTWG 8/10/2021, per request after an internal review, it was discovered that VistA-CMS -
@@ -3061,6 +3201,32 @@ profiles:
     evidence:
       doc: vista_monograph_0723_r
       line: 5836
+      match: appid
+    confidence: high
+  QAP:
+    name: Survey Generator
+    purpose: The Survey Generator is a software package which allows creation and maintenance of computerized
+      survey forms.
+    purpose_long: The Survey Generator is a software package which allows creation and maintenance of
+      computerized survey forms. It also provides for entry of any respondent’s answers via computer terminal,
+      or a hard copy filled out and then entered by any designated person. In addition, it provides useful
+      statistical information by survey alone or by demographic data items. This package is designed with
+      both the survey author and the respondent in mind. It is simple to use and straightforward in operation
+      and does not require any exceptional skills on the user's part.
+    function_category: VistA Office (VO) Technical Reference
+    business_owner: ​VHA
+    app_user_primary: developer
+    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Inactive
+    features: []
+    namespace: QAP
+    source: monograph
+    reviewed: false
+    evidence:
+      doc: vista_monograph_0723_r
+      line: 8276
       match: appid
     confidence: high
   QMIM:
@@ -3360,7 +3526,7 @@ profiles:
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Technical Reference Only
-    features: *id003
+    features: *id004
     namespace: KMPR
     source: monograph
     reviewed: false
@@ -3389,7 +3555,7 @@ profiles:
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Technical Reference Only
-    features: *id004
+    features: *id005
     namespace: KMPS
     source: monograph
     reviewed: false
@@ -3399,6 +3565,49 @@ profiles:
       match: namespace
     confidence: medium
     parent_package: KMP
+  SD:
+    name: Scheduling
+    purpose: Legacy Primary Care Management Module (PCMM GUI) is no longer in use and has been replaced
+      by Patient Centered Management Module (PCMM Web), VASI 1530.
+    purpose_long: 'Note: This product has been replaced by Patient Centered Management Module Web (PCMM
+      Web) so it will appear as an Inactive module in this & future versions of Monograph.'
+    function_category: Clinical Services
+    business_owner: ​Office of Primary Care Services
+    app_user_primary: clinical
+    app_user_basis: 'SPM product line: Clinical Services'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Inactive
+    features: *id002
+    namespace: SD
+    source: monograph
+    reviewed: false
+    evidence:
+      doc: vista_monograph_0723_r
+      line: 7270
+      match: namespace
+    confidence: medium
+  SPN:
+    name: Spinal Cord Injury and Disorders Outcomes (SCIDO)
+    purpose: ''
+    purpose_long: This product has been decommissioned and has been labeled as a VistA Office Technical
+      Reference since it is Monograph legacy information.
+    function_category: VistA Office (VO) VistA Infrastructure
+    business_owner: ​VHA
+    app_user_primary: sysadmin
+    app_user_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Inactive
+    features: []
+    namespace: SPN
+    source: monograph
+    reviewed: false
+    evidence:
+      doc: vista_monograph_0723_r
+      line: 8036
+      match: namespace
+    confidence: medium
   SQLI:
     name: SQL Interface
     purpose: VA FileMan is the VistA database management system (DBMS). It runs in any American National
@@ -3414,7 +3623,7 @@ profiles:
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Production
-    features: *id005
+    features: *id006
     namespace: DI
     source: monograph
     reviewed: true
@@ -3510,7 +3719,7 @@ profiles:
     software_class: I
     software_class_basis: VDL national catalog membership (nationally released)
     vasi_status: Technical Reference Only
-    features: *id006
+    features: *id007
     namespace: XU
     source: monograph
     reviewed: false
@@ -3795,6 +4004,42 @@ profiles:
       line: 8806
       match: appid
     confidence: high
+  WII:
+    name: Wounded Ill and Injured Warriors
+    purpose: Wounded Injured and Ill Warriors (WII) module was developed to provide accurate and timely
+      personnel and health related data to the Department of Defense/Defense Finance and Accounting Service
+      (DoD/DFAS) supporting adequate maintenance of pay and entitlements for all wounded warriors.
+    purpose_long: Through a collaborative effort between VHA & DoD/DFAS, a Memorandum of Understanding
+      (MOU) was reached to provide defined data elements to DFAS for tracking of active-duty service members
+      admitted to VA inpatient facilities. The MOU established the authorities and agreement for the exchange
+      of information relating to admissions and discharges from VA inpatient facilities of active-duty
+      personnel. There is a weekly collection process of admissions and discharges for active-duty service
+      members at each VA inpatient facility. This collection and consolidation of data into a single repository
+      is reviewed and transmitted to DFAS to a central data collection point. Each facility runs the weekly
+      background job which collects data based on admissions and discharges for patients with a Primary
+      or Other Eligibility of TRICARE, SHARING AGREEMENT or OTHER FEDERAL AGENCY. Upon completion of the
+      background job, VistA will send an email message to the local WII ADT REVIEWER mail group alerting
+      facility staff on whether there are entries requiring approval. The message indicates either potential
+      or no potential active-duty admissions/discharges for the past week. If there were potential admissions
+      & discharges, the message will state there are active-duty admissions, reflect the number of potential
+      active-duty admissions or discharges needing review, the record count, and the time period of the
+      report. Staff will review and process those potential active-duty cases.
+    function_category: VistA Office (VO) Technical Reference
+    business_owner: ​ Software Product Management Office
+    app_user_primary: developer
+    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Inactive
+    features: []
+    namespace: WII
+    source: monograph
+    reviewed: false
+    evidence:
+      doc: vista_monograph_0723_r
+      line: 10184
+      match: appid
+    confidence: high
   WV:
     name: Womens Health
     purpose: The Women's Health (WH) application provides tracking functionality for procedures of particular
@@ -3930,6 +4175,40 @@ profiles:
       match: appid
     confidence: high
     parent_package: XU
+  XT:
+    name: Kernel Toolkit
+    purpose: ​Kernel Toolkit (also referred to as "Toolkit") supplements the Kernel software package.
+      It provides Development and Quality Assessment Tools and System Management Utilities.
+    purpose_long: Kernel Toolkit (also referred to as "Toolkit" supplements the Kernel software package.
+      It provides Development and Quality Assessment Tools and System Management Utilities.
+    function_category: VistA Office (VO) VistA Infrastructure
+    business_owner: ​VHA
+    app_user_primary: sysadmin
+    app_user_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Inactive
+    features:
+    - Promote standard programmer interfaces
+    - Provide programmer and systems management
+    - Provide a portable routine and global editor
+    - Check adherence to programming standards and correct syntax with the XINDEX tool
+    - Provide support for data standardization
+    - Provide standard error trapping, storing, and reporting
+    - Support quality assessment tools for the comparison of routines and data dictionaries
+    - Provide software project management utilities
+    - Provide tools to work with data in Extensible Markup Language (XML)
+    - Customize and tune site parameters for local requirements
+    - Provide a Multi-Term Lookup Utility for enhanced VA FileMan lookups
+    - Provide PARAMETERS file (#8989.5) for user-specific to system-level tracking of parameter values
+    namespace: XT
+    source: monograph
+    reviewed: false
+    evidence:
+      doc: vista_monograph_0723_r
+      line: 4566
+      match: appid
+    confidence: high
   XU:
     name: Kernel
     purpose: ​Kernel provides a portability layer between the underlying operating system and application
@@ -4008,6 +4287,84 @@ profiles:
     evidence:
       doc: vista_monograph_0723_r
       line: 7696
+      match: appid
+    confidence: high
+  YS:
+    name: Mental Health
+    purpose: ​VTWG on 10/20/2020 the system is marked INACTIVE per request. Interface for historical lookup
+      of Medical Opinions on Mental Health Claims. Business is considering discontinuing service. The Mental
+      Health module provides computer support for both clinical and administrative patient care activities
+      associated with mental health care.
+    purpose_long: Psychiatrists and psychologists have directed this VistA module’s design with active
+      input from all health care disciplines, guided by the principle of creating software that makes
+      the clinician’s job easier and leads to better patient care. A by-product of this approach has been
+      the creation of a clinical database, which is useful to mental health program managers in many ways,
+      including evaluating clinical productivity, monitoring, and improving the quality of care, and trending
+      various patient care events. This clinical database package is comprehensive and accessible from
+      workstations throughout medical facilities.
+    function_category: VistA Office (VO) Technical Reference
+    business_owner: ​Mental Health
+    app_user_primary: developer
+    app_user_basis: 'SPM product line: VistA Office (VO) Technical Reference'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Inactive
+    features:
+    - A patient profile with demographic information and a brief index of the clinical database, including
+      physical examinations, psychological tests, and clinical interviews, problem list, and diagnoses
+    - Diagnostic and Statistical Manual of Mental Disorders (DSM-IV) and International Classification
+      of Diseases (ICD-9 & ICD-10) diagnoses. Psychological test and interview results, reviews of systems,
+      past medical histories, crisis notes, clinical patient messages, and progress notes
+    - A Global Assessment of Functioning (GAF) Case Finder Report, which lists all patients that have
+      not been given a GAF score within the last 90 days
+    - The ability for patients to undergo psychological tests and clinical interviews at a workstation,
+      saving considerable clinician time. Psychological tests are automatically scored for retrieval,
+      with access governed by the guidelines of the American Psychological Association
+    - Provides functionality required to run associated commercial-off-the-shelf (COTS) software
+    - Allows clinicians and patients to enter demographics and self-administered interviews via a workstation
+      using video and audio technology
+    - Provides the patients with privacy and appropriate time to complete an interview
+    - Provides a crash recovery file
+    - Displays patient demographics data, which can be printed, copied to the Windows clipboard, or saved
+      to a text file
+    - Context-sensitive help is available for most items, with suggestions for test administration and
+      interpretations
+    - Provides a user-friendly interface for entering interview data
+    - Enhances the ability of both staff and patients to enter psychological test data
+    - Creates reports and graphical displays of complex tests by sub-category or scales
+    - Creates psychological test order windows that display tests that can be ordered based on the provider
+      privileges
+    - Provides a text report of selected tests and graphs of numeric scores
+    - Helps clarify diagnoses and provides empirical measures for treatment outcomes
+    namespace: YS
+    source: monograph
+    reviewed: false
+    evidence:
+      doc: vista_monograph_0723_r
+      line: 5052
+      match: appid
+    confidence: high
+  ZSLOT:
+    name: SlotMaster (Kernel ZSLOT)
+    purpose: SlotMaster is a quick login utility for VMS systems. SlotMaster saves user time by letting
+      the user connect directly to an active M partition. This saves users from sitting through VMS process
+      creation and loading an M partition, allowing them to log in to VistA.
+    purpose_long: This product has been decommissioned and has been designated as a VistA Office Technical
+      Reference since it is Monograph legacy information.
+    function_category: VistA Office (VO) VistA Infrastructure
+    business_owner: ​Not Applicable
+    app_user_primary: sysadmin
+    app_user_basis: 'SPM product line: VistA Office (VO) VistA Infrastructure'
+    software_class: I
+    software_class_basis: VDL national catalog membership (nationally released)
+    vasi_status: Inactive
+    features: []
+    namespace: ZSL
+    source: monograph
+    reviewed: false
+    evidence:
+      doc: vista_monograph_0723_r
+      line: 7972
       match: appid
     confidence: high
 fallback_profiles:
@@ -4381,7 +4738,6 @@ fallback_profiles:
     confidence: low
 _needs_fallback: {}
 _excluded:
-  ACR: Ambulatory Care Reporting — inactive (VASI status)
   AFJX: Network Health Exchange (NHE) — non-vista (system_type=Integration middleware)
   BMS: Bed Management Solution — non-vista (system_type=COTS product)
   CAPRI: Compensation and Pension Record Interchange — non-vista (system_type=VBA system)
@@ -4423,23 +4779,16 @@ _excluded:
   NPM: National Patch Module — non-vista (system_type=VA enterprise service)
   NUMI: National Utilization Management Integration — non-vista (system_type=Web client)
   OHRS: Occupational Health Record-keeping System — non-vista (system_type=VA enterprise service)
-  OOPS: Automated Safety Incident Surveillance Tracking System — inactive (VASI status)
   ORRC: Care Management — decommissioned (inventory app_status)
-  PCMM: Primary Care Management Module — inactive (VASI status)
   PECS: 'Pharmacy: Pharmacy Enterprise Customization System — non-vista (system_type=Web client)'
   PPS-N: 'Pharmacy: Pharmacy Product System - National — non-vista (system_type=Web client)'
   PRED: 'Pharmacy: Pharmacy Data Update (DATUP) — non-vista (system_type=Web client)'
   PREM: 'Pharmacy: Medication Order Check Healthcare Application (MOCHA) — non-vista (system_type=Integration
     middleware)'
-  PRS: Personnel and Accounting Integrated Data (PAID) — inactive (VASI status)
-  QAC: Patient Advocate Tracking System (PATS) — decommissioned (inventory app_status)
   QAN: Incident Reporting — decommissioned (inventory app_status)
-  QAP: Survey Generator — inactive (VASI status)
   ROES: Remote Order Entry System — non-vista (system_type=Web client)
   SAMH: Health Information Gateway and Exchange (HINGE) — non-vista (system_type=Web client)
-  SD: Scheduling — decommissioned (inventory app_status)
   SOW: Social Work — decommissioned (inventory app_status)
-  SPN: Spinal Cord Injury and Disorders Outcomes (SCIDO) — decommissioned (inventory app_status)
   STS: Standards & Terminology Services — non-vista (system_type=VA enterprise service)
   TMP: Telehealth Management Platform — non-vista (system_type=Integration middleware)
   VAP: Veterans Authorization and Preferences — non-vista (system_type=VA enterprise service)
@@ -4460,9 +4809,5 @@ _excluded:
   WEBP: Patient Centered Management Module (PCMM Web) — non-vista (system_type=Web client)
   WEBS: VistA Audit Solution — non-vista (system_type=Web client)
   WEBV: VistAWeb — non-vista (system_type=Web client)
-  WII: Wounded Ill and Injured Warriors — inactive (VASI status)
   XOBE: Electronic Signature (ESig) — non-vista (system_type=Integration middleware)
   XOBW: HealtheVet Web Services Client (HWSC) — non-vista (system_type=Integration middleware)
-  XT: Kernel Toolkit — inactive (VASI status)
-  YS: Mental Health — inactive (VASI status)
-  ZSLOT: SlotMaster (Kernel ZSLOT) — inactive (VASI status)

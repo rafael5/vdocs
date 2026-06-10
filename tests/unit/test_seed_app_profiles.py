@@ -224,14 +224,14 @@ def test_fallback_profile_carries_enrichments() -> None:
     assert fb["namespace"] == "ONC"
 
 
-def test_classify_scope_excludes_non_vista_and_decommissioned() -> None:
-    assert classify_scope("VistA", "active", "Production") == (True, "")
-    assert classify_scope("VistA + GUI", "archive", "Production") == (True, "")
-    ok, reason = classify_scope("Web client", "active", "Production")
+def test_classify_scope_matches_pipeline_gate_no_vasi_exclusion() -> None:
+    # in-scope = VistA prefix AND not decommissioned — the SAME rule as scope-policy.yaml
+    assert classify_scope("VistA", "active") == (True, "")
+    assert classify_scope("VistA + GUI", "active") == (True, "")
+    ok, reason = classify_scope("Web client", "active")
     assert ok is False and "non-vista" in reason
-    ok, reason = classify_scope("COTS product", "active", "Production")
+    ok, reason = classify_scope("COTS product", "active")
     assert ok is False and "non-vista" in reason
-    ok, reason = classify_scope("VistA", "decommissioned", "Production")
+    ok, reason = classify_scope("VistA", "decommissioned")
     assert ok is False and "decommissioned" in reason
-    ok, reason = classify_scope("VistA", "active", "Inactive")
-    assert ok is False and "inactive" in reason
+    # VASI status is NOT a scope input — an app the gate admits must get a profile (e.g. SD/YS/XT)

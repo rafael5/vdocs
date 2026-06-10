@@ -230,8 +230,10 @@ doc already cleared G3/G4), so they belong to the inventory plane (§10 item 2),
 
 ## 7. App-profile enrichments (the Monograph/#9.4 layer)
 
-`registries/inventory/app-profiles.yaml` — one profile per application (92 from the **VistA Monograph
-July 2023** §4, 21 curated fallback, 83 excluded). Each profile:
+`registries/inventory/app-profiles.yaml` — one profile per application (104 from the **VistA Monograph
+July 2023** §4, 21 curated fallback, 71 excluded). The profile scope **matches the pipeline app-scope
+gate** (VistA + not decommissioned; VASI status is a *field*, not a scope filter) so every app whose
+docs enter gold gets a profile — `app_user` covers 100% of gold docs. Each profile:
 
 | Field | Source | Use | Conf |
 |---|---|---|---|
@@ -351,7 +353,7 @@ Measured on 2,889 in-scope VistA genuine docs:
    not the document. Tests: `kernel/test_personas`, `test_enrich_doc_pure`, `test_index_stage`,
    `test_facets`. **Remaining:** backfill the lake (item 5) so the columns populate for real.
 2. **Materialize the app-scope gate as an inventory field** (`app_in_scope` + `app_scope_reason`) and
-   `state.db` skip-logging, with a regression fixture locking the 1,390/2,338 + 83-`_excluded` splits.
+   `state.db` skip-logging, with a regression fixture locking the 1,390/2,338 + 71-`_excluded` splits.
    See `docs/prompts/scope-gatekeeper-kickoff.md`.
 3. **Class II via the VA SAC list** — seed `registries/inventory/software-class.yaml` by namespace to
    split true Class II out of the Class I default.

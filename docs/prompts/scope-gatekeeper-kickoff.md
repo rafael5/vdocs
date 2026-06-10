@@ -14,16 +14,20 @@ converted, enriched, indexed, or published to gold:
 1. **Non-VistA / pure COTS** — commercial products and standalone systems that aren't VistA M
    packages (e.g. `system_type` ∈ {COTS product, Web client, VA enterprise service, Integration
    middleware, VBA system, Program documentation, Data patch}).
-2. **Decommissioned** — retired packages (`app_status == "decommissioned"`, or VDL/Monograph
-   marks them retired).
-3. **Inactive** — Monograph `VASI System Status == "Inactive"`.
+2. **Decommissioned** — retired packages (`app_status == "decommissioned"` — aggregated across the
+   app's rows: decommissioned only when *every* row is, so an app with any active/archive doc stays in).
 
-**In scope = active VistA M package.** Concretely the current predicate (the seed of the gate):
+> **VASI status is NOT a scope filter.** An earlier draft also excluded Monograph
+> `VASI System Status == "Inactive"`, but the live pipeline gate doesn't see VASI, so it *admits*
+> those apps' docs into gold — excluding them at the profile layer left ~185 gold docs (incl. all of
+> Scheduling) untagged. `vasi_status` is kept as a profile *field* (lifecycle/importance), never a
+> scope filter. The profile scope now **matches the gate exactly**.
+
+**In scope = VistA M package that isn't decommissioned.** Concretely the predicate (the seed of the gate):
 
 ```
 in_scope  ⟺  system_type.startswith("VistA")          # VistA, VistA + GUI/COTS/middleware
-            AND app_status != "decommissioned"
-            AND vasi_status.lower() != "inactive"
+            AND app_status != "decommissioned"          # aggregated; not first-row
 ```
 
 VistA-hybrids (`VistA + COTS`, `VistA + GUI`, `VistA + middleware`) **stay in** — they are
@@ -37,9 +41,10 @@ VistA-based. Only *pure* COTS/web/enterprise-service apps are excluded.
 ## What already exists (reuse, don't reinvent)
 
 - `scripts/seed_app_profiles.py` — `classify_scope()` is the reference predicate (tested in
-  `tests/unit/test_seed_app_profiles.py`). The draft `registries/inventory/app-profiles.yaml`
-  `_excluded:` block is the current ruling on all 196 apps (61 non-vista + 13 decommissioned + 9
-  inactive = 83 excluded) — use it as the expected-output fixture for the gate.
+  `tests/unit/test_seed_app_profiles.py`), now **aligned to this gate** (VistA prefix + not
+  decommissioned; **VASI status is NOT a scope filter** — it's a profile field). The draft
+  `registries/inventory/app-profiles.yaml` `_excluded:` block is the current ruling on all 196 apps
+  (**71 excluded** = non-vista + truly-decommissioned) — use it as the expected-output fixture.
 - Signals available on every inventory row: `system_type`, `cots_dependent`, `app_status`,
   `app_name_abbrev`, `pkg_ns`; plus Monograph `VASI System Status` where the app joins.
 
@@ -57,7 +62,7 @@ Both gates are **enforced at the fetch chokepoint** and green (`make check`, 813
 **Remaining** (the rest of this doc): surface the decision in the **gold inventory / index.db facet
 / gold frontmatter** (`app_in_scope`, `doc_kept`, policy `tier`) so it's visible offline, not just
 enforced at fetch; add the `state.db` skip-logging + regression fixture (lock the 1390/2338 and the
-83-app `_excluded` splits); fold the per-app manual overrides into `scope-policy.yaml`. The pure
+71-app `_excluded` splits); fold the per-app manual overrides into `scope-policy.yaml`. The pure
 predicate already exists (`GatePolicy.admits`) — promote it from fetch-only to a baked inventory
 field in `catalog`/`enrich`.
 
@@ -88,7 +93,7 @@ Enforce it at the same gate as app-scope (skip + log omitted docs in `state.db`)
 ## The task (TDD — test first, per CLAUDE.md)
 
 1. **Declare the policy as data**, not code: add `registries/inventory/scope-policy.yaml` —
-   the allowed/denied `system_type` values, the denied `app_status`/`vasi_status` values, and any
+   the allowed `system_type` prefixes and the denied `app_status` values (NOT `vasi_status`), and any
    per-app manual overrides (with rationale). Discovery is data (tenet #13), so the gate reads the
    registry; it never hard-codes the lists.
 2. **Add an app-level scope field to the inventory** (`EnrichedRecord`): e.g. `app_in_scope: bool`
@@ -107,7 +112,7 @@ Enforce it at the same gate as app-scope (skip + log omitted docs in `state.db`)
 - One registry declares the policy; one pure predicate enforces it; zero hard-coded lists in stages.
 - `make check` green (lint, mypy, ≥95% coverage on the new pure code).
 - Re-running `fetch` admits exactly the in-scope VistA apps; out-of-scope apps are skipped with a
-  logged, queryable reason — verified against the 83-app `_excluded` baseline.
+  logged, queryable reason — verified against the 71-app `_excluded` baseline.
 - `app_in_scope` is visible in the inventory, the index, and gold frontmatter.
 
 ## Related follow-up — Class II via the VA SAC list (importance filtering)

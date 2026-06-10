@@ -204,23 +204,34 @@ def parent_package(abbrev: str) -> str:
     return _PARENT_PACKAGE.get(abbrev, "")
 
 
-def classify_scope(system_type: str, app_status: str, vasi_status: str) -> tuple[bool, str]:
-    """In-scope = active VistA (M-based) app. COTS/web/non-VistA and decommissioned/inactive out."""
+def classify_scope(system_type: str, app_status: str) -> tuple[bool, str]:
+    """In-scope = VistA (M-based) app that isn't decommissioned — **the same rule as the live
+    pipeline gate** (`scope-policy.yaml`: `system_type` prefix + denied `app_status`). The profile
+    layer MUST match the gate so every app whose docs enter gold gets a profile (no untagged gold).
+    NOTE: the Monograph `vasi_status` is kept as a profile *field* (lifecycle/importance) but is NOT
+    used to exclude — VASI-inactive apps the gate still admits (e.g. SD, YS, XT) need profiles."""
     if not system_type.startswith("VistA"):
         return False, f"non-vista (system_type={system_type})"
     if app_status == "decommissioned":
         return False, "decommissioned (inventory app_status)"
-    if vasi_status.strip().lower() == "inactive":
-        return False, "inactive (VASI status)"
     return True, ""
 
 
 def _distinct_apps(inv: EnrichedInventory) -> dict[str, dict]:
-    """One row per canonical abbrev with the fields needed to join + scope."""
+    """One row per canonical abbrev with the fields needed to join + scope.
+
+    ``app_status`` is **aggregated across all the app's rows**, not taken from the first one: an app
+    is ``decommissioned`` only when *every* row is (matching the pipeline gate's per-doc semantics —
+    an app with any active/archive doc is in scope). The first-row-wins bug otherwise flagged whole
+    active apps decommissioned (e.g. SD/Scheduling: 10 decommissioned rows of 760)."""
     apps: dict[str, dict] = {}
+    statuses: dict[str, set[str]] = {}
     for r in inv.records:
         ab = r.app_name_abbrev
-        if not ab or ab in apps:
+        if not ab:
+            continue
+        statuses.setdefault(ab, set()).add(r.app_status)
+        if ab in apps:
             continue
         am = _APPID.search(r.app_url)
         apps[ab] = {
@@ -228,8 +239,10 @@ def _distinct_apps(inv: EnrichedInventory) -> dict[str, dict]:
             "pkg_ns": r.pkg_ns,
             "appid": am.group(1) if am else "",
             "system_type": r.system_type,
-            "app_status": r.app_status,
+            "app_status": "",  # filled below from the aggregate
         }
+    for ab, app in apps.items():
+        app["app_status"] = "decommissioned" if statuses[ab] == {"decommissioned"} else "active"
     return apps
 
 
@@ -456,7 +469,7 @@ def build_profiles(entries: list[dict], inv: EnrichedInventory) -> dict:
 
     for abbrev in sorted(apps):
         app = apps[abbrev]
-        ok, reason = classify_scope(app["system_type"], app["app_status"], "")
+        ok, reason = classify_scope(app["system_type"], app["app_status"])
         if not ok:
             excluded[abbrev] = f"{app['name']} — {reason}"
             continue
@@ -468,11 +481,6 @@ def build_profiles(entries: list[dict], inv: EnrichedInventory) -> dict:
                 needs_fallback[abbrev] = (
                     f"{app['name']} — not in Monograph 2023 (needs manual extraction)"
                 )
-            continue
-        # re-check scope now that we know the Monograph VASI status
-        ok, reason = classify_scope(app["system_type"], app["app_status"], entry["vasi_status"])
-        if not ok:
-            excluded[abbrev] = f"{app['name']} — {reason}"
             continue
         primary, secondary, basis = resolve_audience(
             abbrev, entry["product_line"], entry["business_owner"]
