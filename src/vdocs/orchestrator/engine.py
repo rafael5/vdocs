@@ -103,6 +103,7 @@ class Orchestrator:
         selected = self._select(from_, to, only)
         total = len(selected)
         for i, stage in enumerate(selected, 1):
+            rep.stage_start(i, total, stage.name, stage.description)
             pf = stage.preflight(ctx, force)
             if pf.decision is Decision.FAIL:
                 log.error("stage-preflight-failed", stage=stage.name, reason=pf.reason)

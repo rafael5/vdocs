@@ -80,3 +80,75 @@ def test_summary_renders_warning_lines_human_readably():
     out = "\n".join(lines)
     assert "permanently unavailable" in out
     assert "DGBT:dgbt_1_40_um" in out
+
+
+def test_stage_start_emits_a_live_banner():
+    lines, r = _reporter()
+    r.stage_start(2, 13, "fetch", "download selected documents")
+    out = "\n".join(lines)
+    assert "2/13" in out and "fetch" in out
+    assert "download selected documents" in out
+
+
+def test_rich_renderer_renders_stages_and_verdict():
+    import io
+
+    from rich.console import Console
+
+    from vdocs.orchestrator.report import RichRenderer, RunReporter
+
+    buf = io.StringIO()
+    # a non-terminal file → Rich emits plain text, so substrings are stable to assert
+    r = RunReporter(renderer=RichRenderer(Console(file=buf, width=120)))
+    r.stage_start(1, 4, "crawl", "crawl the VDL")
+    r.stage_done(1, 4, "crawl", Status.GREEN, {"docs": 8907}, [], 1.2)
+    r.stage_skipped(2, 4, "catalog", "inputs unchanged")
+    r.stage_done(3, 4, "fetch", Status.WARN, {"fetched": 1040}, ["2 docs missing"], 99.5)
+    r.stage_error(4, 4, "validate", "1 severed ref", "fix refs.yaml then re-run validate")
+    r.render_summary()
+    out = buf.getvalue()
+    for name in ("crawl", "catalog", "fetch", "validate"):
+        assert name in out
+    assert "GREEN" in out and "WARN" in out and "ERROR" in out
+    assert "VERDICT" in out.upper()
+    assert "refs.yaml" in out  # the remediation reaches the operator
+    assert "2 docs missing" in out  # the warning reaches the operator
+    assert r.verdict() is Status.ERROR  # data model unchanged by the renderer
+
+
+def test_fmt_elapsed_formats_seconds_and_minutes():
+    from vdocs.orchestrator.report import _fmt_elapsed
+
+    assert _fmt_elapsed(1.5) == "1.5s"
+    assert _fmt_elapsed(372.0) == "6m12s"
+
+
+def test_default_renderer_picks_rich_on_tty_plain_otherwise(monkeypatch):
+    import vdocs.orchestrator.report as rep
+
+    class _Out:
+        def __init__(self, tty: bool) -> None:
+            self._tty = tty
+
+        def isatty(self) -> bool:
+            return self._tty
+
+    monkeypatch.setattr(rep.sys, "stdout", _Out(False))
+    assert isinstance(rep._default_renderer(), rep.PlainRenderer)
+    monkeypatch.setattr(rep.sys, "stdout", _Out(True))
+    assert isinstance(rep._default_renderer(), rep.RichRenderer)
+
+
+def test_rich_and_plain_agree_on_verdict_and_exit_code():
+    import io
+
+    from rich.console import Console
+
+    from vdocs.orchestrator.report import RichRenderer, RunReporter
+
+    rich = RunReporter(renderer=RichRenderer(Console(file=io.StringIO(), width=100)))
+    plain = RunReporter(echo=lambda _s: None)
+    for rep in (rich, plain):
+        rep.stage_done(1, 1, "fetch", Status.WARN, {}, ["heads up"], 0.0)
+    assert rich.verdict() is plain.verdict() is Status.WARN
+    assert rich.exit_code(strict=True) == plain.exit_code(strict=True) == 10
