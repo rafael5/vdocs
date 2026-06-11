@@ -52,11 +52,11 @@
 | | P2.3 | Coverage stats (% populated, distinct counts, rows) in `manifest.json` | ✅ | `_gather_coverage` (defensive over columns) → `coverage` block |
 | | P2.4 | `capabilities` (read-contract) in `manifest.json` | ✅ | `read_contract`{version,capabilities} block from spec |
 | | P2.5 | Corpus characterization snapshot in `manifest.json` | ✅ | `facet_distribution` → `characterization` block (diffable per build) |
-| **P3 — Shared Go core** (vdocs-tui) | P3.1 | Extract `internal/index` → importable `pkg/index` | ⬜ | API-stable; tests green |
-| | P3.2 | Vendor `contracts/read/v1.json` + `go:generate` → col constants/struct/`RequiredSchemaVersion` | ⬜ | codegen |
-| | P3.3 | `Open()` runtime version check (MAJOR mismatch → clear error) | ⬜ | |
-| | P3.4 | `make contract-check` drift check (vendored vs local vdocs sibling) | ⬜ | the "warn me" alarm |
-| | P3.5 | Contract test against fixture DB built from spec | ⬜ | CI |
+| **P3 — Shared Go core** (vdocs-tui) | P3.1 | Extract `internal/index` → importable `pkg/index` | ✅ | mechanical PR #23 (`5d2f880`); API-stable |
+| | P3.2 | Vendor `contracts/read/v1.json` + bind (`go:embed`+parse, not codegen) | ✅ | PR #24; `RequiredSchemaVersion`/`Capabilities`/`ContractViewColumns` |
+| | P3.3 | `Open()` runtime version check (MAJOR mismatch → clear error) | ✅ | unstamped DB degrades, doesn't block |
+| | P3.4 | `make contract-check` drift check (vendored vs local vdocs sibling) | ✅ | the "warn me" alarm; in `make check`, self-skips in CI |
+| | P3.5 | Contract test (accessors + accept/refuse/degrade) | ✅ | `pkg/index/contract_test.go` |
 | **P4 — vdocs-tui consumes contract** | P4.1 | Query `v_*` views, not physical tables | ⬜ | |
 | | P4.2 | Defensive optional columns → absent column = absent facet | ⬜ | graceful degradation |
 | | P4.3 | Read all vocab from `vocab` table | ⬜ | |
@@ -259,24 +259,39 @@ errors clearly on MAJOR mismatch; P3.4 `make contract-check` diffs vendored vs
 TDD throughout; one PR for P3.1 (isolated mechanical move), then feature PRs.
 
 ### Changelog
-_(none yet)_
+- **2026-06-11** — ✅ landed (vdocs-tui, two PRs; build + tests + lint + contract-check green).
+  - **P3.1** PR #23 (`5d2f880`): `git mv internal/index pkg/index` + import rewrites; API-unchanged.
+  - **P3.2–P3.5** PR #24 (`12baa2f`): vendored `pkg/index/contract/v1.json` (`go:embed`),
+    `contract.go` (`RequiredSchemaVersion`/`Capabilities`/`ContractViewColumns`), `Open()`
+    MAJOR-compat check (unstamped DB degrades), `make contract-check` (in `make check`),
+    `contract_test.go`.
 
 ### Discoveries
-_(to fill)_ — seeded by D2, D6.
+- **D13 (deviation from plan):** chose **`go:embed` + parse** over a `go:generate` code generator
+  for the Go contract binding — same runtime/drift/contract guarantees with far less machinery (no
+  generator to maintain, no generated-file-diff CI dance). **Tradeoff:** the kickoff's scenario-1
+  guarantee ("*compile* error when you read a field the contract lacks") softens to a **test/runtime**
+  failure, because the SQL still uses string column names rather than generated constants. Wiring
+  generated column constants into every query (true compile-time enforcement) is a larger query
+  rewrite — deferred; the drift check + contract test + producer-side doctor gate cover the gap.
+- **D14:** `Open()`'s version check must be **lenient on a missing stamp** — pre-contract/foreign
+  DBs and the existing Go test fixtures have no `meta` table, so absent → proceed; only a
+  *present-but-incompatible* MAJOR is fatal. (Also why the live pre-P1 lake DB still opens in the
+  TUI — it just doesn't get the compatibility guarantee until rebuilt.)
+- **process:** `git mv internal/index pkg/index` failed until `pkg/` existed (`mkdir -p pkg` first).
 
 ### Risks & mitigations
-- **Risk:** `internal/`→`pkg/` move breaks the `vdocs-tui` build / import paths broadly.
-  **Mitigation:** mechanical move + global import rewrite in a single isolated PR; gate green before
-  any feature work; keep the package API identical.
-- **Risk:** `make contract-check` needs the vdocs sibling present — fails on a machine without it.
-  **Mitigation:** drift check is *advisory + CI-only against a checked-in upstream snapshot*; the
-  vendored copy is authoritative for builds, so a missing sibling degrades to "drift unknown," not a
-  broken build.
-- **Risk:** codegen output committed vs generated-on-build divergence. **Mitigation:** commit the
-  generated file + a CI check that `go generate ./...` produces no diff (the standard Go pattern).
+- **Risk:** `make contract-check` needs the vdocs sibling present. **Mitigation (shipped):** the
+  drift check self-skips ("drift unknown") when `$(VDOCS_CONTRACT)` is absent, so CI/airgapped
+  builds don't break; the vendored copy is authoritative for the build either way.
+- **Risk:** vendored contract silently rots behind upstream. **Mitigation (shipped):**
+  `make contract-check` is in `make check`, so a local dev build flags drift the moment the sibling
+  advances.
 
 ### Lessons learned
-_(none yet)_
+- `go:embed`+parse is the pragmatic equal of codegen when the generated artifact is just *data the
+  code reads* (versions, capability/column sets) rather than *symbols the code references*. Reach
+  for codegen only when you want the compiler to enforce references.
 
 ---
 
