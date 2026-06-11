@@ -7,10 +7,11 @@
 # aliases that map a document to a product (longest/most-specific match wins;
 # order within an app is specific-first, generic core last).
 #
-# ONLY multi-product namespaces are listed. A single-product app defaults to its
-# app_code (abbr) + app_name (full), already handled by the `application` facet.
+# Every app is listed: the hand-curated multi-product namespaces first, then a
+# Phase-2b sweep of single-product apps (abbr from the app_name's parenthetical
+# where present, else the app_code; match keeps the distinguishing suffix).
 # Curated 2026-06-10 from the Phase-1 mining (docs/product-*.draft.yaml); edit
-# freely (tenet #13).
+# freely (tenet #13) — change an entry and `vdocs run --only index --force`.
 
 products:
 
@@ -105,3 +106,176 @@ products:
     - { abbr: Kernel, full: Kernel, match: [Kernel, "Assigning Person Class", "Reverse Negative Lock", "VistA Build Analyzer", KDC] }
   DI:
     - { abbr: FileMan, full: VA FileMan, match: [FileMan, "FM ", "VA FileMan"] }
+
+  # ── single-product apps (Phase-2b sweep) — abbr from app_name's parenthetical
+  # abbreviation where present, else app_code; match keeps the distinguishing suffix ──
+  ACKQ:  # Quality Audiology and Speech Analysis and Reporting (QUASAR)
+    - { abbr: QUASAR, full: Quality Audiology and Speech Analysis and Reporting, match: [Quality Audiology and Speech Analysis and Reporting, Quality Audiology and Speech Analysis and Reporting (QUASAR), QUASAR, Audiometric Exam, ACKQ] }
+  ACR:  # Ambulatory Care Reporting
+    - { abbr: ACR, full: Ambulatory Care Reporting, match: [Ambulatory Care Reporting, ACRP Interface Toolkit, ACR] }
+  AMT:  # Anticoagulation Management Tool
+    - { abbr: AMT, full: Anticoagulation Management Tool, match: [Anticoagulation Management Tool, AMT] }
+  ANRV:  # Visual Impairment Service Team (VIST)
+    - { abbr: VIST, full: Visual Impairment Service Team, match: [Visual Impairment Service Team, Visual Impairment Service Team (VIST), Blind Rehab, VIST, ANRV] }
+  AR/WS:  # Pharmacy: Automatic Replenish / Ward Stock
+    - { abbr: AR/WS, full: Automatic Replenish / Ward Stock, match: ["Pharmacy: Automatic Replenish / Ward Stock", Automatic Replenish / Ward Stock, Automatic Replenishment/Ward Stock, AR/WS] }
+  ASCD:  # Automated Service Connected Designation
+    - { abbr: ASCD, full: Automated Service Connected Designation, match: [Automated Service Connected Designation, ASCD] }
+  ASU:  # CPRS: Authorization Subscription Utility
+    - { abbr: ASU, full: Authorization Subscription Utility, match: ["CPRS: Authorization Subscription Utility", Authorization Subscription Utility, ASU Clinical Coordinator, ASU] }
+  CPRS:  # Computerized Patient Record System
+    - { abbr: CPRS, full: Computerized Patient Record System, match: [Computerized Patient Record System, CPRS, Provider Role Tool, CPRS Query Hepatitis C Reports, EHRM Cutover Note] }
+  CRHD:  # Shift Handoff Tool
+    - { abbr: CRHD, full: Shift Handoff Tool, match: [Shift Handoff Tool, CRHD] }
+  DGBT:  # Beneficiary Travel
+    - { abbr: DGBT, full: Beneficiary Travel, match: [Beneficiary Travel, Beneficiary Travel Dashboard, DGBT] }
+  DGJ:  # Incomplete Records Tracking (IRT)
+    - { abbr: IRT, full: Incomplete Records Tracking, match: [Incomplete Records Tracking, Incomplete Records Tracking (IRT), IRT, DGJ] }
+  DVBA:  # Automated Medical Information Exchange (AMIE)
+    - { abbr: AMIE, full: Automated Medical Information Exchange, match: [Automated Medical Information Exchange, Automated Medical Information Exchange (AMIE), AMIE, AMIE Medical Admin Service, AMIE Regional Office, DVBA] }
+  ECME:  # Electronic Claims Management Engine
+    - { abbr: ECME, full: Electronic Claims Management Engine, match: [Electronic Claims Management Engine, ECME] }
+  ECX:  # Decision Support System (DSS) Extracts
+    - { abbr: DSS, full: Decision Support System Extracts, match: [Decision Support System  Extracts, Decision Support System (DSS) Extracts, Decision Support System Extracts, DSS FY21, DSS, ECX] }
+  EDIS:  # Emergency Department Integration Software
+    - { abbr: EDIS, full: Emergency Department Integration Software, match: [Emergency Department Integration Software, Emergency Dept Integration Software (EDIS) Increment 3, Emergency Dept Integration Software GUI (EDIS), Emergency Dept Integration Software (EDIS), EDIS] }
+  EFR:  # Registry: Embedded Fragments
+    - { abbr: EFR, full: Embedded Fragments, match: ["Registry: Embedded Fragments", Embedded Fragments, EFR] }
+  EN:  # Engineering (AEMS / MERS)
+    - { abbr: EN, full: Engineering (AEMS / MERS), match: [Engineering (AEMS / MERS), EN RTLS Enhancement, EN RTLS Enhancement Interfaces, EN] }
+  EPI:  # Laboratory: Emerging Pathogens Initiative
+    - { abbr: EPI, full: Emerging Pathogens Initiative, match: ["Laboratory: Emerging Pathogens Initiative", Emerging Pathogens Initiative, Laboratory Hepatitis C and EPI, Laboratory EPI Roll Up Modifications, Laboratory EPI Search/Extract, Laboratory EPI] }
+  FB:  # Fee Basis
+    - { abbr: FB, full: Fee Basis, match: [Fee Basis, ARCH, FB] }
+  FFP:  # Fugitive Felon Program
+    - { abbr: FFP, full: Fugitive Felon Program, match: [Fugitive Felon Program, Fugitive Felon Program (FFP), FFP] }
+  FH:  # Nutrition and Food Service
+    - { abbr: FH, full: Nutrition and Food Service, match: [Nutrition and Food Service, "Nutrition & Food Services", FH] }
+  FIM:  # Functional Independence Measurement
+    - { abbr: FIM, full: Functional Independence Measurement, match: [Functional Independence Measurement, Functional Independence Measurement (FIM), FIM] }
+  GEN:  # Generic Code Sheet (GCS)
+    - { abbr: GCS, full: Generic Code Sheet, match: [Generic Code Sheet, Generic Code Sheet (GCS), GCS, GEN] }
+  GMPL:  # CPRS: Problem List
+    - { abbr: GMPL, full: Problem List, match: ["CPRS: Problem List", Problem List, GMPL] }
+  GMR:  # Intake and Output
+    - { abbr: GMR, full: Intake and Output, match: [Intake and Output, Intake/Output, GMR] }
+  GMRA:  # CPRS: Adverse Reaction Tracking (ART)
+    - { abbr: ART, full: Adverse Reaction Tracking, match: ["CPRS: Adverse Reaction Tracking", "CPRS: Adverse Reaction Tracking (ART)", Adverse Reaction Tracking (ART), Adverse Reaction Tracking, ART, GMRA] }
+  GMRV:  # Vitals/Measurements
+    - { abbr: Vitals, full: Vitals/Measurements, match: [Vitals/Measurements, Vitals, Portable Vital Signs Monitors Interface Specifications, GMRV] }
+  GMTS:  # CPRS: Health Summary
+    - { abbr: GMTS, full: Health Summary, match: ["CPRS: Health Summary", Health Summary, GMTS] }
+  HBPC:  # Home Based Primary Care
+    - { abbr: HBPC, full: Home Based Primary Care, match: [Home Based Primary Care, Hospital Based Primary Care (former HBHC), HBPC] }
+  HL7:  # HL7 (VistA Messaging)
+    - { abbr: HL7, full: HL7 (VistA Messaging), match: [HL7 (VistA Messaging), HL7 V., HL7 V. *14, HL7 V. *19, HL7 V. *56 Site, HL7 V. *161 Site] }
+  IBD:  # Automated Information Collection System (AICS)
+    - { abbr: AICS, full: Automated Information Collection System, match: [Automated Information Collection System, Automated Information Collection System (AICS), AICS, IBD] }
+  KMPD:  # Capacity Management Tools
+    - { abbr: KMPD, full: Capacity Management Tools, match: [Capacity Management Tools, KMPD] }
+  KMPR:  # Resource Usage Monitor
+    - { abbr: KMPR, full: Resource Usage Monitor, match: [Resource Usage Monitor, KMPR] }
+  KMPS:  # Statistical Analysis of Global Growth
+    - { abbr: KMPS, full: Statistical Analysis of Global Growth, match: [Statistical Analysis of Global Growth, SAGG, KMPS] }
+  KMPV:  # VistA System Monitor (VSM)
+    - { abbr: VSM, full: VistA System Monitor, match: [VistA System Monitor, VistA System Monitor (VSM), VSM, KMPV] }
+  LEDI:  # Laboratory: Electronic Data Interchange
+    - { abbr: LEDI, full: Electronic Data Interchange, match: ["Laboratory: Electronic Data Interchange", Electronic Data Interchange, LEDI III Implementation and, LDSI/LEDI IV Update, LDSI/LEDI IV Update HL7 Interface, LEDI] }
+  MC:  # Medicine
+    - { abbr: MC, full: Medicine, match: [Medicine, MC] }
+  MD:  # Clinical Procedures
+    - { abbr: MD, full: Clinical Procedures, match: [Clinical Procedures, "Clinical Procedures Outbound Admissions, Discharges, Transfers (ADT) Feed", MD] }
+  MMRS:  # Methicillin Resistant Staph Aureus (MRSA)
+    - { abbr: MRSA, full: Methicillin Resistant Staph Aureus, match: [Methicillin Resistant Staph Aureus, Methicillin Resistant Staph Aureus (MRSA), MRSA Program Tools, MRSA, MMRS] }
+  MPIF:  # Master Patient Index
+    - { abbr: MPIF, full: Master Patient Index, match: [Master Patient Index, MPI/PD VISTA, Duplicate Record Merge, MPI Austin, MPI HL7 Interface, "Duplicate Record Merge: Patch"] }
+  NCR:  # Registry: National Clozapine Coordination
+    - { abbr: NCR, full: National Clozapine Coordination, match: ["Registry: National Clozapine Coordination", National Clozapine Coordination, National Clozapine Registry, NCR] }
+  NUR:  # Nursing
+    - { abbr: NUR, full: Nursing, match: [Nursing, NUR] }
+  ONC:  # Registry: Oncology
+    - { abbr: ONC, full: Oncology, match: ["Registry: Oncology", Oncology, ONC] }
+  OOPS:  # Automated Safety Incident Surveillance Tracking System
+    - { abbr: OOPS, full: Automated Safety Incident Surveillance Tracking System, match: [Automated Safety Incident Surveillance Tracking System, ASISTS GUI, OOPS] }
+  OR:  # Order Entry / CPRS
+    - { abbr: OR, full: Order Entry / CPRS, match: [Order Entry / CPRS, Group, Bulk Parameter Editor for Notifications, OR] }
+  PAIT:  # Patient Appointment Info. Transmission
+    - { abbr: PAIT, full: Patient Appointment Info. Transmission, match: [Patient Appointment Info. Transmission, PAIT, PAIT Information Flowchart] }
+  POC:  # Laboratory: Point of Care
+    - { abbr: POC, full: Point of Care, match: ["Laboratory: Point of Care", Point of Care, "Laboratory: POC Interface", "Laboratory: POC HL7 Interface Specifications Document", POC] }
+  PRCN:  # Equipment / Turn-In Request
+    - { abbr: PRCN, full: Equipment / Turn-In Request, match: [Equipment / Turn-In Request, PRCN] }
+  PREA:  # Pharmacy: Advanced Medication Platform
+    - { abbr: PREA, full: Advanced Medication Platform, match: ["Pharmacy: Advanced Medication Platform", Advanced Medication Platform, AMPL, AMPL Frequently Asked Questions, PREA] }
+  PRF:  # Patient Record Flags
+    - { abbr: PRF, full: Patient Record Flags, match: [Patient Record Flags, Patient Record Flags Phase III, 892/951/960_TIU*1*279 Patient Record Flags, 951 Patient Record Flags HL7 Interface, PRF] }
+  PRPF:  # Integrated Patient Funds
+    - { abbr: PRPF, full: Integrated Patient Funds, match: [Integrated Patient Funds, PFOP, PFOP Data Diagnostic Patch, PRPF] }
+  PRS:  # Personnel and Accounting Integrated Data (PAID)
+    - { abbr: PAID, full: Personnel and Accounting Integrated Data, match: [Personnel and Accounting Integrated Data, Personnel and Accounting Integrated Data (PAID), PAID, PRS] }
+  PSA:  # Pharmacy: Drug Accountability
+    - { abbr: PSA, full: Drug Accountability, match: ["Pharmacy: Drug Accountability", Drug Accountability, Drug Accountability/Inventory Interface, API, PSA] }
+  PSD:  # Pharmacy: Controlled Substances
+    - { abbr: PSD, full: Controlled Substances, match: ["Pharmacy: Controlled Substances", Controlled Substances, Inspectors, PSD] }
+  PSJ:  # Pharmacy: Inpatient Medications
+    - { abbr: PSJ, full: Inpatient Medications, match: ["Pharmacy: Inpatient Medications", Inpatient Medications, "Inpatient Medications & Outpatient Pharmacy NCC (Clozapine)", PSJ] }
+  PX:  # Patient Care Encounter (PCE)
+    - { abbr: PCE, full: Patient Care Encounter, match: [Patient Care Encounter, Patient Care Encounter (PCE), PCE, PX] }
+  QAC:  # Patient Advocate Tracking System (PATS)
+    - { abbr: PATS, full: Patient Advocate Tracking System, match: [Patient Advocate Tracking System, Patient Advocate Tracking System (PATS), PATS, PATS System Management, QAC] }
+  QAM:  # Clinical Monitoring System
+    - { abbr: QAM, full: Clinical Monitoring System, match: [Clinical Monitoring System, Clinical Monitoring System ADPAC, QAM] }
+  QAO:  # Occurrence Screen
+    - { abbr: QAO, full: Occurrence Screen, match: [Occurrence Screen, Occurrence Screen ADPAC, QAO] }
+  QAP:  # Survey Generator
+    - { abbr: QAP, full: Survey Generator, match: [Survey Generator, Survery Generator, QAP] }
+  QMIM:  # Quality Management Integration Module
+    - { abbr: QMIM, full: Quality Management Integration Module, match: [Quality Management Integration Module, Quality Management Integration, QMIM] }
+  RA:  # Radiology/Nuclear Medicine
+    - { abbr: RA, full: Radiology/Nuclear Medicine, match: [Radiology/Nuclear Medicine, HL7 Interface, Radiology ADPAC, Radiology, Community Care Imaging Orders to Consult, Radiology HL7] }
+  RMDS:  # RAI/MDS
+    - { abbr: RMDS, full: RAI/MDS, match: [RAI/MDS, RAI/MDS Electronic Transmission, RMDS] }
+  ROEV:  # Registry: Military Eye Vision Injury (MEVIR)
+    - { abbr: MEVIR, full: Military Eye Vision Injury, match: ["Registry: Military Eye Vision Injury", "Registry: Military Eye Vision Injury (MEVIR)", Military Eye Vision Injury (MEVIR), Military Eye Vision Injury, MEVIR, ROEV] }
+  ROR:  # Registry: Clinical Case (CCR)
+    - { abbr: CCR, full: Clinical Case, match: ["Registry: Clinical Case", "Registry: Clinical Case (CCR)", Clinical Case (CCR), Clinical Case, CCR, ROR] }
+  RT:  # Record Tracking
+    - { abbr: RT, full: Record Tracking, match: [Record Tracking, RT] }
+  SPN:  # Spinal Cord Injury and Disorders Outcomes (SCIDO)
+    - { abbr: SCIDO, full: Spinal Cord Injury and Disorders Outcomes, match: [Spinal Cord Injury and Disorders Outcomes, Spinal Cord Injury and Disorders Outcomes (SCIDO), SCIDO, SPN] }
+  SQLI:  # SQL Interface
+    - { abbr: SQLI, full: SQL Interface, match: [SQL Interface, Vendor, Site, SQLI] }
+  SR:  # MailMan
+    - { abbr: SR, full: MailMan, match: [MailMan, Surgery, Surgery Health Level 7 Interface Specifications, SR] }
+  SRA:  # Surgery Risk Assessment
+    - { abbr: SRA, full: Surgery Risk Assessment, match: [Surgery Risk Assessment, SRA] }
+  TBI:  # Registry: Traumatic Brain Injury
+    - { abbr: TBI, full: Traumatic Brain Injury, match: ["Registry: Traumatic Brain Injury", Traumatic Brain Injury, TBI Instruments, TBI Polytrauma, TBI, TBI System Management] }
+  TIU:  # CPRS: Text Integration Utility
+    - { abbr: TIU, full: Text Integration Utility, match: ["CPRS: Text Integration Utility", Text Integration Utility, TIU, Additional Signer Utility, TIU Generic HL7 Interface, TIU Clinical Coordinator and] }
+  VALM:  # List Manager
+    - { abbr: VALM, full: List Manager, match: [List Manager, List, VALM] }
+  VAQ:  # Patient Data Exchange (PDX)
+    - { abbr: PDX, full: Patient Data Exchange, match: [Patient Data Exchange, Patient Data Exchange (PDX), PDX V., PDX, VAQ] }
+  VBECS:  # Laboratory: VistA Blood Establishment Computer Software
+    - { abbr: VBECS, full: VistA Blood Establishment Computer Software, match: ["Laboratory: VistA Blood Establishment Computer Software", VistA Blood Establishment Computer Software, "Laboratory: VBECS", "Laboratory: VBECS Admin", VBECS] }
+  VDEF:  # VistA Data Extraction Framework
+    - { abbr: VDEF, full: VistA Data Extraction Framework, match: [VistA Data Extraction Framework, VDEF, VDEF VistA Messaging] }
+  VPR:  # Virtual Patient Record
+    - { abbr: VPR, full: Virtual Patient Record, match: [Virtual Patient Record, Virtual Patient Record (VPR), VPR] }
+  WII:  # Wounded Ill and Injured Warriors
+    - { abbr: WII, full: Wounded Ill and Injured Warriors, match: [Wounded Ill and Injured Warriors, WII] }
+  WV:  # Womens Health
+    - { abbr: WV, full: Womens Health, match: [Womens Health, "Women's Health", WV] }
+  XM:  # MailMan
+    - { abbr: XM, full: MailMan, match: [MailMan, TCP/IP Service for Mailman, MailMan Network, MailMan Systems Management, XM] }
+  XOBV:  # VistALink
+    - { abbr: XOBV, full: VistALink, match: [VistALink, VistALink System Management, XOBV] }
+  XQOR:  # Kernel Unwinder
+    - { abbr: XQOR, full: Kernel Unwinder, match: [Kernel Unwinder, XQOR] }
+  XT:  # Kernel Toolkit
+    - { abbr: XT, full: Kernel Toolkit, match: [Kernel Toolkit, VistA, XT] }
+  XWB:  # Remote Procedure Call (RPC) Broker
+    - { abbr: RPC, full: Remote Procedure Call Broker, match: [Remote Procedure Call  Broker, Remote Procedure Call (RPC) Broker, Remote Procedure Call Broker, and TCP/IP, Systems Management, RPC] }
+  ZSLOT:  # SlotMaster (Kernel ZSLOT)
+    - { abbr: ZSLOT, full: SlotMaster (Kernel ZSLOT), match: [SlotMaster (Kernel ZSLOT), Slotmaster Management, ZSLOT] }
