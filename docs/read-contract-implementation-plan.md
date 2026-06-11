@@ -61,11 +61,11 @@
 | | P4.2 | Pre-contract DB degrades (`HasContractViews` → skip/degrade) | ✅ | real-corpus tests skip; `Vocab()` best-effort |
 | | P4.3 | Read persona/section/domain vocab from `v_vocab` | ✅ | `Vocab.Persona/Section/Domain` |
 | | P4.4 | **Deleted** `explain.go` `personaDef`/`sectionDef`/`domainDef` | ✅ | explainer fully data-driven (the payoff) |
-| **P5 — vdocs-web** (new repo) | P5.1 | Scaffold: Go module, SvelteKit, Makefile, CI | ⬜ | |
-| | P5.2 | Spine: `/api/facets` + `/api/candidates` over `pkg/index` + minimal Svelte page | ⬜ | prove the seam |
+| **P5 — vdocs-web** (new repo) | P5.1 | Scaffold: Go module (`replace`→`../vdocs-tui`), Makefile, lint | ✅ | repo `vista-cloud-dev/vdocs-web` (`f70fc9e`); CI deferred (D17) |
+| | P5.2 | Spine: `/api/facets` + `/api/candidates` (+`/api/meta`) over `pkg/index` + embedded page | ✅ | httptest-covered; minimal vanilla-JS browser |
 | | P5.3 | Preview / TOC / fuzzy / **FTS5** endpoints + panes | ⬜ | |
 | | P5.4 | DB auto-download on first run + manifest validation (sha256, schema_version) | ⬜ | zstd, resumable |
-| | P5.5 | Declare required `capabilities`; `go:embed` built front-end | ⬜ | self-contained binary |
+| | P5.5 | SvelteKit front-end (`go:embed`) | 🟡 | embed plumbing ✅; **SvelteKit blocked — no Node (D17)** |
 | | P5.6 | Cross-compile matrix (linux/mac/win) | ⬜ | |
 | **P6 — Multi-consumer hardening** (future) | P6.1 | MCP endpoint consuming `pkg/index` + capabilities | ⛔ | when MCP is revived |
 | | P6.2 | `make check-consumers` compatibility matrix in vdocs | ⬜ | blast-radius before a bump |
@@ -355,26 +355,38 @@ is green*; P5.3 preview/TOC/fuzzy/FTS endpoints + panes; P5.4 first-run DB auto-
 declare required capabilities + `go:embed` the built front-end; P5.6 cross-compile matrix.
 
 ### Changelog
-_(none yet)_
+- **2026-06-11** — ✅ spine landed. New repo `github.com/vista-cloud-dev/vdocs-web` (private,
+  `f70fc9e`). Go module imports `vdocs-tui/pkg/index` via `replace => ../vdocs-tui` (verified —
+  prints contract v1.2). `internal/api`: `/api/facets?axis=`, `/api/candidates`, `/api/meta` over
+  the `v_*` views (httptest-covered); `internal/web`: `go:embed` minimal vanilla-JS faceted browser;
+  `cmd/vdocs-web`: DB resolution + pre-contract-DB refusal + `127.0.0.1:8765`. `make check` green.
 
 ### Discoveries
-_(to fill)_ — seeded by D5.
+- **D17 (toolchain blocker):** the host has **Go but no Node/npm** (only an npm cache), so the
+  chosen **SvelteKit** front-end can't be built yet. Shipped a minimal **vanilla-JS** embedded page
+  as the spine (works offline, proves the API seam); `internal/web/static/` is swap-in ready for the
+  SvelteKit build output once Node is installed. **Operator action:** install Node to unblock P5.5.
+- **D18 (cross-module import works):** `vdocs-web` imports `pkg/index` via a `../vdocs-tui` replace +
+  the shared module cache — local airgapped build/test/lint all green. **CI deferred:** a
+  cross-*private*-repo build needs a dual-checkout+PAT or `go mod vendor`; local `make check` is the
+  gate for now (a decision to make when CI is wired).
+- **verify gap:** the spine is proven by httptest over a contract-faithful fixture; it can't be
+  smoke-tested against the *live* lake until the index is rebuilt at v1.2 (the pre-P1 DB lacks the
+  views, and the server refuses it by design).
 
 ### Risks & mitigations
-- **Risk:** 294 MB download UX (slow, interrupted, no host). **Mitigation:** zstd-compress (mostly
-  text — large ratio), resumable ranged download, sha256 verify, cache under `$XDG_CACHE_HOME`;
-  also honor `--db`/`$VDOCS_DB`/`$DATA_DIR` for a locally-present DB (no download).
-- **Risk:** schema/DB mismatch after a contract bump — user has an old cached DB. **Mitigation:**
-  manifest carries `read_schema_version`; the binary refuses an incompatible cached DB *at fetch/load
-  time* with the actionable message, and offers to re-download.
-- **Risk:** serving the read-only DB to a browser exposes more than intended. **Mitigation:** bind
-  `127.0.0.1` only; DB opened `mode=ro`+`query_only`; JSON API exposes only contract views.
-- **Risk:** front-end build toolchain bloats the airgapped binary / breaks offline builds.
-  **Mitigation:** SvelteKit static adapter → plain assets embedded via `go:embed`; pin deps; vendor
-  the npm cache for offline builds (mirror the Go `GOPROXY=file://` pattern).
+- **Risk:** 294 MB download UX (P5.4, not yet built). **Mitigation (planned):** zstd, resumable
+  ranged fetch, sha256 + `read_schema_version` verify, `$XDG_CACHE_HOME`; honor `--db`/`$VDOCS_DB`/
+  `$DATA_DIR` first (no download when a local DB exists — the current behavior).
+- **Risk (shipped mitigation):** browser exposure — bound to `127.0.0.1` only; DB opened
+  `mode=ro`+`query_only`; the API exposes only contract views/columns.
+- **Risk:** SvelteKit offline build. **Mitigation (planned):** static-adapter output embedded via
+  `go:embed`; vendor the npm cache (the npm `_cacache` already present) — mirror `GOPROXY=file://`.
 
 ### Lessons learned
-_(none yet)_
+- The contract investment paid off again: standing up a *second* consumer was mostly wiring — the
+  query core, version check, and view binding came for free via `pkg/index`; `vdocs-web` added only
+  HTTP handlers + a page.
 
 ---
 
