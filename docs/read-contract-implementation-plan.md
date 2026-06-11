@@ -64,9 +64,9 @@
 | **P5 — vdocs-web** (new repo) | P5.1 | Scaffold: Go module (`replace`→`../vdocs-tui`), Makefile, lint | ✅ | repo `vista-cloud-dev/vdocs-web` (`f70fc9e`); CI deferred (D17) |
 | | P5.2 | Spine: `/api/facets` + `/api/candidates` (+`/api/meta`) over `pkg/index` + embedded page | ✅ | httptest-covered; minimal vanilla-JS browser |
 | | P5.3 | Preview / TOC / fuzzy / **FTS5** endpoints + panes | ✅ | `vdocs-web` PR #1 (`06eaf1f`); reading pane; FTS5 already on `?q=` |
-| | P5.4 | DB auto-download on first run + manifest validation (sha256, schema_version) | ⬜ | zstd, resumable |
+| | P5.4 | DB auto-download on first run + manifest validation (sha256, schema_version) | ✅ | `vdocs-web` PR #2 (`d4c4c08`); zstd, resumable, fail-fast compat; producer publish-stage TODO |
 | | P5.5 | SvelteKit front-end (`go:embed`) | ✅ | Svelte 5 SPA, npm (house std), built→embedded; Node *was* installed (D17) |
-| | P5.6 | Cross-compile matrix (linux/mac/win) | ⬜ | |
+| | P5.6 | Cross-compile matrix (linux/mac/win) | ✅ | `vdocs-web` PR #3 (`8676ccd`); `make dist`, 5 static CGO-free targets, offline |
 | **P6 — Multi-consumer hardening** (future) | P6.1 | MCP endpoint consuming `pkg/index` + capabilities | ⛔ | when MCP is revived |
 | | P6.2 | `make check-consumers` compatibility matrix in vdocs | ⬜ | blast-radius before a bump |
 
@@ -355,6 +355,18 @@ is green*; P5.3 preview/TOC/fuzzy/FTS endpoints + panes; P5.4 first-run DB auto-
 declare required capabilities + `go:embed` the built front-end; P5.6 cross-compile matrix.
 
 ### Changelog
+- **2026-06-11** — ✅ **P5 COMPLETE — P5.6 landed** (`vdocs-web` PR #3, `8676ccd`). `make dist`
+  cross-compiles 5 static **CGO-free** targets (linux/darwin amd64+arm64, windows/amd64) into
+  `dist/vdocs-web_<os>_<arch>[.exe]`. `modernc.org/sqlite` is pure Go + the front-end is `go:embed`'d
+  → the matrix builds **fully offline** from the local module cache, no per-OS toolchain. All five
+  verified correct-arch static binaries.
+- **2026-06-11** — ✅ **P5.4 landed** (`vdocs-web` PR #2, `d4c4c08`; depends on `vdocs-tui` PR #26).
+  First-run `index.db` auto-download: `internal/dbfetch` fetches an **operator-configured** manifest
+  (`--manifest-url` / `$VDOCS_MANIFEST_URL`) → checks `read_schema_version` MAJOR-compat **before**
+  the 294 MB download (fail-fast, reusing new `pkg/index.CheckSchemaVersion`) → resumable HTTP `Range`
+  download → zstd decompress (klauspost, pure-Go) while hashing → sha256 verify → atomic place into
+  `$XDG_CACHE_HOME/vdocs`. A real/cached local DB always wins (`resolveDB` checks cache last). Tests:
+  httptest + real zstd + temp files (no mocks). **D21/D22 below.**
 - **2026-06-11** — ✅ **P5.3 landed** (`vdocs-web` PR #1, `06eaf1f`). Reading surface over
   `pkg/index`: `GET /api/doc/{docKey}/toc` (`ix.DocTOC`), `/api/section/{id}` and
   `/api/preview/{docKey}` (`{text}` ← `ix.SectionText`/`ix.Preview`), routed via Go 1.22
@@ -391,11 +403,26 @@ declare required capabilities + `go:embed` the built front-end; P5.6 cross-compi
 - **verify gap:** the spine is proven by httptest over a contract-faithful fixture; it can't be
   smoke-tested against the *live* lake until the index is rebuilt at v1.2 (the pre-P1 DB lacks the
   views, and the server refuses it by design).
+- **D21 (compat check is contract logic → leaf-first):** the P5.4 fail-fast (reject an incompatible
+  DB *before* a 294 MB download) needed the MAJOR-match rule that previously lived only inside
+  `pkg/index.Open`'s unexported `checkSchema`. Rather than reimplement semver in vdocs-web (the exact
+  duplication ADR-0001 fights), exported **`pkg/index.CheckSchemaVersion(v string) error`** in
+  vdocs-tui (PR #26, `7e9a96e`); `checkSchema` now delegates to it (DRY). The contract's compat
+  *semantics* stay in one place. Leaf-first: producer helper merged, then consumer built on it.
+- **D22 (auto-download = operator-configured, no host assumed):** no DB host is decided and the
+  publish `corpus-manifest.json` carries **no DB-artifact descriptor** (url/sha256/size/compression).
+  Chosen scope (operator sign-off): vdocs-web fetches from an **operator-provided manifest URL**;
+  the consumer defines the minimal descriptor schema it reads (documented in `vdocs-web/README.md`);
+  zstd is feasible airgapped (`klauspost/compress` is in the local module cache, pure-Go, no cgo).
+  **Producer TODO (not P5):** the `vdocs` publish stage must emit that descriptor + host the
+  compressed artifact for auto-download to work against the real corpus.
 
 ### Risks & mitigations
-- **Risk:** 294 MB download UX (P5.4, not yet built). **Mitigation (planned):** zstd, resumable
-  ranged fetch, sha256 + `read_schema_version` verify, `$XDG_CACHE_HOME`; honor `--db`/`$VDOCS_DB`/
-  `$DATA_DIR` first (no download when a local DB exists — the current behavior).
+- **Risk:** 294 MB download UX. **Mitigation (shipped, P5.4):** zstd, resumable ranged fetch, sha256
+  + `read_schema_version` fail-fast verify, `$XDG_CACHE_HOME` cache; honors `--db`/`$VDOCS_DB`/
+  `$DATA_DIR`/cache first (no download when any local DB exists). **Open producer dependency:** the
+  publish stage must emit the DB-artifact descriptor + host the compressed file (D22) — until then
+  there's nothing to download from.
 - **Risk (shipped mitigation):** browser exposure — bound to `127.0.0.1` only; DB opened
   `mode=ro`+`query_only`; the API exposes only contract views/columns.
 - **Risk:** SvelteKit offline build. **Mitigation (planned):** static-adapter output embedded via
@@ -405,6 +432,13 @@ declare required capabilities + `go:embed` the built front-end; P5.6 cross-compi
 - The contract investment paid off again: standing up a *second* consumer was mostly wiring — the
   query core, version check, and view binding came for free via `pkg/index`; `vdocs-web` added only
   HTTP handlers + a page.
+- It paid off a *third* time in P5.4: the auto-download's pre-flight compat check was a 3-line reuse
+  of `pkg/index.CheckSchemaVersion` (D21), not a reinvented semver — and that helper now serves both
+  `Open` and the fetcher. Each new need pulls contract logic *into* `pkg/index`, never duplicates it.
+- **P5 (vdocs-web) is complete (P5.1–P5.6).** Remaining contract work is P6 (deferred: MCP consumer +
+  `make check-consumers` compatibility matrix) and the **producer publish stage** (emit the DB
+  descriptor + host the artifact; D22) — the one thing standing between P5.4's mechanism and a real
+  end-to-end download.
 
 ---
 
