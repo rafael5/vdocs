@@ -133,3 +133,41 @@ def test_diagnose_function_category_gap_is_by_design_not_red(tmp_path):
     fc = next(c for c in report.checks if c.name == "coverage:function_category")
     assert fc.health is Health.BY_DESIGN  # 90% meets the floor → expected gap, not a defect
     assert report.verdict() == "GREEN"
+
+
+# --- P1: read-contract validation (emitted DB == spec) ------------------------------------------
+
+
+def _with_contract(tmp_path):
+    """A DB carrying the generated v_* views + a stamped meta version — the consumer surface."""
+    from vdocs.kernel import read_contract as rc
+
+    spec = rc.load(rc.contract_path())
+    conn = _open(tmp_path)
+    conn.executescript(rc.view_ddl(spec))
+    conn.execute(
+        "INSERT INTO meta (key, value) VALUES ('read_schema_version', ?)", (rc.version(spec),)
+    )
+    _doc(conn, doc_key="ADT/a", doc_id="ADT:a", anchor_key="ADT:DG:UM:a")
+    _fts(conn, "ADT/a")
+    conn.commit()
+    return conn, spec
+
+
+def test_diagnose_contract_check_passes_when_db_matches_spec(tmp_path):
+    conn, spec = _with_contract(tmp_path)
+    report = doc.diagnose(conn, kept_doctypes=_KEPT, policy=_POLICY, read_spec=spec)
+    conn.close()
+    rc_check = next(c for c in report.checks if c.name == "read contract")
+    assert rc_check.health is Health.PASS and "views match" in rc_check.detail
+
+
+def test_diagnose_contract_check_fails_red_when_a_view_is_missing(tmp_path):
+    conn, spec = _with_contract(tmp_path)
+    conn.execute("DROP VIEW v_entities")  # the published interface no longer matches the spec
+    conn.commit()
+    report = doc.diagnose(conn, kept_doctypes=_KEPT, policy=_POLICY, read_spec=spec)
+    conn.close()
+    rc_check = next(c for c in report.checks if c.name == "read contract")
+    assert rc_check.health is Health.FAIL and "v_entities missing" in rc_check.detail
+    assert report.verdict() == "RED"

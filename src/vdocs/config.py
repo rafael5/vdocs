@@ -60,6 +60,12 @@ class Settings(BaseSettings):
         # repo root = src/vdocs/config.py → parents[2]
         return Path(__file__).resolve().parents[2] / "registries"
 
+    @property
+    def read_contract_dir(self) -> Path:
+        """The published read-contract specs (ADR-0001) — in the **repo** (`contracts/read/`),
+        the SSOT the index views are generated from and `doctor` validates against."""
+        return Path(__file__).resolve().parents[2] / "contracts" / "read"
+
     # --- the lake root (§5.3) ---
     @property
     def lake(self) -> Path:

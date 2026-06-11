@@ -41,12 +41,12 @@
 | | P0.2 | Stamp `read_schema_version` (`1.0`) | ✅ | `index_pure.READ_SCHEMA_VERSION` |
 | | P0.3 | Stamp `corpus_content_hash` + `corpus_doc_count` | ✅ | deterministic; build ts deferred to manifest (D8) |
 | | P0.4 | ~~Drop `doc_meta_staged`~~ → exclude from consumer surface | ⚠️ | **revised (D7):** real `enrich→index` contract, kept; views exclude it (P1), strip at publish |
-| **P1 — Read contract + views** (vdocs) | P1.1 | `contracts/read/v1.json` spec describing *today's* schema | ⬜ | SSOT; no behavior change |
-| | P1.2 | `contracts/read/CHANGELOG.md` + `read-contract.schema.json` meta-schema | ⬜ | |
-| | P1.3 | `v_documents` / `v_sections` / `v_entities` / `v_entity_mentions` views | ⬜ | from spec |
-| | P1.4 | Document `chunks_fts` (cols + tokenizer) as named contract | ⬜ | FTS can't be a view (D-fts) |
-| | P1.5 | `doctor`: assert emitted DB == spec (views, cols, types, version) | ⬜ | producer gate |
-| | P1.6 | `contract-lint`: enforce semver bump-type vs prior spec | ⬜ | breaking change w/o MAJOR fails |
+| **P1 — Read contract + views** (vdocs) | P1.1 | `contracts/read/v1.json` spec describing *today's* schema | ✅ | SSOT; `cfg.read_contract_dir` |
+| | P1.2 | `contracts/read/CHANGELOG.md` (+ ~~meta-schema~~ deferred) | ✅ | meta-schema low-value; spec shape covered by tests |
+| | P1.3 | `v_documents`/`v_sections`/`v_chunks`/`v_entities`/`v_entity_mentions` views | ✅ | **generated** from spec (`kernel.read_contract.view_ddl`) |
+| | P1.4 | Document `chunks_fts` (cols + tokenizer) as named contract | ✅ | `fts` block in v1.json (D-fts) |
+| | P1.5 | `doctor`: assert emitted DB == spec (views, cols, version) | ✅ | `contract_check`; FAIL⇒RED; wired in `_emit_doctor` |
+| | P1.6 | `contract-lint`: enforce semver bump-type vs prior spec | ✅ | `lint_bump` + `make contract-lint` (no-op at v1) |
 | **P2 — Vocab-as-data + drift gates** (vdocs) | P2.1 | `vocab(kind,code,label,description)` table from `registries/` | ⬜ | sections, domains, personas, doc types, apps, products |
 | | P2.2 | `doctor` enum-coverage gate (every distinct facet value ∈ vocab) | ⬜ | growth introducing undefined value fails producer |
 | | P2.3 | Coverage stats (% populated, distinct counts, rows) in `manifest.json` | ⬜ | |
@@ -154,23 +154,39 @@ spec (gate); P1.6 `contract-lint` comparing spec vN vs vN-1 to enforce bump-type
 each (doctor assertion test with a deliberately-mutated fixture that must fail).
 
 ### Changelog
-_(none yet)_
+- **2026-06-11** — ✅ landed (`make check` green: 903 passed, 98.04%).
+  - `contracts/read/v1.json` — the SSOT spec (5 views over their source tables + the `chunks_fts`
+    named surface + `capabilities`), `contracts/read/CHANGELOG.md`, `Settings.read_contract_dir`.
+  - `kernel/read_contract.py` (pure, unit-tested): `load`/`view_columns`/`view_ddl` (generates the
+    `CREATE VIEW`s — views ARE the spec), `version`/`capabilities`, `lint_bump`/`lint_latest`.
+  - Index stage loads the spec, **generates** the `v_*` views from it, and stamps
+    `meta.read_schema_version` from `version(spec)` (single source).
+  - `doctor.contract_check` (pure) + `diagnose(read_spec=…)` — emitted DB must expose every view
+    with the spec's columns + matching version; FAIL ⇒ RED. Wired into `_emit_doctor` (doctor+build).
+  - `make contract-lint` (semver bump-type guard; no-op until a v2 exists).
 
 ### Discoveries
-_(to fill)_ — seeded by D2, D-fts.
+- **D9:** the live `~/data/vdocs/index.db` predates P0/P1 (no `meta`/views), so `vdocs doctor` now
+  reports **RED** against it (missing `meta` version → contract mismatch) until an `index` re-run.
+  Expected — `contract_ver` 6→7 forces the rebuild; not run here (294 MB; shared-lake guard).
+- **D10:** `doctor.diagnose` had a parameter-shadowing footgun — `for fld, spec in
+  policy.coverage.items()` clobbered a `spec` param, so the contract block ran against a
+  `CoverageSpec`. Renamed the param to `read_spec`. Watch loop-var/param collisions in long fns.
 
 ### Risks & mitigations
-- **Risk:** views drift from physical tables silently (a column added to `documents` but not to
-  `v_documents`). **Mitigation:** P1.5 `doctor` asserts the view's columns == spec; a new physical
-  column is invisible to consumers until *deliberately* added to the view + spec (MINOR bump).
-- **Risk:** view indirection costs query performance on large joins. **Mitigation:** SQLite views
-  are query-rewrite (no materialization); verify with `EXPLAIN QUERY PLAN` parity on the candidate
-  query; keep facet-column indices.
-- **Risk:** hand-written DDL diverges from `v1.json`. **Mitigation:** generate the view DDL from the
-  spec (or, minimally, P1.5 fails if they disagree) — single SSOT.
+- **Risk:** views drift from physical tables silently. **Mitigation (shipped):** views are
+  *generated* from the spec, and `doctor` asserts the emitted view columns == spec — a new physical
+  column is invisible to consumers until deliberately added to the spec (MINOR bump).
+- **Risk:** view indirection costs query performance. **Mitigation:** SQLite views are query-rewrite
+  (no materialization); facet-column indices unchanged. Revisit with `EXPLAIN QUERY PLAN` if a
+  consumer reports slowness.
+- **Note:** the operator must re-run `index` (or `build`) on the real lake to gain the views+meta;
+  until then `doctor` is RED on the pre-P1 DB (D9).
 
 ### Lessons learned
-_(none yet)_
+- Generating the views from the spec (vs hand-writing DDL + a drift check) removed an entire class
+  of drift — there is genuinely one source. Worth the small build-time spec load.
+- Reading `diagnose` before extending it would have caught D10 sooner; the integration suite did.
 
 ---
 

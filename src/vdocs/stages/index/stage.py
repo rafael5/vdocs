@@ -36,7 +36,7 @@ from vdocs.contracts.registry import (
     INDEX_SECTIONS,
     TEXT_NORMALIZED,
 )
-from vdocs.kernel import db, frontmatter, personas, titles
+from vdocs.kernel import db, frontmatter, personas, read_contract, titles
 from vdocs.kernel import products as kproducts
 from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, RunResult
@@ -127,6 +127,9 @@ class IndexStage(Stage):
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
+        # the published read contract (ADR-0001): the SSOT the v_* views are generated from and
+        # whose version is stamped into `meta` — so views can't drift from the spec.
+        spec = read_contract.load(read_contract.contract_path(base=cfg.read_contract_dir))
         staged_cols, staged_rows = _read_staged(cfg.index_db)
         by_path = {str(r["bundle_path"]): r for r in staged_rows}
         latest_ids = _latest_doc_ids(cfg.gold_consolidated)
@@ -231,6 +234,7 @@ class IndexStage(Stage):
 
         def build(conn: sqlite3.Connection) -> None:
             conn.executescript(_SCHEMA)
+            conn.executescript(read_contract.view_ddl(spec))  # the published v_* read interface
             _carry_staged(conn, staged_cols, staged_rows)
             conn.executemany(
                 f"INSERT INTO documents ({', '.join(_DOC_COLUMNS)}) "
@@ -264,7 +268,10 @@ class IndexStage(Stage):
                 "INSERT INTO entity_mentions (entity_id, doc_key, section_id) VALUES (?, ?, ?)",
                 mentions,
             )
-            conn.executemany("INSERT INTO meta (key, value) VALUES (?, ?)", ip.meta_rows(documents))
+            conn.executemany(
+                "INSERT INTO meta (key, value) VALUES (?, ?)",
+                ip.meta_rows(documents, schema_version=read_contract.version(spec)),
+            )
 
         db.build_atomic(cfg.index_db, build)
         return RunResult(

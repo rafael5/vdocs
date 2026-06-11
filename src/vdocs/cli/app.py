@@ -347,9 +347,12 @@ def _emit_doctor(cfg: Settings) -> str:
         return "RED"
     kept = frozenset(r.code for r in load_gate_config(cfg.registries).kept)
     policy = doc.load_doctor_policy(cfg.registries)
+    from vdocs.kernel import read_contract as rc
+
+    spec = rc.load(rc.contract_path(base=cfg.read_contract_dir))
     conn = db.connect(cfg.index_db, read_only=True)
     try:
-        report = doc.diagnose(conn, kept_doctypes=kept, policy=policy)
+        report = doc.diagnose(conn, kept_doctypes=kept, policy=policy, read_spec=spec)
     finally:
         conn.close()
     doc.render_report(report, typer.echo)

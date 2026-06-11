@@ -395,12 +395,19 @@ def _seed_index_for_ask(tmp_path):
 def _seed_sound_index(tmp_path):
     """A minimal sound gold index.db: one fully-populated Tier-A (UM) anchor + FTS + an entity."""
     from vdocs.kernel import db
+    from vdocs.kernel import read_contract as rc
     from vdocs.stages.index.stage import _SCHEMA
 
     cfg = Settings(data_dir=tmp_path)
     cfg.lake.mkdir(parents=True, exist_ok=True)
     conn = db.connect(cfg.index_db)
     conn.executescript(_SCHEMA)
+    # the published read interface (ADR-0001) — doctor now gates that the DB matches the spec
+    spec = rc.load(rc.contract_path(base=cfg.read_contract_dir))
+    conn.executescript(rc.view_ddl(spec))
+    conn.execute(
+        "INSERT INTO meta (key, value) VALUES ('read_schema_version', ?)", (rc.version(spec),)
+    )
     cols = (
         "doc_key, doc_id, app_code, doc_type, section, pkg_ns, version, patch_id, anchor_key, "
         "group_key, title, doc_label, app_user, doc_user, software_class, function_category, "

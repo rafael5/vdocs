@@ -107,6 +107,31 @@ def integrity_check(
     return Check(name, health_bad, detail_bad.format(n=violations) + _sample(offenders))
 
 
+def contract_check(
+    emitted_views: dict[str, list[str]], stamped_version: str, spec: dict[str, Any]
+) -> Check:
+    """The read-contract gate (ADR-0001 P1): the emitted ``index.db`` must expose every ``v_*`` view
+    the spec declares, with its exact columns in order, and the ``meta.read_schema_version`` it
+    stamps must equal the spec's. Any mismatch is a FAIL ⇒ RED — the producer cannot ship a DB that
+    violates its own published contract."""
+    from vdocs.kernel import read_contract as rc
+
+    want = rc.view_columns(spec)
+    problems: list[str] = []
+    for view, cols in want.items():
+        got = emitted_views.get(view)
+        if got is None:
+            problems.append(f"{view} missing")
+        elif got != cols:
+            problems.append(f"{view} columns drifted (got {got})")
+    if stamped_version != rc.version(spec):
+        problems.append(f"meta version {stamped_version!r} != spec version {rc.version(spec)!r}")
+    if problems:
+        return Check("read contract", Health.FAIL, "; ".join(problems))
+    detail = f"v{rc.version(spec)}: {len(want)} views match the spec"
+    return Check("read contract", Health.PASS, detail)
+
+
 # --- the policy (expected-coverage floors + known-empty / accepted edge cases) -------------------
 
 
@@ -153,10 +178,15 @@ def load_doctor_policy(registries_dir: Path) -> DoctorPolicy:
 
 
 def diagnose(
-    conn: sqlite3.Connection, *, kept_doctypes: frozenset[str], policy: DoctorPolicy
+    conn: sqlite3.Connection,
+    *,
+    kept_doctypes: frozenset[str],
+    policy: DoctorPolicy,
+    read_spec: dict[str, Any] | None = None,
 ) -> DoctorReport:
     """Run every soundness check against ``index.db`` and assemble the report. ``kept_doctypes`` is
-    the gate's Tier-A keep set (gold must contain only those)."""
+    the gate's Tier-A keep set (gold must contain only those). When ``read_spec`` (a read-contract)
+    is given, also gate that the emitted DB matches it verbatim (ADR-0001 P1)."""
 
     def one(sql: str, *params: object) -> int:
         return int(conn.execute(sql, params).fetchone()[0])
@@ -281,6 +311,18 @@ def diagnose(
                 detail_bad="{n} dangling entity_mention(s)",
             )  # fmt: skip
         )
+
+    # read contract: the emitted DB exposes the published v_* interface verbatim (ADR-0001 P1)
+    if read_spec is not None:
+        from vdocs.kernel import read_contract as rc
+
+        emitted = {}
+        for view in rc.view_columns(read_spec):
+            cols = [r[1] for r in conn.execute(f"PRAGMA table_info({view})").fetchall()]
+            if cols:  # empty ⇒ the view doesn't exist (so contract_check reports it missing)
+                emitted[view] = cols
+        row = conn.execute("SELECT value FROM meta WHERE key='read_schema_version'").fetchone()
+        checks.append(contract_check(emitted, row[0] if row else "", read_spec))
 
     return DoctorReport(gold_count=gold, checks=checks)
 

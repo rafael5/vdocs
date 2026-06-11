@@ -337,3 +337,34 @@ def test_index_content_hash_stable_across_forced_rebuild(ctx):
     first = _hash()
     orch.run(ctx, force=True)
     assert _hash() == first
+
+
+def test_index_emits_read_contract_views_matching_the_spec(ctx):
+    # P1 (ADR-0001): index.db exposes the v_* read interface, generated from contracts/read/v1.json
+    # (the SSOT) — so the views' columns match the spec and the views return the base-table data.
+    from vdocs.kernel import read_contract as rc
+
+    _seed(ctx)
+    (result,) = Orchestrator([IndexStage()]).run(ctx)
+    assert result.status == "ok"
+    spec = rc.load(rc.contract_path(base=ctx.cfg.read_contract_dir))
+    want_cols = rc.view_columns(spec)
+
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        for view, cols in want_cols.items():
+            got = [r[1] for r in conn.execute(f"PRAGMA table_info({view})").fetchall()]
+            assert got == cols, f"{view} columns drifted from the spec"
+        # the view is a faithful window on its base table (same row count)
+        assert (
+            conn.execute("SELECT count(*) FROM v_documents").fetchone()[0]
+            == conn.execute("SELECT count(*) FROM documents").fetchone()[0]
+        )
+        # is_latest flows through the view
+        latest = conn.execute("SELECT count(*) FROM v_documents WHERE is_latest = 1").fetchone()[0]
+        assert latest == 1
+        # the read_schema_version stamped in meta is the spec's version (single source)
+        ver = conn.execute("SELECT value FROM meta WHERE key = 'read_schema_version'").fetchone()[0]
+        assert ver == rc.version(spec) == "1.0"
+    finally:
+        conn.close()

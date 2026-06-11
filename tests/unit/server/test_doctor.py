@@ -66,3 +66,39 @@ def test_verdict_green_unless_a_failure():
     assert green.verdict() == "GREEN" and not green.failures()
     red = DoctorReport(gold_count=615, checks=[Check("a", Health.FAIL, "boom")])
     assert red.verdict() == "RED" and red.failures()[0].name == "a"
+
+
+# --- P1: read-contract validation (the producer gate that emitted DB == spec) -------------------
+
+_CONTRACT_SPEC = {
+    "read_schema_version": "1.0",
+    "views": {"v_documents": {"source": "documents", "columns": {"doc_key": {}, "title": {}}}},
+}
+
+
+def test_contract_check_passes_when_views_and_version_match():
+    from vdocs.server.doctor import contract_check
+
+    c = contract_check({"v_documents": ["doc_key", "title"]}, "1.0", _CONTRACT_SPEC)
+    assert c.health is Health.PASS
+
+
+def test_contract_check_fails_on_missing_view():
+    from vdocs.server.doctor import contract_check
+
+    c = contract_check({}, "1.0", _CONTRACT_SPEC)
+    assert c.health is Health.FAIL and "v_documents" in c.detail
+
+
+def test_contract_check_fails_on_column_drift():
+    from vdocs.server.doctor import contract_check
+
+    c = contract_check({"v_documents": ["doc_key"]}, "1.0", _CONTRACT_SPEC)
+    assert c.health is Health.FAIL
+
+
+def test_contract_check_fails_on_version_mismatch():
+    from vdocs.server.doctor import contract_check
+
+    c = contract_check({"v_documents": ["doc_key", "title"]}, "0.9", _CONTRACT_SPEC)
+    assert c.health is Health.FAIL and "version" in c.detail.lower()
