@@ -46,11 +46,12 @@ def test_version_and_capabilities_read_from_spec():
 def test_load_reads_the_real_v1_contract():
     # the shipped contract parses and declares the views consumers bind to
     spec = rc.load(rc.contract_path())
-    assert rc.version(spec) == "1.0"
+    assert rc.version(spec) == "1.1"
     cols = rc.view_columns(spec)
-    assert {"v_documents", "v_sections", "v_chunks", "v_entities", "v_entity_mentions"} <= set(cols)
+    expected = {"v_documents", "v_sections", "v_chunks", "v_entities", "v_entity_mentions"}
+    assert expected <= set(cols) and "v_vocab" in cols
     assert cols["v_documents"][0] == "doc_key"
-    assert "fts5" in rc.capabilities(spec)
+    assert {"fts5", "vocab_table"} <= set(rc.capabilities(spec))
 
 
 # --- P1.6: contract-lint — the semver bump-type guard (no breaking change as a MINOR) ------------

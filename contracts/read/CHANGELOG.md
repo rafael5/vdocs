@@ -6,6 +6,16 @@ Semver for the **read** contract (`read_schema_version`), the consumer-facing in
 replacement additively, keep the old as an alias for one release, then remove + MAJOR bump. See
 [ADR-0001](../../docs/adr/0001-read-contract-and-drift-prevention.md).
 
+## v1.1 — 2026-06-11
+
+Additive (backward-compatible) — ADR-0001 P2:
+
+- **New view** `v_vocab` over the new `vocab` table: the controlled facet vocabularies (function
+  domains, doc types, VDL sections, personas) published as data, sourced from `registries/`
+  (`function-domains.yaml`, `doc-labels.yaml`, `section-codes.yaml`, the new `personas.yaml`).
+  Consumers read definitions from here instead of hardcoding them.
+- **New capability** `vocab_table`.
+
 ## v1.0 — 2026-06-11
 
 Initial published contract. Describes the existing `index.db` schema verbatim (no behavior change):

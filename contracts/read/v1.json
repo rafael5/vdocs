@@ -1,5 +1,5 @@
 {
-  "read_schema_version": "1.0",
+  "read_schema_version": "1.1",
   "description": "Published read contract for vdocs index.db (ADR-0001). Consumers (vdocs-tui, vdocs-web, MCP) bind ONLY to the v_* views + the named chunks_fts surface — never to physical tables. The pipeline may refactor physical tables freely behind these. Views are GENERATED from this spec (kernel.read_contract.view_ddl), so they cannot drift from it; `vdocs doctor` asserts the emitted DB matches.",
   "views": {
     "v_documents": {
@@ -81,6 +81,16 @@
         "doc_key": {"type": "TEXT", "nullable": false, "desc": "document the mention is in"},
         "section_id": {"type": "TEXT", "nullable": false, "desc": "section the mention is in"}
       }
+    },
+    "v_vocab": {
+      "source": "vocab",
+      "description": "Controlled facet vocabularies as data (sourced from registries): function domains, doc types, VDL sections, personas. Consumers read definitions from here instead of hardcoding them (ADR-0001 P2).",
+      "columns": {
+        "kind": {"type": "TEXT", "nullable": false, "desc": "vocabulary axis: function_category | doc_type | section | persona"},
+        "code": {"type": "TEXT", "nullable": false, "desc": "the value as stored in documents (e.g. UM, CLI, clinical, Laboratory)"},
+        "label": {"type": "TEXT", "nullable": true, "desc": "human display label"},
+        "description": {"type": "TEXT", "nullable": true, "desc": "human definition (for the explainer)"}
+      }
     }
   },
   "fts": {
@@ -103,6 +113,7 @@
     "pub_year",
     "entity_mentions",
     "persona_facets",
-    "product_facets"
+    "product_facets",
+    "vocab_table"
   ]
 }

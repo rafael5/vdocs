@@ -107,6 +107,20 @@ def integrity_check(
     return Check(name, health_bad, detail_bad.format(n=violations) + _sample(offenders))
 
 
+def enum_coverage_check(field: str, undefined: Sequence[str]) -> Check:
+    """The vocabulary gate (ADR-0001 P2): every distinct non-empty ``field`` value present in gold
+    must be defined in the ``vocab`` table. A newly fetched doc that introduces an undefined domain
+    / doc type / section / persona FAILs the producer (⇒ RED) until the registry is updated — so
+    growing the corpus can't silently hand consumers an undefined value."""
+    return integrity_check(
+        f"vocab:{field}",
+        len(undefined),
+        detail_ok=f"all {field} values are defined in vocab",
+        detail_bad=f"{{n}} undefined {field} value(s)",
+        offenders=undefined,
+    )
+
+
 def contract_check(
     emitted_views: dict[str, list[str]], stamped_version: str, spec: dict[str, Any]
 ) -> Check:
@@ -311,6 +325,27 @@ def diagnose(
                 detail_bad="{n} dangling entity_mention(s)",
             )  # fmt: skip
         )
+
+    # enum coverage: every facet value present in gold is defined in the vocab (ADR-0001 P2). A
+    # newly fetched doc introducing an undefined value fails the producer until the registry catches
+    # up — drift caught at the source. Only runs when the vocab table is populated.
+    has_vocab = one(
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='vocab'"
+    ) and one("SELECT count(*) FROM vocab")
+    if has_vocab:
+        for field, kind in (
+            ("function_category", "function_category"),
+            ("doc_type", "doc_type"),
+            ("section", "section"),
+            ("app_user", "persona"),
+            ("doc_user", "persona"),
+        ):
+            undefined = ids(
+                f"SELECT DISTINCT {field} FROM documents WHERE is_latest=1 AND {field}<>'' "
+                "AND {f} NOT IN (SELECT code FROM vocab WHERE kind=?)".format(f=field),
+                kind,
+            )
+            checks.append(enum_coverage_check(field, undefined))
 
     # read contract: the emitted DB exposes the published v_* interface verbatim (ADR-0001 P1)
     if read_spec is not None:

@@ -47,10 +47,10 @@
 | | P1.4 | Document `chunks_fts` (cols + tokenizer) as named contract | ✅ | `fts` block in v1.json (D-fts) |
 | | P1.5 | `doctor`: assert emitted DB == spec (views, cols, version) | ✅ | `contract_check`; FAIL⇒RED; wired in `_emit_doctor` |
 | | P1.6 | `contract-lint`: enforce semver bump-type vs prior spec | ✅ | `lint_bump` + `make contract-lint` (no-op at v1) |
-| **P2 — Vocab-as-data + drift gates** (vdocs) | P2.1 | `vocab(kind,code,label,description)` table from `registries/` | ⬜ | sections, domains, personas, doc types, apps, products |
-| | P2.2 | `doctor` enum-coverage gate (every distinct facet value ∈ vocab) | ⬜ | growth introducing undefined value fails producer |
+| **P2 — Vocab-as-data + drift gates** (vdocs) | P2.1 | `vocab(kind,code,label,description)` table from `registries/` | ✅ | `kernel/vocab.py`; v_vocab (contract→1.1); domains/doc_type/section/persona |
+| | P2.2 | `doctor` enum-coverage gate (every distinct facet value ∈ vocab) | ✅ | `enum_coverage_check`; undefined value ⇒ RED |
 | | P2.3 | Coverage stats (% populated, distinct counts, rows) in `manifest.json` | ⬜ | |
-| | P2.4 | `capabilities` list in `manifest.json` | ⬜ | `fts5`,`pub_year`,`vocab_table`,… |
+| | P2.4 | `capabilities` (read-contract) in `manifest.json` | ⬜ | from spec |
 | | P2.5 | Corpus characterization (approval) test | ⬜ | distinct-values/counts diff per build |
 | **P3 — Shared Go core** (vdocs-tui) | P3.1 | Extract `internal/index` → importable `pkg/index` | ⬜ | API-stable; tests green |
 | | P3.2 | Vendor `contracts/read/v1.json` + `go:generate` → col constants/struct/`RequiredSchemaVersion` | ⬜ | codegen |

@@ -313,7 +313,7 @@ def test_index_stamps_read_contract_meta(ctx):
         meta = dict(conn.execute("SELECT key, value FROM meta").fetchall())
     finally:
         conn.close()
-    assert meta["read_schema_version"] == "1.0"
+    assert meta["read_schema_version"] == "1.1"
     assert meta["corpus_doc_count"] == "2"  # both version-group members are documents
     assert len(meta["corpus_content_hash"]) == 64  # sha256 hexdigest
 
@@ -365,6 +365,34 @@ def test_index_emits_read_contract_views_matching_the_spec(ctx):
         assert latest == 1
         # the read_schema_version stamped in meta is the spec's version (single source)
         ver = conn.execute("SELECT value FROM meta WHERE key = 'read_schema_version'").fetchone()[0]
-        assert ver == rc.version(spec) == "1.0"
+        assert ver == rc.version(spec) == "1.1"
+    finally:
+        conn.close()
+
+
+def test_index_publishes_the_vocab_table(ctx):
+    # P2 (ADR-0001): index.db carries the controlled facet vocabularies as data (v_vocab), sourced
+    # from registries — so consumers read definitions instead of hardcoding them.
+    from vdocs.kernel import vocab as kv
+
+    _seed(ctx)
+    (result,) = Orchestrator([IndexStage()]).run(ctx)
+    assert result.status == "ok"
+    want = kv.vocab_rows(ctx.cfg.registries)
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        got = conn.execute(
+            "SELECT kind, code, label, description FROM v_vocab ORDER BY kind, code"
+        ).fetchall()
+        # every registry-sourced vocabulary row is published verbatim via the view
+        assert [tuple(r) for r in got] == sorted(want)
+        # the four facet axes are all present
+        kinds = {r[0] for r in got}
+        assert {"function_category", "doc_type", "section", "persona"} <= kinds
+        # a known definition is queryable (the explainer's data source)
+        desc = conn.execute(
+            "SELECT description FROM v_vocab WHERE kind='persona' AND code='clinical'"
+        ).fetchone()[0]
+        assert "care staff" in desc
     finally:
         conn.close()

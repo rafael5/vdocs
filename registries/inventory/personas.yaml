@@ -1,0 +1,21 @@
+# registries/inventory/personas.yaml — the shared 5-persona vocabulary (ADR-0001 P2).
+# ONE vocabulary serves both persona axes: app_user (who OPERATES the app, app-profiles.yaml) and
+# doc_user (who READS the doc, doc-user.yaml). This file is the authoritative source of the persona
+# *definitions* (published into index.db's `vocab` table, kind=persona), so consumers read them as
+# data instead of hardcoding them. Keep this set in sync with doc-user.yaml's 5-persona vocabulary.
+personas:
+  clinical:
+    label: Clinical
+    description: care staff — physicians, nurses, pharmacists, lab/imaging techs.
+  clinical-admin:
+    label: Clinical-administrative
+    description: clinical-administrative staff — MAS clerks, registrars, HIM, schedulers.
+  business-admin:
+    label: Business / fiscal
+    description: business/fiscal staff — billing, eligibility, finance, HR.
+  developer:
+    label: Developer
+    description: programmers and integrators who build/maintain VistA code & interfaces.
+  sysadmin:
+    label: System administrator
+    description: IRM / system administrators who install, configure, and operate packages.

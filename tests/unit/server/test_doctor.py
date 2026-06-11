@@ -102,3 +102,21 @@ def test_contract_check_fails_on_version_mismatch():
 
     c = contract_check({"v_documents": ["doc_key", "title"]}, "0.9", _CONTRACT_SPEC)
     assert c.health is Health.FAIL and "version" in c.detail.lower()
+
+
+# --- P2: enum-coverage gate (every facet value present in gold is defined in vocab) -------------
+
+
+def test_enum_coverage_passes_when_no_undefined_values():
+    from vdocs.server.doctor import enum_coverage_check
+
+    c = enum_coverage_check("function_category", [])
+    assert c.health is Health.PASS
+
+
+def test_enum_coverage_fails_and_names_the_undefined_values():
+    from vdocs.server.doctor import enum_coverage_check
+
+    c = enum_coverage_check("function_category", ["Health Informatics", "Mystery Domain"])
+    assert c.health is Health.FAIL
+    assert "Health Informatics" in c.detail

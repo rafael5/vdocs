@@ -4,3 +4,12 @@ section_code:
   VistA/GUI Hybrids (formerly HealtheVet): GUI
   Infrastructure: INF
   Monograph: MON
+
+# code → (label, human description) for the published `vocab` table (ADR-0001 P2, kind=section).
+# Additive — the stages above read only `section_code:`. Keep the codes in sync with that map.
+descriptions:
+  CLI: {label: Clinical, description: "Clinical — patient-care software."}
+  FIN: {label: Financial / administrative, description: "Financial / administrative software."}
+  GUI: {label: GUI / Windows client, description: "GUI / Windows-client software."}
+  INF: {label: Infrastructure, description: "Infrastructure — platform & developer software."}
+  MON: {label: Monograph / monitoring, description: "Monograph / monitoring & management software."}

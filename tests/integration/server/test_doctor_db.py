@@ -171,3 +171,40 @@ def test_diagnose_contract_check_fails_red_when_a_view_is_missing(tmp_path):
     rc_check = next(c for c in report.checks if c.name == "read contract")
     assert rc_check.health is Health.FAIL and "v_entities missing" in rc_check.detail
     assert report.verdict() == "RED"
+
+
+# --- P2: enum-coverage gate (undefined facet value fails the producer) --------------------------
+
+
+def _define(conn, *rows):
+    conn.executemany("INSERT INTO vocab (kind, code, label, description) VALUES (?,?,?,'')", rows)
+
+
+def test_enum_gate_fails_red_on_an_undefined_function_category(tmp_path):
+    # the seeded doc uses function_category='registration'; vocab defines only 'Laboratory' → the
+    # value is undefined → FAIL ⇒ RED (exactly the "grew the library with a new domain" case).
+    conn, spec = _with_contract(tmp_path)
+    _define(conn, ("function_category", "Laboratory", "Laboratory"))
+    conn.commit()
+    report = doc.diagnose(conn, kept_doctypes=_KEPT, policy=_POLICY, read_spec=spec)
+    conn.close()
+    fc = next(c for c in report.checks if c.name == "vocab:function_category")
+    assert fc.health is Health.FAIL and "registration" in fc.detail
+    assert report.verdict() == "RED"
+
+
+def test_enum_gate_passes_when_every_value_is_defined(tmp_path):
+    conn, spec = _with_contract(tmp_path)
+    _define(
+        conn,
+        ("function_category", "registration", "Registration"),
+        ("doc_type", "UM", "User Manual"),
+        ("section", "CLIN", "Clinical"),
+        ("persona", "clinical", "Clinical"),
+        ("persona", "developer", "Developer"),
+    )
+    conn.commit()
+    report = doc.diagnose(conn, kept_doctypes=_KEPT, policy=_POLICY, read_spec=spec)
+    conn.close()
+    for field in ("function_category", "doc_type", "section", "app_user", "doc_user"):
+        assert next(c for c in report.checks if c.name == f"vocab:{field}").health is Health.PASS

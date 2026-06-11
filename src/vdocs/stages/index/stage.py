@@ -36,7 +36,7 @@ from vdocs.contracts.registry import (
     INDEX_SECTIONS,
     TEXT_NORMALIZED,
 )
-from vdocs.kernel import db, frontmatter, personas, read_contract, titles
+from vdocs.kernel import db, frontmatter, personas, read_contract, titles, vocab
 from vdocs.kernel import products as kproducts
 from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, RunResult
@@ -95,6 +95,13 @@ CREATE VIEW quality AS
 -- read-contract meta (ADR-0001, P0): two version axes consumers check —
 -- read_schema_version (structural, semver) + corpus_content_hash (data fingerprint).
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+-- published vocabulary (ADR-0001, P2): controlled facet vocabularies as DATA (sourced from
+-- registries) — domains, doc types, sections, personas — surfaced as v_vocab. Lets consumers read
+-- definitions instead of hardcoding them, and lets doctor gate that every facet value is defined.
+CREATE TABLE vocab (
+  kind TEXT NOT NULL, code TEXT NOT NULL, label TEXT, description TEXT,
+  PRIMARY KEY (kind, code)
+);
 """
 
 _DOC_COLUMNS = (
@@ -122,14 +129,17 @@ class IndexStage(Stage):
     # v6 (date facet): documents gained `published` (YYYY-MM) + `pub_year` from the gold FM.
     # v7 (read contract, ADR-0001 P0): index.db gained a `meta` table stamping
     # read_schema_version + corpus_content_hash (the producer/consumer version axes).
+    # v8 (vocab-as-data, ADR-0001 P2): index.db gained a `vocab` table (v_vocab) of the
+    # controlled facet vocabularies from registries; read contract → v1.1.
     # The bump folds into consumers' inputs_fp so a re-run rebuilds.
-    contract_ver = 7
+    contract_ver = 8
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
         # the published read contract (ADR-0001): the SSOT the v_* views are generated from and
         # whose version is stamped into `meta` — so views can't drift from the spec.
         spec = read_contract.load(read_contract.contract_path(base=cfg.read_contract_dir))
+        vocab_rows = vocab.vocab_rows(cfg.registries)  # published facet vocabulary (P2)
         staged_cols, staged_rows = _read_staged(cfg.index_db)
         by_path = {str(r["bundle_path"]): r for r in staged_rows}
         latest_ids = _latest_doc_ids(cfg.gold_consolidated)
@@ -267,6 +277,10 @@ class IndexStage(Stage):
             conn.executemany(
                 "INSERT INTO entity_mentions (entity_id, doc_key, section_id) VALUES (?, ?, ?)",
                 mentions,
+            )
+            conn.executemany(
+                "INSERT INTO vocab (kind, code, label, description) VALUES (?, ?, ?, ?)",
+                vocab_rows,
             )
             conn.executemany(
                 "INSERT INTO meta (key, value) VALUES (?, ?)",
