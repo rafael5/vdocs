@@ -181,8 +181,9 @@ def test_index_builds_documents_sections_entities(ctx):
 
 
 def test_index_denoises_title_preserving_source_and_app_name(ctx):
-    # a title heavy with version/patch noise → `title` is de-noised (kernel.titles); the raw is
-    # preserved as `title_source`; `app_name` is the app's canonical name (the display fallback).
+    # a title heavy with version/patch noise → `title` is abbreviation-first
+    # ("<product abbr> — <suffix>", version/patch stripped); raw preserved as `title_source`;
+    # `app_name`/`product_*` populated. ACKQ has no product-registry entry → defaults to app_code.
     from vdocs.kernel import personas
 
     raw = "QUASAR Version 3 User Manual (Updated ACKQ*3*21)"
@@ -202,14 +203,17 @@ def test_index_denoises_title_preserving_source_and_app_name(ctx):
     expected_app = personas.app_names(ctx.cfg.registries).get("ACKQ", "")
     conn = db.connect(ctx.cfg.index_db, read_only=True)
     try:
-        title, src, app_name = conn.execute(
-            "SELECT title, title_source, app_name FROM documents WHERE doc_id = 'ACKQ:quasar_um'"
+        title, src, app_name, p_abbr, p_full = conn.execute(
+            "SELECT title, title_source, app_name, product_abbr, product_full "
+            "FROM documents WHERE doc_id = 'ACKQ:quasar_um'"
         ).fetchone()
     finally:
         conn.close()
-    assert title == "QUASAR User Manual"  # "Version 3" + "(Updated ACKQ*3*21)" stripped
+    # "Version 3" + "(Updated ACKQ*3*21)" stripped; "QUASAR" lead replaced by the app_code abbr
+    assert title == "ACKQ — User Manual"
     assert src == raw  # raw title preserved for provenance/search
     assert app_name and app_name == expected_app  # canonical app name populated
+    assert p_abbr == "ACKQ" and p_full == expected_app  # default product = the application
 
 
 def test_chunks_fts_indexes_doc_title_so_title_only_tokens_match(ctx):

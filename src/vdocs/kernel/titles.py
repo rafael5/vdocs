@@ -60,15 +60,90 @@ def clean_title(raw: str, app_name: str = "") -> str:
     ``app_name``. A fully-collapsed result falls back to ``app_name`` (or the
     trimmed raw if no app name is known).
     """
-    s = raw or ""
-    for rx in _STRIP:
-        s = rx.sub(" ", s)
-    s = _tidy(s)
+    s = _denoise(raw)
     if not s:
         return app_name or (raw or "").strip()
     if app_name and _label_only(s):
         return f"{app_name} — {s}"
     return s
+
+
+def _denoise(raw: str) -> str:
+    """Strip version/patch tokens and tidy — the de-noised title, no name fallback."""
+    s = raw or ""
+    for rx in _STRIP:
+        s = rx.sub(" ", s)
+    return _tidy(s)
+
+
+# ── abbreviation-first display title (product-prefixed) ─────────────────────
+
+_DOCKIND = re.compile(
+    r"\b(user|technical|installation|deployment|security|supervisor|manager|pharmacist|"
+    r"technician|nurse|inspector|programmer|clinician|developer|manual|guide|guides|handbook|"
+    r"reference|card|notes|addendum|supplement|appendix|specification|spec|overview|setup|"
+    r"training|getting|quick|release|change|package|menu|module)\b",
+    re.I,
+)
+_LEAD_PARENS = re.compile(r"^\s*\([^)]*\)")  # a leftover "(ABBR)" right after a stripped name
+
+
+def _starts_with(text: str, prefix: str) -> bool:
+    """Case-insensitive prefix match at a word boundary (so 'RA' ≠ 'Radiology')."""
+    if not prefix or len(text) < len(prefix):
+        return False
+    if text[: len(prefix)].lower() != prefix.lower():
+        return False
+    rest = text[len(prefix) :]
+    return rest == "" or not rest[0].isalnum()
+
+
+def _heuristic_lead(t: str) -> str:
+    """The product/app name a title leads with = its text before the first doc-kind word."""
+    m = _DOCKIND.search(t)
+    return (t[: m.start()] if m else t).strip(" -–:/")
+
+
+def _strip_domain_prefix(name: str) -> str:
+    """Drop a leading 'Pharmacy: ' / 'CPRS: ' / 'Registry: ' qualifier from a name."""
+    return name.split(": ", 1)[1] if ": " in name else name
+
+
+def display_title(
+    raw: str, app_code: str, app_name: str, products: list[dict]
+) -> tuple[str, str, str]:
+    """Build the abbreviation-first display title for a document.
+
+    Returns ``(title, product_abbr, product_full)`` where ``title`` is
+    ``"<ABBR> — <distinguishing suffix>"`` (version/patch removed, the product
+    name replaced by its dense abbreviation so titles cluster and sort by
+    product). ``products`` is the registry entry list for ``app_code`` ([] if
+    none → defaults to the application's own name/code).
+    """
+    t = _denoise(raw)
+    abbr = full = ""
+    matched = ""
+    # 1) registry product whose longest match-alias is a word-boundary prefix
+    for p in products:
+        for alias in p["match"]:
+            if _starts_with(t, alias) and len(alias) > len(matched):
+                abbr, full, matched = p["abbr"], p["full"], alias
+    # 2) default: the application itself
+    if not abbr:
+        abbr = app_code
+        full = app_name or app_code
+        for cand in sorted({app_name, _strip_domain_prefix(app_name)}, key=len, reverse=True):
+            if cand and _starts_with(t, cand):
+                matched = cand
+                break
+        else:
+            matched = _heuristic_lead(t)
+    # 3) suffix = the title minus the matched product/app name, de-chromed
+    rest = t[len(matched) :] if matched and _starts_with(t, matched) else t
+    rest = _LEAD_PARENS.sub("", rest)
+    suffix = rest.strip(" -–:,/")
+    title = f"{abbr} — {suffix}" if suffix else abbr
+    return title, abbr, full
 
 
 def _tidy(s: str) -> str:

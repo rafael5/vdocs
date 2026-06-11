@@ -1,0 +1,107 @@
+# product-names.yaml — canonical product/module names for multi-product apps.
+#
+# A VistA namespace (app_code) often hosts several distinctly-named products; the
+# `application` facet alone (app_code → app_name) can't tell them apart. This
+# registry names each product so the faceted browser can show the dense `abbr`
+# and the explainer bar can expand it to `full`. `match` lists the title-leading
+# aliases that map a document to a product (longest/most-specific match wins;
+# order within an app is specific-first, generic core last).
+#
+# ONLY multi-product namespaces are listed. A single-product app defaults to its
+# app_code (abbr) + app_name (full), already handled by the `application` facet.
+# Curated 2026-06-10 from the Phase-1 mining (docs/product-*.draft.yaml); edit
+# freely (tenet #13).
+
+products:
+
+  # ── Registration & scheduling ──
+  ADT:
+    - { abbr: PIMS, full: Patient Information Management System, match: [PIMS] }
+  SD:
+    - { abbr: VSE, full: VistA Scheduling Enhancement, match: ["VistA Scheduling Enhancement", "VSE for Clinical Staff", VSECS, VSE] }
+    - { abbr: ISS, full: Integrated Scheduling Solution, match: ["Integrated Scheduling Solution", ISS] }
+    - { abbr: CCST, full: Clinical Capacity Search Tool, match: ["Clinical Capacity Search Tool", CCST] }
+    - { abbr: PCICSV, full: Patient Check-In Clinical Staff Viewer, match: ["Patient Check In Clinical Staff Viewer", PCICSV] }
+    - { abbr: CCM, full: Clinical Configuration Manager, match: ["Clinical Configuration"] }
+    - { abbr: Recall, full: Recall Reminders, match: ["Recall Reminder"] }
+    - { abbr: Scheduling, full: "Scheduling (PIMS)", match: [PIMS, Scheduling] }
+  IVMB:
+    - { abbr: GMT, full: Geographic Means Test, match: ["Geographic Means Test", GMT] }
+    - { abbr: MTS, full: Means Test Sharing, match: ["Means Test Sharing", MTS] }
+    - { abbr: IVM, full: "Income Verification Match / Health Eligibility Center", match: ["Error Processing", "Priority Letters", IVM, HEC] }
+  PCMM:
+    - { abbr: MHTC, full: Mental Health Treatment Coordinator, match: ["PCMM Mental Health Treatment Coordinator", MHTC] }
+    - { abbr: PCMM, full: Primary Care Management Module, match: ["Primary Care Management", PCMM] }
+
+  # ── Pharmacy ──
+  PSO:
+    - { abbr: IEP, full: Inbound ePrescribing, match: ["Pharmacy Reengineering (PRE) Inbound ePrescribing (IEP)", "Inbound ePrescribing", IEP] }
+    - { abbr: ePCS, full: ePrescribing Controlled Substances, match: ["ePrescribing Controlled Substances", ePCS] }
+    - { abbr: OneVA Rx, full: OneVA Pharmacy, match: ["OneVA Pharmacy"] }
+    - { abbr: Outpatient Rx, full: Outpatient Pharmacy, match: ["Outpatient Pharmacy"] }
+  PSB:
+    - { abbr: BCMA, full: Bar Code Medication Administration, match: [BCMA, BCBU] }
+  PSN:
+    - { abbr: NDF, full: National Drug File, match: ["National Drug File", NDF] }
+  PSS:
+    - { abbr: PDM, full: Pharmacy Data Management, match: ["Pharmacy Data Management", "Pharmacy: Data Management", "Dosing Order Check", MOCHA] }
+  PSU:
+    - { abbr: PBM, full: Pharmacy Benefits Management, match: ["Benefits Management", "Ask A"] }
+  PSX:
+    - { abbr: CMOP, full: Consolidated Mail Outpatient Pharmacy, match: [CMOP, "Consolidated Mail Outpatient Pharmacy"] }
+
+  # ── Laboratory ──
+  LR:
+    - { abbr: AP, full: Anatomic Pathology, match: ["Laboratory Anatomic Pathology", "AP "] }
+    - { abbr: Blood Bank, full: "Blood Bank (legacy)", match: ["Laboratory: Blood Bank"] }
+    - { abbr: Lab, full: Laboratory, match: [Laboratory] }
+  LA:
+    - { abbr: Lab UI, full: Laboratory Universal Interface, match: ["Laboratory: Universal Interface", "Universal Interface"] }
+
+  # ── Radiology & imaging ──
+  MAG:
+    - { abbr: VistARad, full: "VistARad (radiology display)", match: [VistARad, VistARAD] }
+    - { abbr: VIX, full: VistA Imaging Exchange, match: ["VistA Imaging Exchange", "Central VistA Imaging Exchange", CVIX, "VIX Admin", VIX] }
+    - { abbr: DICOM GW, full: VistA Imaging DICOM Gateway, match: ["VistA Imaging DICOM Gateway", DICOM] }
+    - { abbr: VistA Imaging, full: VistA Imaging System, match: ["VistA Imaging"] }
+
+  # ── Billing & finance ──
+  IB:
+    - { abbr: EIV, full: Electronic Insurance Verification, match: ["Electronic Insurance Verification", EIV, eIV] }
+    - { abbr: eII, full: Electronic Insurance Identification, match: ["Electronic Insurance Identification", eII] }
+    - { abbr: Claims Tracking, full: Claims Tracking, match: ["Claims Tracking"] }
+    - { abbr: IB, full: Integrated Billing, match: ["Integrated Billing", EDI, "Long Term Care", "Diagnostic Measures", IB] }
+  PRC:
+    - { abbr: IFCAP, full: "Integrated Funds Distribution, Control Point Activity, Accounting & Procurement", match: [IFCAP] }
+  PRCA:
+    - { abbr: AR, full: Accounts Receivable, match: ["Accounts Receivable", AR] }
+  EC:
+    - { abbr: ECS, full: Event Capture System, match: ["Event Capture", ECS] }
+
+  # ── Clinical care ──
+  GMRC:
+    - { abbr: CCRA, full: Community Care Referral and Authorization, match: ["Community Care Referral and Authorization", CCRA] }
+    - { abbr: SEOC, full: Standardized Episodes of Care, match: ["Standardized Episodes of Care", SEOC] }
+    - { abbr: Consult Toolbox, full: Consult Toolbox, match: ["Consult Toolbox"] }
+    - { abbr: Consults, full: Consult / Request Tracking, match: ["Consult/Request Tracking", "One Consult", "Decision Support Tool", DOCMP, CITI, EPRS, Consult] }
+  PXRM:
+    - { abbr: CR, full: Clinical Reminders, match: ["Clinical Reminders", Reminder, Template, AHOBP, "Airborne Hazard"] }
+  NUPA:
+    - { abbr: PADP, full: Patient Assessment Documentation Package, match: [PADP] }
+
+  # ── Specialty care ──
+  YS:
+    - { abbr: MHA, full: Mental Health Assistant, match: ["Mental Health Assistant", MHA] }
+    - { abbr: VCL, full: Veterans Crisis Line, match: ["Veteran's Crisis Line", "Crisis Line", "Suicide Prevention"] }
+    - { abbr: ASI-MV, full: Addiction Severity Index (Multimedia), match: ["Addiction Severity Index"] }
+    - { abbr: MH, full: Mental Health, match: ["Mental Health"] }
+  RMPR:
+    - { abbr: NPPD, full: National Prosthetics Patient Database, match: [NPPD, "National Prosthetics Patient Database"] }
+    - { abbr: Home Oxygen, full: Home Oxygen, match: ["Home Oxygen"] }
+    - { abbr: Prosthetics, full: Prosthetics, match: [Prosthetics, "Delayed Order Report", "Electronic Order/Suspense", "Purchase Card", "View Billing", "Purchasing"] }
+
+  # ── Infrastructure ──
+  XU:
+    - { abbr: Kernel, full: Kernel, match: [Kernel, "Assigning Person Class", "Reverse Negative Lock", "VistA Build Analyzer", KDC] }
+  DI:
+    - { abbr: FileMan, full: VA FileMan, match: [FileMan, "FM ", "VA FileMan"] }

@@ -37,6 +37,7 @@ from vdocs.contracts.registry import (
     TEXT_NORMALIZED,
 )
 from vdocs.kernel import db, frontmatter, personas, titles
+from vdocs.kernel import products as kproducts
 from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -52,7 +53,8 @@ CREATE TABLE documents (
   doc_id        TEXT NOT NULL,
   app_code      TEXT, doc_type TEXT, section TEXT, pkg_ns TEXT,
   version       TEXT, patch_id TEXT, anchor_key TEXT, group_key TEXT,
-  title         TEXT, title_source TEXT, app_name TEXT, doc_label TEXT,
+  title         TEXT, title_source TEXT, app_name TEXT,
+  product_abbr  TEXT, product_full TEXT, doc_label TEXT,
   app_user      TEXT, doc_user TEXT, software_class TEXT, function_category TEXT,
   word_count    INTEGER, section_count INTEGER, is_latest INTEGER NOT NULL,
   template_id   TEXT, source_sha256 TEXT, source_url TEXT
@@ -93,7 +95,8 @@ CREATE VIEW quality AS
 
 _DOC_COLUMNS = (
     "doc_key", "doc_id", "app_code", "doc_type", "section", "pkg_ns", "version", "patch_id",
-    "anchor_key", "group_key", "title", "title_source", "app_name", "doc_label",
+    "anchor_key", "group_key", "title", "title_source", "app_name",
+    "product_abbr", "product_full", "doc_label",
     "app_user", "doc_user", "software_class", "function_category",
     "word_count", "section_count", "is_latest", "template_id", "source_sha256", "source_url",
 )  # fmt: skip
@@ -109,8 +112,10 @@ class IndexStage(Stage):
     # v3 (§7 bake): documents gained app_user/doc_user/software_class/function_category columns +
     # the persona facet index. v4 (title de-noise): documents gained `title_source` (raw title) +
     # `app_name`, and `title` is now the version/patch-stripped display name (kernel.titles).
+    # v5 (abbreviation-first titles): documents gained `product_abbr`/`product_full`, and `title`
+    # is now "<product abbr> — <suffix>" (kernel.titles.display_title + product-names.yaml).
     # The bump folds into consumers' inputs_fp so a re-run rebuilds.
-    contract_ver = 4
+    contract_ver = 5
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
@@ -118,6 +123,7 @@ class IndexStage(Stage):
         by_path = {str(r["bundle_path"]): r for r in staged_rows}
         latest_ids = _latest_doc_ids(cfg.gold_consolidated)
         app_name_map = personas.app_names(cfg.registries)  # app_code → name (title fallback)
+        products = kproducts.load_products(cfg.registries)  # app_code → [product] (abbr titles)
         rules = ent.compile_rules(
             _load_entity_entries(cfg.registries / "entities" / "entities.yaml")
         )
@@ -146,7 +152,15 @@ class IndexStage(Stage):
             word_count = int(staged.get("word_count") or ep.word_count(body))
             documents.append(
                 _doc_row(
-                    doc_key, doc_id, meta, staged, is_latest, word_count, len(secs), app_name_map
+                    doc_key,
+                    doc_id,
+                    meta,
+                    staged,
+                    is_latest,
+                    word_count,
+                    len(secs),
+                    app_name_map,
+                    products,
                 )
             )
             for s in secs:
@@ -269,13 +283,15 @@ def _read_table_csv(path):  # type: ignore[no-untyped-def]
         return []
 
 
-def _doc_row(doc_key, doc_id, meta, staged, is_latest, word_count, section_count, app_names):  # type: ignore[no-untyped-def]
+def _doc_row(  # type: ignore[no-untyped-def]
+    doc_key, doc_id, meta, staged, is_latest, word_count, section_count, app_names, products
+):
     """One `documents` row — inventory identity from the staged table, title/template/provenance
     from the bundle FM (the keys `doc_meta_staged` doesn't carry).
 
-    The display `title` is de-noised (version/patch stripped) via `kernel.titles`; the raw
-    title is preserved as `title_source`, and `app_name` (the app's canonical name) is the
-    fallback used when a title de-noises to only a doc-type label."""
+    The display `title` is abbreviation-first — `"<product abbr> — <suffix>"`, version/patch
+    stripped (`kernel.titles.display_title`); `title_source` preserves the raw; `product_abbr`/
+    `product_full` and `app_name` drive the faceted browser + explainer."""
 
     def s(key: str) -> str:
         return str(staged.get(key, "") or "")
@@ -283,6 +299,9 @@ def _doc_row(doc_key, doc_id, meta, staged, is_latest, word_count, section_count
     app_code = s("app_code") or str(meta.get("app_code", ""))
     raw_title = str(meta.get("title", "") or s("doc_title"))
     app_name = app_names.get(app_code, "")
+    disp_title, product_abbr, product_full = titles.display_title(
+        raw_title, app_code, app_name, products.get(app_code, [])
+    )
     return (
         doc_key,
         doc_id,
@@ -294,9 +313,11 @@ def _doc_row(doc_key, doc_id, meta, staged, is_latest, word_count, section_count
         s("patch_id") or str(meta.get("patch_id", "")),
         s("anchor_key"),
         s("group_key"),
-        titles.clean_title(raw_title, app_name),
+        disp_title,
         raw_title,
         app_name,
+        product_abbr,
+        product_full,
         s("doc_label"),
         # §7 profile tags: baked into the body FM by `enrich`, read straight off `meta`
         str(meta.get("app_user", "")),

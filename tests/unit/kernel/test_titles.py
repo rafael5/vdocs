@@ -88,3 +88,68 @@ def test_clean_title_is_idempotent() -> None:
     ]:
         once = titles.clean_title(raw, "App Name")
         assert titles.clean_title(once, "App Name") == once
+
+
+# ── display_title (abbreviation-first, product-prefixed) ────────────────────
+
+_PSO = [
+    {
+        "abbr": "IEP",
+        "full": "Inbound ePrescribing",
+        "match": [
+            "Pharmacy Reengineering (PRE) Inbound ePrescribing (IEP)",
+            "Inbound ePrescribing",
+            "IEP",
+        ],
+    },
+    {"abbr": "Outpatient Rx", "full": "Outpatient Pharmacy", "match": ["Outpatient Pharmacy"]},
+]
+_VSE = [
+    {
+        "abbr": "VSE",
+        "full": "VistA Scheduling Enhancement",
+        "match": ["VistA Scheduling Enhancement", "VSE"],
+    }
+]
+
+
+def test_display_title_registry_product():
+    title, abbr, full = titles.display_title(
+        "Outpatient Pharmacy Manager's User Manual", "PSO", "Pharmacy: Outpatient Pharmacy", _PSO
+    )
+    assert title == "Outpatient Rx — Manager's User Manual"
+    assert (abbr, full) == ("Outpatient Rx", "Outpatient Pharmacy")
+
+
+def test_display_title_longest_alias_wins():
+    title, abbr, _ = titles.display_title(
+        "Pharmacy Reengineering (PRE) Inbound ePrescribing (IEP) User Manual (Unit 4, Part 1)",
+        "PSO",
+        "Pharmacy: Outpatient Pharmacy",
+        _PSO,
+    )
+    assert abbr == "IEP"
+    assert title == "IEP — User Manual (Unit 4, Part 1)"
+
+
+def test_display_title_strips_leftover_abbr_paren():
+    title, abbr, _ = titles.display_title(
+        "VistA Scheduling Enhancement (VSE) GUI User Guide Addendum", "SD", "Scheduling", _VSE
+    )
+    assert title == "VSE — GUI User Guide Addendum"
+
+
+def test_display_title_default_app_uses_app_code_and_heuristic_lead():
+    # no registry entry → abbr is the app_code; the leading product name is dropped
+    title, abbr, full = titles.display_title(
+        "Radiology User Manual", "RA", "Radiology/Nuclear Medicine", []
+    )
+    assert (title, abbr, full) == ("RA — User Manual", "RA", "Radiology/Nuclear Medicine")
+
+
+def test_display_title_default_keeps_distinguishing_module():
+    # the app_name prefixes the title → only it is stripped, the module survives
+    title, _, _ = titles.display_title(
+        "Beneficiary Travel Dashboard User Manual", "DGBT", "Beneficiary Travel", []
+    )
+    assert title == "DGBT — Dashboard User Manual"
