@@ -65,7 +65,7 @@
 | | P5.2 | Spine: `/api/facets` + `/api/candidates` (+`/api/meta`) over `pkg/index` + embedded page | ✅ | httptest-covered; minimal vanilla-JS browser |
 | | P5.3 | Preview / TOC / fuzzy / **FTS5** endpoints + panes | ⬜ | |
 | | P5.4 | DB auto-download on first run + manifest validation (sha256, schema_version) | ⬜ | zstd, resumable |
-| | P5.5 | SvelteKit front-end (`go:embed`) | 🟡 | embed plumbing ✅; **SvelteKit blocked — no Node (D17)** |
+| | P5.5 | SvelteKit front-end (`go:embed`) | ✅ | Svelte 5 SPA, npm (house std), built→embedded; Node *was* installed (D17) |
 | | P5.6 | Cross-compile matrix (linux/mac/win) | ⬜ | |
 | **P6 — Multi-consumer hardening** (future) | P6.1 | MCP endpoint consuming `pkg/index` + capabilities | ⛔ | when MCP is revived |
 | | P6.2 | `make check-consumers` compatibility matrix in vdocs | ⬜ | blast-radius before a bump |
@@ -362,10 +362,19 @@ declare required capabilities + `go:embed` the built front-end; P5.6 cross-compi
   `cmd/vdocs-web`: DB resolution + pre-contract-DB refusal + `127.0.0.1:8765`. `make check` green.
 
 ### Discoveries
-- **D17 (toolchain blocker):** the host has **Go but no Node/npm** (only an npm cache), so the
-  chosen **SvelteKit** front-end can't be built yet. Shipped a minimal **vanilla-JS** embedded page
-  as the spine (works offline, proves the API seam); `internal/web/static/` is swap-in ready for the
-  SvelteKit build output once Node is installed. **Operator action:** install Node to unblock P5.5.
+- **D17 (corrected):** the host **does** have Node (nvm: v22.22.2 + v24.14.1, default `lts/*`,
+  Corepack) and direnv — my earlier "no Node" was the *sandbox's non-login shell* not sourcing nvm
+  (run node from `~/.nvm/versions/node/v22.22.2/bin` or with nvm sourced). SvelteKit was never truly
+  blocked; **P5.5 is done** — a Svelte 5 SPA, built (adapter-static) into `internal/web/static/` and
+  embedded. The vanilla-JS placeholder is replaced.
+- **D19 (`go:embed` gotcha):** `//go:embed static` **excludes** files/dirs beginning with `_`, but
+  SvelteKit emits assets under `_app/` — must use **`//go:embed all:static`** (tested). The built
+  output is **committed** so `go build`/CI needs no Node.
+- **D20 (house Node standard, recorded in `~/.claude/CLAUDE.md`):** the repo's `~/claude/templates/`
+  already encode the conventions — **npm** (not pnpm), **Biome**, **`node:test`**, `.node-version`,
+  direnv `.envrc`. Aligned vdocs-web to it (npm + `.node-version` + committed `package-lock.json`);
+  SvelteKit's Vite build is the one justified deviation (it's an app, not a publishable lib). Added
+  Node + Go sections to the global `CLAUDE.md` so all languages have one consistent home.
 - **D18 (cross-module import works):** `vdocs-web` imports `pkg/index` via a `../vdocs-tui` replace +
   the shared module cache — local airgapped build/test/lint all green. **CI deferred:** a
   cross-*private*-repo build needs a dual-checkout+PAT or `go mod vendor`; local `make check` is the
