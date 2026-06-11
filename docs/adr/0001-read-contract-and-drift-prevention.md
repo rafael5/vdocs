@@ -7,6 +7,9 @@
 - **Supersedes / relates to:** the lexical-search plans (`docs/offline-lexical-search-plan.md`),
   the vdocs-web direction (option A, server-backed). This ADR is authoritative for the
   producer→consumer data contract.
+- **Implementation tracker (how/status):**
+  [`docs/read-contract-implementation-plan.md`](../read-contract-implementation-plan.md) — staged
+  phases P0–P6 with per-phase changelog/discoveries/risks. Update it as work lands.
 
 ## Context
 
