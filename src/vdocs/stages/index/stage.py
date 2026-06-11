@@ -92,6 +92,9 @@ CREATE VIEW quality AS
   SELECT d.doc_key, d.doc_id, d.is_latest, d.word_count, d.section_count,
          (SELECT count(*) FROM entity_mentions em WHERE em.doc_key = d.doc_key) AS entity_mentions
   FROM documents d;
+-- read-contract meta (ADR-0001, P0): two version axes consumers check —
+-- read_schema_version (structural, semver) + corpus_content_hash (data fingerprint).
+CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 """
 
 _DOC_COLUMNS = (
@@ -117,8 +120,10 @@ class IndexStage(Stage):
     # v5 (abbreviation-first titles): documents gained `product_abbr`/`product_full`, and `title`
     # is now "<product abbr> — <suffix>" (kernel.titles.display_title + product-names.yaml).
     # v6 (date facet): documents gained `published` (YYYY-MM) + `pub_year` from the gold FM.
+    # v7 (read contract, ADR-0001 P0): index.db gained a `meta` table stamping
+    # read_schema_version + corpus_content_hash (the producer/consumer version axes).
     # The bump folds into consumers' inputs_fp so a re-run rebuilds.
-    contract_ver = 6
+    contract_ver = 7
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
@@ -259,6 +264,7 @@ class IndexStage(Stage):
                 "INSERT INTO entity_mentions (entity_id, doc_key, section_id) VALUES (?, ?, ?)",
                 mentions,
             )
+            conn.executemany("INSERT INTO meta (key, value) VALUES (?, ?)", ip.meta_rows(documents))
 
         db.build_atomic(cfg.index_db, build)
         return RunResult(

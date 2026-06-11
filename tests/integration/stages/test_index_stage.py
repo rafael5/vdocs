@@ -300,3 +300,40 @@ def test_index_preserves_staged_across_forced_rebuild(ctx):
         assert conn.execute("SELECT count(*) FROM documents").fetchone()[0] == 2
     finally:
         conn.close()
+
+
+def test_index_stamps_read_contract_meta(ctx):
+    # P0 (ADR-0001): index.db carries a `meta` table with the structural-contract version
+    # (read_schema_version) + the data fingerprint (corpus_content_hash) + the doc count.
+    _seed(ctx)
+    (result,) = Orchestrator([IndexStage()]).run(ctx)
+    assert result.status == "ok"
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        meta = dict(conn.execute("SELECT key, value FROM meta").fetchall())
+    finally:
+        conn.close()
+    assert meta["read_schema_version"] == "1.0"
+    assert meta["corpus_doc_count"] == "2"  # both version-group members are documents
+    assert len(meta["corpus_content_hash"]) == 64  # sha256 hexdigest
+
+
+def test_index_content_hash_stable_across_forced_rebuild(ctx):
+    # the corpus fingerprint is deterministic: rebuilding the identical corpus yields the same
+    # hash (no build timestamps baked in), so a consumer/cache can tell "same corpus, rebuilt".
+    _seed(ctx)
+    orch = Orchestrator([IndexStage()])
+    orch.run(ctx)
+
+    def _hash():
+        conn = db.connect(ctx.cfg.index_db, read_only=True)
+        try:
+            return conn.execute(
+                "SELECT value FROM meta WHERE key = 'corpus_content_hash'"
+            ).fetchone()[0]
+        finally:
+            conn.close()
+
+    first = _hash()
+    orch.run(ctx, force=True)
+    assert _hash() == first

@@ -9,6 +9,7 @@ rows, graph nodes, published anchors, and (later) vector keys all reference one 
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 
@@ -22,6 +23,37 @@ from vdocs.kernel.markdown import (
 from vdocs.stages.normalize.anchors_pure import github_slug
 
 DEFAULT_TOC_DEPTH = (2, 3)
+
+# --- read-contract meta (ADR-0001, P0) ----------------------------------------------------------
+# index.db carries a `meta(key, value)` table with two independent version axes consumers check:
+#   • read_schema_version — the *structural* contract (semver; bumped when views/columns change).
+#   • corpus_content_hash — the *data* fingerprint; changes iff the document set/its fields change.
+# The hash is deterministic and order-independent (no build timestamps) so an identical corpus
+# rebuilds to the same fingerprint — consumers/caches can tell "the corpus changed" from "same
+# corpus, rebuilt". The wall-clock build time is deliberately NOT hashed (and lives in the publish
+# manifest, not here) so index.db stays reproducible.
+READ_SCHEMA_VERSION = "1.0"
+
+
+def corpus_content_hash(documents: list[tuple]) -> str:
+    """A deterministic sha256 fingerprint over the (order-independent) document rows."""
+    h = hashlib.sha256()
+    for row in sorted(documents):
+        h.update(repr(row).encode("utf-8"))
+        h.update(b"\x00")
+    return h.hexdigest()
+
+
+def meta_rows(
+    documents: list[tuple], schema_version: str = READ_SCHEMA_VERSION
+) -> list[tuple[str, str]]:
+    """The `meta` rows written into index.db: the schema-version axis + the corpus fingerprint."""
+    return [
+        ("read_schema_version", schema_version),
+        ("corpus_content_hash", corpus_content_hash(documents)),
+        ("corpus_doc_count", str(len(documents))),
+    ]
+
 
 # Oversized-leaf splitting (§14.6). Calibration targets (tune against the B3 golden set), not magic
 # constants: only a leaf body larger than OVERSIZED_CHUNK_CHARS is split; each window aims for

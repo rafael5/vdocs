@@ -326,3 +326,32 @@ def test_shred_marks_stub_leaf_searchable():
     )
     secs = {s.slug: s for s in ip.shred_sections(body, "SD/x")}
     assert secs["standard-notice"].kind == "stub" and secs["standard-notice"].searchable is True
+
+
+# --- P0: read-contract meta (schema version + corpus fingerprint) -------------------------------
+# Pure construction of the index.db `meta` rows: a structural-contract version axis
+# (read_schema_version) + a data fingerprint axis (corpus_content_hash). The hash must be
+# deterministic and order-independent (so an identical corpus rebuilds to the same fingerprint —
+# no build timestamps in it) and must change when any document row changes.
+
+_DOCS_A = [("CPRS/or_ig", "CPRS:or_ig", "CPRS", 1), ("ADT/um", "ADT:um", "ADT", 0)]
+_DOCS_B = [("ADT/um", "ADT:um", "ADT", 0), ("CPRS/or_ig", "CPRS:or_ig", "CPRS", 1)]  # reordered
+
+
+def test_corpus_content_hash_is_deterministic_and_order_independent():
+    assert ip.corpus_content_hash(_DOCS_A) == ip.corpus_content_hash(_DOCS_B)
+    # a fingerprint, not empty
+    assert len(ip.corpus_content_hash(_DOCS_A)) == 64  # sha256 hexdigest
+
+
+def test_corpus_content_hash_changes_when_a_document_changes():
+    # flip is_latest on the first doc → a different fingerprint
+    changed = [("CPRS/or_ig", "CPRS:or_ig", "CPRS", 0), ("ADT/um", "ADT:um", "ADT", 0)]
+    assert ip.corpus_content_hash(changed) != ip.corpus_content_hash(_DOCS_A)
+
+
+def test_meta_rows_carry_schema_version_and_fingerprint():
+    rows = dict(ip.meta_rows(_DOCS_A))
+    assert rows["read_schema_version"] == ip.READ_SCHEMA_VERSION == "1.0"
+    assert rows["corpus_doc_count"] == "2"
+    assert rows["corpus_content_hash"] == ip.corpus_content_hash(_DOCS_A)

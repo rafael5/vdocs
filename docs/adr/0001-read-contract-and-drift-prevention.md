@@ -25,8 +25,12 @@ concrete, verified ways:
    (×10), `FROM entity_mentions`, `JOIN entities`, `FROM chunks_fts`, etc., with column names in
    SQL strings. Any rename/reorder in the pipeline breaks consumers silently (wrong data) or
    loudly (scan error) with no diagnostic.
-3. **A build-staging table leaks into the shipped DB.** `doc_meta_staged` is internal scratch but
-   ships in `index.db`.
+3. **A pipeline-internal table is visible in the shipped DB.** `doc_meta_staged` ships in
+   `index.db`. *(Correction, 2026-06-11 / impl D7: this is **not** mere scratch — it is a real
+   `enrich→index` `ArtifactContract`, deliberately carried forward because `index.db` is both the
+   pipeline working store and the read artifact. It must **not** be dropped in the index stage. The
+   fix is to exclude it from the **consumer surface** via the `v_*` views and strip it from the
+   **distributed** artifact at publish time — see Build sequence step 1.)*
 
 Crucially, the **most common** change — *fetching more docs, growing the gold library, refining
 the pipeline* — is **not** primarily a schema change. It is **data** and **vocabulary** drift,
@@ -169,8 +173,10 @@ target is airgapped/offline.
 
 ## Build sequence (incremental, each step shippable)
 
-1. **vdocs (tiny):** add `meta` table with `read_schema_version` + `corpus_snapshot`; drop
-   `doc_meta_staged`. Immediate fragility reduction.
+1. **vdocs (tiny):** add `meta` table with `read_schema_version` + `corpus_snapshot`. ✅ *done
+   2026-06-11.* (`doc_meta_staged` is **kept** — it's a real `enrich→index` contract, D7; it's
+   excluded from the consumer surface by the views in step 2 and stripped from the distributed
+   artifact at publish, not here.)
 2. **vdocs:** author `contracts/read/v2.json` describing *today's* schema (no behavior change) +
    CHANGELOG; add `v_*` views generated from it; extend `doctor` to validate emitted DB == spec.
 3. **vdocs:** publish the `vocab` table from `registries/`; add the `doctor` enum-coverage gate +

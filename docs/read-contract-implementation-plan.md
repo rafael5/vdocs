@@ -37,10 +37,10 @@
 
 | Phase | ID | Step | Status | Note |
 |-------|----|------|--------|------|
-| **P0 — Contract baseline** (vdocs) | P0.1 | `meta(key,value)` table in `index.db` | ⬜ | written by index stage |
-| | P0.2 | Stamp `read_schema_version` (start `1.0`) | ⬜ | semver string |
-| | P0.3 | Stamp `corpus_snapshot` (build ts · doc count · content hash) | ⬜ | data fingerprint |
-| | P0.4 | Drop `doc_meta_staged` from shipped DB | ⬜ | build-scratch leak (D3) |
+| **P0 — Contract baseline** (vdocs) | P0.1 | `meta(key,value)` table in `index.db` | ✅ | index stage; contract_ver 6→7 |
+| | P0.2 | Stamp `read_schema_version` (`1.0`) | ✅ | `index_pure.READ_SCHEMA_VERSION` |
+| | P0.3 | Stamp `corpus_content_hash` + `corpus_doc_count` | ✅ | deterministic; build ts deferred to manifest (D8) |
+| | P0.4 | ~~Drop `doc_meta_staged`~~ → exclude from consumer surface | ⚠️ | **revised (D7):** real `enrich→index` contract, kept; views exclude it (P1), strip at publish |
 | **P1 — Read contract + views** (vdocs) | P1.1 | `contracts/read/v1.json` spec describing *today's* schema | ⬜ | SSOT; no behavior change |
 | | P1.2 | `contracts/read/CHANGELOG.md` + `read-contract.schema.json` meta-schema | ⬜ | |
 | | P1.3 | `v_documents` / `v_sections` / `v_entities` / `v_entity_mentions` views | ⬜ | from spec |
@@ -107,21 +107,37 @@ an attached temp DB) before finalizing. Tests first: assert the published DB has
 both keys and no `doc_meta_staged`.
 
 ### Changelog
-_(none yet)_
+- **2026-06-11** — ✅ landed. `index_pure.corpus_content_hash()` + `meta_rows()` (pure,
+  unit-tested: deterministic + order-independent + changes on any row change); `meta(key,value)`
+  table added to `_SCHEMA`; `build()` inserts `read_schema_version=1.0`, `corpus_content_hash`,
+  `corpus_doc_count`. Stage `contract_ver` 6→7 (produces[] shape change → re-run rebuilds). 2 unit
+  + 2 integration tests (incl. rebuild-determinism). `make check` green: 886 passed, 98.18%.
 
 ### Discoveries
-_(to fill as work lands)_ — seeded by D1, D3.
+- **D7 ⚠️ (revises P0.4):** `doc_meta_staged` is **not** build scratch — it's a real cross-stage
+  contract (`ArtifactContract DOC_META_STAGED`): `enrich` produces it, `index` `requires`+consumes
+  it, and `index.db` is *both* the pipeline working store and the read artifact, so the build
+  **deliberately carries it forward** (`_carry_staged`; tests
+  `test_index_preserves_staged_across_forced_rebuild`). It cannot be dropped in the index stage
+  without breaking re-runnability. **Resolution:** keep it; exclude it from the *consumer* surface
+  via the `v_*` views (P1, consumers never query it); strip it from the *distributed* artifact at
+  publish time (deferred to P5.4 / a publish stage), not here.
+- **D8:** baking a wall-clock build timestamp into `index.db` would make it non-reproducible.
+  Decision: `corpus_content_hash` is timestamp-free (sorted content only) so identical data
+  rebuilds to the same fingerprint; the human-facing **build timestamp lives in the publish
+  `manifest.json`** (P2.3), not in `index.db`.
 
 ### Risks & mitigations
-- **Risk:** `corpus_snapshot` hash unstable across rebuilds of identical data (ordering, timestamps
-  baked in) → false "data changed" signals, needless vdocs-web re-downloads. **Mitigation:** hash a
-  canonical, sorted projection of content columns only (exclude build timestamps from the hash;
-  keep the timestamp as a separate display field).
-- **Risk:** dropping `doc_meta_staged` mid-build breaks a later stage that reads it. **Mitigation:**
-  confirm it's consumed only within the index stage (grep) before dropping; drop at the very end.
+- **Risk:** `corpus_content_hash` couples to the exact `documents` row representation, so a benign
+  refactor of column order/format churns the fingerprint. **Mitigation (accepted):** that *is* a
+  consumer-visible change (display columns are part of what consumers read); a structural change
+  also bumps `read_schema_version`. Revisit only if churn proves noisy.
+- ~~Risk: dropping `doc_meta_staged` breaks a later stage~~ — resolved by D7 (not dropped here).
 
 ### Lessons learned
-_(none yet)_
+- Reading the producing stage + its `ArtifactContract` *before* acting caught D7 — the "leaked
+  staging table" framing in the ADR was wrong; it's a real contract edge. Grounding before code
+  paid for itself. The ADR's build-sequence step 1 is corrected accordingly.
 
 ---
 
