@@ -57,7 +57,8 @@ CREATE TABLE documents (
   product_abbr  TEXT, product_full TEXT, doc_label TEXT,
   app_user      TEXT, doc_user TEXT, software_class TEXT, function_category TEXT,
   word_count    INTEGER, section_count INTEGER, is_latest INTEGER NOT NULL,
-  template_id   TEXT, source_sha256 TEXT, source_url TEXT
+  template_id   TEXT, source_sha256 TEXT, source_url TEXT,
+  published     TEXT, pub_year TEXT
 );
 CREATE TABLE doc_sections (
   section_id TEXT PRIMARY KEY,
@@ -99,6 +100,7 @@ _DOC_COLUMNS = (
     "product_abbr", "product_full", "doc_label",
     "app_user", "doc_user", "software_class", "function_category",
     "word_count", "section_count", "is_latest", "template_id", "source_sha256", "source_url",
+    "published", "pub_year",
 )  # fmt: skip
 
 
@@ -114,8 +116,9 @@ class IndexStage(Stage):
     # `app_name`, and `title` is now the version/patch-stripped display name (kernel.titles).
     # v5 (abbreviation-first titles): documents gained `product_abbr`/`product_full`, and `title`
     # is now "<product abbr> — <suffix>" (kernel.titles.display_title + product-names.yaml).
+    # v6 (date facet): documents gained `published` (YYYY-MM) + `pub_year` from the gold FM.
     # The bump folds into consumers' inputs_fp so a re-run rebuilds.
-    contract_ver = 5
+    contract_ver = 6
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
@@ -299,6 +302,8 @@ def _doc_row(  # type: ignore[no-untyped-def]
     app_code = s("app_code") or str(meta.get("app_code", ""))
     raw_title = str(meta.get("title", "") or s("doc_title"))
     app_name = app_names.get(app_code, "")
+    published = str(meta.get("published", ""))  # gold FM publication date (YYYY-MM)
+    pub_year = published[:4] if published[:4].isdigit() else ""
     disp_title, product_abbr, product_full = titles.display_title(
         raw_title, app_code, app_name, products.get(app_code, [])
     )
@@ -330,6 +335,8 @@ def _doc_row(  # type: ignore[no-untyped-def]
         str(meta.get("template_id", "")),
         str(meta.get("source_sha256", "")),
         s("source_url") or str(meta.get("source_url", "")),
+        published,
+        pub_year,
     )
 
 

@@ -61,6 +61,7 @@ def _seed_bundle(ctx, app, slug, patch_id, body, title="Install Guide"):
             "doc_user": "sysadmin",
             "software_class": "I",
             "function_category": "Health Informatics",
+            "published": "2015-09",
             "tool_ver": "0.1.0",
         },  # fmt: skip
         body,
@@ -203,17 +204,18 @@ def test_index_denoises_title_preserving_source_and_app_name(ctx):
     expected_app = personas.app_names(ctx.cfg.registries).get("ACKQ", "")
     conn = db.connect(ctx.cfg.index_db, read_only=True)
     try:
-        title, src, app_name, p_abbr, p_full = conn.execute(
-            "SELECT title, title_source, app_name, product_abbr, product_full "
+        title, src, app_name, p_abbr, p_full, pub_year = conn.execute(
+            "SELECT title, title_source, app_name, product_abbr, product_full, pub_year "
             "FROM documents WHERE doc_id = 'ACKQ:quasar_um'"
         ).fetchone()
     finally:
         conn.close()
-    # "Version 3" + "(Updated ACKQ*3*21)" stripped; "QUASAR" lead replaced by the app_code abbr
-    assert title == "ACKQ — User Manual"
+    assert pub_year == "2015"  # derived from the gold FM 'published: 2015-09'
+    # "Version 3" + "(Updated ACKQ*3*21)" stripped; ACKQ's product-names entry → QUASAR
+    assert title == "QUASAR — User Manual"
     assert src == raw  # raw title preserved for provenance/search
     assert app_name and app_name == expected_app  # canonical app name populated
-    assert p_abbr == "ACKQ" and p_full == expected_app  # default product = the application
+    assert p_abbr == "QUASAR" and p_full == "Quality Audiology and Speech Analysis and Reporting"
 
 
 def test_chunks_fts_indexes_doc_title_so_title_only_tokens_match(ctx):
