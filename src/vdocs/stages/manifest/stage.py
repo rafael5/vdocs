@@ -24,7 +24,7 @@ from vdocs.contracts.registry import (
     REGISTRIES,
     RELATIONS,
 )
-from vdocs.kernel import cas, db
+from vdocs.kernel import cas, db, read_contract
 from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -43,9 +43,24 @@ class ManifestStage(Stage):
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
         counts = _gather_counts(cfg.index_db)
+        coverage = _gather_coverage(cfg.index_db)
         generated_at = ctx.clock()
 
-        manifest = mp.corpus_manifest(counts, tool_ver=cfg.tool_ver, generated_at=generated_at)
+        # the read-contract version + capabilities the published DB satisfies — consumers negotiate
+        # against this (ADR-0001 P2.4); coverage feeds consumer staleness/quality (P2.3).
+        spec = read_contract.load(read_contract.contract_path(base=cfg.read_contract_dir))
+        rc_block = {
+            "version": read_contract.version(spec),
+            "capabilities": read_contract.capabilities(spec),
+        }
+        manifest = mp.corpus_manifest(
+            counts,
+            tool_ver=cfg.tool_ver,
+            generated_at=generated_at,
+            coverage=coverage,
+            read_contract=rc_block,
+            characterization=_gather_characterization(cfg.index_db),
+        )
         discovery = mp.discovery_descriptor(counts, tool_ver=cfg.tool_ver)
         cas.atomic_write(cfg.corpus_manifest, _dumps(manifest))
         cas.atomic_write(cfg.discovery_json, _dumps(discovery))
@@ -141,6 +156,57 @@ def _gather_counts(index_db):  # type: ignore[no-untyped-def]
                 conn.execute("SELECT rel, count(*) FROM relations GROUP BY rel").fetchall()
             ),
         }
+    finally:
+        conn.close()
+
+
+def _gather_coverage(index_db):  # type: ignore[no-untyped-def]
+    """Per-facet coverage over the is_latest gold (ADR-0001 P2.3): populated/total/pct + distinct
+    value count. Lets a consumer surface staleness/quality (e.g. '12% lack function_category')."""
+    conn = db.connect(index_db, read_only=True)
+    try:
+        total = conn.execute("SELECT count(*) FROM documents WHERE is_latest=1").fetchone()[0]
+        have = {r[1] for r in conn.execute("PRAGMA table_info(documents)").fetchall()}
+        fields = ("function_category", "doc_type", "section", "app_user", "doc_user", "pkg_ns")
+        cov: dict[str, dict] = {}
+        for f in (f for f in fields if f in have):  # defensive: cover only columns that exist
+            pop = conn.execute(
+                f"SELECT count(*) FROM documents WHERE is_latest=1 AND {f}<>''"  # noqa: S608
+            ).fetchone()[0]
+            distinct = conn.execute(
+                f"SELECT count(DISTINCT {f}) FROM documents WHERE is_latest=1 AND {f}<>''"  # noqa: S608
+            ).fetchone()[0]
+            cov[f] = {
+                "populated": pop,
+                "total": total,
+                "pct": round(100 * pop / total, 1) if total else 0.0,
+                "distinct": distinct,
+            }
+        return cov
+    finally:
+        conn.close()
+
+
+def _gather_characterization(index_db):  # type: ignore[no-untyped-def]
+    """Per-facet distinct-value distribution over is_latest gold (ADR-0001 P2.5) — the data-shape
+    snapshot. Covers the vocab-gated facets; defensive over which columns exist."""
+    conn = db.connect(index_db, read_only=True)
+    try:
+        have = {r[1] for r in conn.execute("PRAGMA table_info(documents)").fetchall()}
+        fields = tuple(
+            f
+            for f in ("function_category", "doc_type", "section", "app_user", "doc_user")
+            if f in have
+        )
+        if not fields:
+            return {}
+        rows = [
+            dict(r)
+            for r in conn.execute(
+                f"SELECT {', '.join(fields)} FROM documents WHERE is_latest=1"  # noqa: S608
+            ).fetchall()
+        ]
+        return mp.facet_distribution(rows, fields)
     finally:
         conn.close()
 

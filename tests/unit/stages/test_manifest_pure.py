@@ -209,3 +209,35 @@ def test_corpus_card_renders_usage_catalog_and_recipe():
     assert "documents/gold/consolidated/CPRS/or_um/body.md" in md  # with resolvable paths
     assert "XLFSTR" in md  # entity highlights rendered
     assert "never guess" in md.lower()  # the anti-hallucination usage rule
+
+
+def test_manifest_embeds_coverage_and_read_contract_when_given():
+    # P2.3/P2.4: optional coverage stats + the read-contract version/capabilities (for consumer
+    # staleness + capability negotiation). Absent when not supplied (backward-compatible).
+    cov = {"function_category": {"populated": 9, "total": 10, "pct": 90.0, "distinct": 8}}
+    rc = {"version": "1.1", "capabilities": ["fts5", "vocab_table"]}
+    m = mp.corpus_manifest(
+        _COUNTS, tool_ver="0.1.0", generated_at="t", coverage=cov, read_contract=rc
+    )
+    assert m["coverage"]["function_category"]["pct"] == 90.0
+    assert m["read_contract"]["version"] == "1.1"
+    assert "vocab_table" in m["read_contract"]["capabilities"]
+
+
+def test_manifest_omits_coverage_and_read_contract_by_default():
+    m = mp.corpus_manifest(_COUNTS, tool_ver="0.1.0", generated_at="t")
+    assert "coverage" not in m and "read_contract" not in m
+
+
+def test_facet_distribution_counts_values_per_field():
+    # P2.5: the corpus characterization snapshot — distinct values + their doc counts per facet,
+    # so an unexpected data-shape shift (a value appearing/vanishing) is a reviewable manifest diff.
+    rows = [
+        {"function_category": "Pharmacy", "doc_type": "UM"},
+        {"function_category": "Pharmacy", "doc_type": "TM"},
+        {"function_category": "Laboratory", "doc_type": "UM"},
+        {"function_category": "", "doc_type": "UM"},  # empty is not counted
+    ]
+    dist = mp.facet_distribution(rows, ("function_category", "doc_type"))
+    assert dist["function_category"] == {"Laboratory": 1, "Pharmacy": 2}
+    assert dist["doc_type"] == {"TM": 1, "UM": 3}

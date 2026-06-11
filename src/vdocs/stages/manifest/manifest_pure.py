@@ -133,14 +133,32 @@ def _capabilities() -> dict[str, bool]:
     return {"lexical": True, "structured": True, "graph": True}
 
 
+def facet_distribution(
+    rows: list[dict[str, Any]], fields: tuple[str, ...]
+) -> dict[str, dict[str, int]]:
+    """Corpus characterization (ADR-0001 P2.5): ``{field: {value: doc_count}}`` over the given rows,
+    empties excluded, sorted. Embedded in the manifest as a per-build snapshot so a data-shape shift
+    (a facet value appearing or vanishing as the library grows) shows up as a reviewable diff."""
+    dist: dict[str, dict[str, int]] = {}
+    for f in fields:
+        counts: Counter = Counter(str(r.get(f, "")) for r in rows if str(r.get(f, "")))
+        dist[f] = dict(sorted(counts.items()))
+    return dist
+
+
 def corpus_manifest(
     counts: dict[str, Any],
     *,
     tool_ver: str,
     generated_at: str,
+    coverage: dict[str, Any] | None = None,
+    read_contract: dict[str, Any] | None = None,
+    characterization: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """The corpus manifest: counts, lineage, the ID scheme, and the capability manifest."""
-    return {
+    """The corpus manifest: counts, lineage, the ID scheme, and the capability manifest. When given,
+    also embeds per-facet ``coverage`` stats (consumer staleness) and the ``read_contract``
+    version + capabilities (consumer capability negotiation, ADR-0001 P2.3/P2.4)."""
+    manifest: dict[str, Any] = {
         "schema_version": 1,
         "tool_ver": tool_ver,
         "generated_at": generated_at,
@@ -148,6 +166,13 @@ def corpus_manifest(
         "id_scheme": ID_SCHEME,
         "capabilities": _capabilities(),
     }
+    if coverage is not None:
+        manifest["coverage"] = coverage
+    if read_contract is not None:
+        manifest["read_contract"] = read_contract
+    if characterization is not None:
+        manifest["characterization"] = characterization
+    return manifest
 
 
 def build_catalog(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

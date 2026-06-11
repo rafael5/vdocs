@@ -165,3 +165,18 @@ def test_manifest_counts_stable_across_forced_rerun(ctx):
     assert first["counts"] == second["counts"]
     assert first["capabilities"] == second["capabilities"]
     assert first["generated_at"] != second["generated_at"]  # the clock advanced
+
+
+def test_manifest_carries_read_contract_and_coverage(ctx):
+    # P2.3/P2.4: the manifest advertises the read-contract version + capabilities (consumer
+    # negotiation) and per-facet coverage stats (consumer staleness/quality).
+    _seed(ctx)
+    (result,) = Orchestrator([ManifestStage()]).run(ctx)
+    assert result.status == "ok"
+    manifest = json.loads(ctx.cfg.corpus_manifest.read_text())
+    assert manifest["read_contract"]["version"] == "1.1"
+    assert "fts5" in manifest["read_contract"]["capabilities"]
+    # pkg_ns exists in the fixture schema → covered (defensive: absent facet columns are skipped)
+    assert manifest["coverage"]["pkg_ns"]["total"] == 2  # two is_latest anchors
+    # P2.5 characterization snapshot: doc_type distribution over is_latest gold (d1=UM, d3="")
+    assert manifest["characterization"]["doc_type"] == {"UM": 1}

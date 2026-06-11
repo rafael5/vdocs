@@ -49,9 +49,9 @@
 | | P1.6 | `contract-lint`: enforce semver bump-type vs prior spec | ✅ | `lint_bump` + `make contract-lint` (no-op at v1) |
 | **P2 — Vocab-as-data + drift gates** (vdocs) | P2.1 | `vocab(kind,code,label,description)` table from `registries/` | ✅ | `kernel/vocab.py`; v_vocab (contract→1.1); domains/doc_type/section/persona |
 | | P2.2 | `doctor` enum-coverage gate (every distinct facet value ∈ vocab) | ✅ | `enum_coverage_check`; undefined value ⇒ RED |
-| | P2.3 | Coverage stats (% populated, distinct counts, rows) in `manifest.json` | ⬜ | |
-| | P2.4 | `capabilities` (read-contract) in `manifest.json` | ⬜ | from spec |
-| | P2.5 | Corpus characterization (approval) test | ⬜ | distinct-values/counts diff per build |
+| | P2.3 | Coverage stats (% populated, distinct counts, rows) in `manifest.json` | ✅ | `_gather_coverage` (defensive over columns) → `coverage` block |
+| | P2.4 | `capabilities` (read-contract) in `manifest.json` | ✅ | `read_contract`{version,capabilities} block from spec |
+| | P2.5 | Corpus characterization snapshot in `manifest.json` | ✅ | `facet_distribution` → `characterization` block (diffable per build) |
 | **P3 — Shared Go core** (vdocs-tui) | P3.1 | Extract `internal/index` → importable `pkg/index` | ⬜ | API-stable; tests green |
 | | P3.2 | Vendor `contracts/read/v1.json` + `go:generate` → col constants/struct/`RequiredSchemaVersion` | ⬜ | codegen |
 | | P3.3 | `Open()` runtime version check (MAJOR mismatch → clear error) | ⬜ | |
@@ -203,24 +203,46 @@ characterization (approval) test. Tests first: a fixture introducing an undefine
 the enum gate; a vocab-table read returns expected labels.
 
 ### Changelog
-_(none yet)_
+- **2026-06-11** — ✅ landed (`make check` green: 916 passed, 98.02%).
+  - **P2.1** `registries/inventory/personas.yaml` (NEW) + `section-codes.yaml` `descriptions:`
+    block; `kernel/vocab.py` (`vocab_rows`, pure, unit-tested); `vocab` table + `v_vocab` view;
+    read contract → **v1.1** (additive: `v_vocab` + `vocab_table` capability); stage `contract_ver`
+    7→8. Commit `26cb923`.
+  - **P2.2** `doctor.enum_coverage_check` + `diagnose`: undefined `function_category`/`doc_type`/
+    `section`/`app_user`/`doc_user` value ⇒ FAIL ⇒ RED (runs only when `vocab` populated). `26cb923`.
+  - **P2.3** `_gather_coverage` → manifest `coverage` block (populated/total/pct/distinct per facet).
+  - **P2.4** manifest `read_contract`{version, capabilities} block (consumer negotiation).
+  - **P2.5** `manifest_pure.facet_distribution` (pure) → manifest `characterization` block
+    (distinct-value→count per vocab-gated facet) — a diffable per-build data-shape snapshot.
 
 ### Discoveries
-_(to fill)_ — seeded by D4.
+- **D11:** persona descriptions had **no registry** (lived only in `vdocs-tui/explain.go`). Created
+  `personas.yaml` as the authoritative source — so P4 can delete the Go `personaDef` map. Section
+  descriptions similarly only in Go → added a `descriptions:` block to `section-codes.yaml`.
+  (Function-domain definitions + doc-labels already existed in registries.)
+- **D12:** the manifest integration fixture uses a *minimal* `documents` schema (no
+  `function_category`/`section`/`app_user`/`doc_user`). Made `_gather_coverage`/
+  `_gather_characterization` **defensive** (cover only columns that exist) rather than assume the
+  full schema — good behavior generally, not just for the test.
+- **process:** backticks inside a double-quoted `git commit -m` trigger shell command substitution
+  and silently drop the backticked word (mangled `26cb923` message). Use single quotes / a message
+  file for commit bodies.
 
 ### Risks & mitigations
-- **Risk:** registries and DB values are keyed differently (case, whitespace, abbreviation vs full)
-  → false enum-gate failures. **Mitigation:** normalize keys in one place (the vocab builder);
-  characterization test surfaces mismatches early.
-- **Risk:** enum gate too strict — blocks a legitimate corpus rebuild because a new doc type is
-  genuinely new. **Mitigation:** the gate *should* block; the fix is a 1-line registry add, which is
-  the intended workflow. Provide a clear failure message naming the missing code + registry file.
-- **Risk:** characterization-test snapshot churns on every legitimate corpus growth → noisy diffs.
-  **Mitigation:** snapshot *structure of the distribution* (distinct value set + presence), not raw
-  counts, for the gate; keep counts as informational.
+- **Risk:** registries and DB values keyed differently (case/whitespace) → false enum-gate
+  failures. **Mitigation (verified):** the facet values in `documents` are sourced from the *same*
+  registries the vocab is built from (function_category from function-domains, etc.), so keys align;
+  the integration tests confirm a real seeded value (`registration`, `UM`, `CLI`, personas) gates
+  correctly.
+- **Risk:** enum gate too strict — blocks a rebuild on a genuinely-new value. **Mitigation:** that
+  *is* the intended behavior; the failure names the offending values (`{n} undefined … value(s)` +
+  offender sample) so the fix is a 1-line registry add.
 
 ### Lessons learned
-_(none yet)_
+- The vocab table makes the enum gate and the consumer explainer share one source — adding a domain
+  is now a registry edit that both the producer gate and (after P4) every consumer pick up.
+- Defensive column handling (D12) is worth doing in producer-side gather code too, not just
+  consumers — fixtures and partial DBs are real.
 
 ---
 
