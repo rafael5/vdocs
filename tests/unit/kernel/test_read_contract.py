@@ -46,7 +46,7 @@ def test_version_and_capabilities_read_from_spec():
 def test_load_reads_the_real_v1_contract():
     # the shipped contract parses and declares the views consumers bind to
     spec = rc.load(rc.contract_path())
-    assert rc.version(spec) == "1.1"
+    assert rc.version(spec) == "1.2"
     cols = rc.view_columns(spec)
     expected = {"v_documents", "v_sections", "v_chunks", "v_entities", "v_entity_mentions"}
     assert expected <= set(cols) and "v_vocab" in cols
@@ -74,7 +74,7 @@ _MINUS = [("doc_key", "TEXT")]  # `title` removed → breaking
 
 
 def test_additive_minor_bump_is_clean():
-    assert rc.lint_bump(_BASE, _spec("1.1", _PLUS)) == []
+    assert rc.lint_bump(_BASE, _spec("1.2", _PLUS)) == []
 
 
 def test_additive_without_a_bump_is_flagged():
@@ -83,7 +83,7 @@ def test_additive_without_a_bump_is_flagged():
 
 
 def test_removing_a_column_as_a_minor_is_flagged_breaking():
-    problems = rc.lint_bump(_BASE, _spec("1.1", _MINUS))
+    problems = rc.lint_bump(_BASE, _spec("1.2", _MINUS))
     assert problems and any("MAJOR" in p for p in problems)
 
 
@@ -92,10 +92,10 @@ def test_breaking_change_with_major_bump_is_clean():
 
 
 def test_column_type_change_is_breaking():
-    problems = rc.lint_bump(_BASE, _spec("1.1", [("doc_key", "TEXT"), ("title", "INTEGER")]))
+    problems = rc.lint_bump(_BASE, _spec("1.2", [("doc_key", "TEXT"), ("title", "INTEGER")]))
     assert problems and any("MAJOR" in p for p in problems)
 
 
 def test_removing_a_capability_is_breaking():
-    problems = rc.lint_bump(_BASE, _spec("1.1", [("doc_key", "TEXT"), ("title", "TEXT")], caps=()))
+    problems = rc.lint_bump(_BASE, _spec("1.2", [("doc_key", "TEXT"), ("title", "TEXT")], caps=()))
     assert problems and any("MAJOR" in p for p in problems)

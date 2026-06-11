@@ -313,7 +313,7 @@ def test_index_stamps_read_contract_meta(ctx):
         meta = dict(conn.execute("SELECT key, value FROM meta").fetchall())
     finally:
         conn.close()
-    assert meta["read_schema_version"] == "1.1"
+    assert meta["read_schema_version"] == "1.2"
     assert meta["corpus_doc_count"] == "2"  # both version-group members are documents
     assert len(meta["corpus_content_hash"]) == 64  # sha256 hexdigest
 
@@ -365,7 +365,7 @@ def test_index_emits_read_contract_views_matching_the_spec(ctx):
         assert latest == 1
         # the read_schema_version stamped in meta is the spec's version (single source)
         ver = conn.execute("SELECT value FROM meta WHERE key = 'read_schema_version'").fetchone()[0]
-        assert ver == rc.version(spec) == "1.1"
+        assert ver == rc.version(spec) == "1.2"
     finally:
         conn.close()
 

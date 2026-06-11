@@ -64,7 +64,7 @@ CREATE TABLE doc_sections (
   section_id TEXT PRIMARY KEY,
   doc_key    TEXT NOT NULL REFERENCES documents(doc_key),
   slug TEXT, title TEXT, level INTEGER, toc_level INTEGER, is_latest INTEGER NOT NULL,
-  kind TEXT NOT NULL, searchable INTEGER NOT NULL, section_path TEXT
+  kind TEXT NOT NULL, searchable INTEGER NOT NULL, section_path TEXT, seq INTEGER
 );
 CREATE TABLE chunks (
   chunk_id   TEXT PRIMARY KEY,
@@ -131,8 +131,10 @@ class IndexStage(Stage):
     # read_schema_version + corpus_content_hash (the producer/consumer version axes).
     # v8 (vocab-as-data, ADR-0001 P2): index.db gained a `vocab` table (v_vocab) of the
     # controlled facet vocabularies from registries; read contract → v1.1.
+    # v9 (section order, ADR-0001 P4): doc_sections gained `seq` (document-order ordinal) so
+    # consumers can ORDER BY a real column (views have no rowid); read contract → v1.2.
     # The bump folds into consumers' inputs_fp so a re-run rebuilds.
-    contract_ver = 8
+    contract_ver = 9
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
@@ -184,7 +186,7 @@ class IndexStage(Stage):
                     products,
                 )
             )
-            for s in secs:
+            for seq, s in enumerate(secs):
                 sections.append(
                     (
                         s.section_id,
@@ -197,6 +199,7 @@ class IndexStage(Stage):
                         s.kind,
                         int(s.searchable),
                         s.section_path,
+                        seq,  # document-order ordinal — the stable sort key consumers ORDER BY
                     )
                 )
                 # entities stay a section-level signal (mentions cite the anchor section_id)
@@ -254,8 +257,8 @@ class IndexStage(Stage):
             conn.executemany(
                 "INSERT INTO doc_sections "
                 "(section_id, doc_key, slug, title, level, toc_level, is_latest, "
-                "kind, searchable, section_path) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "kind, searchable, section_path, seq) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 sections,
             )
             conn.executemany(

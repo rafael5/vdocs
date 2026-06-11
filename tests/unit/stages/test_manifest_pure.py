@@ -215,12 +215,12 @@ def test_manifest_embeds_coverage_and_read_contract_when_given():
     # P2.3/P2.4: optional coverage stats + the read-contract version/capabilities (for consumer
     # staleness + capability negotiation). Absent when not supplied (backward-compatible).
     cov = {"function_category": {"populated": 9, "total": 10, "pct": 90.0, "distinct": 8}}
-    rc = {"version": "1.1", "capabilities": ["fts5", "vocab_table"]}
+    rc = {"version": "1.2", "capabilities": ["fts5", "vocab_table"]}
     m = mp.corpus_manifest(
         _COUNTS, tool_ver="0.1.0", generated_at="t", coverage=cov, read_contract=rc
     )
     assert m["coverage"]["function_category"]["pct"] == 90.0
-    assert m["read_contract"]["version"] == "1.1"
+    assert m["read_contract"]["version"] == "1.2"
     assert "vocab_table" in m["read_contract"]["capabilities"]
 
 

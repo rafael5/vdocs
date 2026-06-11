@@ -1,5 +1,5 @@
 {
-  "read_schema_version": "1.1",
+  "read_schema_version": "1.2",
   "description": "Published read contract for vdocs index.db (ADR-0001). Consumers (vdocs-tui, vdocs-web, MCP) bind ONLY to the v_* views + the named chunks_fts surface — never to physical tables. The pipeline may refactor physical tables freely behind these. Views are GENERATED from this spec (kernel.read_contract.view_ddl), so they cannot drift from it; `vdocs doctor` asserts the emitted DB matches.",
   "views": {
     "v_documents": {
@@ -49,7 +49,8 @@
         "is_latest": {"type": "INTEGER", "nullable": false, "desc": "from the owning document"},
         "kind": {"type": "TEXT", "nullable": false, "desc": "container | ok | stub | hollow"},
         "searchable": {"type": "INTEGER", "nullable": false, "desc": "1 if on the search surface"},
-        "section_path": {"type": "TEXT", "nullable": true, "desc": "' > '-joined ancestor heading titles"}
+        "section_path": {"type": "TEXT", "nullable": true, "desc": "' > '-joined ancestor heading titles"},
+        "seq": {"type": "INTEGER", "nullable": true, "desc": "document-order ordinal within the doc (ORDER BY this for TOC/preview order)"}
       }
     },
     "v_chunks": {

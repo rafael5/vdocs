@@ -1,0 +1,121 @@
+# DRAFT product abbreviations (Phase 1b). Per app_code: ABBR: <best expansion>  (+ variants).
+# Facet shows the ABBR (dense); the info bar expands to the full name.
+
+# ══ Admin & quality ══
+  DGJ:  # Incomplete Records Tracking (IRT)
+    IRT: 'Incomplete Records Tracking'
+  QAC:  # Patient Advocate Tracking System (PATS)
+    PATS: 'Patient Advocate Tracking System'
+
+# ══ Billing & finance ══
+  EC:  # Event Capture System (ECS)
+    ECS: 'Event Capture System'
+  ECX:  # Decision Support System (DSS) Extracts
+    DSS: 'Decision Support System Extracts'
+  FFP:  # Fugitive Felon Program
+    FFP: 'Fugitive Felon Program'
+  GEN:  # Generic Code Sheet (GCS)
+    GCS: 'Generic Code Sheet'
+  IB:  # Integrated Billing
+    EIV: 'Electronic Insurance Verification and Interfacility Insurance Update (IIU'
+    IIU: 'Electronic Insurance Verification (EIV) and Interfacility Insurance Update'   # alts: ['Electronic Insurance Verification (eIV) and Interfacility Insurance Update']
+    LTC: '176/728 IB Long Term Care Copay Phase 2'
+    eII: 'Electronic Insurance Identification'
+    eIV: 'Electronic Insurance Verification and Interfacility Insurance Update (IIU'
+  PRCA:  # Accounts Receivable (AR)
+    AR: 'Accounts Receivable — AR'   # alts: ['Accounts Receivable']
+    DMC: 'Accounts Receivable Debt Management Center Referral Process'
+  PRS:  # Personnel and Accounting Integrated Data (PAID)
+    PAID: 'Personnel and Accounting Integrated Data'
+
+# ══ Clinical care ══
+  EDIS:  # Emergency Department Integration Software
+    EDIS: 'Emergency Dept Integration Software Increment 3'   # alts: ['Emergency Dept Integration Software GUI', 'Emergency Dept Integration Software']
+  FIM:  # Functional Independence Measurement
+    FIM: 'Functional Independence Measurement'
+  GMRA:  # CPRS: Adverse Reaction Tracking (ART)
+    ART: 'CPRS: Adverse Reaction Tracking'
+  GMRC:  # CPRS: Consult/Request Tracking
+    CCRA: 'Community Care Referral and Authorization'
+    CITI: 'DOCMP CHAMPVA In-House Treatment Initiative'
+    DOCMP: 'Delivery Operations Claims Management Platform – Pega'
+    DST: 'Decision Support Tool'
+    EPRS: 'Enterprise Program Reporting System'
+    SEOC: 'Standardized Episodes of Care'   # alts: ['Standardized Episodes of Care API']
+  IBD:  # Automated Information Collection System (AICS)
+    AICS: 'Automated Information Collection System'
+  MD:  # Clinical Procedures
+    ADT: 'Clinical Procedures Outbound Admissions, Discharges, Transfers Feed'
+  NUPA:  # Patient Assessment Documentation Package (PADP)
+    PADP: 'Patient Assessment Documentation Package'
+  PX:  # Patient Care Encounter (PCE)
+    PCE: 'Patient Care Encounter'
+  PXRM:  # Clinical Reminders
+    VSAS: 'Symptom Assessment System Template'
+
+# ══ Infrastructure ══
+  DI:  # FileMan
+    DAC: 'FM Data Access Control'
+  KMPV:  # VistA System Monitor (VSM)
+    VSM: 'VistA System Monitor'
+  VAQ:  # Patient Data Exchange (PDX)
+    PDX: 'Patient Data Exchange'
+  VPR:  # Virtual Patient Record
+    VPR: 'Virtual Patient Record'
+  XWB:  # Remote Procedure Call (RPC) Broker
+    RPC: 'Remote Procedure Call Broker —'   # alts: ['Remote Procedure Call Broker']
+
+# ══ Laboratory ══
+  LR:  # Laboratory
+    ISBT: 'Laboratory: Blood Bank International Society of Blood Transfusions'
+
+# ══ Pharmacy ══
+  PSB:  # Pharmacy: Bar Code Medication Administration (BCMA)
+    BCMA: 'Pharmacy: Bar Code Medication Administration'
+  PSN:  # Pharmacy: National Drug File (NDF)
+    NDF: 'Pharmacy: National Drug File —'   # alts: ['Pharmacy: National Drug File']
+  PSO:  # Pharmacy: Outpatient Pharmacy
+    IEP: 'Pharmacy Reengineering (PRE) Inbound ePrescribing'
+    PRE: 'Pharmacy Reengineering Inbound ePrescribing (IEP'
+    ePCS: 'ePrescribing Controlled Substances Graphical'
+
+# ══ Radiology & imaging ══
+  MAG:  # VistA Imaging System
+    AWIV: 'VistA Imaging System Advanced Web Image Viewer'
+    CVIX: "Central VistA Imaging Exchange Administrator's"
+    VIX: 'VistA Imaging Exchange Enhanced Image Viewer'   # alts: ["VistA Imaging Exchange Administrator's"]
+
+# ══ Registration & scheduling ══
+  ADT:  # Admission Discharge Transfer
+    ISS: 'Integrated Scheduling Solution'
+  IVMB:  # Health Eligibility Center (HEC)
+    GMT: 'Geographic Means Test'
+    HEC: 'Health Eligibility Center'
+    MTS: 'Means Test Sharing'
+  PCMM:  # Primary Care Management Module
+    MHTC: 'PCMM Mental Health Treatment Coordinator'
+  SD:  # Scheduling
+    CCST: 'Clinical Capacity Search Tool'
+    ISS: 'Integrated Scheduling Solution'
+    PCICSV: 'Patient Check In Clinical Staff Viewer'
+    VSE: 'VistA Scheduling Enhancement GUI'   # alts: ['VistA Scheduling Enhancement GUI .']
+    VSECS: 'VSE for Clinical Staff'
+
+# ══ Specialty care ══
+  ACKQ:  # Quality Audiology and Speech Analysis and Reporting (QUASAR)
+    QUASAR: 'Quality Audiology and Speech Analysis and Reporting'
+  ANRV:  # Visual Impairment Service Team (VIST)
+    VIST: 'Visual Impairment Service Team'
+  DVBA:  # Automated Medical Information Exchange (AMIE)
+    AMIE: 'Automated Medical Information Exchange'
+  MMRS:  # Methicillin Resistant Staph Aureus (MRSA)
+    MRSA: 'Methicillin Resistant Staph Aureus —'   # alts: ['Methicillin Resistant Staph Aureus']
+  RMPR:  # Prosthetics
+    DOR: 'Delayed Order Report (GUI'
+    GUI: 'Prosthetics VistA Suite'   # alts: ['Delayed Order Report (DOR', 'View Billing Information']
+  ROEV:  # Registry: Military Eye Vision Injury (MEVIR)
+    MEVIR: 'Registry: Military Eye Vision Injury'
+  ROR:  # Registry: Clinical Case (CCR)
+    CCR: 'Registry: Clinical Case —'   # alts: ['Registry: Clinical Case']
+  SPN:  # Spinal Cord Injury and Disorders Outcomes (SCIDO)
+    SCIDO: 'Spinal Cord Injury and Disorders Outcomes'

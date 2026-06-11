@@ -6,6 +6,15 @@ Semver for the **read** contract (`read_schema_version`), the consumer-facing in
 replacement additively, keep the old as an alias for one release, then remove + MAJOR bump. See
 [ADR-0001](../../docs/adr/0001-read-contract-and-drift-prevention.md).
 
+## v1.2 — 2026-06-11
+
+Additive (backward-compatible) — ADR-0001 P4:
+
+- **`v_sections.seq`** — the document-order ordinal of each section. Consumers `ORDER BY seq` for
+  TOC/preview order; SQLite views have no `rowid`, so an explicit ordering column is required once
+  consumers read through `v_sections` instead of the physical table. (Driven by the vdocs-tui
+  consumer need — the canonical "consumer demand → additive producer change" round-trip.)
+
 ## v1.1 — 2026-06-11
 
 Additive (backward-compatible) — ADR-0001 P2:
