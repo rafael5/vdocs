@@ -63,7 +63,7 @@
 | | P4.4 | **Deleted** `explain.go` `personaDef`/`sectionDef`/`domainDef` | ✅ | explainer fully data-driven (the payoff) |
 | **P5 — vdocs-web** (new repo) | P5.1 | Scaffold: Go module (`replace`→`../vdocs-tui`), Makefile, lint | ✅ | repo `vista-cloud-dev/vdocs-web` (`f70fc9e`); CI deferred (D17) |
 | | P5.2 | Spine: `/api/facets` + `/api/candidates` (+`/api/meta`) over `pkg/index` + embedded page | ✅ | httptest-covered; minimal vanilla-JS browser |
-| | P5.3 | Preview / TOC / fuzzy / **FTS5** endpoints + panes | ⬜ | |
+| | P5.3 | Preview / TOC / fuzzy / **FTS5** endpoints + panes | ✅ | `vdocs-web` PR #1 (`06eaf1f`); reading pane; FTS5 already on `?q=` |
 | | P5.4 | DB auto-download on first run + manifest validation (sha256, schema_version) | ⬜ | zstd, resumable |
 | | P5.5 | SvelteKit front-end (`go:embed`) | ✅ | Svelte 5 SPA, npm (house std), built→embedded; Node *was* installed (D17) |
 | | P5.6 | Cross-compile matrix (linux/mac/win) | ⬜ | |
@@ -355,6 +355,15 @@ is green*; P5.3 preview/TOC/fuzzy/FTS endpoints + panes; P5.4 first-run DB auto-
 declare required capabilities + `go:embed` the built front-end; P5.6 cross-compile matrix.
 
 ### Changelog
+- **2026-06-11** — ✅ **P5.3 landed** (`vdocs-web` PR #1, `06eaf1f`). Reading surface over
+  `pkg/index`: `GET /api/doc/{docKey}/toc` (`ix.DocTOC`), `/api/section/{id}` and
+  `/api/preview/{docKey}` (`{text}` ← `ix.SectionText`/`ix.Preview`), routed via Go 1.22
+  method+wildcard `ServeMux`. Svelte `+page.svelte` gained a results→preview pane (doc → TOC →
+  section body, full-document/close); `api.ts` gained `toc`/`section`/`preview` + `Section`. **FTS5
+  needed no new endpoint** — it was already wired on `?q=` in `/api/candidates` (`filterFromQuery`),
+  now surfaced by the search box. httptest over a contract-faithful fixture (documents +
+  doc_sections + chunks + `v_*` views); `golangci-lint`/`go test -race`/`svelte-check` green; front
+  end rebuilt + embedded (`go:embed all:static`). Next: P5.4 (DB auto-download).
 - **2026-06-11** — ✅ spine landed. New repo `github.com/vista-cloud-dev/vdocs-web` (private,
   `f70fc9e`). Go module imports `vdocs-tui/pkg/index` via `replace => ../vdocs-tui` (verified —
   prints contract v1.2). `internal/api`: `/api/facets?axis=`, `/api/candidates`, `/api/meta` over
