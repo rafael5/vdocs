@@ -57,10 +57,10 @@
 | | P3.3 | `Open()` runtime version check (MAJOR mismatch → clear error) | ✅ | unstamped DB degrades, doesn't block |
 | | P3.4 | `make contract-check` drift check (vendored vs local vdocs sibling) | ✅ | the "warn me" alarm; in `make check`, self-skips in CI |
 | | P3.5 | Contract test (accessors + accept/refuse/degrade) | ✅ | `pkg/index/contract_test.go` |
-| **P4 — vdocs-tui consumes contract** | P4.1 | Query `v_*` views, not physical tables | ⬜ | |
-| | P4.2 | Defensive optional columns → absent column = absent facet | ⬜ | graceful degradation |
-| | P4.3 | Read all vocab from `vocab` table | ⬜ | |
-| | P4.4 | **Delete** `explain.go` `personaDef`/`sectionDef`/`domainDef` | ⬜ | first consumer payoff (D4) |
+| **P4 — vdocs-tui consumes contract** | P4.1 | Query `v_*` views, not physical tables | ✅ | PR #25 (`91860a4`); chunks_fts stays |
+| | P4.2 | Pre-contract DB degrades (`HasContractViews` → skip/degrade) | ✅ | real-corpus tests skip; `Vocab()` best-effort |
+| | P4.3 | Read persona/section/domain vocab from `v_vocab` | ✅ | `Vocab.Persona/Section/Domain` |
+| | P4.4 | **Deleted** `explain.go` `personaDef`/`sectionDef`/`domainDef` | ✅ | explainer fully data-driven (the payoff) |
 | **P5 — vdocs-web** (new repo) | P5.1 | Scaffold: Go module, SvelteKit, Makefile, CI | ⬜ | |
 | | P5.2 | Spine: `/api/facets` + `/api/candidates` over `pkg/index` + minimal Svelte page | ⬜ | prove the seam |
 | | P5.3 | Preview / TOC / fuzzy / **FTS5** endpoints + panes | ⬜ | |
@@ -307,20 +307,39 @@ explainer returns registry-sourced definitions; a fixture missing an optional co
 that facet and without crashing.
 
 ### Changelog
-_(none yet)_
+- **2026-06-11** — ✅ landed (vdocs-tui PR #25 `91860a4`; build + tests + lint + contract-check green).
+  Queries switched to `v_*` views (chunks_fts kept); `DocTOC`/`Preview` order by `v_sections.seq`;
+  `Vocab()` loads `Persona`/`Section`/`Domain` from `v_vocab`; `explain.go`'s three hardcoded maps
+  **deleted**; `HasContractViews()` skip/degrade for pre-contract DBs; fixtures rebuilt
+  contract-faithfully (`ViewDDL` + stamped meta).
+- **2026-06-11** — producer round-trip (vdocs `8c3dee8`): added `doc_sections.seq` + read contract
+  **v1.2** to satisfy the consumer's ordering need (see D15).
 
 ### Discoveries
-_(to fill)_ — seeded by D4.
+- **D15 (the canonical round-trip):** switching `DocTOC`/`Preview` to `v_sections` broke ordering —
+  **SQLite views have no `rowid`**, and there was no explicit order column. The fix flowed *upstream*
+  exactly as designed: add `doc_sections.seq` (document-order ordinal) to the producer → additive
+  contract bump **v1.1→v1.2** → re-vendor in vdocs-tui → `ORDER BY seq`. A clean demonstration of
+  "consumer demand → versioned, additive producer change → consumer adopts."
+- **D16:** the live pre-P1 lake DB has no `v_*` views, so real-corpus integration tests must *skip*
+  (via `HasContractViews()`), not fail. Same reason the TUI degrades rather than hard-blocks on it.
+  A friendly "rebuild your index" guard in `cmd/vdocs-tui` is a nice follow-up (not yet done).
+- **process:** `git add -A` swept two pre-existing untracked `docs/*.draft.yaml` into a commit
+  (`8c3dee8`); un-tracked them in `30ec765`. Stage explicit paths only.
 
 ### Risks & mitigations
-- **Risk:** vocab table ships *after* the maps are deleted → blank definitions in the interim.
-  **Mitigation:** sequence P2.1 (producer ships vocab) **before** P4.4 (consumer deletes maps); keep
-  `orFallback` so a missing definition degrades to the raw code, never a crash.
-- **Risk:** a consumer expects a vocab kind the producer doesn't emit yet. **Mitigation:** capability
-  declaration (`vocab_table`) + load-time check; missing kind → fallback, logged.
+- **Risk:** vocab maps deleted before the producer ships vocab → blank defs. **Mitigation (held):**
+  P2.1 shipped `v_vocab` before P4.4 deleted the maps; `orFallback` degrades a missing def to the
+  raw code, never a crash.
+- **Risk:** a v1.0/v1.1-built DB lacks `seq`/`v_vocab` but passes the MAJOR check. **Mitigation:**
+  `Vocab()` v_vocab reads are best-effort (degrade); `ORDER BY seq` with NULLs is harmless ordering,
+  not an error. A full rebuild at v1.2 is the clean state.
 
 ### Lessons learned
-_(none yet)_
+- The whole investment paid off here: a consumer-side need (section order) became a small, additive,
+  *versioned* producer change with a re-vendor step — no big-bang, no guesswork about compatibility.
+- Deleting the `explain.go` maps is the concrete proof the contract works: vocabulary is now data,
+  edited once in `registries/` and consumed everywhere.
 
 ---
 
