@@ -32,3 +32,9 @@ This file is for **what shipped**. For the *why* behind decisions
   8k-context chunk no longer drags a whole batch up to its length (the cause of the ~20–25 GB
   spikes). Vectors also stream into `vectors.db` batch-by-batch rather than accumulating every
   vector in memory first.
+- **`index`**: heading-less documents are no longer dropped from the search/preview surface. The
+  shredder splits a body on ATX headings, so sources with none (menu listings, quick-reference
+  cards, change-pages) produced **0 sections → 0 chunks** and showed no body — 29 of the 615
+  `is_latest` docs (incl. full manuals like *Prosthetics — Inventory Package*, 38k words). `index`
+  now falls back to a single whole-body section (titled from the doc) when no heading-derived
+  section survives, so the text is chunked, searchable, and previewable. Realized on a re-`index`.

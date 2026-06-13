@@ -359,10 +359,18 @@ def _split_long(block: str, limit: int) -> list[str]:
 
 
 def shred_sections(
-    body: str, doc_key: str, toc_depth: tuple[int, int] = DEFAULT_TOC_DEPTH
+    body: str,
+    doc_key: str,
+    toc_depth: tuple[int, int] = DEFAULT_TOC_DEPTH,
+    doc_title: str = "",
 ) -> list[Section]:
     """Split `body` into heading-delimited sections (fence-aware; the generated ``## Contents`` and
-    bookmark-only headings are skipped, matching `anchors_pure.parse_headings` so slugs align)."""
+    bookmark-only headings are skipped, matching `anchors_pure.parse_headings` so slugs align).
+
+    A heading-less body (menu listings, quick-reference cards, change-pages — real text with no
+    ATX headings) would otherwise yield zero sections, so the document gets no chunks and is
+    invisible to preview/search. When no heading-derived section survives, fall back to a single
+    whole-body section (slug ``body``, titled from ``doc_title``) so the text is still indexed."""
     lo, hi = min(toc_depth), max(toc_depth)
     lines = body.split("\n")
     heads = [(idx, level, strip_tags(raw).strip()) for idx, level, raw in iter_headings(body)]
@@ -399,6 +407,24 @@ def shred_sections(
                 kind=kind,
                 searchable=kind in ("ok", "stub"),
                 section_path=section_path,
+            )
+        )
+    if not sections and body.strip():
+        # No heading produced a section — emit the whole body as one leaf so its text still reaches
+        # the chunk/FTS surface (classified by the shared substantive-token floor, like any leaf).
+        has_referent, tokens = substantive_tokens(lines)
+        kind = classify_section(is_container=False, has_referent=has_referent, tokens=tokens)
+        sections.append(
+            Section(
+                section_id=f"{doc_key}/body",
+                slug="body",
+                title=doc_title or "Document",
+                level=1,
+                text=body.strip(),
+                toc_level=True,
+                kind=kind,
+                searchable=kind in ("ok", "stub"),
+                section_path="",
             )
         )
     return sections

@@ -171,7 +171,7 @@ class IndexStage(Stage):
             # is findable on every chunk of the doc even when section titles/bodies are generic.
             doc_title = str(meta.get("title", "") or staged.get("doc_title") or "")
             toc_depth = _toc_depth(body_path.parent / "refs.yaml")
-            secs = ip.shred_sections(body, doc_key, toc_depth)
+            secs = ip.shred_sections(body, doc_key, toc_depth, doc_title)
             word_count = int(staged.get("word_count") or ep.word_count(body))
             documents.append(
                 _doc_row(
