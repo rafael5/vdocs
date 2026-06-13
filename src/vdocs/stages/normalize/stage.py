@@ -51,6 +51,7 @@ class NormalizeStage(Stage):
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.kernel.text import decade_bucket
+        from vdocs.stages.fidelity import retention_pure as rtn
         from vdocs.stages.normalize import anchors_pure as anchors
         from vdocs.stages.normalize import capture_pure as capture
         from vdocs.stages.normalize import normalize_pure as nz
@@ -74,7 +75,7 @@ class NormalizeStage(Stage):
         normalized_root = ctx.cfg.silver_normalized
         n_docs = n_revision = n_tables = n_refs = n_boiler = n_template = 0
         n_published = n_titlepage = n_titleimg = n_flags = n_toc = 0
-        n_capture = n_absent_unexpected = 0
+        n_capture = n_absent_unexpected = n_low_retention = 0
         body_files = sorted(enriched_root.rglob("body.md"))
         kept = {p.parent.relative_to(enriched_root).as_posix() for p in body_files}
         # Per-document error isolation (R6): a single bad doc is logged + counted + skipped so one
@@ -144,9 +145,18 @@ class NormalizeStage(Stage):
                 if standardized != body:
                     n_titlepage += 1
                 body = standardized
+                # CONTENT-RETENTION GATE (§6.7): tables are already lifted to CSV above, so the body
+                # F-steps should preserve their input. A catastrophic drop here means a strip ran
+                # past its mark (e.g. a legacy TOC into the body) — invisible to the over-strip gate
+                # (a deleted-whole body has 0 sections → 0/0 → PASS). Flag low retention per doc.
+                pre_norm_words = len(body.split())
                 body, anchor_map = nz.normalize_body(
                     body, phrases, doc_id=str(rel), boilerplate=boilerplate, toc_titles=toc_titles
                 )
+                retention = rtn.score_retention(pre_norm_words, len(body.split()))
+                if retention.verdict != rtn.PASS:
+                    doc_flags.append(f"low-retention:{retention.verdict}:{retention.retention:.2f}")
+                    n_low_retention += 1
                 if anchor_map.toc_unresolved:
                     doc_flags.append(f"legacy-toc-unresolved:{len(anchor_map.toc_unresolved)}")
                 n_boiler += body.count("](_shared/boilerplate/")  # REFERENCE links inserted
@@ -241,6 +251,7 @@ class NormalizeStage(Stage):
                 "flag_sidecars": n_flags,
                 "capture_sidecars": n_capture,
                 "absent_unexpected": n_absent_unexpected,
+                "low_retention": n_low_retention,
                 "phrases": len(phrases),
                 "errors": loop.errors,
                 "pruned": n_pruned,
