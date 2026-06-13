@@ -38,3 +38,8 @@ This file is for **what shipped**. For the *why* behind decisions
   `is_latest` docs (incl. full manuals like *Prosthetics — Inventory Package*, 38k words). `index`
   now falls back to a single whole-body section (titled from the doc) when no heading-derived
   section survives, so the text is chunked, searchable, and previewable. Realized on a re-`index`.
+- **`index`**: name search now finds a package by its well-known name. The FTS `doc_title` surface
+  folds in the package application name (e.g. *FileMan*), because titles are namespace-prefixed
+  (*"DI — Technical Manual"*) — so a name search for "fileman" previously matched **1** of FileMan's
+  9 docs. Corpus-wide, 946/1034 titles lacked their own `app_name` token. Display titles are
+  unchanged; only the FTS name surface is enriched. Realized on a re-`index`.

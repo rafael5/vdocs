@@ -358,6 +358,18 @@ def _split_long(block: str, limit: int) -> list[str]:
     return pieces
 
 
+def fts_doc_title(app_name: str, title: str) -> str:
+    """The name tokens for the FTS ``doc_title`` column: the display title with the package's
+    application name folded in (e.g. ``"FileMan"``). Titles are frequently namespace-prefixed
+    (``"DI — Technical Manual"``), so without this a name search by the well-known package name
+    misses every doc but the rare one carrying it in the title. Skipped when the app name is empty
+    or already present in the title (no doubling)."""
+    app = app_name.strip()
+    if not app or app.lower() in title.lower():
+        return title
+    return f"{app} {title}"
+
+
 def shred_sections(
     body: str,
     doc_key: str,

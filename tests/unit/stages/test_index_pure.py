@@ -118,6 +118,18 @@ def test_shred_sections_no_fallback_for_blank_body():
     assert ip.shred_sections("   \n\n", "ADT/x") == []
 
 
+def test_fts_doc_title_folds_in_app_name():
+    # Titles are namespace-prefixed ("DI — …"), so a name search by the package's well-known name
+    # ("FileMan") misses every doc but the rare one with it in the title. Fold app_name into the FTS
+    # doc_title surface so package-name search finds them all.
+    assert ip.fts_doc_title("FileMan", "DI — Technical Manual") == "FileMan DI — Technical Manual"
+    assert (
+        ip.fts_doc_title("FileMan", "FileMan — DDE Utility Tutorial")
+        == "FileMan — DDE Utility Tutorial"  # already present → no doubling
+    )
+    assert ip.fts_doc_title("", "DI — User Guide") == "DI — User Guide"  # no app_name → unchanged
+
+
 def _section(text, *, kind="ok", searchable=True, sid="SD/x/s", path=""):
     return ip.Section(
         section_id=sid,

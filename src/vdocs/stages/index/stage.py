@@ -170,6 +170,11 @@ class IndexStage(Stage):
             # The document title is an FTS column (L1.2) so a doc-defining token (e.g. "KAAJEE")
             # is findable on every chunk of the doc even when section titles/bodies are generic.
             doc_title = str(meta.get("title", "") or staged.get("doc_title") or "")
+            # The FTS doc_title surface folds in the package application name (e.g. "FileMan") so a
+            # name search by the well-known package name finds every doc, not just the rare one
+            # whose title isn't namespace-prefixed ("DI — …"). Display title is unaffected.
+            app_code = str(staged.get("app_code") or meta.get("app_code", ""))
+            fts_title = ip.fts_doc_title(app_name_map.get(app_code, ""), doc_title)
             toc_depth = _toc_depth(body_path.parent / "refs.yaml")
             secs = ip.shred_sections(body, doc_key, toc_depth, doc_title)
             word_count = int(staged.get("word_count") or ep.word_count(body))
@@ -222,7 +227,7 @@ class IndexStage(Stage):
                                 c.section_id,
                                 doc_key,
                                 unit.title,
-                                doc_title,
+                                fts_title,
                                 unit.section_path,
                                 c.text,
                             )
@@ -241,7 +246,7 @@ class IndexStage(Stage):
                             tid = base if i == 0 else f"{base}#p{i + 1}"
                             chunks.append((tid, s.section_id, doc_key, i, text))
                             fts.append(
-                                (tid, s.section_id, doc_key, caption, doc_title,
+                                (tid, s.section_id, doc_key, caption, fts_title,
                                  s.section_path, text)
                             )  # fmt: skip
 
