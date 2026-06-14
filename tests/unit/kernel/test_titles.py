@@ -153,3 +153,16 @@ def test_display_title_default_keeps_distinguishing_module():
         "Beneficiary Travel Dashboard User Manual", "DGBT", "Beneficiary Travel", []
     )
     assert title == "DGBT — Dashboard User Manual"
+
+
+def test_display_title_alias_with_surrounding_space_still_matches():
+    # The DI/FileMan registry alias is written "FM " (trailing space). _starts_with already enforces
+    # a word boundary, so the space made the alias DEAD — and "FM Key and Index Tutorial" has no
+    # doc-kind word for the heuristic to stop at, so the whole title was taken as the product name →
+    # empty suffix → collapsed to the bare abbr "DI". Aliases are stripped before matching.
+    fileman = [{"abbr": "FileMan", "full": "VA FileMan", "match": ["FileMan", "FM ", "VA FileMan"]}]
+    title, abbr, full = titles.display_title("FM Key and Index Tutorial", "DI", "FileMan", fileman)
+    assert (title, abbr, full) == ("FileMan — Key and Index Tutorial", "FileMan", "VA FileMan")
+    # the word boundary is still respected — "FMX…" must NOT match the "FM" alias
+    _, abbr2, _ = titles.display_title("FMX Standalone Report", "DI", "FileMan", fileman)
+    assert abbr2 != "FileMan"  # falls through to the default (app_code) path, no false FM match

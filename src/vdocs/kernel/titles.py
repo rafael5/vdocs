@@ -123,11 +123,14 @@ def display_title(
     t = _denoise(raw)
     abbr = full = ""
     matched = ""
-    # 1) registry product whose longest match-alias is a word-boundary prefix
+    # 1) registry product whose longest match-alias is a word-boundary prefix. Aliases are stripped
+    # first: `_starts_with` already enforces a word boundary, so a padded alias (e.g. the DI/FileMan
+    # "FM ") would otherwise never match — the char after it is always alphanumeric.
     for p in products:
         for alias in p["match"]:
-            if _starts_with(t, alias) and len(alias) > len(matched):
-                abbr, full, matched = p["abbr"], p["full"], alias
+            a = alias.strip()
+            if _starts_with(t, a) and len(a) > len(matched):
+                abbr, full, matched = p["abbr"], p["full"], a
     # 2) default: the application itself
     if not abbr:
         abbr = app_code

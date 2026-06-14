@@ -55,3 +55,10 @@ This file is for **what shipped**. For the *why* behind decisions
   strip is now bounded to the contiguous TOC-entry/blank run when the region carries body prose, and
   is byte-identical for well-formed docs. See `docs/normalize-toc-overstrip-proposal.md`. Realized
   on a re-`normalize`.
+- **`index` / `kernel.titles`**: a registry product alias written with surrounding whitespace (the
+  DI/FileMan `"FM "` and LR/`"AP "`) was **dead** — `display_title._starts_with` already enforces a
+  word boundary, so the trailing space could never match. FileMan docs fell to the default path and
+  showed `"DI — …"`; two whose titles had no doc-kind word for the heuristic to stop at ("FM Key and
+  Index Tutorial", "FM ScreenMan Tutorial for Developers") collapsed to the **bare abbr "DI"**.
+  Aliases are now stripped before matching, so FileMan docs display `"FileMan — …"` (the registry's
+  intended abbr) and the two tutorials get real suffixes. Realized on a re-`index`.
