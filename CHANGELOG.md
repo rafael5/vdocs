@@ -17,6 +17,11 @@ This file is for **what shipped**. For the *why* behind decisions
   fetched 1040/1044 → **615 `is_latest` gold docs**. B1–B5 quality/fidelity checks pass — gate
   fidelity (only Tier-A doc-types), persona columns (`app_user`/`software_class` 100%), FTS, all 9
   entity types, faceted + pre-cited search. GREEN authorizes the TUI build.
+- **Content-retention fidelity guardrail** (`fidelity/retention_pure.py`): scores each doc on how
+  much of its enriched body survived `normalize` (words relocated to table CSVs count as kept),
+  catching a strip that deletes the body whole — the blind spot of the over-strip gate, which scores
+  a body-less doc `0/0` → PASS. The `normalize` stage records a per-doc `low-retention` flag +
+  `low_retention` count; `validate`-gate blocking is a follow-up.
 
 ### Changed
 
@@ -32,3 +37,21 @@ This file is for **what shipped**. For the *why* behind decisions
   8k-context chunk no longer drags a whole batch up to its length (the cause of the ~20–25 GB
   spikes). Vectors also stream into `vectors.db` batch-by-batch rather than accumulating every
   vector in memory first.
+- **`index`**: heading-less documents are no longer dropped from the search/preview surface. The
+  shredder splits a body on ATX headings, so sources with none (menu listings, quick-reference
+  cards, change-pages) produced **0 sections → 0 chunks** and showed no body — 29 of the 615
+  `is_latest` docs (incl. full manuals like *Prosthetics — Inventory Package*, 38k words). `index`
+  now falls back to a single whole-body section (titled from the doc) when no heading-derived
+  section survives, so the text is chunked, searchable, and previewable. Realized on a re-`index`.
+- **`index`**: name search now finds a package by its well-known name. The FTS `doc_title` surface
+  folds in the package application name (e.g. *FileMan*), because titles are namespace-prefixed
+  (*"DI — Technical Manual"*) — so a name search for "fileman" previously matched **1** of FileMan's
+  9 docs. Corpus-wide, 946/1034 titles lacked their own `app_name` token. Display titles are
+  unchanged; only the FTS name surface is enriched. Realized on a re-`index`.
+- **`normalize`**: the legacy in-body TOC strip no longer deletes the body of a Pandoc-flattened
+  doc. The ATX-heading branch dropped from a "Table of Contents" heading **to the next markdown
+  heading**; a flattened doc (bold pseudo-headings, no real ATX headings) has none, so the strip ran
+  to EOF — gutting 4 real manuals (e.g. *Prosthetics — Inventory Package*, 37,960 → 27 words). The
+  strip is now bounded to the contiguous TOC-entry/blank run when the region carries body prose, and
+  is byte-identical for well-formed docs. See `docs/normalize-toc-overstrip-proposal.md`. Realized
+  on a re-`normalize`.

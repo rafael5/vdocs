@@ -292,6 +292,17 @@ def _is_loose_toc_entry(line: str) -> bool:
     return _LOOSE_TOC_ENTRY_RE.match(line) is not None
 
 
+def _is_toc_nav_line(line: str) -> bool:
+    """A line that belongs to a legacy-TOC block — a blank, an anchor-linked entry, or a
+    dotted/plain entry ending in a page number — as opposed to body prose. Bounds the ATX-heading
+    TOC strip so it stops at the first real prose line instead of running into a flattened doc's
+    body (which has no terminating heading to stop it)."""
+    s = line.strip()
+    if not s:
+        return True
+    return _is_loose_toc_entry(line) or _TRAILING_PAGE_RE.search(s) is not None
+
+
 def _norm_toc_title(line: str) -> str:
     """A legacy-TOC heading line's bare title — HTML tags (the ``<span id="_Toc…">`` bookmark
     old-gen headers carry), emphasis (``*``/``_``/`` ` ``), ATX/blockquote markers, and whitespace
@@ -345,9 +356,21 @@ def _scan_legacy_toc(
         # level — H1–H3, the H4–H6 the old `max_level=3` gate missed, and the oversized >6-`#`
         # form upstream mangles. The exact title match (not a substring) keeps it safe.
         if m and _norm_toc_title(lines[i]) in wanted:
+            # Region end: the next markdown heading, or EOF. A clean TOC region is entries + blanks;
+            # a Pandoc-flattened doc has no terminating heading, so "drop to the next heading" ran
+            # to EOF and deleted the body. If the region carries substantive prose (a non-blank line
+            # that isn't a page-numbered entry), bound the drop to the contiguous leading entry/
+            # blank run — stop at the first prose line (mirrors the plain-text branch). Otherwise
+            # drop the whole region (byte-identical to before for every well-formed doc).
+            h = i + 1
+            while h < n and not HEADING_RE.match(lines[h]):
+                h += 1
+            has_prose = any(not _is_toc_nav_line(lines[k]) for k in range(i + 1, h))
             drop.add(i)
             j = i + 1
-            while j < n and not HEADING_RE.match(lines[j]):
+            while j < (n if has_prose else h):
+                if has_prose and not _is_toc_nav_line(lines[j]):
+                    break  # first body-prose line ends the bounded TOC region
                 drop.add(j)
                 if _is_loose_toc_entry(lines[j]) and (e := parse_legacy_toc_entry(lines[j])):
                     entries.append(e)

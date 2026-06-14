@@ -150,6 +150,36 @@ def test_strip_existing_toc_removes_prior_contents_block():
     assert "## A" in out and "real" in out  # real section kept
 
 
+def test_strip_legacy_toc_keeps_body_of_flattened_doc():
+    # A Pandoc-flattened doc: a "Table of Contents" heading + page-numbered entries, then the BODY
+    # as headingless prose. The old ATX branch "dropped to the next heading" — with none, it ran to
+    # EOF and deleted the body. The bounded strip drops only the heading + the contiguous entry run.
+    body = (
+        "## Table of Contents\n\n"
+        "Overview [1](#_Toc1)\n\n"
+        "Setup [2](#_Toc2)\n\n"
+        "The audiometric exam module records patient data and prints reports for the clinic.\n"
+        "Each step is described below in detail with examples and screen captures.\n"
+    )
+    out = nz.strip_legacy_toc(body, frozenset({"table of contents"}))
+    assert "## Table of Contents" not in out  # the legacy header is removed
+    assert "Overview [1](#_Toc1)" not in out  # and its page-numbered entries
+    assert "audiometric exam module" in out and "screen captures" in out  # body prose SURVIVES
+
+
+def test_strip_legacy_toc_clean_toc_dropped_whole_to_next_heading():
+    # A well-formed doc: the TOC region is entries+blanks until the next heading, no prose → dropped
+    # whole (behavior unchanged). Guards the bounded path from regressing clean docs.
+    body = (
+        "## Table of Contents\n\n"
+        "Overview [1](#_Toc1)\n\n"
+        "## Overview\n\nReal section prose stands on its own here.\n"
+    )
+    out = nz.strip_legacy_toc(body, frozenset({"table of contents"}))
+    assert "## Table of Contents" not in out and "Overview [1](#_Toc1)" not in out
+    assert "## Overview" in out and "Real section prose" in out
+
+
 def test_build_toc_empty_for_no_headings():
     assert nz.build_toc([]) == ""
 

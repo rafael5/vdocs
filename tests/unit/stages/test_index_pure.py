@@ -94,6 +94,42 @@ def test_shred_marks_hollow_leaf_not_searchable():
     assert "empty-section" in {s.slug for s in ip.shred_sections(body, "SD/x")}  # row still present
 
 
+def test_shred_sections_fallback_when_no_headings():
+    # Heading-less sources (menu listings, quick-reference cards, change-pages) still carry real
+    # body text; without a fallback, shred returns [] → the doc gets zero chunks, no preview/search.
+    # Emit the whole body as one searchable section titled from the document.
+    body = (
+        "OPTION NAME | SUGGESTED RUN FREQUENCY | REMARKS\n"
+        "DG G&L RECALCULATION AUTO | Nightly | Recommended to run at 9 PM.\n"
+        "This menu document lists the background job options for the package.\n"
+    )
+    secs = ip.shred_sections(body, "ACR/acr_puse", doc_title="ACR — Menu")
+    assert len(secs) == 1
+    s = secs[0]
+    assert s.slug == "body" and s.section_id == "ACR/acr_puse/body"
+    assert s.title == "ACR — Menu"  # carries the doc title for the single TOC entry / FTS
+    assert s.kind == "ok" and s.searchable is True
+    assert "DG G&L RECALCULATION" in s.text and s.section_path == ""
+
+
+def test_shred_sections_no_fallback_for_blank_body():
+    # A genuinely empty body stays zero sections — the fallback only rescues real heading-less text.
+    # (whitespace-only input must not synthesize a section)
+    assert ip.shred_sections("   \n\n", "ADT/x") == []
+
+
+def test_fts_doc_title_folds_in_app_name():
+    # Titles are namespace-prefixed ("DI — …"), so a name search by the package's well-known name
+    # ("FileMan") misses every doc but the rare one with it in the title. Fold app_name into the FTS
+    # doc_title surface so package-name search finds them all.
+    assert ip.fts_doc_title("FileMan", "DI — Technical Manual") == "FileMan DI — Technical Manual"
+    assert (
+        ip.fts_doc_title("FileMan", "FileMan — DDE Utility Tutorial")
+        == "FileMan — DDE Utility Tutorial"  # already present → no doubling
+    )
+    assert ip.fts_doc_title("", "DI — User Guide") == "DI — User Guide"  # no app_name → unchanged
+
+
 def _section(text, *, kind="ok", searchable=True, sid="SD/x/s", path=""):
     return ip.Section(
         section_id=sid,
