@@ -21,9 +21,9 @@ from vdocs.kernel import registry as kregistry
 from vdocs.kernel.cas import Cas
 from vdocs.kernel.docloop import DocLoop
 from vdocs.kernel.text import safe_component
-from vdocs.models.stage import Idempotency, PostflightResult, RunResult
+from vdocs.models.stage import Decision, Idempotency, PostflightResult, PreflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
-from vdocs.stages.convert.convert_pure import ConvertedDoc
+from vdocs.stages.convert.convert_pure import ConvertedDoc, missing_converters
 
 log = structlog.get_logger(__name__)
 
@@ -42,6 +42,32 @@ class ConvertStage(Stage):
         self._docling = docling  # default Docling when None
         self._errors = 0  # per-document failures isolated this run (R6 — see doc_error_gate)
         self._total = 0
+
+    def preflight(self, ctx: StageContext, force: bool) -> PreflightResult:
+        """On top of the generic preflight, fail fast with a remediation hint if a required external
+        converter binary is missing — *before* the per-document loop, so a missing `pandoc` reads as
+        "install pandoc" instead of "N documents failed to convert" (a mis-reported corpus defect).
+        Only checks when this run will actually convert (PROCEED); a skipped/resumed convert needs
+        no binary. Injected converters (tests / backends) are never gated on the system tool.
+        """
+        base = super().preflight(ctx, force)
+        if base.decision is not Decision.PROCEED:
+            return base  # FAIL (bad input) or SKIP (unchanged) — no conversion this run
+        routing = _load_converter_routing(
+            ctx.cfg.registries / "converter-routing" / "converter-routing.yaml"
+        )
+        missing = missing_converters(
+            need_pandoc=self._pandoc is None,
+            need_docling=self._docling is None and bool(routing),
+            available=_converter_available,
+        )
+        if missing:
+            tools = ", ".join(tool for tool, _hint in missing)
+            hints = "; ".join(hint for _tool, hint in missing)
+            return PreflightResult.fail(
+                f"required converter binary not found: {tools}", remediation=hints
+            )
+        return base
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.stages.convert import convert_pure as cp
@@ -114,6 +140,17 @@ def _load_converter_routing(path) -> frozenset[str]:  # type: ignore[no-untyped-
     """Bundle identities (``<app>/<slug>``) curated to convert with Docling (empty if absent)."""
     data = kregistry.load_mapping(path, missing_ok=True)
     return frozenset(data.get("docling") or [])
+
+
+def _converter_available(tool: str) -> bool:
+    """Whether an external converter binary is on PATH. Docling is commonly installed as a uv tool
+    under ``~/.local/bin`` (mirrors :func:`_docling_convert`'s fallback), so check there too."""
+    import shutil
+    from pathlib import Path
+
+    if shutil.which(tool):
+        return True
+    return tool == "docling" and (Path.home() / ".local" / "bin" / "docling").exists()
 
 
 def _docling_convert(data: bytes, ext: str) -> ConvertedDoc:  # pragma: no cover - subprocess I/O

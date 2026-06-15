@@ -15,6 +15,17 @@ To start building, see [`docs/kickoff-prompt.md`](docs/kickoff-prompt.md).
 make install
 ```
 
+To **run the document pipeline** (not just `make check`), two system converters are also required —
+they are external binaries, not pip dependencies:
+
+```bash
+sudo apt install pandoc                     # or: brew install pandoc  (required: every DOCX)
+uv tool install 'docling-slim[standard]'    # Docling CLI (for the routed CPRS doc)
+```
+
+The `convert` stage preflight-checks both and fails up front with the install command if either is
+missing. See [`docs/de-novo-run.md`](docs/de-novo-run.md) for the full operator runbook.
+
 ## Usage
 
 ```bash

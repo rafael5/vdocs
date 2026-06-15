@@ -23,6 +23,15 @@ The pipeline narrates itself: every stage prints a `[k/N] stage — …` banner,
 
 - **Network** is needed for `crawl` + `fetch` (they pull from `https://www.va.gov/vdl/`). Everything
   after `fetch` runs **offline** (see §6 for the airgapped split).
+- **Converters (system binaries — not pip deps).** `convert` shells out to **Pandoc** (required for
+  every DOCX) and, for the one curated heavy-cross-reference doc (`CPRS/cprsguium`, see
+  `registries/converter-routing/`), the **Docling** CLI. Install both before running:
+  ```bash
+  sudo apt install pandoc                      # or: brew install pandoc
+  uv tool install 'docling-slim[standard]'     # Docling CLI, isolated env
+  ```
+  `convert` preflight-checks these and **fails up front with the exact install command** if either
+  is missing — so you won't see a misleading "N documents failed to convert."
 - **Shared lake.** `~/data/vdocs` (`$DATA_DIR`) is shared. `vdocs build` **refuses to start if another
   vdocs pipeline process is active** (it would race `state.db`/`index.db`/the CAS). If you see that
   message, wait for the other run (check `reports/*.log`) — don't force past it.

@@ -429,8 +429,12 @@ def _seed_sound_index(tmp_path):
     conn.close()
 
 
-def test_build_fresh_refuses_without_yes(tmp_path):
-    # the destructive wipe must not happen without explicit confirmation
+def test_build_fresh_refuses_without_yes(tmp_path, monkeypatch):
+    # the destructive wipe must not happen without explicit confirmation. Neutralize the
+    # shared-lake guard (checked before the confirmation): it shells `pgrep -af vdocs`, which
+    # self-matches because the test interpreter's .venv path contains "vdocs" — so without this the
+    # test fails deterministically on the abort branch even with no other vdocs process running.
+    monkeypatch.setattr("vdocs.cli.app._other_vdocs_running", lambda: False)
     result = runner.invoke(app, ["build", "--fresh"], env={"DATA_DIR": str(tmp_path)})
     assert result.exit_code == 1
     assert "--fresh --yes" in result.stdout

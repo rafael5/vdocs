@@ -9,10 +9,36 @@ store (``assets/<sha256>.<ext>``) once the images have been extracted and stored
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 from vdocs.kernel.text import safe_component
+
+# Install hints surfaced as the preflight remediation when an external converter binary is absent
+# (the convert stage shells these out; they are system tools, not pip dependencies).
+PANDOC_HINT = "install pandoc — `sudo apt install pandoc` (or `brew install pandoc`)"
+DOCLING_HINT = "install the Docling CLI isolated: `uv tool install 'docling-slim[standard]'`"
+
+
+def missing_converters(
+    need_pandoc: bool, need_docling: bool, available: Callable[[str], bool]
+) -> list[tuple[str, str]]:
+    """Which required external converter binaries are absent, as ``(tool, install_hint)`` pairs.
+
+    Pure: the caller supplies the ``available(tool) -> bool`` probe (real impl wraps
+    ``shutil.which``) so this is unit-testable with no filesystem. ``need_pandoc``/``need_docling``
+    reflect whether
+    each converter will actually be invoked this run — a converter injected by a test (or a routing
+    file that sends nothing to Docling) is *not* needed, so its binary is never demanded.
+    """
+    missing: list[tuple[str, str]] = []
+    if need_pandoc and not available("pandoc"):
+        missing.append(("pandoc", PANDOC_HINT))
+    if need_docling and not available("docling"):
+        missing.append(("docling", DOCLING_HINT))
+    return missing
+
 
 # markdown image: ![alt](target "optional title")
 _MD_IMG_RE = re.compile(r"(!\[[^\]]*\]\()([^)\s]+)([^)]*\))")
