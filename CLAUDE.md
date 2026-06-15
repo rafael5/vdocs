@@ -62,8 +62,13 @@ until that is green.
 
 Python 3.12 + `uv` · `ruff` (line 100; E,F,I) · `mypy` · `pytest` + **Hypothesis** (property tests
 for pure transforms) · **Typer** CLI · **Pydantic v2** boundary types + **Pydantic Settings** config
-· **structlog** · SQLite (`state.db`, `index.db`) + **sqlite-vec** (`vectors.db`) · **MCP Python SDK**.
-Add deps **per phase** as the design requires (`uv add … && uv lock`, commit the lock) — not all up front.
+· **structlog** · SQLite (`state.db`, `index.db`, both FTS5). Document conversion shells out to
+**Pandoc** (and **Docling** for the routed CPRS doc) — system binaries, not pip deps (see
+`de-novo-run.md §0`). Add deps **per phase** as the design requires (`uv add … && uv lock`, commit
+the lock) — not all up front.
+> **Descoped (direction reset 2026-06-08):** `sqlite-vec`/`vectors.db` and the **MCP Python SDK** —
+> the semantic/vector + agent surface is parked. They are **not** dependencies; ignore older
+> references to them.
 
 ## TDD — hard rule
 

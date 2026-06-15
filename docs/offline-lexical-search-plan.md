@@ -134,18 +134,10 @@ Search hits must resolve to a readable doc; ship the browsable corpus.
 
 ## Master tracker
 
-| Phase | ID | Step | Status |
-|-------|----|------|--------|
-| **L1 — Lexical quality** | L1.1 | Field-weighted BM25 | ⬜ |
-| | L1.2 | Doc title (+breadcrumb) in FTS | ⬜ |
-| | L1.3 | Glossary query expansion | ⬜ |
-| **L2 — Distributable tool** | L2.1 | Go search CLI (`modernc.org/sqlite`, FTS5) | ⬜ |
-| | L2.2 | Cross-compile + handoff | ⬜ |
-| | L2.3 | Ranker-parity gate (Go ↔ Python on golden set) | ⬜ |
-| **L3 — Human corpus** | L3.1 | `publish` | ⬜ |
-| | L3.2 | `push` | ⬜ |
-| **L4 — Quality gate** | L4.1 | Gate the metrics in CI | ⬜ |
-| | L4.2 | Publish the quality claim | ⬜ |
+> **Live status is tracked in one place — the
+> [implementation tracker](offline-lexical-search-implementation-plan.md)** (per-step ✅/🟡/⬜ with
+> measured numbers and a per-phase changelog). This document is the *what/why*; to avoid two
+> trackers drifting (they did), the status table is **not duplicated here**.
 
 **Suggested order:** L1 first (it defines the quality ceiling and is mostly query-time), then L2
 (portability — the headline deliverable), with L3/L4 parallelizable.

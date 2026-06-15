@@ -21,6 +21,9 @@ The pipeline narrates itself: every stage prints a `[k/N] stage — …` banner,
 
 ## 0. Prerequisites
 
+- **Invoking `vdocs`.** After `make install` the CLI lives in the project `.venv`, **not** on your
+  `PATH`. Every `vdocs …` command below means **`uv run vdocs …`** (or `source .venv/bin/activate`
+  once, then plain `vdocs …`).
 - **Network** is needed for `crawl` + `fetch` (they pull from `https://www.va.gov/vdl/`). Everything
   after `fetch` runs **offline** (see §6 for the airgapped split).
 - **Converters (system binaries — not pip deps).** `convert` shells out to **Pandoc** (required for

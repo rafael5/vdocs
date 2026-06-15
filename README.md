@@ -1,13 +1,17 @@
 # vdocs
 
-A TDD Python pipeline that turns the VA VistA Document Library (DOCX/PDF manuals) into a clean,
-GitHub-native markdown corpus **and** a self-contained, offline knowledge base
-(lexical + structured + graph search over `index.db`, zero ML dependencies). Greenfield v2 rewrite
-of `vista-docs`.
+A TDD Python pipeline that turns the VA VistA Document Library (DOCX manuals) into a clean,
+human-browsable markdown corpus **and** a self-contained **lexical search index** (`index.db`,
+SQLite + FTS5) that any developer can search **offline with zero ML dependencies**. Greenfield v2
+rewrite of `vista-docs`.
 
-**Architecture is fully specified in [`docs/vdocs-design.md`](docs/vdocs-design.md)** (the single
-source of truth) with the QA companion [`docs/fidelity-framework.md`](docs/fidelity-framework.md).
-To start building, see [`docs/kickoff-prompt.md`](docs/kickoff-prompt.md).
+**Source of truth:** the go-forward plan
+[`docs/offline-lexical-search-plan.md`](docs/offline-lexical-search-plan.md) (*what/why*) and its
+[implementation tracker](docs/offline-lexical-search-implementation-plan.md) (*how/status*). New to
+the project? Start with the [user guide](docs/vdocs-user-guide.md); to **run** the pipeline, follow
+the [operator runbook](docs/de-novo-run.md). The original `vdocs-design.md` / `fidelity-framework.md`
+are archived under [`docs/historical/`](docs/historical/) as superseded reference (the semantic /
+vector / MCP surface was descoped — the project is lexical-first and offline).
 
 ## Install
 
@@ -28,9 +32,15 @@ missing. See [`docs/de-novo-run.md`](docs/de-novo-run.md) for the full operator 
 
 ## Usage
 
+After `make install`, the `vdocs` CLI lives in the project's `.venv` (it is **not** on your `PATH`).
+Invoke it with `uv run` — or activate the venv first:
+
 ```bash
-vdocs --help
+uv run vdocs --help          # or: source .venv/bin/activate  &&  vdocs --help
 ```
+
+The full run is three commands (`uv run vdocs gate` → `… build --fresh --yes` → `… doctor`); see the
+[operator runbook](docs/de-novo-run.md).
 
 ## Develop
 
