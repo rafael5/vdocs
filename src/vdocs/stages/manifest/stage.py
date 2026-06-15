@@ -25,6 +25,7 @@ from vdocs.contracts.registry import (
     RELATIONS,
 )
 from vdocs.kernel import cas, db, read_contract
+from vdocs.kernel import csv as kcsv
 from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -108,16 +109,9 @@ class ManifestStage(Stage):
 def _harvest_glossary_pairs(cfg) -> list:  # type: ignore[no-untyped-def]
     """Scan every `tables/*.csv` sidecar under silver-normalized and collect `(term, definition)`
     pairs from those that are acronym glossaries (B2). Non-glossary tables yield none."""
-    import csv
-
     pairs: list = []
     for csv_path in cfg.silver_normalized.rglob("tables/*.csv"):
-        try:
-            with csv_path.open(newline="", encoding="utf-8") as fh:
-                rows = list(csv.reader(fh))
-        except (OSError, UnicodeDecodeError, csv.Error):
-            continue
-        pairs.extend(mp.acronym_table_pairs(rows))
+        pairs.extend(mp.acronym_table_pairs(kcsv.read_rows(csv_path)))
     return pairs
 
 

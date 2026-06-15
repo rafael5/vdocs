@@ -35,3 +35,20 @@ def test_to_csv_strict_raises_on_extra_keys():
 
     with pytest.raises(ValueError):
         kcsv.to_csv(["a"], [{"a": "1", "extra": "x"}], strict=True)
+
+
+def test_read_rows_reads_a_csv_file(tmp_path):
+    p = tmp_path / "t.csv"
+    p.write_text("a,b\r\n1,2\r\n3,4\r\n", encoding="utf-8")
+    assert kcsv.read_rows(p) == [["a", "b"], ["1", "2"], ["3", "4"]]
+
+
+def test_read_rows_missing_file_is_empty(tmp_path):
+    assert kcsv.read_rows(tmp_path / "nope.csv") == []
+
+
+def test_read_rows_unreadable_bytes_are_empty(tmp_path):
+    # a binary/undecodable sidecar must never abort the caller — it reads as no rows
+    p = tmp_path / "bad.csv"
+    p.write_bytes(b"\xff\xfe\x00\x01 not utf-8")
+    assert kcsv.read_rows(p) == []
