@@ -313,7 +313,7 @@ def test_index_stamps_read_contract_meta(ctx):
         meta = dict(conn.execute("SELECT key, value FROM meta").fetchall())
     finally:
         conn.close()
-    assert meta["read_schema_version"] == "1.2"
+    assert meta["read_schema_version"] == "1.3"
     assert meta["corpus_doc_count"] == "2"  # both version-group members are documents
     assert len(meta["corpus_content_hash"]) == 64  # sha256 hexdigest
 
@@ -365,7 +365,7 @@ def test_index_emits_read_contract_views_matching_the_spec(ctx):
         assert latest == 1
         # the read_schema_version stamped in meta is the spec's version (single source)
         ver = conn.execute("SELECT value FROM meta WHERE key = 'read_schema_version'").fetchone()[0]
-        assert ver == rc.version(spec) == "1.2"
+        assert ver == rc.version(spec) == "1.3"
     finally:
         conn.close()
 
@@ -396,3 +396,39 @@ def test_index_publishes_the_vocab_table(ctx):
         assert "care staff" in desc
     finally:
         conn.close()
+
+
+def test_index_records_per_doc_image_stats(ctx):
+    # A figure present in the asset CAS is counted + sized; a ref to a missing asset is skipped.
+    img = b"\x89PNG fake image bytes for sizing"
+    ctx.cfg.assets.mkdir(parents=True, exist_ok=True)
+    (ctx.cfg.assets / "fig1.png").write_bytes(img)
+    doc = _seed_bundle(
+        ctx,
+        "DI",
+        "fm_tm",
+        "DI*22.2*1",
+        "# FileMan TM\n\n## Screens\n\nThe editor screen:\n\n"
+        "![editor](fig1.png)\n\n![missing](nope.png)\n",
+    )
+    _seed_staged(ctx, [doc])
+    _seed_consolidated(ctx, latest_doc_id=doc, all_doc_ids=[doc])
+    for stage, art in (
+        ("normalize", TEXT_NORMALIZED),
+        ("consolidate", CONSOLIDATED),
+        ("enrich", DOC_META_STAGED),
+    ):
+        _bless(ctx, stage, art)
+
+    (result,) = Orchestrator([IndexStage()]).run(ctx)
+    assert result.status == "ok"
+
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        count, nbytes = conn.execute(
+            "SELECT image_count, image_bytes FROM v_documents WHERE doc_key = ?", ("DI/fm_tm",)
+        ).fetchone()
+    finally:
+        conn.close()
+    assert count == 1  # fig1.png resolves in the CAS; nope.png is skipped
+    assert nbytes == len(img)

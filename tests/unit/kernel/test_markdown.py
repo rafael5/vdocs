@@ -161,3 +161,19 @@ def test_legacy_toc_target_returns_outer_anchor():
     assert md.legacy_toc_target("[Intro [1](#intro)](#intro)") == "#intro"
     assert md.legacy_toc_target("[X [9](#_Toc55)](#_Toc55)") == "#_Toc55"
     assert md.legacy_toc_target("not an entry") is None
+
+
+def test_image_targets_finds_markdown_and_html_basenames_deduped():
+    body = (
+        "# Doc\n\ntext\n\n"
+        "![a fig](abc123.png)\n"
+        '<img src="def456.jpg" alt="x"/>\n'
+        "![again](abc123.png)\n"  # dup -> counted once
+        "![nested](media/ghi789.png)\n"  # path stripped to basename
+        "[not an image](https://x/y)\n"  # plain link -> ignored
+    )
+    assert md.image_targets(body) == ["abc123.png", "def456.jpg", "ghi789.png"]
+
+
+def test_image_targets_empty_when_no_images():
+    assert md.image_targets("# Title\n\njust prose, [a link](x).\n") == []
