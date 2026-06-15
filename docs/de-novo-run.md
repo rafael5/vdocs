@@ -24,6 +24,10 @@ The pipeline narrates itself: every stage prints a `[k/N] stage — …` banner,
 - **Invoking `vdocs`.** After `make install` the CLI lives in the project `.venv`, **not** on your
   `PATH`. Every `vdocs …` command below means **`uv run vdocs …`** (or `source .venv/bin/activate`
   once, then plain `vdocs …`).
+- **Check the environment first:** `vdocs preflight` → `PREFLIGHT: GO|NO-GO`. It verifies the things
+  that strand a run before stage 1 — the converter binaries (Pandoc, + Docling if a doc is routed
+  to it), a writable `$DATA_DIR`, free disk, and VDL reachability — each OK/WARN/FAIL with a fix.
+  Exit 1 on NO-GO. (The prereqs below are exactly what it checks.)
 - **Network** is needed for `crawl` + `fetch` (they pull from `https://www.va.gov/vdl/`). Everything
   after `fetch` runs **offline** (see §6 for the airgapped split).
 - **Converters (system binaries — not pip deps).** `convert` shells out to **Pandoc** (required for

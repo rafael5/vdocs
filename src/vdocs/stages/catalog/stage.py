@@ -25,6 +25,7 @@ class CatalogStage(Stage):
     requires = [CATALOG_RAW]
     produces = [CATALOG_ENRICHED]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
+    contract_ver = 1  # bump when CATALOG_ENRICHED's record shape changes (re-runs its consumers)
     # F4: catalog.raw is STATE-class crawl evidence; if it survives on disk, enrich it rather than
     # FAILing for a missing crawl run record (a wiped state.db must not force a re-crawl).
     requires_upstream_record = False

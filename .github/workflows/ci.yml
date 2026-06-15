@@ -26,5 +26,11 @@ jobs:
       - name: Type check
         run: uv run mypy src/
 
+      # The convert stage shells out to pandoc; installing it lets the real-conversion smoke test
+      # (tests/integration/stages/test_convert_smoke.py) run here, so a green CI proves the
+      # pipeline's convert backend actually works — not just that the code lints + unit-tests pass.
+      - name: Install pandoc (for the convert smoke test)
+        run: sudo apt-get update && sudo apt-get install -y pandoc
+
       - name: Test with coverage
         run: uv run pytest --cov --cov-report=term-missing

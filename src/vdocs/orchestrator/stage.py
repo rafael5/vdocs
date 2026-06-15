@@ -73,6 +73,11 @@ class Stage(ABC):
     requires: list[ArtifactContract] = []
     produces: list[ArtifactContract] = []
     idempotency: Idempotency = Idempotency.SKIP_IF_UNCHANGED
+    # The version of this stage's PRODUCED shape (its `produces[]` schema / store columns / file
+    # layout). **Bump it whenever you change that shape** — a bump re-runs this stage even when its
+    # inputs are unchanged (skip-decision below), and folds into each downstream consumer's
+    # inputs_fp (~line 199), so consumers re-run too. Every derived-store producer declares it
+    # explicitly (not the bare default) so the bump-on-shape-change contract is local and visible.
     contract_ver: int = 1
     # When True (default), an internal upstream must have an ``ok`` ``state.db`` run record or
     # preflight FAILs (an orphan file on disk is untrusted — it could be a partial write). Stages

@@ -48,6 +48,7 @@ class RelateStage(Stage):
     requires = [INDEX_DOCUMENTS, INDEX_ENTITIES, INDEX_SECTIONS]
     produces = [RELATIONS]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
+    contract_ver = 1  # bump when the RELATIONS table shape changes (re-runs manifest)
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         mentions = _read_mentions(ctx.cfg.index_db)
