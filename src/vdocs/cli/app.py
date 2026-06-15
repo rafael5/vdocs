@@ -7,6 +7,9 @@ exit with the remediation hint (tenet #7).
 
 from __future__ import annotations
 
+import functools
+from collections.abc import Callable
+
 import typer
 
 from vdocs.config import Settings
@@ -31,6 +34,27 @@ from vdocs.stages.validate.stage import ValidateStage
 app = typer.Typer(
     help="vdocs — VistA Document Library modernization pipeline", no_args_is_help=True
 )
+
+
+def _guarded(fn: Callable[..., None]) -> Callable[..., None]:
+    """Wrap a CLI command so an *unhandled* exception surfaces as one clean ERROR line + exit 1 —
+    the same no-traceback contract the orchestrated run/build path gives, for the aux commands
+    (gate/fetch/doctor/ask/inventory) that don't go through `_drive`. An intentional `typer.Exit`
+    (a handled error condition, already clean) passes through untouched. So a malformed registry
+    YAML or a missing file reads as "ERROR: doctor failed — …" instead of a Python traceback the
+    no-AI operator would have to decode."""
+
+    @functools.wraps(fn)
+    def wrapper(*args: object, **kwargs: object) -> None:
+        try:
+            fn(*args, **kwargs)
+        except typer.Exit:
+            raise
+        except Exception as exc:  # noqa: BLE001 — the CLI's outermost clean-error boundary
+            typer.secho(f"ERROR: {fn.__name__} failed — {exc}", fg="red", bold=True)
+            raise typer.Exit(code=1) from exc
+
+    return wrapper
 
 
 def build_stages() -> list[Stage]:
@@ -121,6 +145,7 @@ def _read_select_file(path: str) -> frozenset[str]:
 
 
 @app.command()
+@_guarded
 def fetch(
     apps: list[str] = typer.Option([], "--app", help="app code (exact) or app-name substring"),
     sections: list[str] = typer.Option([], "--section", help="section code (exact)"),
@@ -198,6 +223,7 @@ def fetch(
 
 
 @app.command()
+@_guarded
 def gate(
     counts: bool = typer.Option(
         True, "--counts/--no-counts", help="also show admitted counts against the gold inventory"
@@ -300,6 +326,7 @@ def manifest(force: bool = typer.Option(False, "--force", "-f")) -> None:
 
 
 @app.command()
+@_guarded
 def ask(
     query: str = typer.Argument(..., help="a natural-language question about VistA / the corpus"),
     k: int = typer.Option(8, "--k", "-k", help="how many ranked hits to return"),
@@ -360,6 +387,7 @@ def _emit_doctor(cfg: Settings) -> str:
 
 
 @app.command()
+@_guarded
 def doctor() -> None:
     """Check the gold corpus and emit GOLD LIBRARY: GREEN|RED — the shipped soundness gate (B1–B5).
 
@@ -382,6 +410,7 @@ def validate(force: bool = typer.Option(False, "--force", "-f")) -> None:
 
 
 @app.command()
+@_guarded
 def inventory(
     status: bool = typer.Option(False, "--status", help="show per-document fetch status"),
 ) -> None:

@@ -546,6 +546,19 @@ def test_doctor_without_index_errors(tmp_path):
     assert "vdocs index" in result.stdout or "vdocs build" in result.stdout
 
 
+def test_unhandled_error_in_aux_command_is_clean_not_traceback(tmp_path, monkeypatch):
+    # An unexpected exception in an aux command (e.g. a malformed registry YAML) must surface as one
+    # clean ERROR line + exit 1, not a traceback the no-AI operator would have to decode.
+    def boom(_cfg):
+        raise RuntimeError("doctor-policy.yaml is malformed")
+
+    monkeypatch.setattr("vdocs.cli.app._emit_doctor", boom)
+    result = runner.invoke(app, ["doctor"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 1
+    assert "ERROR" in result.stdout
+    assert "doctor-policy.yaml is malformed" in result.stdout  # the cause is shown, no traceback
+
+
 def test_doctor_reports_green_on_a_sound_index(tmp_path):
     _seed_sound_index(tmp_path)
     result = runner.invoke(app, ["doctor"], env={"DATA_DIR": str(tmp_path)})
