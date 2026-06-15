@@ -1,7 +1,8 @@
-"""The `validate` stage — the sidecar-verification HARD GATE (Steps 2-3; §8, FF C2/C5).
+"""The `validate` stage — the sidecar-verification HARD GATE (Steps 2-3; §8).
 
-This is the first slice of the §8 ``validate`` gate (the broader S→T fidelity verdict, schema, and
-ID/vector integrity land later and feed the *same* gate). It consumes the signals `normalize`
+This is the §8 ``validate`` gate (the original "full fidelity stage" was retired with the
+fidelity framework — the lexical-first direction superseded it; the live content-retention check
+now lives in ``normalize`` via ``retention_pure``). It consumes the signals `normalize`
 already records but nothing read — the per-bundle ``capture.yaml`` typed capture-attempt records
 (§6.4) and the ``refs.yaml`` outbound cross-ref maps (§6.7) — and **fails loudly** on:
 
@@ -22,7 +23,7 @@ already records but nothing read — the per-bundle ``capture.yaml`` typed captu
 It always (re)writes ``reports/validation/verification.json`` (the findings + the count baseline)
 and sets its own ``ok`` via the deep gate. ``ALWAYS_RERUN`` — a gate re-checks every time. Pure
 logic lives in ``reconcile_pure``/``refs_pure``; this driver is thin I/O (reads the tree + state,
-writes the report). The pure cores are written to be reused by the full ``fidelity`` stage later.
+writes the report).
 """
 
 from __future__ import annotations

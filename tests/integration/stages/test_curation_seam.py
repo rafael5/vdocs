@@ -8,8 +8,6 @@ objects and no mocks**:
       → CURATE (promote candidates verbatim into a tmp `registries/`)
       → normalize (consume the *curated* registry: STRIP template scaffold + stamp template_id,
         REFERENCE boilerplate to gold/_shared, regenerate the TOC) — idempotent
-      → fidelity compliance oracle scores the body vs. the retained schema (§9.8) and the
-        validate gate blocks a non-conformant doc.
 
 The point is that `discover`'s output is curation-shaped and flows straight through `normalize`'s
 deterministic application, and that the application is a pure function of `(document, registry)`.
@@ -26,7 +24,6 @@ from vdocs.models.stage import StageRun
 from vdocs.orchestrator.engine import Orchestrator
 from vdocs.stages.discover.discover_pure import PatternReport
 from vdocs.stages.discover.stage import DiscoverStage
-from vdocs.stages.fidelity import compliance_pure as cp
 from vdocs.stages.normalize.stage import NormalizeStage
 
 _APP = "DEP"
@@ -132,7 +129,7 @@ def _seed_enriched_doc(ctx):
     _bless(ctx, ("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX))
 
 
-def test_curation_seam_discover_to_normalize_to_oracle(ctx):
+def test_curation_seam_discover_to_normalize(ctx):
     # --- 1. DISCOVER (mine) → candidates with evidence + disposition -------------------------
     _seed_converted(ctx, n=4)
     bodies_before = {p: p.read_bytes() for p in ctx.cfg.silver_converted.rglob("body.md")}
@@ -180,16 +177,3 @@ def test_curation_seam_discover_to_normalize_to_oracle(ctx):
     first = out_path.read_bytes()
     Orchestrator([NormalizeStage()]).run(ctx, force=True)
     assert out_path.read_bytes() == first
-
-    # --- 4. VALIDATE: the retained schema is the compliance oracle (§9.8) ---------------------
-    expected = [
-        cp.ExpectedSection(title=s.title, title_pattern=s.title_pattern, required=s.required)
-        for s in template.sections
-    ]
-    conformant = "# X\n\n## Purpose\n\np\n\n## Rollback\n\nr\n"
-    assert cp.score_extraction_compliance(conformant, expected).verdict == cp.PASS
-
-    broken = "# X\n\n## Purpose\n\np\n"  # a required section dropped → extraction-bug signal
-    verdict = cp.score_extraction_compliance(broken, expected)
-    assert verdict.verdict in (cp.REVIEW, cp.QUARANTINE)
-    assert cp.blocks_publish(verdict.verdict) is True  # the validate hard gate blocks it (§8)

@@ -50,10 +50,10 @@ class NormalizeStage(Stage):
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.kernel.text import decade_bucket
-        from vdocs.stages.fidelity import retention_pure as rtn
         from vdocs.stages.normalize import anchors_pure as anchors
         from vdocs.stages.normalize import capture_pure as capture
         from vdocs.stages.normalize import normalize_pure as nz
+        from vdocs.stages.normalize import retention_pure as rtn
         from vdocs.stages.normalize import revision_pure as rev
         from vdocs.stages.normalize import tables_pure as tbl
         from vdocs.stages.normalize import template_pure as tmpl
