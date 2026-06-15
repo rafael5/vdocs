@@ -616,3 +616,32 @@ def test_ask_no_match_reports_clearly(tmp_path):
     result = runner.invoke(app, ["ask", "zz"], env={"DATA_DIR": str(tmp_path)})
     assert result.exit_code == 0
     assert "no match" in result.stdout.lower()
+
+
+def test_publish_rich_assets_builds_bundle(tmp_path):
+    lake, registries = tmp_path / "lake", tmp_path / "registries"
+    registries.mkdir()
+    (registries / "rich-publication.yaml").write_text("rich:\n  - CPRS/cprsguium\n")
+    cfg = Settings(data_dir=lake)
+    body = cfg.gold_consolidated / "CPRS/cprsguium" / "body.md"
+    body.parent.mkdir(parents=True, exist_ok=True)
+    body.write_text("# UM\n\n![f1](sha1.png)\n")
+    cfg.assets.mkdir(parents=True, exist_ok=True)
+    (cfg.assets / "sha1.png").write_bytes(b"PNGDATA")
+
+    env = {"DATA_DIR": str(lake), "REGISTRIES_DIR": str(registries)}
+    result = runner.invoke(app, ["publish-rich-assets"], env=env)
+    assert result.exit_code == 0, result.stdout
+    assert "1 figures" in result.stdout
+    assert (cfg.rich_assets / "sha1.png").read_bytes() == b"PNGDATA"
+    assert cfg.rich_assets_manifest.is_file()
+
+
+def test_publish_rich_assets_empty_subset_exits_one(tmp_path):
+    registries = tmp_path / "registries"
+    registries.mkdir()
+    (registries / "rich-publication.yaml").write_text("rich: []\n")
+    env = {"DATA_DIR": str(tmp_path / "lake"), "REGISTRIES_DIR": str(registries)}
+    result = runner.invoke(app, ["publish-rich-assets"], env=env)
+    assert result.exit_code == 1
+    assert "no curated subset" in result.stdout

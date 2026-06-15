@@ -459,6 +459,35 @@ def preflight() -> None:
         raise typer.Exit(code=1)
 
 
+@app.command(name="publish-rich-assets")
+@_guarded
+def publish_rich_assets() -> None:
+    """Build the rich-publication subset image bundle (rich-publication proposal §3/§7).
+
+    Collects the *union* of the curated docs' (``registries/rich-publication.yaml``) referenced
+    figures into ``$DATA_DIR/rich-assets/`` — a flat, content-addressed bundle that rides alongside
+    ``index.db`` (which stays text-only). vdocs-web serves these via ``GET /api/asset/{sha}``.
+    Reports any listed doc with no gold body and any referenced figure that didn't resolve."""
+    from vdocs.server import rich_assets
+
+    cfg = Settings()
+    subset = rich_assets.load_subset(cfg.registries)
+    if not subset:
+        typer.echo("no curated subset — populate registries/rich-publication.yaml (key: rich)")
+        raise typer.Exit(code=1)
+    plan = rich_assets.build_bundle(cfg, subset=subset)
+    for d in plan.docs:
+        if not d.present:
+            typer.echo(f"  ! {d.doc_key}: no gold body (skipped) — check the registry entry")
+        elif d.missing:
+            typer.echo(f"  ~ {d.doc_key}: {d.image_count} figures, {d.missing} unresolved ref(s)")
+    mb = plan.total_bytes / 1_048_576
+    typer.echo(
+        f"rich-assets bundle: {len(plan.assets)} figures, {mb:.1f} MB "
+        f"from {sum(d.present for d in plan.docs)}/{len(plan.docs)} docs → {cfg.rich_assets}"
+    )
+
+
 @app.command()
 def validate(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Sidecar-verification HARD GATE: typed absence (capture.yaml) + count reconciliation +

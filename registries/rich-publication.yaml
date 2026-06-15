@@ -1,0 +1,30 @@
+# registries/rich-publication — the curated subset of gold documents that get the *rich* treatment
+# (figures rendered in the vdocs-web reading pane). Rich-publication proposal §3/§6 (D2), tenet #13.
+#
+# Keyed by the **gold bundle identity** <app>/<slug> — the on-disk
+# gold/consolidated/<app>/<slug>/ directory name (the de-versioned anchor slug), same key space as
+# converter-routing.yaml. Note this is the index `doc_key` only when the doc is unversioned; a
+# versioned doc's index doc_key carries a patch suffix (CPRS/cprsguitm_0_636) but its gold dir is
+# the bare slug (CPRS/cprsguitm) — use the gold dir name here. The disposition is SELECT — consumed
+# by `vdocs publish-rich-assets`, which collects the *union* of these docs' referenced assets into
+# the separate image bundle that rides alongside index.db (so index.db stays text-only, D3).
+# vdocs-web serves those bytes from the bundle via `GET /api/asset/{sha}`; docs *not* listed still
+# render their text (markdown), just without figures (D5).
+#
+# Curation criterion (proposal §8 Q1): start with the highest-value, figure-bearing manuals an
+# operator actually reads in VS Code — the CPRS GUI manuals and FileMan — and grow this list (data,
+# not code) as more docs earn the bytes. cprsguium alone is ~442 figures / ~18 MB; the seed bundle
+# is ~tens of MB, well under the curated-subset budget (not the 1.2 GB full asset store).
+#
+# To add a doc: append its `doc_key` (find it via `vdocs ask` hits or the index `documents` table),
+# then re-run `vdocs publish-rich-assets`. A listed key with no gold body is reported, not fatal.
+
+rich:
+  # CPRS GUI — the flagship clinician interface manuals (heaviest figure density in the corpus)
+  - CPRS/cprsguium    # CPRS GUI User Manual (~442 figures)
+  - CPRS/cprsguitm    # CPRS GUI Technical Manual (~72 figures)
+  - CPRS/cprslmum     # CPRS List Manager User Manual (~80 figures)
+  # VA FileMan 22.2 — the database tool manuals (ScreenMan / tutorial screenshots)
+  - DI/fm22_2um1        # FileMan User Manual, Vol 1
+  - DI/fm22_2um2        # FileMan User Manual, Vol 2
+  - DI/scrn_tut         # FileMan ScreenMan tutorial
