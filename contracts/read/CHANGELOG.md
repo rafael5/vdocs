@@ -6,6 +6,16 @@ Semver for the **read** contract (`read_schema_version`), the consumer-facing in
 replacement additively, keep the old as an alias for one release, then remove + MAJOR bump. See
 [ADR-0001](../../docs/adr/0001-read-contract-and-drift-prevention.md).
 
+## v1.3 — 2026-06-15
+
+Additive (backward-compatible) — per-doc figure stats (rich-publication groundwork):
+
+- **`v_documents.image_count`** — distinct figures the doc references that resolve in the asset
+  store.
+- **`v_documents.image_bytes`** — total bytes of those referenced figures (a per-doc upper bound;
+  a published image bundle dedups assets shared across docs). Precomputed at `index` time so
+  consumers and publish-size planning never recount on the fly. (`index` `contract_ver` 9→10.)
+
 ## v1.2 — 2026-06-11
 
 Additive (backward-compatible) — ADR-0001 P4:

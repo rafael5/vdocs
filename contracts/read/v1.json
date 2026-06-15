@@ -1,5 +1,5 @@
 {
-  "read_schema_version": "1.2",
+  "read_schema_version": "1.3",
   "description": "Published read contract for vdocs index.db (ADR-0001). Consumers (vdocs-tui, vdocs-web, MCP) bind ONLY to the v_* views + the named chunks_fts surface — never to physical tables. The pipeline may refactor physical tables freely behind these. Views are GENERATED from this spec (kernel.read_contract.view_ddl), so they cannot drift from it; `vdocs doctor` asserts the emitted DB matches.",
   "views": {
     "v_documents": {
@@ -33,7 +33,9 @@
         "source_sha256": {"type": "TEXT", "nullable": true, "desc": "source document content hash"},
         "source_url": {"type": "TEXT", "nullable": true, "desc": "source VDL URL"},
         "published": {"type": "TEXT", "nullable": true, "desc": "publication date YYYY-MM (gold FM)"},
-        "pub_year": {"type": "TEXT", "nullable": true, "desc": "publication year YYYY"}
+        "pub_year": {"type": "TEXT", "nullable": true, "desc": "publication year YYYY"},
+        "image_count": {"type": "INTEGER", "nullable": true, "desc": "distinct figures the doc references (resolving in the asset store)"},
+        "image_bytes": {"type": "INTEGER", "nullable": true, "desc": "total bytes of those referenced figures (per-doc upper bound; published bundle dedups shared assets)"}
       }
     },
     "v_sections": {

@@ -37,7 +37,7 @@ from vdocs.contracts.registry import (
     TEXT_NORMALIZED,
 )
 from vdocs.kernel import csv as kcsv
-from vdocs.kernel import db, frontmatter, personas, read_contract, titles, vocab
+from vdocs.kernel import db, frontmatter, markdown, personas, read_contract, titles, vocab
 from vdocs.kernel import products as kproducts
 from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, RunResult
@@ -59,7 +59,8 @@ CREATE TABLE documents (
   app_user      TEXT, doc_user TEXT, software_class TEXT, function_category TEXT,
   word_count    INTEGER, section_count INTEGER, is_latest INTEGER NOT NULL,
   template_id   TEXT, source_sha256 TEXT, source_url TEXT,
-  published     TEXT, pub_year TEXT
+  published     TEXT, pub_year TEXT,
+  image_count   INTEGER, image_bytes INTEGER
 );
 CREATE TABLE doc_sections (
   section_id TEXT PRIMARY KEY,
@@ -111,7 +112,7 @@ _DOC_COLUMNS = (
     "product_abbr", "product_full", "doc_label",
     "app_user", "doc_user", "software_class", "function_category",
     "word_count", "section_count", "is_latest", "template_id", "source_sha256", "source_url",
-    "published", "pub_year",
+    "published", "pub_year", "image_count", "image_bytes",
 )  # fmt: skip
 
 
@@ -134,8 +135,11 @@ class IndexStage(Stage):
     # controlled facet vocabularies from registries; read contract → v1.1.
     # v9 (section order, ADR-0001 P4): doc_sections gained `seq` (document-order ordinal) so
     # consumers can ORDER BY a real column (views have no rowid); read contract → v1.2.
+    # v10 (per-doc figure stats): documents gained image_count + image_bytes (figures the doc
+    # references + their total asset bytes) — precomputed so consumers/publish-size planning never
+    # recount; read contract → v1.3 (additive MINOR).
     # The bump folds into consumers' inputs_fp so a re-run rebuilds.
-    contract_ver = 9
+    contract_ver = 10
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
@@ -179,6 +183,11 @@ class IndexStage(Stage):
             toc_depth = _toc_depth(body_path.parent / "refs.yaml")
             secs = ip.shred_sections(body, doc_key, toc_depth, doc_title)
             word_count = int(staged.get("word_count") or ep.word_count(body))
+            # Per-doc figure stats (precomputed, so consumers/publish-size planning never recount on
+            # the fly): distinct images the body references that resolve in the asset CAS, + their
+            # total bytes. The published-bundle size for a subset is the *union* of these shas
+            # across docs (a shared image counts once); this per-doc sum is the safe upper bound.
+            image_count, image_bytes = _image_stats(markdown.image_targets(body), cfg.assets)
             documents.append(
                 _doc_row(
                     doc_key,
@@ -190,6 +199,8 @@ class IndexStage(Stage):
                     len(secs),
                     app_name_map,
                     products,
+                    image_count,
+                    image_bytes,
                 )
             )
             for seq, s in enumerate(secs):
@@ -309,8 +320,30 @@ class IndexStage(Stage):
         )
 
 
+def _image_stats(targets, assets_dir):  # type: ignore[no-untyped-def]
+    """``(image_count, image_bytes)`` for a doc — the figures it references that resolve in the
+    asset CAS, and their total bytes. A ref to a missing/external asset is skipped (counts none)."""
+    count = total = 0
+    for name in targets:
+        p = assets_dir / name
+        if p.is_file():
+            count += 1
+            total += p.stat().st_size
+    return count, total
+
+
 def _doc_row(  # type: ignore[no-untyped-def]
-    doc_key, doc_id, meta, staged, is_latest, word_count, section_count, app_names, products
+    doc_key,
+    doc_id,
+    meta,
+    staged,
+    is_latest,
+    word_count,
+    section_count,
+    app_names,
+    products,
+    image_count,
+    image_bytes,
 ):
     """One `documents` row — inventory identity from the staged table, title/template/provenance
     from the bundle FM (the keys `doc_meta_staged` doesn't carry).
@@ -360,6 +393,8 @@ def _doc_row(  # type: ignore[no-untyped-def]
         s("source_url") or str(meta.get("source_url", "")),
         published,
         pub_year,
+        image_count,
+        image_bytes,
     )
 
 

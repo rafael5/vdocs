@@ -26,6 +26,15 @@ HEADING_RE = re.compile(r"^(#+)\s+(.*?)\s*$")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 MULTI_BLANK = re.compile(r"\n{3,}")
 
+# Inline-image target: markdown ``![alt](target …)`` or HTML ``<img … src="target">``. The single
+# read-side image-ref matcher (§9.2) — `convert` *rewrites* refs to the asset CAS with its own
+# regexes; `index` uses this to *count* a doc's figures and sum their asset bytes (`image_targets`).
+_IMG_REF_RE = re.compile(
+    r"!\[[^\]]*\]\(([^)\s]+)[^)]*\)"  # markdown ![alt](target "title")
+    r'|<img\b[^>]*?\bsrc="([^"]+)"',  # HTML <img ... src="target">
+    re.IGNORECASE,
+)
+
 # A line that is *entirely* a markdown structural artifact, not prose: an `<img>` figure tag, or a
 # `[…](…)` link/secondary-TOC/table-CSV-marker line (with optional `_`/`*`/`↑` wrappers). These
 # dominate the corpus's recurring "boilerplate" noise — `[↑ Back to Contents](#contents)` in every
@@ -89,6 +98,7 @@ __all__ = [
     "LEGACY_TOC_TITLES",
     "LEGACY_TOC_ENTRY_RE",
     "strip_tags",
+    "image_targets",
     "iter_headings",
     "is_markdown_artifact",
     "heading_furniture_text",
@@ -196,6 +206,19 @@ def is_markdown_artifact(line: str) -> bool:
     A blank line is not an artifact (it carries no structure); a prose sentence that merely
     *contains* an inline link is not an artifact (the pattern is anchored at the line start)."""
     return bool(line.strip()) and ARTIFACT_RE.match(line) is not None
+
+
+def image_targets(body: str) -> list[str]:
+    """Every inline-image target **basename** in ``body`` (markdown ``![]()`` + HTML ``<img src>``),
+    deduped in first-seen order. For gold/normalized bodies these are the ``<sha>.<ext>`` asset
+    filenames the ``convert`` stage rewrote refs to — so ``index`` can count a doc's figures and sum
+    their asset bytes. Plain (non-image) links are ignored; ``path/x.png`` reduces to ``x.png``."""
+    seen: dict[str, None] = {}
+    for m in _IMG_REF_RE.finditer(body):
+        target = m.group(1) or m.group(2)
+        if target:
+            seen.setdefault(target.rsplit("/", 1)[-1], None)  # basename
+    return list(seen)
 
 
 def iter_headings(body: str) -> Iterator[tuple[int, int, str]]:

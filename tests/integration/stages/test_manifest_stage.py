@@ -174,7 +174,7 @@ def test_manifest_carries_read_contract_and_coverage(ctx):
     (result,) = Orchestrator([ManifestStage()]).run(ctx)
     assert result.status == "ok"
     manifest = json.loads(ctx.cfg.corpus_manifest.read_text())
-    assert manifest["read_contract"]["version"] == "1.2"
+    assert manifest["read_contract"]["version"] == "1.3"
     assert "fts5" in manifest["read_contract"]["capabilities"]
     # pkg_ns exists in the fixture schema → covered (defensive: absent facet columns are skipped)
     assert manifest["coverage"]["pkg_ns"]["total"] == 2  # two is_latest anchors
