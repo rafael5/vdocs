@@ -142,8 +142,12 @@ rendered output.
 
 ## 7. In-scope phased plan
 
-- **P1 — substrate (vdocs):** `registries/rich-publication.yaml` + the kernel asset-resolution helper
-  (TDD) + a build step that emits the **subset image bundle** (just the curated docs' assets).
+- **P1 — substrate (vdocs): ✅ BUILT (2026-06-15).** `registries/rich-publication.yaml` (curated
+  allowlist, keyed by gold bundle identity) + the kernel asset-resolution helper (`kernel/figures.py`,
+  the single §9.2 resolution home, reused by `index`) + the build step `vdocs publish-rich-assets`
+  (`server/rich_assets.py`) emitting the **subset image bundle** to `$DATA_DIR/rich-assets/`
+  (flat content-addressed + `manifest.json`). Verified on the lake: 6 curated docs (CPRS GUI +
+  FileMan), 606 figures, 31.7 MB, 0 unresolved refs.
 - **P2 — vdocs-web serving + rendering:** `GET /api/asset/{sha}` over the bundle; markdown rendering
   in the reading pane (A1) with a sanitizer; figures render for subset docs. Gate: httptest the
   route + svelte-check; verify in the VS Code Webview (the vdocs-vscode smoke flow).
