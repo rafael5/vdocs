@@ -17,8 +17,7 @@ from vdocs.contracts.registry import (
     TEXT_CONVERTED,
     TEXT_ENRICHED,
 )
-from vdocs.kernel import cas, db, frontmatter, personas
-from vdocs.kernel.text import safe_component
+from vdocs.kernel import cas, db, frontmatter, ids, personas
 from vdocs.models.catalog import EnrichedInventory, EnrichedRecord
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -80,7 +79,7 @@ def _index_by_bundle_path(
     for r in records:
         if r.noise_type:
             continue
-        key = (safe_component(r.app_name_abbrev), safe_component(r.doc_slug))
+        key = ids.bundle_key(r.app_name_abbrev, r.doc_slug)
         current = by_path.get(key)
         if current is None or (r.doc_format == "docx" and current.doc_format != "docx"):
             by_path[key] = r

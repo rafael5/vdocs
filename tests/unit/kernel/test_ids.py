@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from vdocs.kernel.ids import doc_id
+from vdocs.kernel.ids import bundle_key, bundle_path, doc_id
 
 
 @dataclass
@@ -19,3 +19,15 @@ def test_doc_id_is_pure_plain_values():
     # Any object exposing app_name_abbrev + doc_slug works (structural typing; kernel stays
     # model-free).
     assert doc_id(_Rec("ADT", "dg_5_3_1057_dibr")) == "ADT:dg_5_3_1057_dibr"
+
+
+def test_bundle_key_is_the_sanitised_convert_layout_identity():
+    # The (safe app, safe slug) tuple that enrich/discover/normalize all join against the convert
+    # bundle layout — a sanitised app code (AR/WS → AR_WS) still matches the on-disk dir.
+    assert bundle_key("RA", "ra_um") == ("RA", "ra_um")
+    assert bundle_key("AR/WS", "x") == ("AR_WS", "x")
+
+
+def test_bundle_path_is_the_slash_joined_key():
+    assert bundle_path("AR/WS", "x") == "AR_WS/x"
+    assert bundle_path("RA", "ra_um") == "/".join(bundle_key("RA", "ra_um"))

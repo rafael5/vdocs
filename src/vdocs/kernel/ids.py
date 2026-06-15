@@ -12,6 +12,8 @@ from __future__ import annotations
 import re
 from typing import Protocol
 
+from vdocs.kernel.text import safe_component
+
 # A doc_slug is '_'-delimited; these tokens are version/patch noise, not part of the document's
 # identity. Stripping them yields a version-free **stem** that is the same for every version of one
 # document and *different* for distinct documents — the disambiguator the version-group key needs
@@ -60,4 +62,21 @@ def anchor_key(app_code: str, pkg_ns: str, doc_code: str, doc_slug: str = "") ->
     return f"{app_code}:{pkg_ns}:{doc_code}:{stem}" if stem else f"{app_code}:{pkg_ns}:{doc_code}"
 
 
-__all__ = ["HasIdentity", "anchor_key", "doc_id", "slug_stem"]
+def bundle_key(app_code: str, doc_slug: str) -> tuple[str, str]:
+    """The canonical **convert-bundle identity** — ``(safe app, safe slug)`` (§9.2).
+
+    A converted/normalized document lives at ``<safe app_code>/<safe doc_slug>/`` (see
+    ``convert_pure.bundle_dir``); a slash in the app code is sanitised (``AR/WS`` → ``AR_WS``) to
+    stay filesystem-safe. The stages that join *back* to that layout (``enrich`` records,
+    ``discover`` doc-types, ``normalize`` source-shas) all key on this tuple — built here once so
+    the identity can't drift across them."""
+    return (safe_component(app_code), safe_component(doc_slug))
+
+
+def bundle_path(app_code: str, doc_slug: str) -> str:
+    """The convert-bundle identity as a ``"<app>/<slug>"`` path string (``"/".join`` of
+    :func:`bundle_key`) — for callers that key on the path form rather than the tuple."""
+    return "/".join(bundle_key(app_code, doc_slug))
+
+
+__all__ = ["HasIdentity", "anchor_key", "bundle_key", "bundle_path", "doc_id", "slug_stem"]

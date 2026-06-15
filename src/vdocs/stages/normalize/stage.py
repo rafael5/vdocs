@@ -28,10 +28,9 @@ import structlog
 import yaml
 
 from vdocs.contracts.registry import RAW_INDEX, REGISTRIES, TEXT_ENRICHED, TEXT_NORMALIZED
-from vdocs.kernel import cas, frontmatter
+from vdocs.kernel import cas, frontmatter, ids
 from vdocs.kernel import registry as kregistry
 from vdocs.kernel.docloop import DocLoop
-from vdocs.kernel.text import safe_component
 from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
 
@@ -316,7 +315,4 @@ def _load_structure_toc_titles(path) -> frozenset[str]:  # type: ignore[no-untyp
 def _sha_by_bundle_path(raw_index):  # type: ignore[no-untyped-def]
     """Map ``(safe app, safe slug)`` → source sha256 from ``raw/index.json`` (bronze provenance)."""
     index = json.loads(raw_index.read_text(encoding="utf-8"))
-    return {
-        (safe_component(e["app_code"]), safe_component(e["doc_slug"])): sha
-        for sha, e in index.items()
-    }
+    return {ids.bundle_key(e["app_code"], e["doc_slug"]): sha for sha, e in index.items()}
