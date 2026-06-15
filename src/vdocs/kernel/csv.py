@@ -4,7 +4,8 @@ The inventory-medallion stages (``crawl``/``catalog``/``serve-inventory``) each 
 human-browsable flat ``.csv`` alongside their JSON. The row-building is stage-specific (different
 sources, different column mappings), but the serialisation mechanics — header + ordered cells,
 tolerate extra keys from ``model_dump()`` — are one primitive shared here, not copy-pasted per
-stage (§11: a primitive used by ≥2 stages lives in the kernel). Pure: no I/O, no logging.
+stage (§11: a primitive used by ≥2 stages lives in the kernel). ``to_csv`` is pure; ``read_rows``
+is the one I/O function (a tolerant reader for the extracted ``tables/*.csv`` sidecars).
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from __future__ import annotations
 import csv
 import io
 from collections.abc import Iterable, Mapping, Sequence
+from pathlib import Path
 
 
 def to_csv(
@@ -32,3 +34,17 @@ def to_csv(
     for row in rows:
         writer.writerow(row)
     return buf.getvalue()
+
+
+def read_rows(path: Path) -> list[list[str]]:
+    """Read a CSV file into a list of rows (each a list of cell strings); ``[]`` if it is missing
+    or unreadable. The tolerant counterpart to :func:`to_csv`, shared by the stages that scan
+    extracted ``tables/*.csv`` sidecars (``index``, ``manifest``) so the open-and-swallow
+    boilerplate lives once (§9.2) — a malformed/binary sidecar must never abort the caller."""
+    if not path.is_file():
+        return []
+    try:
+        with path.open(newline="", encoding="utf-8") as fh:
+            return list(csv.reader(fh))
+    except (OSError, UnicodeDecodeError, csv.Error):
+        return []

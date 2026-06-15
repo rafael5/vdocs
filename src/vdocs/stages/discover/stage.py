@@ -17,8 +17,7 @@ not re-derived here. ``era`` is read from each body's own title-page date (§9.8
 from __future__ import annotations
 
 from vdocs.contracts.registry import CATALOG_ENRICHED, PATTERNS, TEXT_CONVERTED
-from vdocs.kernel import cas
-from vdocs.kernel.text import safe_component
+from vdocs.kernel import cas, ids
 from vdocs.models.catalog import EnrichedInventory, EnrichedRecord
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
@@ -78,7 +77,7 @@ def _doc_types_by_bundle_path(records: list[EnrichedRecord]) -> dict[str, str]:
     for r in records:
         if r.noise_type or not r.doc_code:
             continue
-        path = f"{safe_component(r.app_name_abbrev)}/{safe_component(r.doc_slug)}"
+        path = ids.bundle_path(r.app_name_abbrev, r.doc_slug)
         if path not in out or r.doc_format == "docx":
             out[path] = r.doc_code
     return out

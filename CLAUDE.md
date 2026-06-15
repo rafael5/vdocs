@@ -32,10 +32,11 @@ Driven by the **go-forward plan** (with two frozen predecessors kept as record/b
 **If the code and the active plan disagree, the plan is the bug report.** Read it before changing
 anything structural; propose design changes by editing the plan first, not in code.
 
-The original design docs — `vdocs-design.md` (architecture) and `fidelity-framework.md` (QA
-companion: per-document migration fidelity, currency, template compliance, TOC integrity,
-retrieval-quality) — are now archived under [`docs/historical/`](docs/historical/) as **reference
-only** (superseded by the plans above where they disagree).
+The original architecture doc `vdocs-design.md` is archived under
+[`docs/historical/`](docs/historical/) as **reference only** (superseded by the plans above where
+they disagree). The fidelity-QA framework (`fidelity-framework.md` + the `compliance`/`overstrip`
+oracles) was **retired** — the lexical-first direction superseded it; the one live guardrail, the
+content-retention check, now lives in `normalize` (`stages/normalize/retention_pure.py`).
 
 ## How to build
 

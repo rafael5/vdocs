@@ -36,6 +36,7 @@ from vdocs.contracts.registry import (
     INDEX_SECTIONS,
     TEXT_NORMALIZED,
 )
+from vdocs.kernel import csv as kcsv
 from vdocs.kernel import db, frontmatter, personas, read_contract, titles, vocab
 from vdocs.kernel import products as kproducts
 from vdocs.kernel import registry as kregistry
@@ -238,7 +239,7 @@ class IndexStage(Stage):
                 tables_dir = body_path.parent / "tables"
                 for s in secs:
                     for name, caption in ip.find_table_refs(s.text):
-                        rows = _read_table_csv(tables_dir / name)
+                        rows = kcsv.read_rows(tables_dir / name)
                         # oversized tables are windowed by rows (#pN) so no chunk blows the
                         # embedder token budget that `embed` asserts.
                         base = f"{s.section_id}#{name}"
@@ -306,19 +307,6 @@ class IndexStage(Stage):
                 "mentions": len(mentions),
             }
         )
-
-
-def _read_table_csv(path):  # type: ignore[no-untyped-def]
-    """Read an extracted `tables/*.csv` sidecar into rows (B3b); `[]` if missing/unreadable."""
-    import csv
-
-    if not path.is_file():
-        return []
-    try:
-        with path.open(newline="", encoding="utf-8") as fh:
-            return list(csv.reader(fh))
-    except (OSError, UnicodeDecodeError, csv.Error):
-        return []
 
 
 def _doc_row(  # type: ignore[no-untyped-def]

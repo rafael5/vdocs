@@ -1,15 +1,14 @@
 """Pure content-retention guardrail — did ``normalize`` keep (or relocate) the body it was given?
 
-Orthogonal to the over-strip gate (``overstrip_pure``), which measures bareness *within* the
-sections that remain and is **blind to a body deleted whole**: a fully gutted doc has zero content
-sections, so its over-strip rate is ``0/0`` → PASS. This gate instead compares the normalized output
-against the enriched input — a catastrophic drop (e.g. a legacy-TOC strip that ran past the TOC into
-the body, vdocs-design §6.7) shows up as near-zero retention.
+The ``normalize`` content-retention gate: compares the normalized output against the enriched
+input so a body deleted whole is caught — a catastrophic drop (e.g. a legacy-TOC strip that ran
+past the TOC into the body, vdocs-design §6.7) shows up as near-zero retention and blocks the doc
+before it reaches the corpus.
 
 Words **relocated** to a referent the body still points at (an extracted ``tables/*.csv`` sidecar)
 count as retained, so legitimately table-heavy docs (a Technical Manual whose option tables move to
-CSV) are never penalised — the same relocated-vs-lost distinction ``overstrip_pure`` draws for
-stubs. Deterministic; no source ``S`` beyond the two word counts the stage already has.
+CSV) are never penalised. Deterministic; no source ``S`` beyond the two word counts the stage
+already has.
 """
 
 from __future__ import annotations
@@ -56,8 +55,8 @@ def score_retention(
 
 
 def blocks_publish(verdict: str, *, signed_off: bool = False) -> bool:
-    """The `validate` hard-gate rule (§8), shared with the other fidelity guardrails: QUARANTINE
-    always blocks; REVIEW blocks unless a human signed off; PASS never blocks."""
+    """The content-retention hard-gate rule (§8): QUARANTINE always blocks; REVIEW blocks unless a
+    human signed off; PASS never blocks."""
     if verdict == QUARANTINE:
         return True
     if verdict == REVIEW:

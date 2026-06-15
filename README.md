@@ -9,9 +9,9 @@ rewrite of `vista-docs`.
 [`docs/offline-lexical-search-plan.md`](docs/offline-lexical-search-plan.md) (*what/why*) and its
 [implementation tracker](docs/offline-lexical-search-implementation-plan.md) (*how/status*). New to
 the project? Start with the [user guide](docs/vdocs-user-guide.md); to **run** the pipeline, follow
-the [operator runbook](docs/de-novo-run.md). The original `vdocs-design.md` / `fidelity-framework.md`
-are archived under [`docs/historical/`](docs/historical/) as superseded reference (the semantic /
-vector / MCP surface was descoped — the project is lexical-first and offline).
+the [operator runbook](docs/de-novo-run.md). The original `vdocs-design.md` is archived under
+[`docs/historical/`](docs/historical/) as superseded reference (the semantic / vector / MCP surface
+and the fidelity-QA framework were descoped — the project is lexical-first and offline).
 
 ## Install
 

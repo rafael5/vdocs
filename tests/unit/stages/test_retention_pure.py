@@ -3,7 +3,7 @@ whole — the blind spot of the over-strip gate, which scores 0/0 → PASS on a 
 
 from __future__ import annotations
 
-from vdocs.stages.fidelity import retention_pure as rp
+from vdocs.stages.normalize import retention_pure as rp
 
 
 def test_full_body_kept_passes():
