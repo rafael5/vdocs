@@ -215,6 +215,20 @@ class Settings(BaseSettings):
         return self.lake / "index.db"
 
     @property
+    def rich_assets(self) -> Path:
+        """The rich-publication subset image bundle (rich-publication proposal §3, D3): a flat,
+        content-addressed dir of the curated docs' assets that rides *alongside* ``index.db`` so
+        ``index.db`` stays text-only. ``vdocs-web`` serves these bytes via ``GET /api/asset/{sha}``.
+        """
+        return self.lake / "rich-assets"
+
+    @property
+    def rich_assets_manifest(self) -> Path:
+        """The subset bundle's manifest (which docs/assets/bytes it contains) — the descriptor a
+        consumer reads to know the bundle's shape without scanning the dir."""
+        return self.rich_assets / "manifest.json"
+
+    @property
     def reports(self) -> Path:
         return self.lake / "reports"
 

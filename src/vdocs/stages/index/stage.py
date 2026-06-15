@@ -37,7 +37,7 @@ from vdocs.contracts.registry import (
     TEXT_NORMALIZED,
 )
 from vdocs.kernel import csv as kcsv
-from vdocs.kernel import db, frontmatter, markdown, personas, read_contract, titles, vocab
+from vdocs.kernel import db, figures, frontmatter, personas, read_contract, titles, vocab
 from vdocs.kernel import products as kproducts
 from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, RunResult
@@ -185,9 +185,10 @@ class IndexStage(Stage):
             word_count = int(staged.get("word_count") or ep.word_count(body))
             # Per-doc figure stats (precomputed, so consumers/publish-size planning never recount on
             # the fly): distinct images the body references that resolve in the asset CAS, + their
-            # total bytes. The published-bundle size for a subset is the *union* of these shas
-            # across docs (a shared image counts once); this per-doc sum is the safe upper bound.
-            image_count, image_bytes = _image_stats(markdown.image_targets(body), cfg.assets)
+            # total bytes — via the shared resolver (kernel.figures, §9.2). The published-bundle
+            # size for a subset is the *union* of these shas across docs (a shared image once);
+            # this per-doc sum is the safe upper bound.
+            image_count, image_bytes = figures.asset_stats(body, cfg.assets)
             documents.append(
                 _doc_row(
                     doc_key,
@@ -318,18 +319,6 @@ class IndexStage(Stage):
                 "mentions": len(mentions),
             }
         )
-
-
-def _image_stats(targets, assets_dir):  # type: ignore[no-untyped-def]
-    """``(image_count, image_bytes)`` for a doc — the figures it references that resolve in the
-    asset CAS, and their total bytes. A ref to a missing/external asset is skipped (counts none)."""
-    count = total = 0
-    for name in targets:
-        p = assets_dir / name
-        if p.is_file():
-            count += 1
-            total += p.stat().st_size
-    return count, total
 
 
 def _doc_row(  # type: ignore[no-untyped-def]
