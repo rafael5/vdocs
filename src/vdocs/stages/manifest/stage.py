@@ -40,6 +40,7 @@ class ManifestStage(Stage):
     requires = [CONSOLIDATED, INDEX_DOCUMENTS, INDEX_ENTITIES, RELATIONS, REGISTRIES]
     produces = [CORPUS_MANIFEST, DISCOVERY_JSON, AI_MANIFEST, CORPUS_CARD]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
+    contract_ver = 1  # bump when the published manifest JSON shape changes (consumer-facing)
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg

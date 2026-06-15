@@ -39,6 +39,7 @@ class ConsolidateStage(Stage):
     requires = [TEXT_NORMALIZED, ASSETS]
     produces = [CONSOLIDATED]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
+    contract_ver = 1  # bump when the gold anchor-bundle layout changes (re-runs index)
 
     def __init__(self) -> None:
         self._errors = 0  # per-document failures isolated this run (R6 — see doc_error_gate)

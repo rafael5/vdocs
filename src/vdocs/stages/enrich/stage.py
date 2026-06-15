@@ -31,6 +31,7 @@ class EnrichStage(Stage):
     requires = [TEXT_CONVERTED, CATALOG_ENRICHED]
     produces = [TEXT_ENRICHED, DOC_META_STAGED]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
+    contract_ver = 1  # bump when DOC_META_STAGED's columns change (re-runs index)
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.stages.enrich import enrich_pure as ep

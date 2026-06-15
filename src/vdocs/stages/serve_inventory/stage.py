@@ -31,6 +31,7 @@ class ServeInventoryStage(Stage):
     requires = [CATALOG_ENRICHED]
     produces = [GOLD_INVENTORY, GOLD_INVENTORY_DB]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
+    contract_ver = 1  # bump when inventory.db's / gold-inventory JSON schema changes
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         inventory = EnrichedInventory.model_validate_json(
