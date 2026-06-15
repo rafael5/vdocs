@@ -546,6 +546,24 @@ def test_doctor_without_index_errors(tmp_path):
     assert "vdocs index" in result.stdout or "vdocs build" in result.stdout
 
 
+def test_preflight_go_when_environment_ready(tmp_path, monkeypatch):
+    monkeypatch.setattr("vdocs.stages.convert.stage._converter_available", lambda _t: True)
+    monkeypatch.setattr("vdocs.cli.app._vdl_reachable", lambda *a, **k: True)
+    result = runner.invoke(app, ["preflight"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 0, result.stdout
+    assert "PREFLIGHT: GO" in result.stdout
+
+
+def test_preflight_no_go_when_pandoc_missing(tmp_path, monkeypatch):
+    # no converter binaries available → pandoc FAILs
+    monkeypatch.setattr("vdocs.stages.convert.stage._converter_available", lambda _t: False)
+    monkeypatch.setattr("vdocs.cli.app._vdl_reachable", lambda *a, **k: True)
+    result = runner.invoke(app, ["preflight"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 1
+    assert "PREFLIGHT: NO-GO" in result.stdout
+    assert "converter:pandoc" in result.stdout and "FAIL" in result.stdout
+
+
 def test_unhandled_error_in_aux_command_is_clean_not_traceback(tmp_path, monkeypatch):
     # An unexpected exception in an aux command (e.g. a malformed registry YAML) must surface as one
     # clean ERROR line + exit 1, not a traceback the no-AI operator would have to decode.

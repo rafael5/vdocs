@@ -401,6 +401,64 @@ def doctor() -> None:
         raise typer.Exit(code=1)
 
 
+_VDL_URL = "https://www.va.gov/vdl/"
+
+
+def _dir_writable(path) -> bool:  # type: ignore[no-untyped-def]
+    """Whether the lake dir can be created + written (ensure it, write a temp file, clean up)."""
+    import tempfile
+
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=path):
+            return True
+    except OSError:
+        return False
+
+
+def _vdl_reachable(url: str = _VDL_URL, timeout: float = 5.0) -> bool:  # pragma: no cover - net I/O
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(url, timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
+@app.command()
+@_guarded
+def preflight() -> None:
+    """Check the environment is ready to run the pipeline → PREFLIGHT: GO|NO-GO (exit 1 on NO-GO).
+
+    Verifies what strands a run *before* stage 1: the converter binaries (pandoc, + docling if a doc
+    is routed to it), a writable $DATA_DIR, free disk, and VDL reachability (crawl/fetch only —
+    post-fetch runs offline, so that's a WARN). Each is OK / WARN / FAIL with a fix. Run it before
+    `vdocs build`."""
+    import shutil
+
+    from vdocs.server import preflight as pf
+    from vdocs.stages.convert.stage import _converter_available, _load_converter_routing
+
+    cfg = Settings()
+    routing = _load_converter_routing(
+        cfg.registries / "converter-routing" / "converter-routing.yaml"
+    )
+    checks = pf.converter_checks(
+        need_pandoc=True, need_docling=bool(routing), available=_converter_available
+    )
+    checks.append(pf.data_dir_check(_dir_writable(cfg.lake), str(cfg.lake)))
+    probe = cfg.lake if cfg.lake.exists() else cfg.lake.parent
+    try:
+        free = shutil.disk_usage(probe).free
+    except OSError:
+        free = pf.MIN_FREE_BYTES  # can't probe → don't WARN spuriously
+    checks.append(pf.disk_check(free))
+    checks.append(pf.network_check(_vdl_reachable(), _VDL_URL))
+    if pf.render(checks, typer.echo) == "NO-GO":
+        raise typer.Exit(code=1)
+
+
 @app.command()
 def validate(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Sidecar-verification HARD GATE: typed absence (capture.yaml) + count reconciliation +
