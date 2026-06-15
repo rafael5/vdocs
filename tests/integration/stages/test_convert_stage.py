@@ -103,6 +103,38 @@ def test_load_converter_routing_empty_when_absent(tmp_path):
     assert _load_converter_routing(tmp_path / "nope.yaml") == frozenset()  # no registry → Pandoc
 
 
+def test_converter_available_probes_path():
+    from vdocs.stages.convert.stage import _converter_available
+
+    assert _converter_available("sh") is True  # always on PATH on POSIX
+    assert _converter_available("vdocs-no-such-binary-xyz") is False
+
+
+def test_preflight_fails_clearly_when_pandoc_missing(ctx, monkeypatch):
+    # With the default (Pandoc) converter and pandoc absent, preflight must FAIL up front with an
+    # actionable remediation — NOT let every doc raise FileNotFoundError inside the per-doc loop,
+    # where it gets mis-reported as "N documents failed to convert" (a fake corpus defect).
+    from vdocs.models.stage import Decision
+
+    _seed_fetched(ctx)
+    monkeypatch.setattr("vdocs.stages.convert.stage._converter_available", lambda _tool: False)
+    res = ConvertStage().preflight(ctx, force=True)  # default converters → real pandoc needed
+    assert res.decision is Decision.FAIL
+    assert "pandoc" in res.reason.lower()
+    assert res.remediation  # tells the operator how to fix it, no AI needed
+
+
+def test_preflight_proceeds_with_injected_converters_even_without_binaries(ctx, monkeypatch):
+    # Injected converters (tests, or pluggable backends) must never demand the system binaries —
+    # both Pandoc and Docling are injected here, so neither pandoc nor docling is required.
+    from vdocs.models.stage import Decision
+
+    _seed_fetched(ctx)
+    monkeypatch.setattr("vdocs.stages.convert.stage._converter_available", lambda _tool: False)
+    res = ConvertStage(convert=fake_convert, docling=fake_convert).preflight(ctx, force=True)
+    assert res.decision is Decision.PROCEED
+
+
 def test_convert_skips_on_clean_rerun(ctx):
     _seed_fetched(ctx)
     orch = Orchestrator([ConvertStage(convert=fake_convert)])
