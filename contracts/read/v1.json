@@ -1,98 +1,331 @@
 {
-  "read_schema_version": "1.3",
+  "read_schema_version": "1.4",
   "description": "Published read contract for vdocs index.db (ADR-0001). Consumers (vdocs-tui, vdocs-web, MCP) bind ONLY to the v_* views + the named chunks_fts surface — never to physical tables. The pipeline may refactor physical tables freely behind these. Views are GENERATED from this spec (kernel.read_contract.view_ddl), so they cannot drift from it; `vdocs doctor` asserts the emitted DB matches.",
   "views": {
     "v_documents": {
       "source": "documents",
       "description": "One row per document (all versions; filter is_latest=1 for the current set).",
       "columns": {
-        "doc_key": {"type": "TEXT", "nullable": false, "desc": "stable bundle path key (PRIMARY)"},
-        "doc_id": {"type": "TEXT", "nullable": false, "desc": "inventory join key app_code:doc_slug"},
-        "app_code": {"type": "TEXT", "nullable": true, "desc": "owning application code"},
-        "doc_type": {"type": "TEXT", "nullable": true, "desc": "document type code (e.g. UM, TM, IG)"},
-        "section": {"type": "TEXT", "nullable": true, "desc": "VDL editorial section code"},
-        "pkg_ns": {"type": "TEXT", "nullable": true, "desc": "home VistA package namespace"},
-        "version": {"type": "TEXT", "nullable": true, "desc": "raw version token (provenance)"},
-        "patch_id": {"type": "TEXT", "nullable": true, "desc": "raw patch id token (provenance)"},
-        "anchor_key": {"type": "TEXT", "nullable": true, "desc": "version-group anchor key"},
-        "group_key": {"type": "TEXT", "nullable": true, "desc": "version-group key"},
-        "title": {"type": "TEXT", "nullable": true, "desc": "display title: abbreviation-first, version/patch stripped"},
-        "title_source": {"type": "TEXT", "nullable": true, "desc": "raw original title (provenance/search)"},
-        "app_name": {"type": "TEXT", "nullable": true, "desc": "canonical application name (app_code expansion)"},
-        "product_abbr": {"type": "TEXT", "nullable": true, "desc": "module abbreviation"},
-        "product_full": {"type": "TEXT", "nullable": true, "desc": "module full name (explainer expansion)"},
-        "doc_label": {"type": "TEXT", "nullable": true, "desc": "doc_type full label (e.g. User Manual)"},
-        "app_user": {"type": "TEXT", "nullable": true, "desc": "persona that operates the application"},
-        "doc_user": {"type": "TEXT", "nullable": true, "desc": "persona that reads the document"},
-        "software_class": {"type": "TEXT", "nullable": true, "desc": "software class (I/III/...)"},
-        "function_category": {"type": "TEXT", "nullable": true, "desc": "functional domain"},
-        "word_count": {"type": "INTEGER", "nullable": true, "desc": "body word count"},
-        "section_count": {"type": "INTEGER", "nullable": true, "desc": "heading/section count"},
-        "is_latest": {"type": "INTEGER", "nullable": false, "desc": "1 = current anchor; 0 = superseded version"},
-        "template_id": {"type": "TEXT", "nullable": true, "desc": "migration template id"},
-        "source_sha256": {"type": "TEXT", "nullable": true, "desc": "source document content hash"},
-        "source_url": {"type": "TEXT", "nullable": true, "desc": "source VDL URL"},
-        "published": {"type": "TEXT", "nullable": true, "desc": "publication date YYYY-MM (gold FM)"},
-        "pub_year": {"type": "TEXT", "nullable": true, "desc": "publication year YYYY"},
-        "image_count": {"type": "INTEGER", "nullable": true, "desc": "distinct figures the doc references (resolving in the asset store)"},
-        "image_bytes": {"type": "INTEGER", "nullable": true, "desc": "total bytes of those referenced figures (per-doc upper bound; published bundle dedups shared assets)"}
+        "doc_key": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "stable bundle path key (PRIMARY)"
+        },
+        "doc_id": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "inventory join key app_code:doc_slug"
+        },
+        "app_code": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "owning application code"
+        },
+        "doc_type": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "document type code (e.g. UM, TM, IG)"
+        },
+        "section": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "VDL editorial section code"
+        },
+        "pkg_ns": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "home VistA package namespace"
+        },
+        "version": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "raw version token (provenance)"
+        },
+        "patch_id": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "raw patch id token (provenance)"
+        },
+        "anchor_key": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "version-group anchor key"
+        },
+        "group_key": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "version-group key"
+        },
+        "title": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "display title: abbreviation-first, version/patch stripped"
+        },
+        "title_source": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "raw original title (provenance/search)"
+        },
+        "app_name": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "canonical application name (app_code expansion)"
+        },
+        "product_abbr": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "module abbreviation"
+        },
+        "product_full": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "module full name (explainer expansion)"
+        },
+        "doc_label": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "doc_type full label (e.g. User Manual)"
+        },
+        "app_user": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "persona that operates the application"
+        },
+        "doc_user": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "persona that reads the document"
+        },
+        "software_class": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "software class (I/III/...)"
+        },
+        "function_category": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "functional domain"
+        },
+        "word_count": {
+          "type": "INTEGER",
+          "nullable": true,
+          "desc": "body word count"
+        },
+        "section_count": {
+          "type": "INTEGER",
+          "nullable": true,
+          "desc": "heading/section count"
+        },
+        "is_latest": {
+          "type": "INTEGER",
+          "nullable": false,
+          "desc": "1 = current anchor; 0 = superseded version"
+        },
+        "template_id": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "migration template id"
+        },
+        "source_sha256": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "source document content hash"
+        },
+        "source_url": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "source VDL URL"
+        },
+        "published": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "publication date YYYY-MM (gold FM)"
+        },
+        "pub_year": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "publication year YYYY"
+        },
+        "image_count": {
+          "type": "INTEGER",
+          "nullable": true,
+          "desc": "distinct figures the doc references (resolving in the asset store)"
+        },
+        "image_bytes": {
+          "type": "INTEGER",
+          "nullable": true,
+          "desc": "total bytes of those referenced figures (per-doc upper bound; published bundle dedups shared assets)"
+        },
+        "bundle_path": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "the de-versioned gold anchor bundle relpath (<app>/<slug>) this doc resolves to; locates the doc's gold sidecars (e.g. tables/*.csv) without parsing the versioned doc_key; empty for a non-latest doc"
+        }
       }
     },
     "v_sections": {
       "source": "doc_sections",
       "description": "One row per heading — the anchor/structure (TOC) map.",
       "columns": {
-        "section_id": {"type": "TEXT", "nullable": false, "desc": "<doc_key>/<slug> stable id (PRIMARY)"},
-        "doc_key": {"type": "TEXT", "nullable": false, "desc": "owning document"},
-        "slug": {"type": "TEXT", "nullable": true, "desc": "GitHub-style heading slug"},
-        "title": {"type": "TEXT", "nullable": true, "desc": "heading text"},
-        "level": {"type": "INTEGER", "nullable": true, "desc": "heading level (H1=1...)"},
-        "toc_level": {"type": "INTEGER", "nullable": true, "desc": "1 if in-TOC at the doc's chosen depth"},
-        "is_latest": {"type": "INTEGER", "nullable": false, "desc": "from the owning document"},
-        "kind": {"type": "TEXT", "nullable": false, "desc": "container | ok | stub | hollow"},
-        "searchable": {"type": "INTEGER", "nullable": false, "desc": "1 if on the search surface"},
-        "section_path": {"type": "TEXT", "nullable": true, "desc": "' > '-joined ancestor heading titles"},
-        "seq": {"type": "INTEGER", "nullable": true, "desc": "document-order ordinal within the doc (ORDER BY this for TOC/preview order)"}
+        "section_id": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "<doc_key>/<slug> stable id (PRIMARY)"
+        },
+        "doc_key": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "owning document"
+        },
+        "slug": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "GitHub-style heading slug"
+        },
+        "title": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "heading text"
+        },
+        "level": {
+          "type": "INTEGER",
+          "nullable": true,
+          "desc": "heading level (H1=1...)"
+        },
+        "toc_level": {
+          "type": "INTEGER",
+          "nullable": true,
+          "desc": "1 if in-TOC at the doc's chosen depth"
+        },
+        "is_latest": {
+          "type": "INTEGER",
+          "nullable": false,
+          "desc": "from the owning document"
+        },
+        "kind": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "container | ok | stub | hollow"
+        },
+        "searchable": {
+          "type": "INTEGER",
+          "nullable": false,
+          "desc": "1 if on the search surface"
+        },
+        "section_path": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "' > '-joined ancestor heading titles"
+        },
+        "seq": {
+          "type": "INTEGER",
+          "nullable": true,
+          "desc": "document-order ordinal within the doc (ORDER BY this for TOC/preview order)"
+        }
       }
     },
     "v_chunks": {
       "source": "chunks",
       "description": "Retrieval units (searchable is_latest section bodies; oversized split #pN). Text store behind chunks_fts.",
       "columns": {
-        "chunk_id": {"type": "TEXT", "nullable": false, "desc": "chunk id (section_id or section_id#pN)"},
-        "section_id": {"type": "TEXT", "nullable": false, "desc": "anchor section a hit resolves to"},
-        "doc_key": {"type": "TEXT", "nullable": false, "desc": "owning document"},
-        "part": {"type": "INTEGER", "nullable": false, "desc": "window index within the section"},
-        "text": {"type": "TEXT", "nullable": false, "desc": "chunk body text"}
+        "chunk_id": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "chunk id (section_id or section_id#pN)"
+        },
+        "section_id": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "anchor section a hit resolves to"
+        },
+        "doc_key": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "owning document"
+        },
+        "part": {
+          "type": "INTEGER",
+          "nullable": false,
+          "desc": "window index within the section"
+        },
+        "text": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "chunk body text"
+        }
       }
     },
     "v_entities": {
       "source": "entities",
       "description": "Distinct extracted entities (registry-driven recognition).",
       "columns": {
-        "entity_id": {"type": "TEXT", "nullable": false, "desc": "type:canonical (PRIMARY)"},
-        "type": {"type": "TEXT", "nullable": true, "desc": "entity type (global, fileman_file, rpc, ...)"},
-        "canonical_name": {"type": "TEXT", "nullable": true, "desc": "canonical surface form"},
-        "mention_count": {"type": "INTEGER", "nullable": true, "desc": "total mentions across the corpus"}
+        "entity_id": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "type:canonical (PRIMARY)"
+        },
+        "type": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "entity type (global, fileman_file, rpc, ...)"
+        },
+        "canonical_name": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "canonical surface form"
+        },
+        "mention_count": {
+          "type": "INTEGER",
+          "nullable": true,
+          "desc": "total mentions across the corpus"
+        }
       }
     },
     "v_entity_mentions": {
       "source": "entity_mentions",
       "description": "Each mention of an entity, citing the anchor section.",
       "columns": {
-        "entity_id": {"type": "TEXT", "nullable": false, "desc": "the entity mentioned"},
-        "doc_key": {"type": "TEXT", "nullable": false, "desc": "document the mention is in"},
-        "section_id": {"type": "TEXT", "nullable": false, "desc": "section the mention is in"}
+        "entity_id": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "the entity mentioned"
+        },
+        "doc_key": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "document the mention is in"
+        },
+        "section_id": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "section the mention is in"
+        }
       }
     },
     "v_vocab": {
       "source": "vocab",
       "description": "Controlled facet vocabularies as data (sourced from registries): function domains, doc types, VDL sections, personas. Consumers read definitions from here instead of hardcoding them (ADR-0001 P2).",
       "columns": {
-        "kind": {"type": "TEXT", "nullable": false, "desc": "vocabulary axis: function_category | doc_type | section | persona"},
-        "code": {"type": "TEXT", "nullable": false, "desc": "the value as stored in documents (e.g. UM, CLI, clinical, Laboratory)"},
-        "label": {"type": "TEXT", "nullable": true, "desc": "human display label"},
-        "description": {"type": "TEXT", "nullable": true, "desc": "human definition (for the explainer)"}
+        "kind": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "vocabulary axis: function_category | doc_type | section | persona"
+        },
+        "code": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "the value as stored in documents (e.g. UM, CLI, clinical, Laboratory)"
+        },
+        "label": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "human display label"
+        },
+        "description": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "human definition (for the explainer)"
+        }
       }
     }
   },
@@ -101,13 +334,34 @@
       "description": "FTS5 search surface over is_latest searchable chunks. Cannot be wrapped in a view; consumers query `chunks_fts MATCH ...` directly. Part of the contract by name.",
       "tokenizer": "unicode61 (fts5 default)",
       "columns": {
-        "chunk_id": {"indexed": false, "desc": "join key to v_chunks"},
-        "section_id": {"indexed": false, "desc": "anchor section"},
-        "doc_key": {"indexed": false, "desc": "owning document"},
-        "title": {"indexed": true, "desc": "chunk unit (section) title"},
-        "doc_title": {"indexed": true, "desc": "document title (doc-defining-token search)"},
-        "section_path": {"indexed": true, "desc": "ancestor heading path"},
-        "body": {"indexed": true, "desc": "chunk body text"}
+        "chunk_id": {
+          "indexed": false,
+          "desc": "join key to v_chunks"
+        },
+        "section_id": {
+          "indexed": false,
+          "desc": "anchor section"
+        },
+        "doc_key": {
+          "indexed": false,
+          "desc": "owning document"
+        },
+        "title": {
+          "indexed": true,
+          "desc": "chunk unit (section) title"
+        },
+        "doc_title": {
+          "indexed": true,
+          "desc": "document title (doc-defining-token search)"
+        },
+        "section_path": {
+          "indexed": true,
+          "desc": "ancestor heading path"
+        },
+        "body": {
+          "indexed": true,
+          "desc": "chunk body text"
+        }
       }
     }
   },

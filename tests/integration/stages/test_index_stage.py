@@ -132,6 +132,11 @@ def test_index_builds_documents_sections_entities(ctx):
         latest = dict(conn.execute("SELECT doc_id, is_latest FROM documents").fetchall())
         assert latest[new] == 1 and latest[old] == 0
 
+        # bundle_path (v1.4): the latest doc resolves to its de-versioned gold anchor relpath (where
+        # its gold sidecars live); a non-latest member carries none. Exposed on v_documents.
+        bp = dict(conn.execute("SELECT doc_id, bundle_path FROM v_documents").fetchall())
+        assert bp[new] == "CPRS/or_ig" and bp[old] == ""
+
         # §7 profile tags baked into the body FM land as documents columns (filterable offline)
         prof = conn.execute(
             "SELECT app_user, doc_user, software_class, function_category "
@@ -313,7 +318,7 @@ def test_index_stamps_read_contract_meta(ctx):
         meta = dict(conn.execute("SELECT key, value FROM meta").fetchall())
     finally:
         conn.close()
-    assert meta["read_schema_version"] == "1.3"
+    assert meta["read_schema_version"] == "1.4"
     assert meta["corpus_doc_count"] == "2"  # both version-group members are documents
     assert len(meta["corpus_content_hash"]) == 64  # sha256 hexdigest
 
@@ -365,7 +370,7 @@ def test_index_emits_read_contract_views_matching_the_spec(ctx):
         assert latest == 1
         # the read_schema_version stamped in meta is the spec's version (single source)
         ver = conn.execute("SELECT value FROM meta WHERE key = 'read_schema_version'").fetchone()[0]
-        assert ver == rc.version(spec) == "1.3"
+        assert ver == rc.version(spec) == "1.4"
     finally:
         conn.close()
 

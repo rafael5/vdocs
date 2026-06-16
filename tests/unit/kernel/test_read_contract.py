@@ -46,7 +46,7 @@ def test_version_and_capabilities_read_from_spec():
 def test_load_reads_the_real_v1_contract():
     # the shipped contract parses and declares the views consumers bind to
     spec = rc.load(rc.contract_path())
-    assert rc.version(spec) == "1.3"
+    assert rc.version(spec) == "1.4"
     cols = rc.view_columns(spec)
     expected = {"v_documents", "v_sections", "v_chunks", "v_entities", "v_entity_mentions"}
     assert expected <= set(cols) and "v_vocab" in cols
