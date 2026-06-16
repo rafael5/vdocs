@@ -425,6 +425,7 @@ the search plan) before the corpus-wide work.
   "generate reference, hand-write the rest" (Microsoft Learn model) — here applied to *meaning* as the
   generated substrate.
 
-> This proposal is the *what/why* of the pivot. On sign-off, the *how/status* belongs in a tracker
-> (new `semantic-knowledge-layer-implementation-plan.md`, mirroring the lexical-search plan/tracker
-> split), and the affected `ArtifactContract`s + stage docs update in the same commits as the code.
+> This proposal is the *what/why* of the pivot. The *how/status* tracker is
+> [`semantic-knowledge-layer-implementation-plan.md`](semantic-knowledge-layer-implementation-plan.md)
+> (S0–S5 steps/gates, mirroring the lexical-search plan/tracker split) — **not started, pending
+> sign-off of §13**. The affected `ArtifactContract`s + stage docs update in the same commits as the code.
