@@ -39,7 +39,8 @@ class ConsolidateStage(Stage):
     requires = [TEXT_NORMALIZED, ASSETS]
     produces = [CONSOLIDATED]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
-    contract_ver = 1  # bump when the gold anchor-bundle layout changes (re-runs index)
+    contract_ver = 2  # bump when the gold anchor-bundle layout changes (re-runs index)
+    # ^ v2: carry the latest member's tables/*.csv sidecars into the bundle (rich-reading tables P1)
 
     def __init__(self) -> None:
         self._errors = 0  # per-document failures isolated this run (R6 — see doc_error_gate)
@@ -56,6 +57,10 @@ class ConsolidateStage(Stage):
         flag_bytes: dict[str, bytes] = {}  # doc_id → the member's flags.yaml (fidelity signals)
         toc_bytes: dict[str, bytes] = {}  # doc_id → the member's toc.yaml (original paper TOC)
         capture_bytes: dict[str, bytes] = {}  # doc_id → the member's capture.yaml (§6.4)
+        # doc_id → {bundle-relative path → bytes} for the member's tables/*.csv sidecars (the large
+        # tables normalize lifted out of the body, §6.4); the latest member's travel into the bundle
+        # so the reading consumer can resolve each `[Table N (extracted to CSV)]` body link (P1).
+        table_bytes: dict[str, dict[str, bytes]] = {}
         # Per-document error isolation (R6): one unreadable/malformed bundle is logged + counted +
         # skipped; the batch continues. doc_error_gate fails the stage only if systemic. The shared
         # guard lives in kernel.docloop (§9.2).
@@ -77,6 +82,11 @@ class ConsolidateStage(Stage):
                 capture_path = body_path.parent / "capture.yaml"
                 if capture_path.is_file():
                     capture_bytes[member.doc_id] = capture_path.read_bytes()
+                tables_dir = body_path.parent / "tables"
+                if tables_dir.is_dir():
+                    table_bytes[member.doc_id] = {
+                        f"tables/{f.name}": f.read_bytes() for f in sorted(tables_dir.glob("*.csv"))
+                    }
 
         groups = cp.group_by_anchor_key(members)
         kept: set[str] = set()
@@ -99,6 +109,9 @@ class ConsolidateStage(Stage):
                 parts["toc.yaml"] = toc_bytes[latest.doc_id]
             if latest.doc_id in capture_bytes:
                 parts["capture.yaml"] = capture_bytes[latest.doc_id]
+            # the latest member's table sidecars travel under their bundle-relative `tables/…` path,
+            # so the body's `[Table N (extracted to CSV)]` links resolve at the gold grain too
+            parts.update(table_bytes.get(latest.doc_id, {}))
             # append-only lineage: fold the fresh chain into any prior history.yaml (§6.6)
             existing = _read_history(anchor / "history.yaml")
             merged = cp.merge_history(existing, cp.build_history(latest.anchor_key, ordered))
@@ -123,12 +136,18 @@ class ConsolidateStage(Stage):
                 yaml.safe_dump(manifest, sort_keys=False, allow_unicode=True).encode("utf-8"),
             )
             # Prune any stale sidecar a prior run left in this (kept) bundle — e.g. a flags.yaml/
-            # toc.yaml whose current latest member no longer has one — so the on-disk part set
-            # matches bundle.yaml exactly (the R4 intra-bundle staleness the integrity gate flags).
+            # toc.yaml whose current latest member no longer has one, or a tables/*.csv from a prior
+            # larger member — so the on-disk part set matches bundle.yaml exactly (the R4 staleness
+            # the gate flags). Recurse so subdir parts (tables/) are covered, and drop a subdir left
+            # empty (e.g. tables/ when the latest member has no extracted tables).
             expected = set(parts) | {bundle.MANIFEST_NAME}
-            for stale in anchor.iterdir():
-                if stale.is_file() and stale.name not in expected:
+            entries = list(anchor.rglob("*"))
+            for stale in entries:
+                if stale.is_file() and stale.relative_to(anchor).as_posix() not in expected:
                     stale.unlink()
+            for sub in sorted((p for p in entries if p.is_dir()), reverse=True):
+                if not any(sub.iterdir()):
+                    sub.rmdir()
 
         n_pruned = cas.prune_bundles(consolidated_root, kept)
         self._errors, self._total = loop.errors, loop.total
