@@ -308,6 +308,70 @@ def test_consolidate_bundle_manifest_detects_tampering(ctx):
     assert any(f.kind == kbundle.HASH_MISMATCH and f.path == "body.md" for f in finds)
 
 
+def test_consolidate_carries_table_sidecars_into_the_gold_bundle(ctx):
+    # P1 (rich-reading tables): normalize lifts large tables to `tables/*.csv` sidecars; consolidate
+    # must carry the LATEST member's sidecars into the gold bundle AND sign them in bundle.yaml, so
+    # the reading consumer can resolve each `[Table N (extracted to CSV)]` body link.
+    from vdocs.kernel import bundle as kbundle
+
+    _seed_member(ctx, slug="or_3_1_dg", patch_id="OR*3*1", body="# DG\n\nv1 body\n", date="2020-01")
+    # the older member's sidecar must NOT win; only the latest member's tables travel
+    cas.atomic_write(
+        ctx.cfg.silver_normalized / "CPRS" / "or_3_1_dg" / "tables" / "table-01.csv", b"old,data\n"
+    )
+    _seed_member(
+        ctx, slug="or_3_9_dg", patch_id="OR*3.0*9", body="# DG\n\nv9 latest\n", date="2022-06"
+    )
+    latest_csv = b"Variable,Default\r\nDT,$H\r\nDUZ,0\r\n"
+    cas.atomic_write(
+        ctx.cfg.silver_normalized / "CPRS" / "or_3_9_dg" / "tables" / "table-01.csv", latest_csv
+    )
+    _seed_assets(ctx)
+    _bless(ctx, "normalize", TEXT_NORMALIZED)
+
+    Orchestrator([ConsolidateStage()]).run(ctx)
+
+    anchor = ctx.cfg.gold_consolidated / "CPRS" / "or_dg"
+    # the latest member's sidecar landed at the same bundle-relative path the body links to
+    assert (anchor / "tables" / "table-01.csv").read_bytes() == latest_csv
+    # it is signed in the manifest under its bundle-relative path (subdir key)
+    manifest = yaml.safe_load((anchor / "bundle.yaml").read_text())
+    listed = {e["path"]: e for e in manifest["parts"]}
+    assert "tables/table-01.csv" in listed
+    assert hashlib.sha256(latest_csv).hexdigest() == listed["tables/table-01.csv"]["sha256"]
+    # the bundle verifies clean with the sidecar enumerated by its bundle-relative path
+    on_disk = {
+        p.relative_to(anchor).as_posix(): p.read_bytes()
+        for p in anchor.rglob("*")
+        if p.is_file() and p.name != kbundle.MANIFEST_NAME
+    }
+    assert kbundle.verify_manifest(manifest, on_disk) == []
+
+
+def test_consolidate_prunes_a_stale_table_sidecar(ctx):
+    # R4 hygiene for the subdir: a prior run's tables/ entry lingering in a still-kept bundle whose
+    # current latest member no longer has it must be removed (and an emptied tables/ dir dropped).
+    from vdocs.kernel import bundle as kbundle
+
+    _seed_member(ctx, slug="or_3_1_dg", patch_id="OR*3*1", body="# DG\n\nv1\n", date="2020-01")
+    _seed_assets(ctx)
+    _bless(ctx, "normalize", TEXT_NORMALIZED)
+    anchor = ctx.cfg.gold_consolidated / "CPRS" / "or_dg"
+    cas.atomic_write(anchor / "tables" / "table-77.csv", b"stale,csv\n")  # prior-run residue
+
+    Orchestrator([ConsolidateStage()]).run(ctx)
+
+    assert not (anchor / "tables" / "table-77.csv").exists()  # stale subdir part pruned
+    assert not (anchor / "tables").exists()  # emptied subdir dropped
+    manifest = yaml.safe_load((anchor / "bundle.yaml").read_text())
+    on_disk = {
+        p.relative_to(anchor).as_posix(): p.read_bytes()
+        for p in anchor.rglob("*")
+        if p.is_file() and p.name != kbundle.MANIFEST_NAME
+    }
+    assert kbundle.verify_manifest(manifest, on_disk) == []
+
+
 def test_consolidate_prunes_stale_sidecar_within_a_kept_bundle(ctx):
     # R4 hygiene caught by the bundle-integrity gate: a prior run's flags.yaml lingering in a still-
     # kept bundle whose current latest member has none must be removed, so the bundle matches its

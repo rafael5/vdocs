@@ -183,11 +183,13 @@ def _verify_bundles(consolidated_root) -> list[dict]:  # type: ignore[no-untyped
     for body_path in sorted(consolidated_root.rglob("body.md")):
         bdir = body_path.parent
         rel = bdir.relative_to(consolidated_root).as_posix()
-        on_disk = {
-            p.name: p.read_bytes()
-            for p in bdir.iterdir()
-            if p.is_file() and p.name != kbundle.MANIFEST_NAME
-        }
+        # Enumerate every part by its bundle-relative path (recursing into subdirs like tables/,
+        # which carries the CSV table sidecars) so the keys match how the manifest lists them.
+        on_disk = {}
+        for p in bdir.rglob("*"):
+            rel_part = p.relative_to(bdir).as_posix()
+            if p.is_file() and rel_part != kbundle.MANIFEST_NAME:
+                on_disk[rel_part] = p.read_bytes()
         manifest_path = bdir / kbundle.MANIFEST_NAME
         if not manifest_path.is_file():
             findings.append(
