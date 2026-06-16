@@ -181,8 +181,12 @@ gate-green. Status legend: ⬜ not started.
 - Create local git repos `~/projects/fileman-docs` and `~/projects/va-docs-portal`.
 - Stand up MkDocs-Material skeleton + the full §3 gate config in `fileman-docs`; prove `make gate`
   green on a placeholder `index.md`.
-- Promote the termbase drafts → committed termbase + `vdocs build-termbase` generator (TDD in vdocs) →
-  emits Vale/typos config.
+- ✅ **`vdocs build-termbase` generator landed** (`kernel/termbase.py` + CLI; TDD, gate-green): compiles
+  the curated `product-names.yaml` / `typo-corrections.yaml` / glossary acronyms → `accept.txt` + a Vale
+  `substitution` style + a `typos` extend-words snippet (1117 approved terms). Source is the *curated*
+  registries, not the noisy `docs/*.draft.yaml` (those were already curated into them 2026-06-10).
+  *Follow-up:* some product `full` names in `product-names.yaml` are noisy doc-title fragments — a
+  registry-curation cleanup, harmless in `accept.txt` (unmatched Vale exceptions) but worth a pass.
 - **Gate:** `make gate` green on the skeleton; termbase generator unit-tested.
 - *(= strategy P1.)*
 

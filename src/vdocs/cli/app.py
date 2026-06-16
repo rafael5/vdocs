@@ -276,6 +276,38 @@ def gate(
         typer.echo(f"    {code or '(untyped)':<10} {n}")
 
 
+@app.command(name="build-termbase")
+@_guarded
+def build_termbase(
+    out_dir: str = typer.Option(
+        "termbase", "--out-dir", "-o", help="directory to write the gate artifacts into"
+    ),
+) -> None:
+    """Compile the curated registries into docs-as-code **quality-gate config** (Vale + typos).
+
+    Single-sources the controlled vocabulary — ``product-names.yaml`` (abbr/full/match),
+    ``typo-corrections.yaml`` (forbidden→preferred), and the glossary acronyms — into an
+    ``accept.txt``, a Vale ``substitution`` style, and a ``typos`` extend-words snippet for a
+    ``*-docs`` repo's gate (the VDL-modernization program; see
+    docs/vdl-content-quality-and-ia-strategy.md §6/§9). A registry edit re-flows here on re-run
+    (tenet #13) — the docs gate never hand-maintains its own copy of the vocabulary.
+    """
+    from pathlib import Path
+
+    from vdocs.kernel import termbase
+
+    cfg = Settings()
+    arts = termbase.termbase_artifacts(cfg.registries)
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    for name, content in sorted(arts.items()):
+        (out / name).write_text(content, encoding="utf-8")
+    n_terms = sum(1 for ln in arts["accept.txt"].splitlines() if ln and not ln.startswith("#"))
+    typer.echo(f"wrote {len(arts)} termbase artifacts to {out}/ — {n_terms} approved terms:")
+    for name in sorted(arts):
+        typer.echo(f"  {name}")
+
+
 @app.command()
 def convert(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Convert fetched documents to markdown bundles (text@converted) + extract images."""
