@@ -60,7 +60,8 @@ CREATE TABLE documents (
   word_count    INTEGER, section_count INTEGER, is_latest INTEGER NOT NULL,
   template_id   TEXT, source_sha256 TEXT, source_url TEXT,
   published     TEXT, pub_year TEXT,
-  image_count   INTEGER, image_bytes INTEGER
+  image_count   INTEGER, image_bytes INTEGER,
+  bundle_path   TEXT
 );
 CREATE TABLE doc_sections (
   section_id TEXT PRIMARY KEY,
@@ -112,7 +113,7 @@ _DOC_COLUMNS = (
     "product_abbr", "product_full", "doc_label",
     "app_user", "doc_user", "software_class", "function_category",
     "word_count", "section_count", "is_latest", "template_id", "source_sha256", "source_url",
-    "published", "pub_year", "image_count", "image_bytes",
+    "published", "pub_year", "image_count", "image_bytes", "bundle_path",
 )  # fmt: skip
 
 
@@ -138,8 +139,11 @@ class IndexStage(Stage):
     # v10 (per-doc figure stats): documents gained image_count + image_bytes (figures the doc
     # references + their total asset bytes) — precomputed so consumers/publish-size planning never
     # recount; read contract → v1.3 (additive MINOR).
+    # v11 (gold bundle path): documents gained bundle_path (the de-versioned gold anchor relpath
+    # this doc resolves to) so a consumer can locate the doc's gold sidecars — e.g. the rich-reading
+    # tables/*.csv — without reverse-engineering doc_key; read contract → v1.4 (additive MINOR).
     # The bump folds into consumers' inputs_fp so a re-run rebuilds.
-    contract_ver = 10
+    contract_ver = 11
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
@@ -149,7 +153,7 @@ class IndexStage(Stage):
         vocab_rows = vocab.vocab_rows(cfg.registries)  # published facet vocabulary (P2)
         staged_cols, staged_rows = _read_staged(cfg.index_db)
         by_path = {str(r["bundle_path"]): r for r in staged_rows}
-        latest_ids = _latest_doc_ids(cfg.gold_consolidated)
+        latest_paths = _latest_bundle_paths(cfg.gold_consolidated)
         app_name_map = personas.app_names(cfg.registries)  # app_code → name (title fallback)
         products = kproducts.load_products(cfg.registries)  # app_code → [product] (abbr titles)
         rules = ent.compile_rules(
@@ -171,7 +175,8 @@ class IndexStage(Stage):
             doc_id = str(
                 staged.get("doc_id") or f"{meta.get('app_code', '')}:{doc_key.split('/')[-1]}"
             )
-            is_latest = doc_id in latest_ids
+            bundle_path = latest_paths.get(doc_id, "")  # the gold anchor relpath ("" if not latest)
+            is_latest = bool(bundle_path)
             # The document title is an FTS column (L1.2) so a doc-defining token (e.g. "KAAJEE")
             # is findable on every chunk of the doc even when section titles/bodies are generic.
             doc_title = str(meta.get("title", "") or staged.get("doc_title") or "")
@@ -202,6 +207,7 @@ class IndexStage(Stage):
                     products,
                     image_count,
                     image_bytes,
+                    bundle_path,
                 )
             )
             for seq, s in enumerate(secs):
@@ -333,6 +339,7 @@ def _doc_row(  # type: ignore[no-untyped-def]
     products,
     image_count,
     image_bytes,
+    bundle_path,
 ):
     """One `documents` row — inventory identity from the staged table, title/template/provenance
     from the bundle FM (the keys `doc_meta_staged` doesn't carry).
@@ -384,6 +391,7 @@ def _doc_row(  # type: ignore[no-untyped-def]
         pub_year,
         image_count,
         image_bytes,
+        bundle_path,
     )
 
 
@@ -413,14 +421,19 @@ def _carry_staged(conn, cols, rows):  # type: ignore[no-untyped-def]
         )
 
 
-def _latest_doc_ids(consolidated_root):  # type: ignore[no-untyped-def]
-    """The `doc_id`s flagged `is_latest` across every group's `history.yaml` (the anchors)."""
-    latest: set[str] = set()
+def _latest_bundle_paths(consolidated_root):  # type: ignore[no-untyped-def]
+    """Map each `is_latest` `doc_id` → its de-versioned gold anchor bundle relpath (`<app>/<slug>`).
+
+    The anchor's `history.yaml` sits at the bundle dir, so `hist_path.parent` IS that relpath.
+    That dir carries the doc's gold sidecars (e.g. `tables/*.csv`); a consumer reads the relpath off
+    `v_documents.bundle_path` to locate them without parsing the versioned `doc_key`."""
+    latest: dict[str, str] = {}
     for hist_path in consolidated_root.rglob("history.yaml"):
+        rel = hist_path.parent.relative_to(consolidated_root).as_posix()
         data = kregistry.load_mapping(hist_path)
         for m in data.get("members") or []:
             if m.get("is_latest"):
-                latest.add(str(m["doc_id"]))
+                latest[str(m["doc_id"])] = rel
     return latest
 
 
