@@ -190,16 +190,24 @@ gate-green. Status legend: ⬜ not started.
 - **Gate:** `make gate` green on the skeleton; termbase generator unit-tested.
 - *(= strategy P1.)*
 
-### ⬜ L1 — Mechanical export: gold → `fileman-docs` first pass (`status: imported`)
-- Add `vdocs export-fileman --subset` (extends the planned `publish`/L3): for the four slugs, emit
-  self-contained GFM — resolve assets→`media/` (reuse `kernel/figures.py`), inline narrative tables,
-  reference tables→`data/*.yml`, boilerplate→`_includes/`, rewrite front matter (frozen provenance +
-  lifecycle), and run **code-block reconstruction** over the DBS-API pages (bold-as-code/escaped-prose →
-  ```` ```mumps ````/```` ```console ````, un-escape `\$ \_ \*`, bind `Figure N:`/`Example N:` captions).
-- Commit the output to `fileman-docs` as the **imported baseline** (every topic `status: imported`).
-- **TDD (vdocs):** pure transforms (`*_pure.py`) for code-block reconstruction + table classify + front-
-  matter rewrite, each test-first. **Gate:** subset exports; `make gate` green; zero residual `\$`/`\_`
-  outside code; no dangling `media/`/`_[Table N]` refs.
+### 🟡 L1 — Mechanical export: gold → `fileman-docs` first pass (`status: imported`)
+`vdocs export-fileman --subset` (extends the planned `publish`/L3, in `stages/publish/`) emits
+self-contained GFM for the four slugs. Built incrementally, each TDD + gate-green:
+- ✅ **L1.1 — front-matter rewrite** (`stages/publish/frontmatter_pure.py`, `61ab836`-follow-on): freeze
+  provenance (`source_url`/`source_sha256` → `imported_from`/`imported_by`/`imported_date`), add
+  lifecycle (`status: imported`, `last_reviewed`, `owner`=`<app>-maintainers`), and the load-bearing
+  decision — rewrite VDL `doc_type` code → Diátaxis mode (DG→reference, TRG→tutorial, TM/UM→how-to,
+  SG→reference; unknown→reference), preserving `source_doc_type`. 14 tests, 971 total/97.91%.
+- ⬜ **L1.2 — code-block reconstruction** over the DBS-API pages: bold-as-code/escaped-prose →
+  ```` ```mumps ````/```` ```console ````, un-escape `\$ \_ \*`, bind `Figure N:`/`Example N:` captions.
+  *Confirmed heuristic* — most bold is inline M-token emphasis within prose, NOT standalone code lines;
+  ambiguous regions → `manual-review`, never silent.
+- ⬜ **L1.3 — table materialization**: classify narrative→inline GFM vs reference→`data/*.yml` + rendered.
+- ⬜ **L1.4 — assets + boilerplate + the driver/CLI**: resolve `![](<sha>)`→`media/` (reuse
+  `kernel/figures.py`), boilerplate→`_includes/`; the `export-fileman` command writes the topic tree.
+- **Gate (whole L1):** subset exports; `make gate` (in fileman-docs) green; zero residual `\$`/`\_`
+  outside code; no dangling `media/`/`_[Table N]` refs. Output committed to `fileman-docs` as the
+  **imported baseline** once gate-clean.
 - *(= master-publication P1/P2 + FileMan-POC P1, subset-scoped.)*
 
 ### ⬜ L2 — Content audit + crosswalk
