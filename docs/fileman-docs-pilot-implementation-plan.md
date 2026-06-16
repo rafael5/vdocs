@@ -205,7 +205,11 @@ self-contained GFM for the four slugs. Built incrementally, each TDD + gate-gree
   manual-review** — false-positive sweep clean (the only English-in-code is string literals/`;`
   comments). 9 tests; 980 total/97.90%. Ambiguous bold code-ish lines → `manual-review` marker, never
   silent.
-- ⬜ **L1.3 — table materialization**: classify narrative→inline GFM vs reference→`data/*.yml` + rendered.
+- ✅ **L1.3 — table materialization** (`stages/publish/tables_pure.py`): deterministic §4 classifier
+  (row-count ≥12 or VistA reference-shaped header → reference; else narrative) + GFM renderer (inline
+  markdown preserved, `|` escaped, ragged rows padded) + reference→records (`data/*.yml`, lossless).
+  Validated on real `fm22_2tm`: Global/File/Routine/Term tables → reference, the Date/Revision/Author
+  revision-history table (11 rows) → narrative — correct. 11 tests; 991 total/97.86%.
 - ⬜ **L1.4 — assets + boilerplate + the driver/CLI**: resolve `![](<sha>)`→`media/` (reuse
   `kernel/figures.py`), boilerplate→`_includes/`; the `export-fileman` command writes the topic tree.
 - **Gate (whole L1):** subset exports; `make gate` (in fileman-docs) green; zero residual `\$`/`\_`
