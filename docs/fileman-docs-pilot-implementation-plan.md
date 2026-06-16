@@ -198,10 +198,13 @@ self-contained GFM for the four slugs. Built incrementally, each TDD + gate-gree
   lifecycle (`status: imported`, `last_reviewed`, `owner`=`<app>-maintainers`), and the load-bearing
   decision — rewrite VDL `doc_type` code → Diátaxis mode (DG→reference, TRG→tutorial, TM/UM→how-to,
   SG→reference; unknown→reference), preserving `source_doc_type`. 14 tests, 971 total/97.91%.
-- ⬜ **L1.2 — code-block reconstruction** over the DBS-API pages: bold-as-code/escaped-prose →
-  ```` ```mumps ````/```` ```console ````, un-escape `\$ \_ \*`, bind `Figure N:`/`Example N:` captions.
-  *Confirmed heuristic* — most bold is inline M-token emphasis within prose, NOT standalone code lines;
-  ambiguous regions → `manual-review`, never silent.
+- ✅ **L1.2 — code-block reconstruction** (`stages/publish/codeblock_pure.py`): bold-as-code/escaped-
+  prose → ```` ```mumps ````/```` ```console ````, un-escape `\$ \_ \*` inside fences, captions kept
+  adjacent. High-precision detector (uppercase anchored verb/`^` + operator) leaves inline M-token
+  emphasis alone. On real `fm22_2dg`: **268 blocks fenced, 3 console, 146 lines un-escaped, 0 false
+  manual-review** — false-positive sweep clean (the only English-in-code is string literals/`;`
+  comments). 9 tests; 980 total/97.90%. Ambiguous bold code-ish lines → `manual-review` marker, never
+  silent.
 - ⬜ **L1.3 — table materialization**: classify narrative→inline GFM vs reference→`data/*.yml` + rendered.
 - ⬜ **L1.4 — assets + boilerplate + the driver/CLI**: resolve `![](<sha>)`→`media/` (reuse
   `kernel/figures.py`), boilerplate→`_includes/`; the `export-fileman` command writes the topic tree.
