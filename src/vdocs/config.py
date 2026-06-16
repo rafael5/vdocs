@@ -229,6 +229,21 @@ class Settings(BaseSettings):
         return self.rich_assets / "manifest.json"
 
     @property
+    def rich_tables(self) -> Path:
+        """The rich-reading **table** distribution (tables proposal P3): the gold bundles' extracted
+        ``tables/*.csv`` sidecars copied structure-preserving (``<app>/<slug>/tables/…``) so they
+        ride *alongside* ``index.db``. Small (~10 MB whole-corpus), so unlike the figure bundle it
+        is NOT curated — every doc's tables ship. ``vdocs-web`` serves them via ``GET /api/table``
+        on a downloaded-only install (no co-located gold tree)."""
+        return self.lake / "rich-tables"
+
+    @property
+    def rich_tables_manifest(self) -> Path:
+        """The table distribution's manifest: each CSV's bundle-relative path + sha256 + bytes — the
+        descriptor + per-file integrity a consumer verifies (CSVs aren't content-addressed)."""
+        return self.rich_tables / "manifest.json"
+
+    @property
     def reports(self) -> Path:
         return self.lake / "reports"
 

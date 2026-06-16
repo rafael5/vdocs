@@ -637,6 +637,24 @@ def test_publish_rich_assets_builds_bundle(tmp_path):
     assert cfg.rich_assets_manifest.is_file()
 
 
+def test_publish_rich_tables_builds_distribution(tmp_path):
+    lake = tmp_path / "lake"
+    cfg = Settings(data_dir=lake)
+    csv = cfg.gold_consolidated / "DI/fm22_2dg" / "tables" / "table-01.csv"
+    csv.parent.mkdir(parents=True, exist_ok=True)
+    csv.write_bytes(b"Var,Default\nDT,$H\n")
+    # a non-table file in the bundle must NOT be distributed
+    (cfg.gold_consolidated / "DI/fm22_2dg" / "body.md").write_text("# DG\n")
+
+    result = runner.invoke(app, ["publish-rich-tables"], env={"DATA_DIR": str(lake)})
+    assert result.exit_code == 0, result.stdout
+    assert "1 CSVs" in result.stdout and "1 docs" in result.stdout
+    out_csv = cfg.rich_tables / "DI/fm22_2dg/tables/table-01.csv"
+    assert out_csv.read_bytes() == b"Var,Default\nDT,$H\n"
+    assert not (cfg.rich_tables / "DI/fm22_2dg/body.md").exists()
+    assert cfg.rich_tables_manifest.is_file()
+
+
 def test_publish_rich_assets_empty_subset_exits_one(tmp_path):
     registries = tmp_path / "registries"
     registries.mkdir()
