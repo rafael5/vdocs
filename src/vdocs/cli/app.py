@@ -488,6 +488,26 @@ def publish_rich_assets() -> None:
     )
 
 
+@app.command(name="publish-rich-tables")
+@_guarded
+def publish_rich_tables() -> None:
+    """Build the rich-reading table distribution (tables proposal P3).
+
+    Copies every gold bundle's extracted ``tables/*.csv`` sidecars into ``$DATA_DIR/rich-tables/``,
+    structure-preserving (``<app>/<slug>/tables/…``) so it rides alongside ``index.db``. The
+    whole-corpus set is small (~10 MB), so it is NOT curated — every doc's tables ship. vdocs-web
+    serves these via ``GET /api/table`` on a downloaded-only install (no co-located gold tree)."""
+    from vdocs.server import rich_tables
+
+    cfg = Settings()
+    plan = rich_tables.build_tables_bundle(cfg)
+    mb = plan.total_bytes / 1_048_576
+    typer.echo(
+        f"rich-tables distribution: {len(plan.tables)} CSVs, {mb:.1f} MB "
+        f"from {plan.doc_count} docs → {cfg.rich_tables}"
+    )
+
+
 @app.command()
 def validate(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Sidecar-verification HARD GATE: typed absence (capture.yaml) + count reconciliation +
