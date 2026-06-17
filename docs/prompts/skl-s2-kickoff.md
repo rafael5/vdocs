@@ -47,13 +47,26 @@ M engines **must go through the `m` toolchain** (m-driver-sdk → m-ydb / m-iris
 - ad-hoc read: `m vista exec --engine ydb ...` (against `vehu`) / `--engine iris` (against `foia-t12`);
 - Go: `mdriver.Client` (m-driver-sdk).
 
-`m` is **not on PATH in this vdocs Python session** — so the DD-seeding step needs a deliberate seam.
-**Decide at S2.2 (surface to Rafael):** either (a) `vdocs` shells out to `m vista exec` for a one-shot
-**DD export** (file#→name + field/global map for the DI files) written to a curated
-`registries/entities/dd-seed.<pkg>.yaml`, or (b) do the DD export from a `vista-cloud-dev` session and
-hand the YAML to `vdocs`. Prefer **(a)** if the `m` toolchain can be put on PATH for the export; the
-export is read-only and content-addressable, so it caches. **Mind the vdocs shared-lake rule** before
-any run on `~/data/vdocs` (check for a live operator run; don't race `state.db`/`index.db`/CAS).
+**`m` is now on PATH** (2026-06-17: `~/scripts/bin/m` → `~/vista-cloud-dev/m-cli/dist/m`) — it resolves
+in this session, runs, and exposes `vista exec` / `vista status` / `test`. **But the driver→container
+binding is not yet wired for `vista exec`:** `m vista exec --engine ydb --transport docker '…'` returns
+`ok:true` but **empty stdout**, and `m vista status --engine ydb --transport docker` reports
+`running:false` — i.e. the docker transport is not hitting the live `vehu` container. Note `m test`
+takes an explicit `--docker vehu` but `m vista exec` has **no `--docker` flag** — its container target
+is config/convention. **This is m-ydb/m-cli configuration and belongs in a `vista-cloud-dev` session**
+(one-session-one-repo; their Increment Protocol), **not** in vdocs.
+
+**Decide at S2.2 (surface to Rafael):** the DD-seeding seam — either
+- **(a)** finalize the `m vista exec` docker→`vehu` binding (in a `vista-cloud-dev` session), then have
+  `vdocs` shell out to it for a one-shot **DD export** (file#→name + field/global map for the DI files)
+  written to a curated `registries/entities/dd-seed.<pkg>.yaml`; or
+- **(b)** do the DD export from a `vista-cloud-dev` session via the **known-good** `m test --docker vehu`
+  path (or a `mdriver.Client` Go helper) and hand the YAML to `vdocs`; or
+- **(c)** start S2 **corpus-mined-first** and backfill the DD spine when the seam is wired (the schema
+  supports it either way — Q6 makes the live system the *tiebreaker*, not a hard blocker).
+
+The DD export is read-only and content-addressable, so it caches. **Mind the vdocs shared-lake rule**
+before any run on `~/data/vdocs` (check for a live operator run; don't race `state.db`/`index.db`/CAS).
 
 ## S2 steps (TDD — pure `*_pure.py` cores first, thin `stage.py` drivers)
 

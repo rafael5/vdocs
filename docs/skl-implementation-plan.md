@@ -96,7 +96,10 @@ Promote semantic resolution to a named DAG layer producing `knowledge.db` for th
 §6). Re-centering, not rewrite — elevate `enrich`+`entities`+`relate`. **Kickoff (next session):**
 `docs/prompts/skl-s2-kickoff.md`. **Live-DD verified available** 2026-06-17 (`vehu`/`foia-t12` up; DD
 populated — `file #200 → "NEW PERSON"` confirmed); access **must** go via the `m` toolchain
-(m-driver-sdk → m-ydb/m-iris), never raw `docker exec` (engine-stack guard).
+(m-driver-sdk → m-ydb/m-iris), never raw `docker exec` (engine-stack guard). **`m` now on PATH**
+(`~/scripts/bin/m`), but the `m vista exec` docker→`vehu` binding is **not yet wired** (returns empty
+stdout; `vista status` reports not-running) — finalize that in a `vista-cloud-dev` session, or seed
+corpus-first and backfill (S2.2 seam decision, options a/b/c in the kickoff).
 
 | ID | Step | Detail | Gate |
 |----|------|--------|------|
