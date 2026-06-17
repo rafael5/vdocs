@@ -48,24 +48,34 @@ M engines **must go through the `m` toolchain** (m-driver-sdk → m-ydb / m-iris
 - Go: `mdriver.Client` (m-driver-sdk).
 
 **`m` is now on PATH** (2026-06-17: `~/scripts/bin/m` → `~/vista-cloud-dev/m-cli/dist/m`) — it resolves
-in this session, runs, and exposes `vista exec` / `vista status` / `test`. **But the driver→container
-binding is not yet wired for `vista exec`:** `m vista exec --engine ydb --transport docker '…'` returns
-`ok:true` but **empty stdout**, and `m vista status --engine ydb --transport docker` reports
-`running:false` — i.e. the docker transport is not hitting the live `vehu` container. Note `m test`
-takes an explicit `--docker vehu` but `m vista exec` has **no `--docker` flag** — its container target
-is config/convention. **This is m-ydb/m-cli configuration and belongs in a `vista-cloud-dev` session**
-(one-session-one-repo; their Increment Protocol), **not** in vdocs.
+in this session, runs, and exposes `vista exec` / `vista status` / `test`. **The driver→container
+binding for `vista exec`/`status` is NOW WIRED** (fixed 2026-06-17 in m-cli + m-ydb). Targeting is
+explicit flags — `--container` (both engines) + `--namespace` (IRIS only). **Working invocations
+(copy verbatim):**
 
-**Decide at S2.2 (surface to Rafael):** the DD-seeding seam — either
-- **(a)** finalize the `m vista exec` docker→`vehu` binding — **kickoff ready:**
-  `docs/prompts/skl-s2.0-m-cli-vista-exec-vehu-binding-kickoff.md` (a `vista-cloud-dev`/`m-cli` session;
-  root cause already traced — `vista_cmd.go` passes no container, driver reads `M_YDB_CONTAINER` which is
-  unset). Then have `vdocs` shell out for a one-shot **DD export** (file#→name + field/global map for the
-  DI files) into a curated `registries/entities/dd-seed.<pkg>.yaml`; or
-- **(b)** do the DD export from a `vista-cloud-dev` session via the **known-good** `m test --docker vehu`
-  path (or a `mdriver.Client` Go helper) and hand the YAML to `vdocs`; or
-- **(c)** start S2 **corpus-mined-first** and backfill the DD spine when the seam is wired (the schema
-  supports it either way — Q6 makes the live system the *tiebreaker*, not a hard blocker).
+```
+# YDB-VistA (vehu)
+m vista exec   --engine ydb  --transport docker --container vehu     'W $P($G(^DIC(200,0)),"^",1)'   # → NEW PERSON
+m vista status --engine ydb  --transport docker --container vehu                                      # → running:true healthy:true version:r2.02
+
+# IRIS-VistA (foia-t12) — add --namespace VISTA
+m vista exec   --engine iris --transport docker --container foia-t12 --namespace VISTA 'W $P($G(^DIC(200,0)),"^",1)'   # → NEW PERSON
+m vista status --engine iris --transport docker --container foia-t12 --namespace VISTA                                  # → running:true healthy:true version:2026.1
+```
+
+Add `-o json` for machine-readable output (`data.stdout`). Still the seam — `vista` drives the
+m-driver-sdk Client, no raw `docker exec`; the engine-stack guard stays satisfied.
+
+**Decide at S2.2 (surface to Rafael):** the DD-seeding seam —
+- **(a) — UNBLOCKED, recommended:** have `vdocs` shell out to the working `m vista exec --engine ydb
+  --transport docker --container vehu …` above for a one-shot **DD export** (file#→name + field/global
+  map for the DI files) into a curated `registries/entities/dd-seed.<pkg>.yaml`. (The
+  `skl-s2.0-m-cli-vista-exec-vehu-binding-kickoff.md` fix is **done** — see the m-cli/m-ydb commits
+  2026-06-17.) Or
+- **(b)** do the DD export from a `vista-cloud-dev` session via `m test --docker vehu` or a
+  `mdriver.Client` Go helper and hand the YAML to `vdocs`; or
+- **(c)** start S2 **corpus-mined-first** and backfill the DD spine later (Q6 makes the live system the
+  *tiebreaker*, not a hard blocker).
 
 The DD export is read-only and content-addressable, so it caches. **Mind the vdocs shared-lake rule**
 before any run on `~/data/vdocs` (check for a live operator run; don't race `state.db`/`index.db`/CAS).

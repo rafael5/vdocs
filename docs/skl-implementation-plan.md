@@ -96,12 +96,21 @@ Promote semantic resolution to a named DAG layer producing `knowledge.db` for th
 §6). Re-centering, not rewrite — elevate `enrich`+`entities`+`relate`. **Kickoff (next session):**
 `docs/prompts/skl-s2-kickoff.md`. **Live-DD verified available** 2026-06-17 (`vehu`/`foia-t12` up; DD
 populated — `file #200 → "NEW PERSON"` confirmed); access **must** go via the `m` toolchain
-(m-driver-sdk → m-ydb/m-iris), never raw `docker exec` (engine-stack guard). **`m` now on PATH**
-(`~/scripts/bin/m`), but the `m vista exec` docker→`vehu` binding is **not yet wired** (returns empty
-stdout; `vista status` reports not-running — root cause: `m-cli/vista_cmd.go` passes no container; the
-m-ydb driver reads `M_YDB_CONTAINER`, which is unset). Fix kickoff (separate `m-cli` session):
-`docs/prompts/skl-s2.0-m-cli-vista-exec-vehu-binding-kickoff.md`. Or seed corpus-first and backfill
-(S2.2 seam decision, options a/b/c in the kickoff).
+(m-driver-sdk → m-ydb/m-iris), never raw `docker exec` (engine-stack guard). **`m vista exec`/`status`
+docker→engine binding is NOW WIRED** (fixed 2026-06-17, m-cli + m-ydb) — **option (a) is unblocked**.
+Working invocation (copy verbatim into S2.2):
+
+```
+m vista exec --engine ydb  --transport docker --container vehu     'W $P($G(^DIC(200,0)),"^",1)'   # → NEW PERSON
+m vista exec --engine iris --transport docker --container foia-t12 --namespace VISTA 'W $P($G(^DIC(200,0)),"^",1)'   # → NEW PERSON
+```
+
+Targeting is explicit flags: `--container` (both engines) + `--namespace` (IRIS only); `m vista status
+--engine ydb --transport docker --container vehu` → `running:true healthy:true version:r2.02`. Two
+fixes landed: m-cli `vista_cmd.go` now passes the target via the SDK Client `ConnArgs` (still the seam —
+no raw `docker exec`), and the m-ydb docker transport now runs through a login shell so the container's
+own `gtmgbldir`/`gtmroutines` load. Seed corpus-first + backfill (options b/c) remains available but is
+no longer necessary for the DD spine.
 
 | ID | Step | Detail | Gate |
 |----|------|--------|------|
