@@ -13,6 +13,10 @@ a ``*-docs`` repo's Vale/typos gate consumes:
   acronyms). Sorted + de-duplicated → deterministic diffs.
 * ``VistA.yml`` — a Vale ``substitution`` style enforcing the curated typo corrections
   (forbidden→preferred), red-gated at ``error``.
+* ``Casing.yml`` — a Vale ``substitution`` style enforcing canonical *capitalization* for the
+  **safe** set only (SKL S1.3): every accepted single-token term except those that opt out
+  (``enforce_case: false``) or collide with an English word (auto-derived, ``kernel.casing_pure``).
+  Replaces the hand-maintained ``fileman-docs`` ``Brand.yml`` + ``Vale.Terms = NO`` workaround.
 * ``typos-extend.toml`` — a ``[default.extend-words]`` identity snippet so ``typos`` (the spell
   checker) accepts single-token VistA jargon.
 
@@ -22,10 +26,12 @@ loader over the registries (the kernel I/O-boundary convention, mirroring ``kern
 
 from __future__ import annotations
 
+from collections.abc import Set
 from pathlib import Path
 
 import yaml
 
+from vdocs.kernel import casing_pure
 from vdocs.kernel import products as kproducts
 from vdocs.kernel import registry as kregistry
 
@@ -37,12 +43,14 @@ def build_artifacts(
     products: dict[str, list[dict]],
     corrections: list[dict],
     expansions: dict[str, str],
+    english_words: Set[str],
 ) -> dict[str, str]:
     """Pure transform: curated registry data → ``{filename: content}`` for the docs-as-code gate."""
     accept = _accept_terms(products, expansions)
     return {
         "accept.txt": _render_accept(accept),
         "VistA.yml": _render_substitutions(corrections),
+        "Casing.yml": _render_casing(accept, products, english_words),
         "typos-extend.toml": _render_typos(accept),
     }
 
@@ -67,6 +75,21 @@ def termbase_artifacts(registries_dir: Path) -> dict[str, str]:
         products=products,
         corrections=[c for c in corrections if isinstance(c, dict)],
         expansions={str(k): str(v) for k, v in expansions.items()},
+        english_words=_load_english_words(registries_dir),
+    )
+
+
+def _load_english_words(registries_dir: Path) -> frozenset[str]:
+    """The lowercase base words Vale's speller consults (vendored from its ``en_US-web.dic``),
+    used to auto-derive ``collides_with_english``. Absent → empty (no casing is enforced, but
+    the artifact stays well-formed — fail-soft like the other optional inputs)."""
+    path = registries_dir / "glossary" / "english-words.txt"
+    if not path.exists():
+        return frozenset()
+    return frozenset(
+        ln.strip().lower()
+        for ln in path.read_text(encoding="utf-8").splitlines()
+        if ln.strip() and not ln.startswith("#")
     )
 
 
@@ -100,6 +123,34 @@ def _render_substitutions(corrections: list[dict]) -> str:
         "level": "error",
         "ignorecase": False,
         "swap": dict(sorted(swap.items())),
+    }
+    return yaml.safe_dump(style, sort_keys=False, allow_unicode=True)
+
+
+def _render_casing(
+    accept: list[str], products: dict[str, list[dict]], english_words: Set[str]
+) -> str:
+    """Vale ``substitution`` style enforcing canonical capitalization for the *safe* set only —
+    every accepted single-token term except those that opt out (``enforce_case: false``) or
+    collide with an English word (auto-derived, ``kernel.casing_pure``). With ``ignorecase: true``
+    each ``canonical→canonical`` entry flags any miscasing while leaving the correct form — and
+    every colliding word like "can" — untouched. This generated style replaces the hand-maintained
+    ``fileman-docs`` ``Brand.yml`` + ``Vale.Terms = NO`` workaround (SKL S1.3/S1.4)."""
+    no_enforce: set[str] = set()
+    for entries in products.values():
+        for e in entries:
+            if e.get("enforce_case") is False:
+                no_enforce.add(str(e["abbr"]))
+                no_enforce.update(str(m) for m in (e.get("match") or []))
+    swap = casing_pure.selective_casing_swap(
+        terms=accept, english_words=english_words, no_enforce=no_enforce
+    )
+    style = {
+        "extends": "substitution",
+        "message": "Use the curated capitalization '%s' (generated from registries/).",
+        "level": "error",
+        "ignorecase": True,
+        "swap": swap,
     }
     return yaml.safe_dump(style, sort_keys=False, allow_unicode=True)
 

@@ -6,9 +6,10 @@
 > changelog/discoveries/risks log. **Update it as work lands** (TDD → `make check` → update tracker →
 > commit, per step — the house cadence).
 
-> **Status: not started — pending proposal sign-off (proposal §13 open questions, esp. K2/Q6).** Do not
-> begin S2+ until S0 ratifies the schema. S1 is a self-contained quick win that can start the moment the
-> Term-classification facets (proposal §5) are agreed.
+> **Status: S1 landed (2026-06-17); S2+ pending proposal sign-off (proposal §13 open questions, esp.
+> K2/Q6).** Do not begin S2+ until S0 ratifies the schema. S1 (the self-contained casing quick win)
+> is **done** — facet schema blessed, casing bug fixed at the source. S1.4 (the `fileman-docs` repo
+> half) is handed off to a separate session (see `docs/prompts/skl-s1.4-fileman-docs-kickoff.md`).
 
 ## Goal — one outcome
 
@@ -55,20 +56,20 @@ Settle the proposal §13 decision table and open questions; freeze the SKL node 
 | S0.2 | Resolve K2 / Q6 | Confirm "symbolic honors the embedding reset" framing (K2); decide entity seed source — live DD/KIDS vs corpus-mined vs both (Q6) | decisions recorded with rationale |
 | S0.3 | Fix the relationship taxonomy | Closed starter edge set (`reads`/`runs-on`/`documented-in`/`synonym-of`/`miscapitalization-of`/…) vs `discover`-proposed (Q3) | edge-type registry shape agreed |
 
-### S1 — Classify the vocabulary; fix the casing bug at the source ⬜
+### S1 — Classify the vocabulary; fix the casing bug at the source 🟡 (vdocs half ✅; S1.4 handoff)
 Self-contained quick win (proposal §12 S1) — the smallest proof that "everything is a projection"
 works, and the deletion of the `fileman-docs` workaround. Does **not** require `knowledge.db` yet; it
 extends the existing termbase projection.
 
-| ID | Step | Detail | Gate |
-|----|------|--------|------|
-| S1.1 | Add Term classification facets | Extend the product/term registries with `class` / `canonical_casing` / `enforce_case` / `expand_on_first_use` (proposal §5) | facets present + schema-validated; TDD on the loader |
-| S1.2 | Auto-derive `collides_with_english` | Pure transform: lowercase each surface; if it's a real word in the **same Hunspell dict Vale ships**, set `collides_with_english=true` → never case-enforced (proposal §7) | pure-fn unit-tested incl. CAN/SITE/AN/OR; no human collision-guessing |
-| S1.3 | `build-termbase` emits selective casing | Project casing enforcement **only** for `enforce_case && !collides_with_english` terms; accept.txt still whitelists all spellings | regenerated Vale style enforces brand casing, ignores colliding acronyms |
-| S1.4 | Retire the `fileman-docs` workaround | Re-run `build-termbase --out-dir` into `fileman-docs`; **delete `.vale/VistA/Brand.yml` + `Vale.Terms = NO`**; `make gate` stays green; the `Vista→VistA` break-test still bites | fileman-docs gate green with zero hand-maintained vocab; casing coverage ≫ 6 terms |
+| ID | Step | Detail | Gate | Status |
+|----|------|--------|------|--------|
+| S1.1 | Add Term classification facets | Extend the product registry with `class` / `canonical_casing` / `enforce_case` / `expand_on_first_use` (proposal §5); validate on load (fail-loud on wrong type) | facets present + schema-validated; TDD on the loader | ✅ `kernel/products.py` |
+| S1.2 | Auto-derive `collides_with_english` | Pure transform: a term collides iff lowercase ∈ the dict **Vale's own speller consults** AND it is not brand-cased (internal-capital). Vendored wordlist from Vale `en_US-web.dic` (proposal §7) | pure-fn unit-tested incl. CAN/SITE/AN/OR/IS + Title-case (Site/Host/Map) + brands; no human collision-guessing | ✅ `kernel/casing_pure.py` |
+| S1.3 | `build-termbase` emits selective casing | Project casing enforcement **only** for `enforce_case && !collides_with_english` single-token terms (new `Casing.yml` Vale style); accept.txt still whitelists all spellings | regenerated Vale style enforces brand casing, ignores colliding acronyms — **624 terms enforced**; E2E Vale proof: Vista→VistA bites, ordinary "can/or/site" untouched | ✅ `kernel/termbase.py` |
+| S1.4 | Retire the `fileman-docs` workaround | Re-run `build-termbase --out-dir` into `fileman-docs`; **delete `.vale/VistA/Brand.yml` + `Vale.Terms = NO`**; `make gate` stays green; the `Vista→VistA` break-test still bites | fileman-docs gate green with zero hand-maintained vocab; casing coverage ≫ 6 terms | ⬜ **handed off** → `docs/prompts/skl-s1.4-fileman-docs-kickoff.md` |
 
 *TDD: `collides_with_english` and the selective-casing projector are pure functions tested first; the
-`fileman-docs` re-run is the integration proof.*
+`fileman-docs` re-run (S1.4) is the integration proof (a one-repo-per-session handoff).*
 
 ### S2 — Formalize the SKL + the `resolve` stage (FileMan) ⬜
 Promote semantic resolution to a named DAG layer producing `knowledge.db` for the `DI` gold (proposal
@@ -119,7 +120,7 @@ Prove the model holds at thousands of documents / millions of words.
 | Phase | Outcome | Status |
 |---|---|---|
 | S0 | Model ratified; `knowledge.db` contract frozen | ⬜ |
-| S1 | Vocabulary classified; casing fixed at source; `fileman-docs` Brand.yml deleted | ⬜ |
+| S1 | Vocabulary classified; casing fixed at source; `fileman-docs` Brand.yml deleted | 🟡 vdocs ✅ / S1.4 handoff |
 | S2 | `resolve` stage + `knowledge.db` for FileMan | ⬜ |
 | S3 | Termbase/glossary/cross-links/index projected from SKL; search vocab-mismatch fixed | ⬜ |
 | S4 | Semantic-fidelity CI gates + meaning-aware dashboard | ⬜ |
@@ -147,10 +148,39 @@ principle) → S2 → S3 (the search payoff) → S4 → S5.
 
 ## Discoveries
 
-- *(none yet — tracker opens 2026-06-16 with the proposal; populate as phases land.)*
+- **(S1.2) Vale grounds against its *own* embedded dict, not the system Hunspell.** `Vale.Spelling`
+  uses `en_US-web.dic` bundled in the binary (`internal/spell/data/`, v3.15.1), **not**
+  `/usr/share/hunspell/en_US.dic`. The two differ in ways that matter, so the wordlist is **vendored
+  into the repo** (`registries/glossary/english-words.txt`, ~78k lowercased base forms) with a
+  provenance header — committed, offline, diffable, no dependency on a go-module-cache layout
+  (Rafael's call, 2026-06-17). The pure fn takes the word set as a param (stays pure); the loader
+  reads the vendored file. **Refresh** by re-extracting from the installed Vale's `en_US-web.dic`.
+- **(S1.2) The naive "lowercase ∈ dict → collides" rule is wrong in *both* directions.** `vista` and
+  `mumps` *are* dictionary words, so the naive rule would veto `VistA` and break the headline
+  Vista→VistA gate. The fix is a **brand-cased guard**: a term collides only if its lowercase is a
+  dict word **and** it is not internal-capital typography (`surface != surface.capitalize()`).
+  - Internal-capital brands (`VistA`, `FileMan`) → never collide → **enforced**.
+  - All-caps acronyms whose lowercase is a word (`CAN`, `SITE`, `OR`, `IS`, `MUMPS`) → collide → spelling-accept only.
+  - **Title-case common words** (`Site`, `Host`, `Map`, `Recall`) → collide too (caught only via the
+    end-to-end Vale run — the first heuristic wrongly enforced `Site` and flagged ordinary "site").
+- **(S1.2) Lowercasing folds in proper nouns — accepted as a conservative under-enforcement.** e.g.
+  Vale's dict has `Tiu` (a deity); lowercased it vetoes the acronym `TIU`. The lowercase-only-base
+  alternative *drops* `is`/`or` (stored capitalized but lowercase-accepted via affix flags) and would
+  **reintroduce** the bug for `IS`. So the wordlist keeps **all** alphabetic base forms lowercased:
+  conservative (a few acronyms like `TIU` go unenforced) but it **never** force-cases a real word.
+- **(S1) Behavior change vs the hand-maintained `Brand.yml`:** `MUMPS` is no longer force-cased
+  (`mumps` is a real medical word) — confirmed acceptable (Rafael, 2026-06-17). Net casing coverage:
+  **6 hand-curated terms → 624 generated terms.**
 
 ## Changelog
 
+- 2026-06-17 — **S1 (vdocs half) landed.** TDD-first: `kernel/casing_pure.py`
+  (`collides_with_english` + `selective_casing_swap`, pure, 100% cov), Term-classification facets +
+  fail-loud validation in `kernel/products.py`, new `Casing.yml` projection in `kernel/termbase.py`,
+  vendored `registries/glossary/english-words.txt`. `make check` green (1006 tests, 97.9% cov). End-to-end
+  Vale proof against the real generated artifacts: Vista/Fileman miscasings flagged, ordinary
+  can/or/site/option/item untouched. S1.4 (fileman-docs `Brand.yml`/`Vale.Terms = NO` deletion) handed
+  off to a separate one-repo session. Grounding open questions validated — see Discoveries.
 - 2026-06-16 — **Tracker opened.** Mirrors the proposal's S0–S5. Status: not started, pending sign-off
   of the proposal §13 open questions. S1 flagged as the self-contained quick win that retires the
   `fileman-docs` casing workaround at the source.

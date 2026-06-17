@@ -27,17 +27,50 @@ _CORRECTIONS = [
 _EXPANSIONS = {
     "ADPAC": "Automated Data Processing Application Coordinator",
     "ACL": "Access Control List",
+    "CAN": "Care Assessment Need",  # collides with English "can"
+    "KIDS": "Kernel Installation and Distribution System",
 }
+# Synthetic stand-in for registries/glossary/english-words.txt.
+_WORDS = frozenset({"can", "site", "an", "or", "is", "vista", "map"})
 
 
 def _arts() -> dict[str, str]:
-    return t.build_artifacts(products=_PRODUCTS, corrections=_CORRECTIONS, expansions=_EXPANSIONS)
+    return t.build_artifacts(
+        products=_PRODUCTS,
+        corrections=_CORRECTIONS,
+        expansions=_EXPANSIONS,
+        english_words=_WORDS,
+    )
 
 
 # --- the artifact set --------------------------------------------------------------------------
-def test_emits_the_three_expected_artifacts():
+def test_emits_the_four_expected_artifacts():
     arts = _arts()
-    assert set(arts) == {"accept.txt", "VistA.yml", "typos-extend.toml"}
+    assert set(arts) == {"accept.txt", "VistA.yml", "Casing.yml", "typos-extend.toml"}
+
+
+# --- Casing.yml (selective case-enforcement, SKL S1.3) -----------------------------------------
+def test_casing_enforces_safe_terms_and_skips_colliding_acronyms():
+    doc = yaml.safe_load(_arts()["Casing.yml"])
+    assert doc["extends"] == "substitution"
+    assert doc["level"] == "error"
+    assert doc["ignorecase"] is True  # catch any miscasing, force canonical
+    swap = doc["swap"]
+    assert swap["PIMS"] == "PIMS"  # product abbr, non-colliding → enforced
+    assert swap["VSE"] == "VSE"  # product abbr → enforced
+    assert swap["KIDS"] == "KIDS"  # acronym not in the English dict → enforced
+    assert "CAN" not in swap  # collides with "can" → spelling-accept only, never force-cased
+    assert "Patient Information Management System" not in swap  # multiword skipped
+
+
+def test_casing_respects_enforce_case_opt_out():
+    products = {"DI": [{"abbr": "FileMan", "match": ["FileMan"], "enforce_case": False}]}
+    doc = yaml.safe_load(
+        t.build_artifacts(products=products, corrections=[], expansions={}, english_words=_WORDS)[
+            "Casing.yml"
+        ]
+    )
+    assert "FileMan" not in doc["swap"]
 
 
 # --- accept.txt --------------------------------------------------------------------------------
@@ -82,9 +115,10 @@ def test_deterministic_across_calls():
 
 
 def test_empty_inputs_yield_well_formed_empty_artifacts():
-    arts = t.build_artifacts(products={}, corrections=[], expansions={})
-    assert set(arts) == {"accept.txt", "VistA.yml", "typos-extend.toml"}
+    arts = t.build_artifacts(products={}, corrections=[], expansions={}, english_words=frozenset())
+    assert set(arts) == {"accept.txt", "VistA.yml", "Casing.yml", "typos-extend.toml"}
     assert yaml.safe_load(arts["VistA.yml"])["swap"] == {}
+    assert yaml.safe_load(arts["Casing.yml"])["swap"] == {}
 
 
 # --- the loader (I/O boundary) -----------------------------------------------------------------
@@ -102,13 +136,17 @@ def test_termbase_artifacts_reads_registries_dir(tmp_path):
     (glo / "expansions.yaml").write_text(
         yaml.safe_dump({"expansions": _EXPANSIONS}), encoding="utf-8"
     )
+    (glo / "english-words.txt").write_text("can\nsite\nvista\n", encoding="utf-8")
 
     arts = t.termbase_artifacts(tmp_path)
     assert "PIMS" in arts["accept.txt"]
     assert yaml.safe_load(arts["VistA.yml"])["swap"]["DIBORG"] == "DIBRG"
+    casing = yaml.safe_load(arts["Casing.yml"])["swap"]
+    assert casing["PIMS"] == "PIMS"  # enforced from the loaded wordlist
+    assert "CAN" not in casing  # colliding acronym vetoed by the loaded wordlist
 
 
 def test_termbase_artifacts_tolerates_absent_registries(tmp_path):
     # No registry files at all → empty-but-well-formed artifacts (fail-soft on the optional inputs).
     arts = t.termbase_artifacts(tmp_path)
-    assert set(arts) == {"accept.txt", "VistA.yml", "typos-extend.toml"}
+    assert set(arts) == {"accept.txt", "VistA.yml", "Casing.yml", "typos-extend.toml"}

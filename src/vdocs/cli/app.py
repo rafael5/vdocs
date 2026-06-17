@@ -285,9 +285,11 @@ def build_termbase(
 ) -> None:
     """Compile the curated registries into docs-as-code **quality-gate config** (Vale + typos).
 
-    Single-sources the controlled vocabulary — ``product-names.yaml`` (abbr/full/match),
-    ``typo-corrections.yaml`` (forbidden→preferred), and the glossary acronyms — into an
-    ``accept.txt``, a Vale ``substitution`` style, and a ``typos`` extend-words snippet for a
+    Single-sources the controlled vocabulary — ``product-names.yaml`` (abbr/full/match +
+    Term-classification facets), ``typo-corrections.yaml`` (forbidden→preferred), and the glossary
+    acronyms — into an ``accept.txt``, a typo ``substitution`` style (``VistA.yml``), a selective
+    *casing* ``substitution`` style (``Casing.yml`` — enforces canonical capitalization only for
+    terms that don't collide with English, SKL S1.3), and a ``typos`` extend-words snippet for a
     ``*-docs`` repo's gate (the VDL-modernization program; see
     docs/vdl-content-quality-and-ia-strategy.md §6/§9). A registry edit re-flows here on re-run
     (tenet #13) — the docs gate never hand-maintains its own copy of the vocabulary.
