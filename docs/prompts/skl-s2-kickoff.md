@@ -57,9 +57,11 @@ is config/convention. **This is m-ydb/m-cli configuration and belongs in a `vist
 (one-session-one-repo; their Increment Protocol), **not** in vdocs.
 
 **Decide at S2.2 (surface to Rafael):** the DD-seeding seam — either
-- **(a)** finalize the `m vista exec` docker→`vehu` binding (in a `vista-cloud-dev` session), then have
-  `vdocs` shell out to it for a one-shot **DD export** (file#→name + field/global map for the DI files)
-  written to a curated `registries/entities/dd-seed.<pkg>.yaml`; or
+- **(a)** finalize the `m vista exec` docker→`vehu` binding — **kickoff ready:**
+  `docs/prompts/skl-s2.0-m-cli-vista-exec-vehu-binding-kickoff.md` (a `vista-cloud-dev`/`m-cli` session;
+  root cause already traced — `vista_cmd.go` passes no container, driver reads `M_YDB_CONTAINER` which is
+  unset). Then have `vdocs` shell out for a one-shot **DD export** (file#→name + field/global map for the
+  DI files) into a curated `registries/entities/dd-seed.<pkg>.yaml`; or
 - **(b)** do the DD export from a `vista-cloud-dev` session via the **known-good** `m test --docker vehu`
   path (or a `mdriver.Client` Go helper) and hand the YAML to `vdocs`; or
 - **(c)** start S2 **corpus-mined-first** and backfill the DD spine when the seam is wired (the schema

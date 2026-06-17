@@ -98,8 +98,10 @@ Promote semantic resolution to a named DAG layer producing `knowledge.db` for th
 populated — `file #200 → "NEW PERSON"` confirmed); access **must** go via the `m` toolchain
 (m-driver-sdk → m-ydb/m-iris), never raw `docker exec` (engine-stack guard). **`m` now on PATH**
 (`~/scripts/bin/m`), but the `m vista exec` docker→`vehu` binding is **not yet wired** (returns empty
-stdout; `vista status` reports not-running) — finalize that in a `vista-cloud-dev` session, or seed
-corpus-first and backfill (S2.2 seam decision, options a/b/c in the kickoff).
+stdout; `vista status` reports not-running — root cause: `m-cli/vista_cmd.go` passes no container; the
+m-ydb driver reads `M_YDB_CONTAINER`, which is unset). Fix kickoff (separate `m-cli` session):
+`docs/prompts/skl-s2.0-m-cli-vista-exec-vehu-binding-kickoff.md`. Or seed corpus-first and backfill
+(S2.2 seam decision, options a/b/c in the kickoff).
 
 | ID | Step | Detail | Gate |
 |----|------|--------|------|
