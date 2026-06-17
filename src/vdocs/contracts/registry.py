@@ -221,6 +221,36 @@ RELATIONS = ArtifactContract(
     db="index.db",
     table="relations",
 )
+# --- the Semantic Knowledge Layer gold store (SKL S2.1, proposal §5/§6) ---
+# `resolve` materializes `knowledge.db` from the consolidated gold + registries + the live-DD seed:
+# the resolved entity / term / relationship graph (Concepts are out of S2 — Q1). It is the SKL's
+# OWN gold DB (Q4 — two DBs joined on entity-id; the merge into the shipped `index.db` is a later
+# `publish` concern). One SQLITE_TABLE contract per node table; all three carried by `resolve`'s one
+# StageRun (`db.build_atomic` rebuilds the whole store so they share an output record).
+KNOWLEDGE_ENTITIES = ArtifactContract(
+    key="knowledge.db:entities",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="resolve",
+    db="documents/gold/knowledge.db",
+    table="entities",
+)
+KNOWLEDGE_TERMS = ArtifactContract(
+    key="knowledge.db:terms",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="resolve",
+    db="documents/gold/knowledge.db",
+    table="terms",
+)
+KNOWLEDGE_RELATIONSHIPS = ArtifactContract(
+    key="knowledge.db:relationships",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="resolve",
+    db="documents/gold/knowledge.db",
+    table="relationships",
+)
 # `manifest`: the agent front door — corpus schema/counts/ID-scheme/capabilities (§14.4).
 # Lexical-first/offline: the capability manifest advertises lexical/structured/graph only.
 CORPUS_MANIFEST = ArtifactContract(
@@ -297,6 +327,9 @@ def default_registry() -> ArtifactRegistry:
         INDEX_ENTITIES,
         INDEX_CHUNKS,
         RELATIONS,
+        KNOWLEDGE_ENTITIES,
+        KNOWLEDGE_TERMS,
+        KNOWLEDGE_RELATIONSHIPS,
         CORPUS_MANIFEST,
         DISCOVERY_JSON,
         AI_MANIFEST,

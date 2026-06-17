@@ -205,6 +205,14 @@ class Settings(BaseSettings):
     def glossary(self) -> Path:
         return self.gold / "glossary.md"
 
+    @property
+    def knowledge_db(self) -> Path:
+        """The Semantic Knowledge Layer's gold store (SKL S2.1): the resolved entity/term/
+        relationship graph `resolve` materializes from the consolidated gold + registries +
+        DD seed. Its **own** gold DB (Q4 — two DBs joined on entity-id; the merge into the shipped
+        `index.db` is a later `publish` concern, not S2)."""
+        return self.gold / "knowledge.db"
+
     # --- derived stores (§5.5) ---
     @property
     def state_db(self) -> Path:
@@ -251,6 +259,13 @@ class Settings(BaseSettings):
     def patterns_report(self) -> Path:
         """``discover`` output: candidate patterns (pre-curation); proposes registries (§9.6)."""
         return self.reports / "patterns" / "patterns.json"
+
+    @property
+    def knowledge_proposals(self) -> Path:
+        """``resolve`` output (SKL S2.4, §10): the curator queue of recognized-but-unresolved
+        mentions — propose-only candidates a human triages into the registry seed. Never asserted
+        into ``knowledge.db``; the reproducible proposal→review artifact."""
+        return self.reports / "knowledge" / "proposals.json"
 
     @property
     def validation_report(self) -> Path:

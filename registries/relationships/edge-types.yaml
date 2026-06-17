@@ -1,0 +1,30 @@
+# registries/relationships/edge-types.yaml — the closed starter relationship taxonomy (SKL S2.3, Q3).
+#
+# The SKL relationship graph is **closed by default, extensible by review**: `relate` may only emit
+# an edge whose `rel` is registered here; an unregistered type never reaches `knowledge.db` (Q3).
+# `discover` may *propose* a new type through the §9.6 gate (human-approved into this file) — it is
+# never auto-admitted. This is tenet #13 ("discovery is data, not code") applied to meaning: the
+# taxonomy is curated data, not a hard-coded enum in the stage.
+#
+# Each entry: `rel` (the edge label, stored verbatim in knowledge.db:relationships), `directed`
+# (whether src→dst is meaningful), and a one-line `note`. Surfaces from proposal §5/§13-Q3.
+
+edge_types:
+  - rel: synonym-of
+    directed: false
+    note: two surfaces name the same entity/term (e.g. "NEW PERSON file" ↔ file #200).
+  - rel: miscapitalization-of
+    directed: true
+    note: a mis-cased surface points at its canonical term ("Vista" → "VistA").
+  - rel: documented-in
+    directed: true
+    note: an entity/concept is documented in a corpus document (entity → doc).
+  - rel: reads
+    directed: true
+    note: a routine reads a FileMan file/global (routine → file).
+  - rel: runs-on
+    directed: true
+    note: an option/RPC runs on a package (option → package).
+  - rel: part-of
+    directed: true
+    note: an entity belongs to a package/namespace (belongs-to-package; entity → package).

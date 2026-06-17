@@ -28,6 +28,7 @@ from vdocs.stages.index.stage import IndexStage
 from vdocs.stages.manifest.stage import ManifestStage
 from vdocs.stages.normalize.stage import NormalizeStage
 from vdocs.stages.relate.stage import RelateStage
+from vdocs.stages.resolve.stage import ResolveStage
 from vdocs.stages.serve_inventory.stage import ServeInventoryStage
 from vdocs.stages.validate.stage import ValidateStage
 
@@ -71,6 +72,7 @@ def build_stages() -> list[Stage]:
         ConsolidateStage(),
         IndexStage(),
         RelateStage(),
+        ResolveStage(),
         ManifestStage(),
         ValidateStage(),
     ]
@@ -351,6 +353,13 @@ def index(force: bool = typer.Option(False, "--force", "-f")) -> None:
 def relate(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Materialize the knowledge graph (doc↔entity, entity↔entity, doc↔doc) into relations."""
     _drive(only="relate", force=force)
+
+
+@app.command()
+def resolve(force: bool = typer.Option(False, "--force", "-f")) -> None:
+    """Build the Semantic Knowledge Layer (gold/knowledge.db): resolve the FileMan (DI) gold's
+    entity/term/relationship nodes from the registries + the live-DD seed (SKL S2)."""
+    _drive(only="resolve", force=force)
 
 
 @app.command()

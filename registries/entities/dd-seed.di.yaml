@@ -1,0 +1,100 @@
+# registries/entities/dd-seed.di.yaml — the FileMan (DI) Data Dictionary spine (SKL S2.2, Q6).
+#
+# Authoritative file#→name + global-root mapping, exported READ-ONLY from the live YDB-VistA Data
+# Dictionary (vehu) via the `m` toolchain on 2026-06-17 — never raw `docker exec` (engine-stack
+# guard). The live DD gives un-guessable identity (`file #200 → "NEW PERSON" → ^VA(200,`); the
+# `synonyms` carry the prose names readers actually use (the corpus-mined half of Q6). Each file
+# resolves to the canonical SKL entity id `fileman_file/<number>`.
+#
+# This is DATA (tenet #13): the `resolve` stage reads it; no file identity lives in stage code. It
+# is committed + content-addressable so the pipeline stays deterministic/offline at run time (the
+# live system is the seed source, not a run-time dependency — Q2/Q6). Regenerate via the
+# read-only export in docs/prompts/skl-s2-kickoff.md (option a).
+
+package: DI
+source:
+  system: vehu
+  engine: ydb
+  exported_on: '2026-06-17'
+  method: m vista exec --engine ydb --transport docker --container vehu
+  query: 'W $P($G(^DIC(F,0)),"^",1) / W $G(^DIC(F,0,"GL"))'
+
+files:
+  # The headline cross-package file every FileMan manual references (Kernel-owned, file #200).
+  - number: '200'
+    name: NEW PERSON
+    global: ^VA(200,
+    synonyms: [NEW PERSON file, the 200 file, user file]
+
+  # --- FileMan's own data dictionary files (DI namespace) ---
+  - number: '1'
+    name: FILE
+    global: ^DIC(
+    synonyms: [file of files, dictionary of files]
+  - number: '.11'
+    name: INDEX
+    global: ^DD("IX",
+  - number: '.2'
+    name: DESTINATION
+    global: ^DIC(.2,
+  - number: '.31'
+    name: KEY
+    global: ^DD("KEY",
+  - number: '.4'
+    name: PRINT TEMPLATE
+    global: ^DIPT(
+    synonyms: [print template file]
+  - number: '.401'
+    name: SORT TEMPLATE
+    global: ^DIBT(
+    synonyms: [sort template file]
+  - number: '.402'
+    name: INPUT TEMPLATE
+    global: ^DIE(
+    synonyms: [input template file]
+  - number: '.403'
+    name: FORM
+    global: ^DIST(.403,
+    synonyms: [ScreenMan form]
+  - number: '.5'
+    name: FUNCTION
+    global: ^DD("FUNC",
+  - number: '.6'
+    name: DD AUDIT
+    global: ^DDA(
+  - number: '.7'
+    name: MUMPS OPERATING SYSTEM
+    global: ^DD("OS",
+  - number: '.81'
+    name: DATA TYPE
+    global: ^DI(.81,
+  - number: '.83'
+    name: COMPILED ROUTINE
+    global: ^DI(.83,
+  - number: '.84'
+    name: DIALOG
+    global: ^DI(.84,
+    synonyms: [DIALOG file]
+  - number: '1.1'
+    name: AUDIT
+    global: ^DIA(
+  - number: '1.2'
+    name: ALTERNATE EDITOR
+    global: ^DIST(1.2,
+  - number: '1.521'
+    name: SQLI_SCHEMA
+    global: ^DMSQ("S",
+
+  # --- cross-package files FileMan documentation routinely references ---
+  - number: '2'
+    name: PATIENT
+    global: ^DPT(
+    synonyms: [PATIENT file, the 2 file]
+  - number: '19'
+    name: OPTION
+    global: ^DIC(19,
+    synonyms: [OPTION file]
+  - number: '3.8'
+    name: MAIL GROUP
+    global: ^XMB(3.8,
+    synonyms: [mail group file]

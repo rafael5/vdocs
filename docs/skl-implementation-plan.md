@@ -6,12 +6,15 @@
 > changelog/discoveries/risks log. **Update it as work lands** (TDD → `make check` → update tracker →
 > commit, per step — the house cadence).
 
-> **Status: S0 signed off + S1 fully landed (2026-06-17); S2 is now unblocked.** S0 ratified the model
+> **Status: S0 signed off + S1 fully landed + S2 landed (2026-06-17).** S0 ratified the model
 > and resolved proposal §13 (K1–K7 + Q1–Q6 — see Decisions under S0). S1 (the self-contained casing
 > quick win) is **done end-to-end** — facet schema blessed, casing bug fixed at the source, and S1.4
 > (the `fileman-docs` repo half) landed: `Brand.yml` deleted, generated `Casing.yml` wired in,
-> `make gate` green (`fileman-docs` `f89977d`). **Next: S2** (`resolve` stage + `knowledge.db` for the
-> DI/FileMan gold), per the S0 decisions.
+> `make gate` green (`fileman-docs` `f89977d`). **S2 is done**: the `resolve` stage + `knowledge.db`
+> are built and proven on the real FileMan (DI) gold — the headline holds (`file #200` ↔ `NEW PERSON`
+> ↔ `^VA(200,` → one `fileman_file/200` entity), 21 FileMan files resolved, 111 typed edges, every
+> node provenanced + `asserted`. **Next: S3** (re-point the projections; entity-keyed `index.db`;
+> the search vocab-mismatch payoff), per the S0 decisions.
 
 ## Goal — one outcome
 
@@ -91,7 +94,7 @@ extends the existing termbase projection.
 *TDD: `collides_with_english` and the selective-casing projector are pure functions tested first; the
 `fileman-docs` re-run (S1.4) is the integration proof (a one-repo-per-session handoff).*
 
-### S2 — Formalize the SKL + the `resolve` stage (FileMan) ⬜
+### S2 — Formalize the SKL + the `resolve` stage (FileMan) ✅ (landed 2026-06-17)
 Promote semantic resolution to a named DAG layer producing `knowledge.db` for the `DI` gold (proposal
 §6). Re-centering, not rewrite — elevate `enrich`+`entities`+`relate`. **Kickoff (next session):**
 `docs/prompts/skl-s2-kickoff.md`. **Live-DD verified available** 2026-06-17 (`vehu`/`foia-t12` up; DD
@@ -112,15 +115,24 @@ no raw `docker exec`), and the m-ydb docker transport now runs through a login s
 own `gtmgbldir`/`gtmroutines` load. Seed corpus-first + backfill (options b/c) remains available but is
 no longer necessary for the DD spine.
 
-| ID | Step | Detail | Gate |
-|----|------|--------|------|
-| S2.1 | `knowledge.db` ArtifactContract | Define the gold contract (schema for entity/term/concept/relationship + provenance/lifecycle); decide one-db-vs-join with `index.db` (Q4) | contract + Pydantic boundary types; orchestrator wires it |
-| S2.2 | `resolve` stage — recognize → resolve | Lift `entities_pure` recognition; add synonymy resolution to canonical entity ids (`file #200`/"NEW PERSON"/`^VA(200,` → `fileman_file/200`) | pure-fn tests; resolution table data-driven from registries |
-| S2.3 | `resolve` stage — classify → relate → verify | Fold S1 term classification in; emit typed relationships; mark DD-checkable facts `verified_on` (Q2: live `vehu`/`foia-t12` now or defer) | `knowledge.db` populated for DI gold; relationships typed + provenanced |
-| S2.4 | Seed the catalog (AI-proposed, human-curated) | Candidate entities/synonyms/concepts from registries + AI proposal under the §10 guardrails (propose-only, grounded, adversarial-triaged) | curator-approved seed; every node cites provenance |
+| ID | Step | Detail | Gate | Status |
+|----|------|--------|------|--------|
+| S2.1 | `knowledge.db` ArtifactContract | Gold contract (schema for entity/term/relationship + provenance/lifecycle + verification block); two-DBs-joined (Q4) | contract + Pydantic boundary types; orchestrator wires it | ✅ `models/knowledge.py`, `kernel/knowledge_db.py`, 3 `KNOWLEDGE_*` contracts |
+| S2.2 | `resolve` stage — recognize → resolve | Share `entities_pure`; data-driven synonymy resolution to canonical ids (`file #200`/`NEW PERSON`/`^VA(200,` → `fileman_file/200`) | pure-fn tests; resolution table data-driven from registries + DD seed | ✅ `resolve_pure.resolution_index/resolve`; live-DD seed `dd-seed.di.yaml` |
+| S2.3 | `resolve` stage — classify → relate → verify | Fold S1 term facets; typed edges from the closed `edge-types.yaml` set (reject unregistered); stamp every node `asserted` (Q2) | `knowledge.db` populated for DI gold; edges typed + provenanced | ✅ `classify_terms`/`partition_edges`/`all_asserted`; `documented-in` edges |
+| S2.4 | Seed the catalog (AI-proposed, human-curated) | Curated seed = `dd-seed.di.yaml` + `edge-types.yaml` (status `approved`); unresolved mentions → a propose-only curator queue (§10) | curator-approved seed; every node cites provenance; zero unreviewed assertions | ✅ `build_proposals` → `reports/knowledge/proposals.json` (4954 candidates, none asserted) |
 
-*TDD: each `resolve` sub-transform is a pure function tested before the `stage.py` driver; integration
-test on a seeded gold slice.*
+*TDD: each `resolve` sub-transform is a pure function tested before the `stage.py` driver
+(`tests/unit/stages/test_resolve_pure.py`); the integration test runs the stage on a seeded DI gold
+slice (`tests/integration/stages/test_resolve_stage.py`) and asserts the headline + `knowledge.db`.*
+
+**Stage seam (design):** `resolve` runs after `consolidate`, reads the DI gold bodies + the
+registries (`entities/entities.yaml`, `entities/dd-seed.di.yaml`, `relationships/edge-types.yaml`,
+`inventory/product-names.yaml`, `glossary/english-words.txt`) and produces the three
+`knowledge.db:{entities,terms,relationships}` SQLITE_TABLE contracts at
+`documents/gold/knowledge.db` (its own gold DB, Q4). CLI: `vdocs resolve`. The orchestrator derives
+its order from `requires`/`produces` — no hand-maintained list (the `vdocs-design.md` §8 table is
+frozen/historical; this tracker + the proposal §6 are the live design surface for the SKL).
 
 ### S3 — Re-point the projections ⬜
 Make every downstream artifact a view of the SKL (proposal §6, §8).
@@ -158,7 +170,7 @@ Prove the model holds at thousands of documents / millions of words.
 |---|---|---|
 | S0 | Model ratified; `knowledge.db` contract frozen | ✅ signed off 2026-06-17 (K1–K7 + Q1–Q6) |
 | S1 | Vocabulary classified; casing fixed at source; `fileman-docs` Brand.yml deleted | ✅ done (vdocs + S1.4) |
-| S2 | `resolve` stage + `knowledge.db` for FileMan | ⬜ |
+| S2 | `resolve` stage + `knowledge.db` for FileMan | ✅ landed 2026-06-17 (21 entities, 23 terms, 111 edges, headline proven) |
 | S3 | Termbase/glossary/cross-links/index projected from SKL; search vocab-mismatch fixed | ⬜ |
 | S4 | Semantic-fidelity CI gates + meaning-aware dashboard | ⬜ |
 | S5 | Templatized; proven on Kernel | ⬜ |
@@ -185,6 +197,33 @@ principle) → S2 → S3 (the search payoff) → S4 → S5.
 
 ## Discoveries
 
+- **(S2.2) DD-seam decision: option (a), but cached as committed registry data — not a run-time live
+  call.** The kickoff offered (a) live DD export, (b) hand-off YAML, (c) corpus-first. Taken: **(a)**
+  — the live YDB-VistA DD (`vehu`) was exported read-only via `m vista exec` (the engine-stack-guard
+  seam; the docker→engine binding verified working this session), but the export is **frozen into a
+  committed, content-addressable registry** (`registries/entities/dd-seed.di.yaml`), so the `resolve`
+  stage stays deterministic/offline at run time. The live system is the *seed source*, never a
+  pipeline dependency (honors Q2/Q6 and decouples S2 throughput from shared-lake/live-engine ops).
+  All 21 seeded FileMan files (file#→name→global) came straight from the authoritative DD — zero
+  guessed identities.
+- **(S2.2) Synonymy resolution needs two surface channels, not one.** The generic `entities_pure`
+  recognizer extracts a `fileman_file` *number* (`file #200` → `200`) and a *bare* global (`^VA`),
+  but the headline also needs the **prose name** (`the NEW PERSON file`) and the **full global root**
+  (`^VA(200,`). So `resolve` layers a literal-surface scanner (an alternation over the seed's
+  names/globals/synonyms) on top of the recognizer: numbers resolve via the recognizer's file-context
+  (so a bare "200" never false-matches), names/globals/synonyms via the literal scan. The headline
+  (`file #200` ↔ `NEW PERSON` ↔ `^VA(200,` → one id) needs *both* channels.
+- **(S2.2) Boundary guards must be per-surface, applied only at alphanumeric edges.** A blanket
+  `(?<![A-Za-z0-9])…(?![A-Za-z0-9])` around the surface alternation broke globals: the seed surface
+  `^VA(200,` ends in a comma deliberately followed by subscripts, so a trailing alnum guard rejected
+  `^VA(200,0)`. Fix: add the left guard only when the surface *starts* with an alnum and the right
+  guard only when it *ends* with one (`_bounded`). Longest-first ordering makes the most specific
+  surface win (`NEW PERSON file` over `NEW PERSON`).
+- **(S2.4) Propose-only is enforced structurally, not by discipline.** The DI run recognizes ~5k
+  mentions the seed can't resolve (bare globals like `^DIC`, routines, options). These are written to
+  `reports/knowledge/proposals.json` as `status: proposed` candidates and **never** touch
+  `knowledge.db` — the write path simply has no route from the queue to the store. A human curates
+  them into the registry seed (status `approved`) before they can be asserted (§10 / Q5).
 - **(S1.2) Vale grounds against its *own* embedded dict, not the system Hunspell.** `Vale.Spelling`
   uses `en_US-web.dic` bundled in the binary (`internal/spell/data/`, v3.15.1), **not**
   `/usr/share/hunspell/en_US.dic`. The two differ in ways that matter, so the wordlist is **vendored
@@ -211,6 +250,20 @@ principle) → S2 → S3 (the search payoff) → S4 → S5.
 
 ## Changelog
 
+- 2026-06-17 — **S2 landed — the `resolve` stage + `knowledge.db` are real.** TDD-first: the SKL node
+  boundary types (`models/knowledge.py`: entity/term/relationship with identity + `provenance[]` +
+  lifecycle + a `verification` block), the gold store I/O boundary (`kernel/knowledge_db.py`, schema
+  v1.0, lossless round-trip), three `KNOWLEDGE_*` ArtifactContracts at `documents/gold/knowledge.db`
+  (its own gold DB, Q4), and the `resolve` stage (`stages/resolve/`, pure cores in `resolve_pure.py`,
+  thin `stage.py`, `vdocs resolve`). Recognize **shares** `index.entities_pure` (no fork); resolve is
+  **data-driven** from the live-DD seed `registries/entities/dd-seed.di.yaml` (Q6, option (a) frozen
+  to committed data); classify folds the S1 term facets (`kernel.products` + `kernel.casing_pure`);
+  relate emits only the closed registered edge set (`registries/relationships/edge-types.yaml`, Q3);
+  verify stamps every node `asserted` (Q2). **Proven on the real DI gold:** the headline holds
+  (`file #200` ↔ `NEW PERSON` ↔ `^VA(200,` → one `fileman_file/200`), 21 FileMan files resolved,
+  23 terms classified, 111 `documented-in` edges, 0 rejected edges, 4954 propose-only candidates
+  (none asserted). `make check` green (1035 tests, 97.78% cov). See Discoveries for the DD-seam
+  decision + the two-channel synonymy / boundary-guard gotchas.
 - 2026-06-17 — **S0 signed off — model ratified; S2 unblocked.** Resolved proposal §13: K1–K7
   recommendations adopted (K2: embeddings stay fully parked); Q1–Q6 decided with rationale (see
   Decisions under S0). Headlines: entity seeds = **live DD spine + corpus synonyms** (Q6); `verified_on`

@@ -75,14 +75,17 @@ def termbase_artifacts(registries_dir: Path) -> dict[str, str]:
         products=products,
         corrections=[c for c in corrections if isinstance(c, dict)],
         expansions={str(k): str(v) for k, v in expansions.items()},
-        english_words=_load_english_words(registries_dir),
+        english_words=load_english_words(registries_dir),
     )
 
 
-def _load_english_words(registries_dir: Path) -> frozenset[str]:
+def load_english_words(registries_dir: Path) -> frozenset[str]:
     """The lowercase base words Vale's speller consults (vendored from its ``en_US-web.dic``),
     used to auto-derive ``collides_with_english``. Absent → empty (no casing is enforced, but
-    the artifact stays well-formed — fail-soft like the other optional inputs)."""
+    the artifact stays well-formed — fail-soft like the other optional inputs).
+
+    Public so the SKL ``resolve`` stage (S2.3 classify) shares this one loader (§9.2) instead of
+    re-reading the vendored wordlist."""
     path = registries_dir / "glossary" / "english-words.txt"
     if not path.exists():
         return frozenset()
