@@ -56,6 +56,28 @@ def acronym_phrase_clauses(tokens: list[str], expansions: dict[str, str]) -> lis
     return clauses
 
 
+def skl_expansion_map(entities: list[tuple[str, str]]) -> dict[str, str]:
+    """Build the query-expansion map from SKL entity identity rows `(canonical, canonical_name)` —
+    the S3.3 `entity_skl` projection (`merge`). A distinctive identifier token (a FileMan file
+    *number*) maps to its spelled-out canonical name, so a query that names an entity by its number
+    expands to the precise name phrase the matching doc actually spells (`file #200` → `NEW PERSON`,
+    the vocabulary-mismatch fix, S3.4). Replaces the hand-seeded `registries/glossary/expansions`
+    (L1.3) with SKL-grounded data.
+
+    Guarded so a bare common word never becomes an expansion: the key is kept only when it is a
+    single alphanumeric token of ≥3 chars (`acronym_phrase_clauses` matches one `token.upper()`,
+    and FTS tokenisation splits on `.`, so a decimal file number like `1.2` can never match and is
+    dropped); the value only when it is a ≥2-word phrase (so `1 → FILE` / `19 → OPTION` drop while
+    `200 → NEW PERSON` survives). Keyed upper-case to match the `acronym_phrase_clauses` lookup.
+    """
+    out: dict[str, str] = {}
+    for canonical, name in entities:
+        key = canonical.strip().upper()
+        if len(key) >= 3 and key.isalnum() and len((name or "").split()) >= 2:
+            out[key] = name
+    return out
+
+
 def fts_match_query(text: str, expansions: dict[str, str] | None = None) -> str:
     """A safe FTS5 MATCH string from free text: alnum tokens (length ≥ 2), each double-quoted,
     OR-joined. Returns `""` when no usable token remains (the caller treats that as no results).

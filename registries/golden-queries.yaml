@@ -226,3 +226,16 @@ queries:
       - { section_id: XOBW/xobw1_0sg/using-the-web-server-manager, grade: 2 }
       - { section_id: XOBW/xobw1_0sg/hwsc-availability-checking, grade: 1 }
       - { section_id: XOBW/xobw1_0sg/securing-a-web-service-using-http-basic-authentication, grade: 1 }
+
+  # ── answerable-Q: fileman-dd — the SKL vocabulary-mismatch fix (S3.4) ──────────────────────────
+  # The entity is named by its NUMBER in the query but by its NAME ("NEW PERSON") in the docs that
+  # define it. Lexical-only ranks those name-heavy sections just outside the top-10; the SKL
+  # expansion (200 → "NEW PERSON", from index.db:entity_skl) pulls them in. nDCG@10: 0 → positive.
+  - id: fileman-file-200-new-person
+    query: What is FileMan file 200, the user account file?
+    intent: The NEW PERSON file (#200) — VistA's user/account file — what it is and holds.
+    axis: fileman-dd
+    relevant:
+      - { section_id: DI/fm22_2um2/new-person-file-for-standalone-va-fileman, grade: 3 }
+      - { section_id: XU/krn_8_0_tm/new-person-fileaudit-fields, grade: 2 }
+    notes: A vocabulary-mismatch query (number ↔ name); the precursor the SKL was built for (§8).

@@ -9,32 +9,35 @@ relevance score, and the resolved gold `body_path`. Read-only (opened via `db.co
 
 from __future__ import annotations
 
+import sqlite3
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
-
-import yaml
 
 from vdocs.kernel import db
 from vdocs.server import ids
 from vdocs.server import search_pure as sp
 
-# Repo-relative `registries/` (same default resolution as `config.Settings.registries`, but without
-# requiring a configured lake — the registry is version-controlled repo data, §9.7).
-_GLOSSARY_EXPANSIONS = (
-    Path(__file__).resolve().parents[3] / "registries" / "glossary" / "expansions.yaml"
-)
 
-
-@lru_cache(maxsize=1)
-def default_expansions() -> dict[str, str]:
-    """The acronym → expansion query-expansion map (L1.3), loaded once from the glossary registry;
-    `{}` if absent (expansion is then a no-op). Used by `lexical_search` so the CLI and the
-    measurement harness expand identically."""
-    if not _GLOSSARY_EXPANSIONS.is_file():
+@lru_cache(maxsize=8)
+def skl_expansions(index_db: str) -> dict[str, str]:
+    """The SKL-grounded query-expansion map (S3.4): a FileMan file *number* → its canonical name
+    phrase, read from `index.db:entity_skl` (the `merge` projection). Replaces the hand-seeded
+    `registries/glossary/expansions.yaml` (L1.3) with **entity-resolved** data — one source the CLI
+    and the measurement harness expand identically. `{}` when the SKL table is absent (a pre-`merge`
+    index.db) or empty, so expansion is then a no-op. Cached per index.db path (call `cache_clear()`
+    after a rebuild). `index_db` is a `str` so the result is hashable/cacheable."""
+    path = Path(index_db)
+    if not path.exists():
         return {}
-    data = yaml.safe_load(_GLOSSARY_EXPANSIONS.read_text(encoding="utf-8")) or {}
-    return {str(k): str(v) for k, v in (data.get("expansions") or {}).items()}
+    conn = db.connect(path, read_only=True)
+    try:
+        rows = conn.execute("SELECT canonical, canonical_name FROM entity_skl").fetchall()
+    except sqlite3.OperationalError:
+        return {}  # pre-merge index.db has no entity_skl table
+    finally:
+        conn.close()
+    return sp.skl_expansion_map([(r[0], r[1]) for r in rows])
 
 
 # 0-based column index of `body` in chunks_fts (the snippet() target) — single-sourced from the
@@ -74,10 +77,13 @@ def lexical_search(
     `{score, section_id, doc_key, doc_id, doc_title, section_title, app_code, doc_type, snippet,
     uri, body_path}` (`score` = −bm25, so higher is more relevant).
 
-    `expansions` (acronym → expansion) is an **opt-in** glossary query-expansion map; pass
-    `default_expansions()` to enable it. It is **off by default** because measurement (L1.3, the
-    19-query golden set) showed it *regresses* lexical quality on this corpus — `doc_title`
-    weighting already captures the acronym signal, and expansion only dilutes it."""
+    `expansions` (token → name phrase) is the query-expansion map. **Default (None) → the
+    SKL-grounded `skl_expansions(index_db)`** (S3.4): a number/identifier query expands to the
+    entity's spelled-out name (`file #200` → `NEW PERSON`), the principled vocabulary-mismatch fix.
+    Pass `{}` to disable expansion (the old hand-seeded glossary path that *regressed* — L1.3 — is
+    retired; the SKL data is entity-resolved, not common-word acronym noise)."""
+    if expansions is None:
+        expansions = skl_expansions(str(index_db))
     match = sp.fts_match_query(query, expansions)
     if not match:
         return []

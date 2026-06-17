@@ -134,15 +134,15 @@ registries (`entities/entities.yaml`, `entities/dd-seed.di.yaml`, `relationships
 its order from `requires`/`produces` — no hand-maintained list (the `vdocs-design.md` §8 table is
 frozen/historical; this tracker + the proposal §6 are the live design surface for the SKL).
 
-### S3 — Re-point the projections ⬜
+### S3 — Re-point the projections 🟡 (S3.3 + S3.4 landed 2026-06-17; S3.1/S3.2 next)
 Make every downstream artifact a view of the SKL (proposal §6, §8).
 
-| ID | Step | Detail | Gate |
-|----|------|--------|------|
-| S3.1 | Termbase ← SKL | `build-termbase` reads Term nodes from the SKL instead of raw registries | termbase regenerates identically-or-better; tenet-13 single-source preserved |
-| S3.2 | Glossary + cross-links ← SKL | Generate `gold/glossary.md` and in-corpus cross-links from entities/synonyms/relationships | glossary non-empty + drift-gated; links resolve (lychee/strict-build) |
-| S3.3 | Entity-keyed `index.db` | New post-`resolve` **`merge`** stage augments `index.db` from `knowledge.db` (D-S3.3a/b below) | chunk about file #200 retrievable by `#200`/"NEW PERSON"/`^VA(200,`; non-DI coverage unchanged; read-contract version bumped (additive) |
-| S3.4 | Search wins (the precursor payoff) | Wire SKL synonym data into `fts_match_query` expansion (replaces empty-glossary L1.3) | a DI file#↔name golden query nDCG@10 0 → >0; mean nDCG@10 beats 0.395 baseline; recorded via `baseline_golden.py` |
+| ID | Step | Detail | Gate | Status |
+|----|------|--------|------|--------|
+| S3.1 | Termbase ← SKL | `build-termbase` reads Term nodes from the SKL instead of raw registries | termbase regenerates identically-or-better; tenet-13 single-source preserved | ⬜ |
+| S3.2 | Glossary + cross-links ← SKL | Generate `gold/glossary.md` and in-corpus cross-links from entities/synonyms/relationships | glossary non-empty + drift-gated; links resolve (lychee/strict-build) | ⬜ |
+| S3.3 | Entity-keyed `index.db` | New post-`resolve` **`merge`** stage augments `index.db` from `knowledge.db` (D-S3.3a/b below) | chunk about file #200 retrievable by `#200`/"NEW PERSON"/`^VA(200,`; non-DI coverage unchanged; read-contract version bumped (additive) | ✅ `bcd4bd0` (merge stage; read contract v1.5; real lake: 6 entities reconciled, 56 synonyms, 5786 chunk tags) |
+| S3.4 | Search wins (the precursor payoff) | Wire SKL synonym data into `fts_match_query` expansion (replaces empty-glossary L1.3) | a DI file#↔name golden query nDCG@10 0 → >0; mean nDCG@10 beats the lexical-only baseline; recorded via `baseline_golden.py` | ✅ DI query **0.131 → 0.406** (recall 0.5→1.0); mean (19-query, main lake) **0.313 → 0.328**; the delta is *only* that query (no regression) |
 
 #### Decisions (S3.3 design, 2026-06-17) — frictions #1/#2 resolved (Rafael)
 
@@ -234,7 +234,7 @@ Prove the model holds at thousands of documents / millions of words.
 | S0 | Model ratified; `knowledge.db` contract frozen | ✅ signed off 2026-06-17 (K1–K7 + Q1–Q6) |
 | S1 | Vocabulary classified; casing fixed at source; `fileman-docs` Brand.yml deleted | ✅ done (vdocs + S1.4) |
 | S2 | `resolve` stage + `knowledge.db` for FileMan | ✅ landed 2026-06-17 (21 entities, 23 terms, 111 edges, headline proven) |
-| S3 | Termbase/glossary/cross-links/index projected from SKL; search vocab-mismatch fixed | ⬜ |
+| S3 | Termbase/glossary/cross-links/index projected from SKL; search vocab-mismatch fixed | 🟡 S3.3+S3.4 done (entity-keyed index.db + the search payoff); S3.1/S3.2 next |
 | S4 | Semantic-fidelity CI gates + meaning-aware dashboard | ⬜ |
 | S5 | Templatized; proven on Kernel | ⬜ |
 
@@ -260,6 +260,32 @@ principle) → S2 → S3 (the search payoff) → S4 → S5.
 
 ## Discoveries
 
+- **(S3.3) D-S3.3b realized as merge-OWNED tables, not a column on `entities`.** The decision said
+  "an `skl_node_id` column on `entities`", but the live `relate` precedent (a post-`index` stage that
+  adds its OWN table via `replace_table_atomic` and *never* rewrites index's tables) is cleaner and
+  more faithful to "additive": `merge` writes `entity_skl`/`entity_synonyms`/`chunk_entities` and
+  leaves `entities` untouched. Same join power, zero risk to the existing `entities`/`v_entities`
+  contract. `index` owns the empty shells + views so `meta.read_schema_version` is consistent even on
+  an index-only run — and `index` takes **no** `knowledge.db` dependency (D-S3.3a preserved).
+- **(S3.3) Only 6 of 21 SKL entities reconcile into `index.db` today.** `index`'s recognizer only
+  emits a `fileman_file:<n>` when "file #<n>"-style context appears in gold; the SKL also seeds files
+  the corpus names only by prose (e.g. `.11 INDEX`, `.402 INPUT TEMPLATE`). The merge augments where
+  *both* DBs agree and no-ops otherwise (friction #3), so this is expected, not a bug — widening
+  index recognition (or reconciling by name) is a later refinement, not S3.
+- **(S3.4) The expansion is a *precision* lever that touches only number-vocabulary queries.** SKL
+  expansion fires solely when a query token is a live file number (`200`). Natural-language queries
+  almost never contain one, so it is a **no-op on the rest of the golden set** — the OFF→ON mean
+  delta (0.313→0.328) is *entirely* the one DI query (0.131→0.406); nothing else moves. This is the
+  opposite of the L1.3 hand-seeded glossary, which expanded acronyms to common words and regressed
+  broadly. Decimal file numbers (`1.2`, `3.8`) are dropped from the map — FTS splits tokens on `.`,
+  so they could never match (a dead, confusing entry otherwise).
+- **(S3.4) The "0.395 baseline" is stale and not directly comparable — suspect the metric.** The
+  recorded 0.3947 (`reports/baseline-phase0.json`) is the **dev lake** with the **5-query** starter
+  set; the golden set was later grown to **19** (`925aefd`) without re-baselining. The valid,
+  controlled measure is OFF vs ON on the *same* lake + set: lexical-only **0.313**, SKL expansion
+  **0.328** (evidence: `reports/search-skl-s3.4-{off,on}.{md,json}` on `~/data/vdocs`). The gate is
+  met on its own terms (the vocab-mismatch query lands, mean improves, no regression); the cross-set
+  0.395 figure is recorded here as background, not as the comparison.
 - **(S2.2) DD-seam decision: option (a), but cached as committed registry data — not a run-time live
   call.** The kickoff offered (a) live DD export, (b) hand-off YAML, (c) corpus-first. Taken: **(a)**
   — the live YDB-VistA DD (`vehu`) was exported read-only via `m vista exec` (the engine-stack-guard
@@ -313,6 +339,21 @@ principle) → S2 → S3 (the search payoff) → S4 → S5.
 
 ## Changelog
 
+- 2026-06-17 — **S3.3 + S3.4 landed — the SKL is folded into `index.db` and the search
+  vocabulary-mismatch payoff is cashed.** S3.3 (`bcd4bd0`): a new post-`resolve` **`merge`** stage
+  (D-S3.3a) augments `index.db` from `knowledge.db` **additively** (D-S3.3b) — `entity_skl` (the
+  colon↔slash reconciliation on `(type, canonical)`), `entity_synonyms` (the surface catalog), and
+  `chunk_entities` (chunk→entity tags), each written via `replace_table_atomic` (the `relate`
+  pattern; index's own tables untouched). `index` owns the empty shells + the `v_*` views (read
+  contract → **v1.5**, additive; `index` `contract_ver` 11→12) so the version is consistent before
+  `merge` runs — `index` gains no `knowledge.db` dependency. On the real DI lake: **6 entities
+  reconciled, 56 synonyms, 5786 chunk tags**. S3.4: `server/search` now derives query expansion from
+  the SKL (`skl_expansions` ← `entity_skl`, on by default; the hand-seeded `glossary/expansions.yaml`
+  path retired), so `200 → "NEW PERSON"`. Added a DI file#↔name golden query; on the 19-query set +
+  main lake it goes **nDCG@10 0.131 → 0.406** (recall 0.5→1.0) and lifts the **mean 0.313 → 0.328** —
+  deterministic, offline, zero-ML. See Discoveries for the additive-tables refinement, the
+  distinctive-surface safety, and the baseline-provenance honesty note. `make check` green (1049
+  tests, 97.76%).
 - 2026-06-17 — **S2 landed — the `resolve` stage + `knowledge.db` are real.** TDD-first: the SKL node
   boundary types (`models/knowledge.py`: entity/term/relationship with identity + `provenance[]` +
   lifecycle + a `verification` block), the gold store I/O boundary (`kernel/knowledge_db.py`, schema

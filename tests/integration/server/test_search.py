@@ -73,17 +73,54 @@ def test_lexical_search_empty_query_returns_nothing(tmp_path):
     assert search.lexical_search(index_db, "   ?  ", k=5) == []
 
 
-def test_default_expansions_loads_the_glossary_registry():
-    # the promoted acronym→expansion map (registries/glossary/expansions.yaml); opt-in for callers.
-    exp = search.default_expansions()
-    assert exp.get("HWSC", "").lower().startswith("healthevet")
+def _seed_entity_skl(index_db, rows):
+    """Add the merge-owned entity_skl table (canonical, canonical_name) skl_expansions reads."""
+    conn = db.connect(index_db)
+    conn.execute(
+        "CREATE TABLE entity_skl (entity_id TEXT PRIMARY KEY, node_id TEXT, "
+        "type TEXT, canonical TEXT, canonical_name TEXT)"
+    )
+    conn.executemany("INSERT INTO entity_skl VALUES (?, ?, ?, ?, ?)", rows)
+    conn.commit()
+    conn.close()
 
 
-def test_lexical_search_accepts_opt_in_expansions(tmp_path):
-    # expansion is off by default (it regresses — L1.3); the opt-in param path still returns hits.
+def test_skl_expansions_reads_entity_skl_and_is_empty_when_absent(tmp_path):
     index_db = tmp_path / "index.db"
     _build(index_db)
-    hits = search.lexical_search(
-        index_db, "KAAJEE", k=5, expansions={"KAAJEE": "Kernel Authentication and Authorization"}
+    # no entity_skl table yet → no-op (back-compat with a pre-merge index.db)
+    assert search.skl_expansions(str(index_db)) == {}
+    _seed_entity_skl(
+        index_db,
+        [("fileman_file:200", "fileman_file/200", "fileman_file", "200", "NEW PERSON")],
     )
-    assert hits and any(h["doc_key"] == "KAAJEE/dibr" for h in hits)
+    search.skl_expansions.cache_clear()
+    assert search.skl_expansions(str(index_db)) == {"200": "NEW PERSON"}
+
+
+def test_lexical_search_uses_skl_expansion_by_default(tmp_path):
+    # a query naming the file by its NUMBER finds the chunk that only spells the NAME (S3.4 fix):
+    # the SKL expands "200" → the phrase "new person".
+    index_db = tmp_path / "index.db"
+    _build(index_db)
+    conn = db.connect(index_db)
+    conn.execute(
+        "INSERT INTO chunks_fts (chunk_id, section_id, doc_key, title, doc_title, section_path, "
+        "body) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        ("DI/fm/np", "DI/fm/np", "KAAJEE/dibr", "Users", "FileMan", "DI",
+         "The NEW PERSON file holds every user account."),
+    )  # fmt: skip
+    conn.commit()
+    conn.close()
+    _seed_entity_skl(
+        index_db,
+        [("fileman_file:200", "fileman_file/200", "fileman_file", "200", "NEW PERSON")],
+    )
+    search.skl_expansions.cache_clear()
+    # the bare number names the entity but appears nowhere in the name-only chunk:
+    # without expansion (opt out) it never reaches it
+    off = search.lexical_search(index_db, "200", k=5, expansions={})
+    assert not any(h["section_id"] == "DI/fm/np" for h in off)
+    # default (None) → SKL expansion on → "200" expands to "new person" → the chunk is retrievable
+    on = search.lexical_search(index_db, "200", k=5)
+    assert any(h["section_id"] == "DI/fm/np" for h in on)

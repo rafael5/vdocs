@@ -116,10 +116,16 @@ def _section_texts(index_db: Path, section_ids: list[str]) -> dict[str, str]:
     return out
 
 
-def evaluate(data_dir: Path, queries_path: Path, k_override: int | None) -> dict[str, Any]:
+def evaluate(
+    data_dir: Path, queries_path: Path, k_override: int | None, *, expand: bool = True
+) -> dict[str, Any]:
     index_db = data_dir / "index.db"
     spec = yaml.safe_load(queries_path.read_text(encoding="utf-8"))
     k = k_override or int(spec.get("k", 10))
+    # expand=True (default) → SKL-grounded query expansion (S3.4, the merge `entity_skl` table);
+    # expand=False → {} disables it (the pre-S3.4 lexical-only baseline, for an apples-to-apples
+    # comparison on the same lake).
+    expansions = None if expand else {}
 
     per_query: list[dict[str, Any]] = []
     ndcgs: list[float] = []
@@ -127,7 +133,7 @@ def evaluate(data_dir: Path, queries_path: Path, k_override: int | None) -> dict
     recalls: list[float] = []
     for q in spec["queries"]:
         judged = {r["section_id"]: int(r["grade"]) for r in (q.get("relevant") or [])}
-        raw_hits = lexical_search(index_db, q["query"], k=max(k, 10))
+        raw_hits = lexical_search(index_db, q["query"], k=max(k, 10), expansions=expansions)
         # redundancy is measured over the RAW top-k chunk hits (their text); nDCG/MRR/recall over
         # the unique-section reduction.
         texts = _section_texts(index_db, [h["section_id"] for h in raw_hits[:k]])
@@ -213,10 +219,15 @@ def main() -> None:
     ap.add_argument("--queries", default="registries/golden-queries.yaml")
     ap.add_argument("--k", type=int, default=None)
     ap.add_argument("--out", default="reports/baseline-phase0.md")
+    ap.add_argument(
+        "--no-expand",
+        action="store_true",
+        help="disable SKL query expansion (the pre-S3.4 lexical-only baseline)",
+    )
     args = ap.parse_args()
 
     data_dir = Path(args.data_dir).expanduser()
-    result = evaluate(data_dir, Path(args.queries), args.k)
+    result = evaluate(data_dir, Path(args.queries), args.k, expand=not args.no_expand)
 
     out_md = Path(args.out)
     out_md.parent.mkdir(parents=True, exist_ok=True)
