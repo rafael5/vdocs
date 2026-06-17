@@ -6,10 +6,11 @@
 > changelog/discoveries/risks log. **Update it as work lands** (TDD → `make check` → update tracker →
 > commit, per step — the house cadence).
 
-> **Status: S1 landed (2026-06-17); S2+ pending proposal sign-off (proposal §13 open questions, esp.
-> K2/Q6).** Do not begin S2+ until S0 ratifies the schema. S1 (the self-contained casing quick win)
-> is **done** — facet schema blessed, casing bug fixed at the source. S1.4 (the `fileman-docs` repo
-> half) is handed off to a separate session (see `docs/prompts/skl-s1.4-fileman-docs-kickoff.md`).
+> **Status: S1 fully landed (2026-06-17, both halves); S2+ pending proposal sign-off (proposal §13
+> open questions, esp. K2/Q6).** Do not begin S2+ until S0 ratifies the schema. S1 (the self-contained
+> casing quick win) is **done end-to-end** — facet schema blessed, casing bug fixed at the source, and
+> S1.4 (the `fileman-docs` repo half) landed: `Brand.yml` deleted, generated `Casing.yml` wired in,
+> `make gate` green (`fileman-docs` `f89977d`).
 
 ## Goal — one outcome
 
@@ -56,7 +57,7 @@ Settle the proposal §13 decision table and open questions; freeze the SKL node 
 | S0.2 | Resolve K2 / Q6 | Confirm "symbolic honors the embedding reset" framing (K2); decide entity seed source — live DD/KIDS vs corpus-mined vs both (Q6) | decisions recorded with rationale |
 | S0.3 | Fix the relationship taxonomy | Closed starter edge set (`reads`/`runs-on`/`documented-in`/`synonym-of`/`miscapitalization-of`/…) vs `discover`-proposed (Q3) | edge-type registry shape agreed |
 
-### S1 — Classify the vocabulary; fix the casing bug at the source 🟡 (vdocs half ✅; S1.4 handoff)
+### S1 — Classify the vocabulary; fix the casing bug at the source ✅ (vdocs + fileman-docs both done)
 Self-contained quick win (proposal §12 S1) — the smallest proof that "everything is a projection"
 works, and the deletion of the `fileman-docs` workaround. Does **not** require `knowledge.db` yet; it
 extends the existing termbase projection.
@@ -66,7 +67,7 @@ extends the existing termbase projection.
 | S1.1 | Add Term classification facets | Extend the product registry with `class` / `canonical_casing` / `enforce_case` / `expand_on_first_use` (proposal §5); validate on load (fail-loud on wrong type) | facets present + schema-validated; TDD on the loader | ✅ `kernel/products.py` |
 | S1.2 | Auto-derive `collides_with_english` | Pure transform: a term collides iff lowercase ∈ the dict **Vale's own speller consults** AND it is not brand-cased (internal-capital). Vendored wordlist from Vale `en_US-web.dic` (proposal §7) | pure-fn unit-tested incl. CAN/SITE/AN/OR/IS + Title-case (Site/Host/Map) + brands; no human collision-guessing | ✅ `kernel/casing_pure.py` |
 | S1.3 | `build-termbase` emits selective casing | Project casing enforcement **only** for `enforce_case && !collides_with_english` single-token terms (new `Casing.yml` Vale style); accept.txt still whitelists all spellings | regenerated Vale style enforces brand casing, ignores colliding acronyms — **624 terms enforced**; E2E Vale proof: Vista→VistA bites, ordinary "can/or/site" untouched | ✅ `kernel/termbase.py` |
-| S1.4 | Retire the `fileman-docs` workaround | Re-run `build-termbase --out-dir` into `fileman-docs`; **delete `.vale/VistA/Brand.yml` + `Vale.Terms = NO`**; `make gate` stays green; the `Vista→VistA` break-test still bites | fileman-docs gate green with zero hand-maintained vocab; casing coverage ≫ 6 terms | ⬜ **handed off** → `docs/prompts/skl-s1.4-fileman-docs-kickoff.md` |
+| S1.4 | Retire the `fileman-docs` workaround | Re-run `build-termbase --out-dir` into `fileman-docs`; **delete `.vale/VistA/Brand.yml`**, wire `Casing.yml` into `make termbase`; `make gate` stays green; the `Vista→VistA` break-test still bites | fileman-docs gate green with zero hand-maintained vocab; casing coverage ≫ 6 terms | ✅ `fileman-docs` `f89977d` (2026-06-17): Brand.yml gone; Casing.yml = 624 terms; gate green 7/7; Vista→VistA + Fileman→FileMan bite, common-word prose clean. `Vale.Terms = NO` **kept** — empirically, accept.txt's English-colliding acronyms (CAN/SITE/OR) make Vale.Terms-ON force-cap prose; Casing.yml is the precise enforcer |
 
 *TDD: `collides_with_english` and the selective-casing projector are pure functions tested first; the
 `fileman-docs` re-run (S1.4) is the integration proof (a one-repo-per-session handoff).*
@@ -120,7 +121,7 @@ Prove the model holds at thousands of documents / millions of words.
 | Phase | Outcome | Status |
 |---|---|---|
 | S0 | Model ratified; `knowledge.db` contract frozen | ⬜ |
-| S1 | Vocabulary classified; casing fixed at source; `fileman-docs` Brand.yml deleted | 🟡 vdocs ✅ / S1.4 handoff |
+| S1 | Vocabulary classified; casing fixed at source; `fileman-docs` Brand.yml deleted | ✅ done (vdocs + S1.4) |
 | S2 | `resolve` stage + `knowledge.db` for FileMan | ⬜ |
 | S3 | Termbase/glossary/cross-links/index projected from SKL; search vocab-mismatch fixed | ⬜ |
 | S4 | Semantic-fidelity CI gates + meaning-aware dashboard | ⬜ |
@@ -174,6 +175,14 @@ principle) → S2 → S3 (the search payoff) → S4 → S5.
 
 ## Changelog
 
+- 2026-06-17 — **S1.4 landed — S1 done end-to-end.** `fileman-docs` `f89977d`: deleted the
+  hand-maintained `.vale/VistA/Brand.yml`, wired the generated `Casing.yml` (624 case-safe terms) into
+  `make termbase`, refreshed the four artifacts. `make gate` green (7/7). Invariants proven via Vale:
+  `Vista→VistA` + `Fileman→FileMan` still bite, common-word prose ("can run it on or off site; it is an
+  option") = zero casing errors, coverage spans `PIMS`/`CPRS`/`KIDS`, `Mumps→MUMPS` deliberately not
+  enforced. `Vale.Terms = NO` **kept** (justified empirically — accept.txt's English-colliding acronyms
+  force-cap prose when Vale.Terms is on; `Casing.yml` is the precise enforcer). Zero hand-maintained
+  vocab remains in `fileman-docs`.
 - 2026-06-17 — **S1 (vdocs half) landed.** TDD-first: `kernel/casing_pure.py`
   (`collides_with_english` + `selective_casing_swap`, pure, 100% cov), Term-classification facets +
   fail-loud validation in `kernel/products.py`, new `Casing.yml` projection in `kernel/termbase.py`,
