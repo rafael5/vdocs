@@ -426,6 +426,6 @@ the search plan) before the corpus-wide work.
   generated substrate.
 
 > This proposal is the *what/why* of the pivot. The *how/status* tracker is
-> [`semantic-knowledge-layer-implementation-plan.md`](semantic-knowledge-layer-implementation-plan.md)
+> [`skl-implementation-plan.md`](skl-implementation-plan.md)
 > (S0–S5 steps/gates, mirroring the lexical-search plan/tracker split) — **not started, pending
 > sign-off of §13**. The affected `ArtifactContract`s + stage docs update in the same commits as the code.

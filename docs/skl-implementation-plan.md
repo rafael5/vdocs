@@ -1,6 +1,6 @@
 # Semantic Knowledge Layer — Implementation Plan & Tracker
 
-> **The *what/why* lives in** [`semantic-knowledge-layer-proposal.md`](semantic-knowledge-layer-proposal.md)
+> **The *what/why* lives in** [`skl-proposal.md`](skl-proposal.md)
 > (the pivot, the data model, the reconciliation with the 2026-06-08 reset, the decision table). This
 > document is the *how/status* tracker: detailed S0–S5 steps, per-phase gates, and a per-phase
 > changelog/discoveries/risks log. **Update it as work lands** (TDD → `make check` → update tracker →
