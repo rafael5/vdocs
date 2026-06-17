@@ -251,6 +251,36 @@ KNOWLEDGE_RELATIONSHIPS = ArtifactContract(
     db="documents/gold/knowledge.db",
     table="relationships",
 )
+# --- the SKL merge into index.db (SKL S3.3, proposal §6/§8) ---
+# `merge` is the post-`resolve` join (D-S3.3a): it augments index.db from knowledge.db ADDITIVELY
+# (D-S3.3b) — reconciling the colon (index) ↔ slash (SKL) entity ids on (type, canonical), the
+# synonym catalog, and chunk→entity tags. It populates the EMPTY shells `index` owns (so the read
+# version is consistent before merge runs), via `kernel.db.replace_table_atomic` — index's own
+# tables are never touched. Non-SKL coverage is unchanged (friction #3).
+MERGE_ENTITY_SKL = ArtifactContract(
+    key="index.db:entity_skl",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="merge",
+    db="index.db",
+    table="entity_skl",
+)
+MERGE_ENTITY_SYNONYMS = ArtifactContract(
+    key="index.db:entity_synonyms",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="merge",
+    db="index.db",
+    table="entity_synonyms",
+)
+MERGE_CHUNK_ENTITIES = ArtifactContract(
+    key="index.db:chunk_entities",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="merge",
+    db="index.db",
+    table="chunk_entities",
+)
 # `manifest`: the agent front door — corpus schema/counts/ID-scheme/capabilities (§14.4).
 # Lexical-first/offline: the capability manifest advertises lexical/structured/graph only.
 CORPUS_MANIFEST = ArtifactContract(
@@ -330,6 +360,9 @@ def default_registry() -> ArtifactRegistry:
         KNOWLEDGE_ENTITIES,
         KNOWLEDGE_TERMS,
         KNOWLEDGE_RELATIONSHIPS,
+        MERGE_ENTITY_SKL,
+        MERGE_ENTITY_SYNONYMS,
+        MERGE_CHUNK_ENTITIES,
         CORPUS_MANIFEST,
         DISCOVERY_JSON,
         AI_MANIFEST,

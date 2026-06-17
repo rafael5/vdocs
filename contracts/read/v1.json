@@ -1,5 +1,5 @@
 {
-  "read_schema_version": "1.4",
+  "read_schema_version": "1.5",
   "description": "Published read contract for vdocs index.db (ADR-0001). Consumers (vdocs-tui, vdocs-web, MCP) bind ONLY to the v_* views + the named chunks_fts surface — never to physical tables. The pipeline may refactor physical tables freely behind these. Views are GENERATED from this spec (kernel.read_contract.view_ddl), so they cannot drift from it; `vdocs doctor` asserts the emitted DB matches.",
   "views": {
     "v_documents": {
@@ -327,6 +327,74 @@
           "desc": "human definition (for the explainer)"
         }
       }
+    },
+    "v_entity_skl": {
+      "source": "entity_skl",
+      "description": "SKL reconciliation map (S3.3): index entity_id (type:canonical) ↔ the Semantic Knowledge Layer node_id (type/canonical), with the SKL canonical identity. Present only for entities resolved in knowledge.db; empty where the SKL has no coverage.",
+      "columns": {
+        "entity_id": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "index entity id (type:canonical) — joins v_entities (PRIMARY)"
+        },
+        "node_id": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "SKL node id (type/canonical)"
+        },
+        "type": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "entity type (e.g. fileman_file)"
+        },
+        "canonical": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "SKL canonical key (e.g. 200)"
+        },
+        "canonical_name": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "SKL human name (e.g. NEW PERSON)"
+        }
+      }
+    },
+    "v_entity_synonyms": {
+      "source": "entity_synonyms",
+      "description": "SKL synonym catalog (S3.3): every surface (canonical name + synonyms) of each resolved entity — the vocabulary a reader/query may use for it.",
+      "columns": {
+        "node_id": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "SKL node id the surface names"
+        },
+        "surface": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "a surface form (name / global / alias)"
+        },
+        "kind": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "canonical_name | synonym"
+        }
+      }
+    },
+    "v_chunk_entities": {
+      "source": "chunk_entities",
+      "description": "SKL chunk tags (S3.3): a chunk is linked to an entity when one of the entity's distinctive surfaces occurs in it — entity-keyed retrieval (a chunk about file #200 is reachable via the entity regardless of which surface it spells).",
+      "columns": {
+        "chunk_id": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "chunk the entity is mentioned in — joins v_chunks"
+        },
+        "node_id": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "SKL node id tagged on the chunk"
+        }
+      }
     }
   },
   "fts": {
@@ -371,6 +439,7 @@
     "entity_mentions",
     "persona_facets",
     "product_facets",
-    "vocab_table"
+    "vocab_table",
+    "skl_entity_keying"
   ]
 }

@@ -141,8 +141,71 @@ Make every downstream artifact a view of the SKL (proposal §6, §8).
 |----|------|--------|------|
 | S3.1 | Termbase ← SKL | `build-termbase` reads Term nodes from the SKL instead of raw registries | termbase regenerates identically-or-better; tenet-13 single-source preserved |
 | S3.2 | Glossary + cross-links ← SKL | Generate `gold/glossary.md` and in-corpus cross-links from entities/synonyms/relationships | glossary non-empty + drift-gated; links resolve (lychee/strict-build) |
-| S3.3 | Entity-keyed `index.db` | `index` tags chunks with resolved entity ids + synonym-expansion data from the SKL | chunk about file #200 retrievable by `#200`/"NEW PERSON"/`^VA(200,` |
-| S3.4 | Search wins (the precursor payoff) | Wire SKL synonym data into `fts_match_query` expansion (replaces empty-glossary L1.3) | KAAJEE nDCG@10 > 0; mean nDCG@10 beats 0.395 baseline; recorded via `baseline_golden.py` |
+| S3.3 | Entity-keyed `index.db` | New post-`resolve` **`merge`** stage augments `index.db` from `knowledge.db` (D-S3.3a/b below) | chunk about file #200 retrievable by `#200`/"NEW PERSON"/`^VA(200,`; non-DI coverage unchanged; read-contract version bumped (additive) |
+| S3.4 | Search wins (the precursor payoff) | Wire SKL synonym data into `fts_match_query` expansion (replaces empty-glossary L1.3) | a DI file#↔name golden query nDCG@10 0 → >0; mean nDCG@10 beats 0.395 baseline; recorded via `baseline_golden.py` |
+
+#### Decisions (S3.3 design, 2026-06-17) — frictions #1/#2 resolved (Rafael)
+
+The two S3.3 decisions that shape everything downstream (kickoff §"real technical frictions"). Surfaced
+from the live code, decided with Rafael before building.
+
+**D-S3.3a — Merge placement = a new post-`resolve` `merge` stage (friction #2, option a).** A thin new
+stage `merge` `requires [INDEX_*, KNOWLEDGE_*]` and runs after both — the orchestrator topo becomes
+`consolidate → {index, resolve} → merge` (Kahn ties break by name; `merge` is forced last by its
+requires). It **augments** `index.db` from `knowledge.db`; `index` stays a **generic whole-corpus
+builder with zero SKL knowledge**. CLI: `vdocs merge`. *Rejected option (b)* (make `index` require
+`knowledge.db`) because it couples the corpus-wide builder to the **DI-only** `resolve` — every index
+run would wait on resolve, any SKL edit would invalidate the whole corpus index, and DI-specificity
+would leak into the generic stage (against tenet #13). The new stage is independently re-runnable and is
+the natural home for the Q4 fold (and later the publish-into-one-file step).
+
+**D-S3.3b — Entity-id reconciliation = additive, keep the colon ids (friction #1, option B).** `index.db`
+keeps its colon `entity_id` (`type:canonical`, e.g. `fileman_file:200`) **untouched**; the read-contract
+bump is **additive** (no breaking change for vdocs-tui / vdocs-web). The `merge` stage writes — **only
+where SKL data exists** — (i) an `skl_node_id` column on `entities` (slash `type/canonical`, NULL for
+non-DI/unresolved rows), (ii) a generated **synonym/expansion** table, and (iii) **chunk→entity tags**.
+The Q4 join is via `skl_node_id`. *Rejected option (a)* (normalize index.db to slash corpus-wide)
+because it is a **breaking** contract change that churns the id on the thousands of non-DI rows the SKL
+never touches, forces a coordinated two-consumer release, and still doesn't deliver the search win on its
+own (the win is the synonym table + chunk tags, which both options need). Additive keeps non-DI coverage
+**literally unchanged** (friction #3) and is reversible.
+
+> **Note (lowers the stakes on D-S3.3b):** the S3.4 search payoff is delivered by the **chunk→entity
+> tags + synonym/expansion table**, *not* by the id-separator choice. Id reconciliation only ensures a
+> chunk tag points at a stable entity row. There is also a **set mismatch** the merge must bridge
+> regardless of separator: `index` recognizes `fileman_file:200` and a *separate* bare `global:^VA`,
+> whereas the SKL folds the number, the name "NEW PERSON", and `^VA(200,` into one `fileman_file/200`
+> node (others as synonyms) — so the merge links index's per-surface mentions to the SKL's per-entity
+> node, then tags the chunks.
+
+**Deferred to S3.1 (friction #4, termbase superset):** whether `classify` emits a Term node for *every*
+registry term (SKL becomes the term superset) vs. the termbase projection unions SKL + registry — decided
+at S3.1 build time (build order is S3.3 → S3.4 first, then S3.1 → S3.2).
+
+**Build shape (S3.3 — refinements found while reading the live code/data).** The `merge` stage mirrors
+`relate` (a post-`index` stage that augments `index.db` via `kernel.db.replace_table_atomic`, never
+rebuilding it). It materializes three **merge-owned, consumer-facing** tables, reconciling on
+`(type, canonical)` since index keys `fileman_file:200` and the SKL keys `fileman_file/200`:
+- `entity_skl(entity_id PK, node_id, type, canonical, canonical_name)` — the colon↔slash join map +
+  SKL identity, only for entities present in **both** DBs (view `v_entity_skl`).
+- `entity_synonyms(node_id, surface, kind)` — every surface (canonical_name + synonyms) per SKL entity
+  (view `v_entity_synonyms`).
+- `chunk_entities(chunk_id, node_id)` — chunk→entity tags (view `v_chunk_entities`).
+
+To keep `meta.read_schema_version` consistent and the views always present (no drift if a run stops
+before `merge`), **`index` owns the empty table shells + the new views** (it is the `index.db` schema
+owner); `merge` only *populates* them. This preserves D-S3.3a's decoupling — `index` gains **no**
+dependency on `knowledge.db` and is **not** reordered after `resolve`; the shells are inert DDL.
+Read contract → **v1.5** (additive: three new views + a `skl_entity_keying` capability); `index`
+`contract_ver` bumps.
+
+**Distinctive-surface safety (found in the real SKL):** common-word canonical names exist
+(`fileman_file/1` = "FILE", `/19` = "OPTION", `/2` = "PATIENT"). Tagging/expanding on a bare common
+word would be catastrophic noise. So both chunk-tagging and the S3.4 expansion use **distinctive
+surfaces only** — file numbers (≥3 chars), globals (`^…`), and multi-word names — never a bare
+single common word. The S3.4 expansion (`number → canonical_name` phrase) is naturally guarded twice:
+`fts_match_query` already skips query tokens `<3` chars and expansion phrases of `<2` words, so
+`1→"FILE"` is dropped while `200→"NEW PERSON"` survives.
 
 ### S4 — Semantic-fidelity gates ⬜
 Turn the proposal §7 invariants into CI gates on the FileMan corpus.

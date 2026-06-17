@@ -105,6 +105,22 @@ CREATE TABLE vocab (
   kind TEXT NOT NULL, code TEXT NOT NULL, label TEXT, description TEXT,
   PRIMARY KEY (kind, code)
 );
+-- SKL entity-keying shells (S3.3, read contract v1.5). `index` owns these EMPTY shells + the v_*
+-- views over them (the index.db schema owner) so the read-schema version is consistent even before
+-- the post-resolve `merge` stage populates them; `merge` fills them via replace_table_atomic. This
+-- keeps `index` free of any knowledge.db dependency (D-S3.3a) — they are inert scaffolding here.
+CREATE TABLE entity_skl (
+  entity_id TEXT PRIMARY KEY, node_id TEXT NOT NULL,
+  type TEXT, canonical TEXT, canonical_name TEXT
+);
+CREATE TABLE entity_synonyms (
+  node_id TEXT NOT NULL, surface TEXT NOT NULL, kind TEXT NOT NULL,
+  PRIMARY KEY (node_id, surface)
+);
+CREATE TABLE chunk_entities (
+  chunk_id TEXT NOT NULL, node_id TEXT NOT NULL,
+  PRIMARY KEY (chunk_id, node_id)
+);
 """
 
 _DOC_COLUMNS = (
@@ -143,7 +159,10 @@ class IndexStage(Stage):
     # this doc resolves to) so a consumer can locate the doc's gold sidecars — e.g. the rich-reading
     # tables/*.csv — without reverse-engineering doc_key; read contract → v1.4 (additive MINOR).
     # The bump folds into consumers' inputs_fp so a re-run rebuilds.
-    contract_ver = 11
+    # v12 (SKL entity-keying, S3.3): index.db gained three EMPTY shells (entity_skl,
+    # entity_synonyms, chunk_entities) + their v_* views — the schema owner stamps them so the read
+    # version is consistent before `merge` populates them; read contract → v1.5 (additive MINOR).
+    contract_ver = 12
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg

@@ -6,6 +6,29 @@ Semver for the **read** contract (`read_schema_version`), the consumer-facing in
 replacement additively, keep the old as an alias for one release, then remove + MAJOR bump. See
 [ADR-0001](../../docs/adr/0001-read-contract-and-drift-prevention.md).
 
+## v1.5 — 2026-06-17
+
+Additive (backward-compatible) — SKL entity-keying (skl-implementation-plan S3.3). `merge` folds the
+Semantic Knowledge Layer (`knowledge.db`) into the shipped `index.db`; `index` owns the (empty) table
+shells + these views so the version is consistent even before `merge` runs:
+
+- **`v_entity_skl`** — the reconciliation map between the two entity-id schemes: index `entity_id`
+  (`type:canonical`) ↔ SKL `node_id` (`type/canonical`), with the SKL canonical identity. Present
+  only where the SKL resolved the entity (DI today); empty elsewhere — non-SKL coverage is unchanged.
+- **`v_entity_synonyms`** — every surface (canonical name + synonyms) of each resolved entity.
+- **`v_chunk_entities`** — chunk→entity tags (entity-keyed retrieval).
+- **capability `skl_entity_keying`** — advertises the three views are populated.
+
+(`index` `contract_ver` 11→12; the new tables are populated by the `merge` stage.)
+
+## v1.4 — 2026-06-16
+
+Additive (backward-compatible) — gold bundle path (rich-reading groundwork):
+
+- **`v_documents.bundle_path`** — the de-versioned gold anchor relpath a doc resolves to, so a
+  consumer can locate the doc's gold sidecars (e.g. the rich-reading `tables/*.csv`) without
+  reverse-engineering `doc_key`. (`index` `contract_ver` 10→11.)
+
 ## v1.3 — 2026-06-15
 
 Additive (backward-compatible) — per-doc figure stats (rich-publication groundwork):

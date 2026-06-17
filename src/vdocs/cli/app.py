@@ -26,6 +26,7 @@ from vdocs.stages.enrich.stage import EnrichStage
 from vdocs.stages.fetch.stage import FetchStage
 from vdocs.stages.index.stage import IndexStage
 from vdocs.stages.manifest.stage import ManifestStage
+from vdocs.stages.merge.stage import MergeStage
 from vdocs.stages.normalize.stage import NormalizeStage
 from vdocs.stages.relate.stage import RelateStage
 from vdocs.stages.resolve.stage import ResolveStage
@@ -73,6 +74,7 @@ def build_stages() -> list[Stage]:
         IndexStage(),
         RelateStage(),
         ResolveStage(),
+        MergeStage(),
         ManifestStage(),
         ValidateStage(),
     ]
@@ -360,6 +362,13 @@ def resolve(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Build the Semantic Knowledge Layer (gold/knowledge.db): resolve the FileMan (DI) gold's
     entity/term/relationship nodes from the registries + the live-DD seed (SKL S2)."""
     _drive(only="resolve", force=force)
+
+
+@app.command()
+def merge(force: bool = typer.Option(False, "--force", "-f")) -> None:
+    """Fold the SKL (knowledge.db) into index.db: reconcile entity ids, project the synonym catalog,
+    and tag chunks with resolved entities (entity-keyed retrieval, SKL S3.3)."""
+    _drive(only="merge", force=force)
 
 
 @app.command()
