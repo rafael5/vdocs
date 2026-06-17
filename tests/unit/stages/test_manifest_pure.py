@@ -80,6 +80,50 @@ def test_build_glossary_empty_is_header_only():
     assert mp.build_glossary([]).strip() == "# Glossary"
 
 
+def _ent(canonical, name, synonyms):
+    from vdocs.models.knowledge import EntityNode
+
+    return EntityNode(
+        type="fileman_file", canonical=canonical, canonical_name=name, synonyms=synonyms
+    )
+
+
+def test_documented_in_map_collects_doc_keys_per_entity():
+    from vdocs.models.knowledge import RelationshipNode
+
+    rels = [
+        RelationshipNode(src_id="fileman_file/200", rel="documented-in", dst_id="doc/DI/a"),
+        RelationshipNode(src_id="fileman_file/200", rel="documented-in", dst_id="doc/DI/b"),
+        RelationshipNode(src_id="fileman_file/2", rel="documented-in", dst_id="doc/DI/c"),
+    ]
+    assert mp.documented_in_map(rels) == {
+        "fileman_file/200": ["DI/a", "DI/b"],
+        "fileman_file/2": ["DI/c"],
+    }
+
+
+def test_skl_entities_glossary_renders_name_aliases_and_documented_links():
+    ent = _ent("200", "NEW PERSON", ["NEW PERSON", "^VA(200,", "file #200"])
+    md = mp.skl_entities_glossary([ent], {"fileman_file/200": ["DI/fm22_2um2/new-person"]})
+    assert "## Entities" in md
+    assert "**NEW PERSON** (FileMan file #200)" in md
+    assert "`^VA(200,`" in md and "`file #200`" in md  # aliases, canonical_name not repeated
+    assert md.count("NEW PERSON`") == 0  # the canonical name isn't echoed as its own alias
+    # the documented-in cross-link resolves into consolidated/
+    assert "[DI/fm22_2um2/new-person](consolidated/DI/fm22_2um2/new-person/body.md)" in md
+
+
+def test_build_glossary_composes_entities_then_acronyms():
+    ent = _ent("200", "NEW PERSON", ["NEW PERSON", "file #200"])
+    md = mp.build_glossary(
+        [("GUI", "Graphical User Interface")],
+        skl_entities=[ent],
+        documented_in={"fileman_file/200": ["DI/x"]},
+    )
+    assert md.index("## Entities") < md.index("## Acronyms")  # entities first
+    assert "**NEW PERSON**" in md and "**GUI** — Graphical User Interface" in md
+
+
 _COUNTS = {
     "documents": 469,
     "documents_latest": 290,

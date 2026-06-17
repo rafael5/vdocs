@@ -134,13 +134,13 @@ registries (`entities/entities.yaml`, `entities/dd-seed.di.yaml`, `relationships
 its order from `requires`/`produces` — no hand-maintained list (the `vdocs-design.md` §8 table is
 frozen/historical; this tracker + the proposal §6 are the live design surface for the SKL).
 
-### S3 — Re-point the projections 🟡 (S3.3 + S3.4 + S3.1 landed 2026-06-17; S3.2 next)
+### S3 — Re-point the projections ✅ (S3.1–S3.4 all landed 2026-06-17)
 Make every downstream artifact a view of the SKL (proposal §6, §8).
 
 | ID | Step | Detail | Gate | Status |
 |----|------|--------|------|--------|
 | S3.1 | Termbase ← SKL | `build-termbase` reads Term nodes from the SKL instead of raw registries | termbase regenerates identically-or-better; tenet-13 single-source preserved | ✅ classify emits the 483-surface Term superset; `build-termbase` projects from `knowledge.db` (registry fallback); **byte-identical** to the registry path (identity test + real-lake diff); accept.txt 1117 terms (no regression) |
-| S3.2 | Glossary + cross-links ← SKL | Generate `gold/glossary.md` and in-corpus cross-links from entities/synonyms/relationships | glossary non-empty + drift-gated; links resolve (lychee/strict-build) | ⬜ |
+| S3.2 | Glossary + cross-links ← SKL | Generate `gold/glossary.md` and in-corpus cross-links from entities/synonyms/relationships | glossary non-empty + drift-gated; links resolve (lychee/strict-build) | ✅ `manifest` projects an **Entities** section from `knowledge.db` (canonical name + aliases + `documented-in` cross-links into `consolidated/`); real lake: 21 entities, links resolve on disk; Acronyms section (B2) retained |
 | S3.3 | Entity-keyed `index.db` | New post-`resolve` **`merge`** stage augments `index.db` from `knowledge.db` (D-S3.3a/b below) | chunk about file #200 retrievable by `#200`/"NEW PERSON"/`^VA(200,`; non-DI coverage unchanged; read-contract version bumped (additive) | ✅ `bcd4bd0` (merge stage; read contract v1.5; real lake: 6 entities reconciled, 56 synonyms, 5786 chunk tags) |
 | S3.4 | Search wins (the precursor payoff) | Wire SKL synonym data into `fts_match_query` expansion (replaces empty-glossary L1.3) | a DI file#↔name golden query nDCG@10 0 → >0; mean nDCG@10 beats the lexical-only baseline; recorded via `baseline_golden.py` | ✅ DI query **0.131 → 0.406** (recall 0.5→1.0); mean (19-query, main lake) **0.313 → 0.328**; the delta is *only* that query (no regression) |
 
@@ -247,7 +247,7 @@ Prove the model holds at thousands of documents / millions of words.
 | S0 | Model ratified; `knowledge.db` contract frozen | ✅ signed off 2026-06-17 (K1–K7 + Q1–Q6) |
 | S1 | Vocabulary classified; casing fixed at source; `fileman-docs` Brand.yml deleted | ✅ done (vdocs + S1.4) |
 | S2 | `resolve` stage + `knowledge.db` for FileMan | ✅ landed 2026-06-17 (21 entities, 23 terms, 111 edges, headline proven) |
-| S3 | Termbase/glossary/cross-links/index projected from SKL; search vocab-mismatch fixed | 🟡 S3.3+S3.4+S3.1 done (entity-keyed index.db + search payoff + termbase ← SKL); S3.2 (glossary) next |
+| S3 | Termbase/glossary/cross-links/index projected from SKL; search vocab-mismatch fixed | ✅ S3.1–S3.4 done (termbase + glossary + entity-keyed index.db + search payoff, all projected from the SKL) |
 | S4 | Semantic-fidelity CI gates + meaning-aware dashboard | ⬜ |
 | S5 | Templatized; proven on Kernel | ⬜ |
 
@@ -352,6 +352,16 @@ principle) → S2 → S3 (the search payoff) → S4 → S5.
 
 ## Changelog
 
+- 2026-06-17 — **S3.2 landed — the glossary + cross-links project from the SKL (S3 complete).**
+  `gold/glossary.md` gains a generated **Entities** section (`manifest_pure.skl_entities_glossary`):
+  one entry per resolved SKL entity — canonical name, what it is (`FileMan file #200`), its aliases,
+  and the gold docs it is `documented-in` (relative cross-links into `consolidated/…/body.md`, from
+  `documented_in_map(relationships)`). The harvested **Acronyms** section (B2) is retained below it;
+  both generated, no hand-maintained list (tenet #13). `manifest` now `requires` `KNOWLEDGE_*` (runs
+  after `resolve`) and reads `knowledge.db`; `contract_ver` 1→2. Real lake: 21 entities, the
+  `documented-in` links resolve on disk. With S3.1–S3.4 done, **every downstream artifact — termbase,
+  glossary, cross-links, the entity-keyed index, and the search expansion — is now a projection of
+  the SKL** (proposal §6/§8). `make check` green (1055 tests, 97.66%).
 - 2026-06-17 — **S3.1 landed — the termbase projects from the SKL.** `classify` (`resolve_pure`) now
   emits a Term node for **every** curated surface (abbr + full + each match alias) — the **483-surface
   superset** (was the ~23 seen in DI gold) — status `approved`, corpus provenance where seen else a

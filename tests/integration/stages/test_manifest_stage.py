@@ -12,9 +12,12 @@ from vdocs.contracts.registry import (
     CONSOLIDATED,
     INDEX_DOCUMENTS,
     INDEX_ENTITIES,
+    KNOWLEDGE_ENTITIES,
+    KNOWLEDGE_RELATIONSHIPS,
     RELATIONS,
 )
-from vdocs.kernel import cas, db
+from vdocs.kernel import cas, db, knowledge_db
+from vdocs.models.knowledge import EntityNode, Provenance, RelationshipNode
 from vdocs.models.stage import Decision, StageRun
 from vdocs.orchestrator.engine import Orchestrator
 from vdocs.stages.manifest.stage import ManifestStage
@@ -69,6 +72,26 @@ def _seed(ctx):
     cas.atomic_write(
         ctx.cfg.gold_consolidated / "CPRS" / "or_ig" / "history.yaml", b"anchor_key: x\n"
     )
+    # the SKL (knowledge.db): one entity documented in a gold doc → the glossary Entities section
+    ctx.cfg.knowledge_db.parent.mkdir(parents=True, exist_ok=True)
+    knowledge_db.write_atomic(
+        ctx.cfg.knowledge_db,
+        entities=[
+            EntityNode(
+                type="fileman_file",
+                canonical="200",
+                canonical_name="NEW PERSON",
+                synonyms=["NEW PERSON", "^VA(200,"],
+                provenance=[Provenance(source_sha256="x", doc="CPRS/or_um")],
+            )
+        ],
+        terms=[],
+        relationships=[
+            RelationshipNode(
+                src_id="fileman_file/200", rel="documented-in", dst_id="doc/CPRS/or_um"
+            )
+        ],
+    )
 
     ctx.state.record(
         StageRun(
@@ -81,6 +104,22 @@ def _seed(ctx):
             outputs_fp={a.key: a.fingerprint(ctx.cfg) for a in (INDEX_DOCUMENTS, INDEX_ENTITIES)},
             counts={},
             contract_ver=1,
+            tool_ver=ctx.cfg.tool_ver,
+        )  # fmt: skip
+    )
+    ctx.state.record(
+        StageRun(
+            stage="resolve",
+            scope="",
+            status="ok",
+            started_at="t",
+            finished_at="t",
+            inputs_fp={},
+            outputs_fp={
+                a.key: a.fingerprint(ctx.cfg) for a in (KNOWLEDGE_ENTITIES, KNOWLEDGE_RELATIONSHIPS)
+            },
+            counts={},
+            contract_ver=2,
             tool_ver=ctx.cfg.tool_ver,
         )  # fmt: skip
     )
@@ -180,3 +219,15 @@ def test_manifest_carries_read_contract_and_coverage(ctx):
     assert manifest["coverage"]["pkg_ns"]["total"] == 2  # two is_latest anchors
     # P2.5 characterization snapshot: doc_type distribution over is_latest gold (d1=UM, d3="")
     assert manifest["characterization"]["doc_type"] == {"UM": 1}
+
+
+def test_manifest_glossary_has_skl_entities_section(ctx):
+    # S3.2: gold/glossary.md gets an Entities section projected from knowledge.db — the entity's
+    # canonical name, aliases, and a documented-in cross-link into consolidated/.
+    _seed(ctx)
+    Orchestrator([ManifestStage()]).run(ctx)
+    glossary = ctx.cfg.glossary.read_text(encoding="utf-8")
+    assert "## Entities" in glossary
+    assert "**NEW PERSON** (FileMan file #200)" in glossary
+    assert "`^VA(200,`" in glossary
+    assert "[CPRS/or_um](consolidated/CPRS/or_um/body.md)" in glossary  # documented-in cross-link

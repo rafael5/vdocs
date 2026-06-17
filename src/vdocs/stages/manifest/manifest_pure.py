@@ -50,30 +50,93 @@ def acronym_table_pairs(rows: list[list[str]]) -> list[tuple[str, str]]:
     return out
 
 
-def build_glossary(pairs: list[tuple[str, str]]) -> str:
-    """Render the promoted corpus glossary `gold/glossary.md` from harvested ``(term, definition)``
-    pairs (B2). Terms are deduped **case-insensitively**; the canonical display casing and the
-    definition are each the most common variant seen across the corpus (ties broken
-    deterministically). Sorted alphabetically (case-insensitive). No timestamp — so a no-op re-run
-    is byte-identical (content-skip)."""
+def build_glossary(
+    pairs: list[tuple[str, str]],
+    *,
+    skl_entities: list | None = None,
+    documented_in: dict[str, list[str]] | None = None,
+) -> str:
+    """Render `gold/glossary.md`. Two GENERATED sections, no hand-maintained list (tenet #13):
+    **Entities** — projected from the SKL (`knowledge.db`): each resolved entity's canonical name,
+    what it is, its aliases, and the gold docs it is documented in (the `documented-in` cross-links,
+    S3.2); and **Acronyms** — the corpus acronym/abbreviation tables harvested into one place (B2).
+    No timestamp, so a no-op re-run is byte-identical (content-skip)."""
+    lines = ["# Glossary", ""]
+    entities = skl_entities_glossary(skl_entities or [], documented_in or {})
+    if entities:
+        lines.append(entities)
+        lines.append("")
+    acronyms = _acronyms_section(pairs)
+    if acronyms:
+        lines.append(acronyms)
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _acronyms_section(pairs: list[tuple[str, str]]) -> str:
+    """The harvested acronym/abbreviation glossary (B2) — deduped case-insensitively, display casing
+    + definition each the most common variant (ties broken deterministically), alphabetical."""
     casing: dict[str, Counter] = defaultdict(Counter)
     defs: dict[str, Counter] = defaultdict(Counter)
     for term, definition in pairs:
         key = term.upper()
         casing[key][term] += 1
         defs[key][definition] += 1
-    lines = ["# Glossary", ""]
-    if defs:
-        lines.append(
-            "_VistA acronyms and defined terms, promoted once from the corpus's "
-            "acronym/abbreviation tables (§9.6 PROMOTE)._"
-        )
-        lines.append("")
-        for key in sorted(defs, key=lambda k: (k.lower(), k)):
-            term = _most_common(casing[key])
-            definition = _most_common(defs[key])
-            lines.append(f"**{term}** — {definition}")
-    return "\n".join(lines).rstrip() + "\n"
+    if not defs:
+        return ""
+    out = [
+        "## Acronyms & abbreviations",
+        "",
+        "_VistA acronyms and defined terms, promoted once from the corpus's "
+        "acronym/abbreviation tables (§9.6 PROMOTE)._",
+        "",
+    ]
+    for key in sorted(defs, key=lambda k: (k.lower(), k)):
+        out.append(f"**{_most_common(casing[key])}** — {_most_common(defs[key])}")
+    return "\n".join(out)
+
+
+def documented_in_map(relationships: list) -> dict[str, list[str]]:
+    """From the `documented-in` edges (`src=node_id`, `dst="doc/<doc_key>"`): node_id → the sorted
+    gold doc_keys it is documented in. The cross-link source for the glossary (S3.2)."""
+    out: dict[str, set[str]] = {}
+    for r in relationships:
+        if r.rel == "documented-in" and r.dst_id.startswith("doc/"):
+            out.setdefault(r.src_id, set()).add(r.dst_id[len("doc/") :])
+    return {nid: sorted(docs) for nid, docs in out.items()}
+
+
+def _entity_label(entity) -> str:  # type: ignore[no-untyped-def]
+    """A human label for what the entity *is* — `FileMan file #200` for a file, else `type id`."""
+    if entity.type == "fileman_file":
+        return f"FileMan file #{entity.canonical}"
+    return f"{entity.type} {entity.canonical}"
+
+
+def skl_entities_glossary(entities: list, documented_in: dict[str, list[str]]) -> str:
+    """The **Entities** section (S3.2): one entry per resolved SKL entity — canonical name, what it
+    is, its aliases, and the gold docs it is documented in (relative links into `consolidated/`, so
+    they resolve from `gold/glossary.md`). Alphabetical by canonical name. `""` when there are no
+    entities (the section is omitted)."""
+    if not entities:
+        return ""
+    out = [
+        "## Entities",
+        "",
+        "_VistA entities resolved in the corpus (the Semantic Knowledge Layer) — canonical name, "
+        "aliases, and where each is documented._",
+        "",
+    ]
+    for e in sorted(entities, key=lambda x: (x.canonical_name.lower(), x.canonical_name)):
+        aliases = [s for s in e.synonyms if s != e.canonical_name]
+        entry = f"**{e.canonical_name}** ({_entity_label(e)})"
+        if aliases:
+            entry += " — also: " + ", ".join(f"`{a}`" for a in aliases)
+        out.append(entry)
+        docs = documented_in.get(e.node_id, [])
+        if docs:
+            links = ", ".join(f"[{d}](consolidated/{d}/body.md)" for d in docs)
+            out.append(f"  Documented in: {links}")
+    return "\n".join(out)
 
 
 def _most_common(counter: Counter) -> str:

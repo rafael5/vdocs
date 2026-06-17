@@ -21,10 +21,12 @@ from vdocs.contracts.registry import (
     DISCOVERY_JSON,
     INDEX_DOCUMENTS,
     INDEX_ENTITIES,
+    KNOWLEDGE_ENTITIES,
+    KNOWLEDGE_RELATIONSHIPS,
     REGISTRIES,
     RELATIONS,
 )
-from vdocs.kernel import cas, db, read_contract
+from vdocs.kernel import cas, db, knowledge_db, read_contract
 from vdocs.kernel import csv as kcsv
 from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, RunResult
@@ -37,10 +39,21 @@ log = structlog.get_logger(__name__)
 class ManifestStage(Stage):
     name = "manifest"
     description = "assemble corpus-manifest.json + discovery.json + the AI corpus card"
-    requires = [CONSOLIDATED, INDEX_DOCUMENTS, INDEX_ENTITIES, RELATIONS, REGISTRIES]
+    requires = [
+        CONSOLIDATED,
+        INDEX_DOCUMENTS,
+        INDEX_ENTITIES,
+        RELATIONS,
+        REGISTRIES,
+        KNOWLEDGE_ENTITIES,
+        KNOWLEDGE_RELATIONSHIPS,
+    ]
     produces = [CORPUS_MANIFEST, DISCOVERY_JSON, AI_MANIFEST, CORPUS_CARD]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
-    contract_ver = 1  # bump when the published manifest JSON shape changes (consumer-facing)
+    # v2 (S3.2): gold/glossary.md gains an Entities section projected from the SKL (knowledge.db) —
+    # canonical names + aliases + documented-in cross-links; manifest now requires KNOWLEDGE_* (runs
+    # after resolve). Bump re-runs so the glossary regenerates from the SKL.
+    contract_ver = 2  # bump when the published manifest JSON / glossary shape changes
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
@@ -89,9 +102,16 @@ class ManifestStage(Stage):
         for name, text in shared.items():
             cas.atomic_write(bp_dir / name, text.encode("utf-8"))
 
-        # B2 (§9.6 PROMOTE): harvest the per-doc acronym/abbreviation tables corpus-wide into one
-        # `gold/glossary.md` (term promoted once, deduped). The per-doc tables stay as-is for now.
-        glossary = mp.build_glossary(_harvest_glossary_pairs(cfg))
+        # `gold/glossary.md`: an **Entities** section projected from the SKL (canonical names +
+        # aliases + documented-in cross-links, S3.2) then the **Acronyms** section harvested from
+        # the per-doc acronym tables (B2, §9.6 PROMOTE). Both generated, no hand-maintained list.
+        skl_entities = knowledge_db.read_entities(cfg.knowledge_db)
+        documented_in = mp.documented_in_map(knowledge_db.read_relationships(cfg.knowledge_db))
+        glossary = mp.build_glossary(
+            _harvest_glossary_pairs(cfg),
+            skl_entities=skl_entities,
+            documented_in=documented_in,
+        )
         cas.atomic_write(cfg.glossary, glossary.encode("utf-8"))
 
         return RunResult(
