@@ -6,11 +6,12 @@
 > changelog/discoveries/risks log. **Update it as work lands** (TDD → `make check` → update tracker →
 > commit, per step — the house cadence).
 
-> **Status: S1 fully landed (2026-06-17, both halves); S2+ pending proposal sign-off (proposal §13
-> open questions, esp. K2/Q6).** Do not begin S2+ until S0 ratifies the schema. S1 (the self-contained
-> casing quick win) is **done end-to-end** — facet schema blessed, casing bug fixed at the source, and
-> S1.4 (the `fileman-docs` repo half) landed: `Brand.yml` deleted, generated `Casing.yml` wired in,
-> `make gate` green (`fileman-docs` `f89977d`).
+> **Status: S0 signed off + S1 fully landed (2026-06-17); S2 is now unblocked.** S0 ratified the model
+> and resolved proposal §13 (K1–K7 + Q1–Q6 — see Decisions under S0). S1 (the self-contained casing
+> quick win) is **done end-to-end** — facet schema blessed, casing bug fixed at the source, and S1.4
+> (the `fileman-docs` repo half) landed: `Brand.yml` deleted, generated `Casing.yml` wired in,
+> `make gate` green (`fileman-docs` `f89977d`). **Next: S2** (`resolve` stage + `knowledge.db` for the
+> DI/FileMan gold), per the S0 decisions.
 
 ## Goal — one outcome
 
@@ -47,15 +48,33 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started. Each phase is an
 increment with a gate; TDD-first where it touches the pipeline (pure `*_pure.py` cores tested before
 thin `stage.py` drivers).
 
-### S0 — Ratify the model ⬜
+### S0 — Ratify the model ✅ (signed off 2026-06-17)
 Settle the proposal §13 decision table and open questions; freeze the SKL node schema and the
 `knowledge.db` gold contract as program policy.
 
-| ID | Step | Detail | Gate |
-|----|------|--------|------|
-| S0.1 | Sign off the data model | Ratify entity/term/concept/relationship + identity/provenance/lifecycle fields (proposal §5) | schema agreed; written into this tracker |
-| S0.2 | Resolve K2 / Q6 | Confirm "symbolic honors the embedding reset" framing (K2); decide entity seed source — live DD/KIDS vs corpus-mined vs both (Q6) | decisions recorded with rationale |
-| S0.3 | Fix the relationship taxonomy | Closed starter edge set (`reads`/`runs-on`/`documented-in`/`synonym-of`/`miscapitalization-of`/…) vs `discover`-proposed (Q3) | edge-type registry shape agreed |
+| ID | Step | Detail | Gate | Status |
+|----|------|--------|------|--------|
+| S0.1 | Sign off the data model | Ratify entity/term/concept/relationship + identity/provenance/lifecycle fields (proposal §5) | schema agreed; written into this tracker | ✅ adopted as policy |
+| S0.2 | Resolve K2 / Q6 | Confirm "symbolic honors the embedding reset" framing (K2); decide entity seed source (Q6) | decisions recorded with rationale | ✅ see Decisions below |
+| S0.3 | Fix the relationship taxonomy | Closed starter edge set vs `discover`-proposed (Q3) | edge-type registry shape agreed | ✅ closed set + gated discover |
+
+#### Decisions (S0 sign-off, 2026-06-17) — proposal §13 resolved
+
+**Decision table K1–K7:** all recommendations **adopted as program policy** (proposal §13). Note on
+**K2**: symbolic ≠ statistical — this *honors* the 2026-06-08 embedding reset; embeddings stay **fully
+parked**, not even scoped as the "optional grounded top-layer," to avoid scope creep. Revisit only as a
+deliberate future decision.
+
+**Open questions Q1–Q6:**
+
+| # | Decision | Rationale / implication for S2+ |
+|---|----------|----------------------------------|
+| **Q6** Entity seeds | **Live DD spine + corpus-mined synonyms; live system as tiebreaker.** | The live Data Dictionary gives authoritative identity (`file #200 → "NEW PERSON"`) cheaply and un-guessably; the corpus supplies the prose synonyms readers actually use (the S3 vocabulary-mismatch fix). **Dependency:** S2.2 needs a live VistA (vehu/foia-t12 + m-engine) for the DD spine; mind the vdocs shared-lake / don't-race-the-operator rule. |
+| **Q2** `verified_on` | **Defer full live verification to S5; schema carries `verification.status` from day one.** | S2 nodes are `asserted` (corpus provenance); a later live check upgrades to `verified` with **no migration**. Decouples S2 throughput from live-system/shared-lake ops (per the Risks "defer if it blocks S2" note). Optional cheap win: a thin file#→name confirmation for the DI files at S2 if the engine is handy. |
+| **Q4** `knowledge.db` ↔ `index.db` | **Two DBs in the lake (joined on entity-id); `publish` folds the small knowledge tables into the shipped `index.db`.** | Separate rebuild lifecycles internally (knowledge = small/curated/slow; index = large/regenerated/per-chunk); one portable file at the distribution edge (honors the search-plan one-file DoD). Shapes **S2.1** (`knowledge.db` is its own gold ArtifactContract) and the publish merge step. |
+| **Q3** Relationship taxonomy | **Closed starter edge set + `discover`-proposed extensions through the §9.6 gate.** | Fixed types (`synonym-of`, `miscapitalization-of`, `documented-in`, `reads`, `runs-on`, `part-of`/`belongs-to-package`) in a version-controlled `registries/relationships/edge-types.yaml`; `discover` may *propose* new types (human-approved); **unregistered edge types never reach `knowledge.db`.** Closed-by-default, extensible-by-review. Shapes **S2.3**. |
+| **Q1** Concept identity | **AI-proposes-clusters → human-curates (§10 loop); Concepts scoped OUT of S2.** | Entities/Terms/Relationships are enumerable + authoritative — S2 builds those. Concepts are the hardest, least-bounded kind; they enter at **S3/S4** when there is corpus-wide signal. Keeps S2 cost bounded (the §13-Q1 cost concern). |
+| **Q5** Governance | **Rafael = sole curator/SME of record; governance = registry PRs + the §9.6 discover gate. No committee.** | Hobbyist/single-developer scale: the version-controlled `registries/` + PR review *is* the governance (CODEOWNER = Rafael). Revisit only if this ever feeds a real VA program. |
 
 ### S1 — Classify the vocabulary; fix the casing bug at the source ✅ (vdocs + fileman-docs both done)
 Self-contained quick win (proposal §12 S1) — the smallest proof that "everything is a projection"
@@ -120,7 +139,7 @@ Prove the model holds at thousands of documents / millions of words.
 
 | Phase | Outcome | Status |
 |---|---|---|
-| S0 | Model ratified; `knowledge.db` contract frozen | ⬜ |
+| S0 | Model ratified; `knowledge.db` contract frozen | ✅ signed off 2026-06-17 (K1–K7 + Q1–Q6) |
 | S1 | Vocabulary classified; casing fixed at source; `fileman-docs` Brand.yml deleted | ✅ done (vdocs + S1.4) |
 | S2 | `resolve` stage + `knowledge.db` for FileMan | ⬜ |
 | S3 | Termbase/glossary/cross-links/index projected from SKL; search vocab-mismatch fixed | ⬜ |
@@ -175,6 +194,12 @@ principle) → S2 → S3 (the search payoff) → S4 → S5.
 
 ## Changelog
 
+- 2026-06-17 — **S0 signed off — model ratified; S2 unblocked.** Resolved proposal §13: K1–K7
+  recommendations adopted (K2: embeddings stay fully parked); Q1–Q6 decided with rationale (see
+  Decisions under S0). Headlines: entity seeds = **live DD spine + corpus synonyms** (Q6); `verified_on`
+  **deferred to S5, schema-ready** (Q2); **two DBs joined, merged into `index.db` at publish** (Q4);
+  relationship taxonomy = **closed starter set + gated `discover`** (Q3); Concepts scoped **out of S2**
+  (Q1); Rafael = sole curator (Q5). The SKL node schema + `knowledge.db` gold contract are now policy.
 - 2026-06-17 — **S1.4 landed — S1 done end-to-end.** `fileman-docs` `f89977d`: deleted the
   hand-maintained `.vale/VistA/Brand.yml`, wired the generated `Casing.yml` (624 case-safe terms) into
   `make termbase`, refreshed the four artifacts. `make gate` green (7/7). Invariants proven via Vale:
