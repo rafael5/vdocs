@@ -47,35 +47,80 @@ def build_artifacts(
 ) -> dict[str, str]:
     """Pure transform: curated registry data → ``{filename: content}`` for the docs-as-code gate."""
     accept = _accept_terms(products, expansions)
+    return _artifacts(accept, _no_enforce_from_products(products), corrections, english_words)
+
+
+def build_artifacts_from_terms(
+    *,
+    terms: list,
+    corrections: list[dict],
+    expansions: dict[str, str],
+    english_words: Set[str],
+) -> dict[str, str]:
+    """Project the gate artifacts from the **SKL Term catalog** instead of the raw product registry
+    (SKL S3.1, tenet #13): the same artifacts, sourced from `knowledge.db` Term nodes. `terms` is a
+    list of `models.knowledge.TermNode`; the accept set is their surfaces (∪ the expansion keys,
+    which are not Term nodes), the no-enforce set is the surfaces whose `enforce_case` is False.
+    Identical to `build_artifacts` when the SKL is the registry superset (proven by the identity
+    test) — that equivalence is the no-regression guarantee. `corrections` stay a registry read."""
+    accept = sorted({t.surface for t in terms if t.surface} | {str(k) for k in expansions if k})
+    no_enforce = {t.surface for t in terms if not t.enforce_case}
+    return _artifacts(accept, no_enforce, corrections, english_words)
+
+
+def _artifacts(
+    accept: list[str], no_enforce: Set[str], corrections: list[dict], english_words: Set[str]
+) -> dict[str, str]:
+    """Assemble the four gate artifacts from the resolved accept-list + no-enforce set (the one
+    shape both the registry and the SKL projections reduce to — so they cannot diverge)."""
     return {
         "accept.txt": _render_accept(accept),
         "VistA.yml": _render_substitutions(corrections),
-        "Casing.yml": _render_casing(accept, products, english_words),
+        "Casing.yml": _render_casing(accept, no_enforce, english_words),
         "typos-extend.toml": _render_typos(accept),
     }
 
 
-def termbase_artifacts(registries_dir: Path) -> dict[str, str]:
-    """Load the curated registries off disk and compile the gate artifacts (optional inputs
-    fail-soft to empty — a not-yet-populated registry yields an empty-but-well-formed artifact)."""
-    products = kproducts.load_products(registries_dir)
-    corrections = (
-        kregistry.load_mapping(
-            registries_dir / "inventory" / "typo-corrections.yaml", missing_ok=True
-        ).get("corrections")
-        or []
-    )
-    expansions = (
-        kregistry.load_mapping(
-            registries_dir / "glossary" / "expansions.yaml", missing_ok=True
-        ).get("expansions")
-        or {}
-    )
+def termbase_artifacts(registries_dir: Path, knowledge_db: Path | None = None) -> dict[str, str]:
+    """Compile the gate artifacts (optional inputs fail-soft to empty). Projects from the **SKL Term
+    catalog** (`knowledge.db`) when present (S3.1 — single-source), else from the raw registries;
+    the two are equivalent by construction (the SKL is the registry superset). `corrections` and
+    `expansions` are registry reads in either path (not Term nodes). The registry fallback keeps the
+    repo-only build (and the `fileman-docs` `make termbase`) working before a `resolve` run."""
+    corrections = [
+        c
+        for c in (
+            kregistry.load_mapping(
+                registries_dir / "inventory" / "typo-corrections.yaml", missing_ok=True
+            ).get("corrections")
+            or []
+        )
+        if isinstance(c, dict)
+    ]
+    expansions = {
+        str(k): str(v)
+        for k, v in (
+            kregistry.load_mapping(
+                registries_dir / "glossary" / "expansions.yaml", missing_ok=True
+            ).get("expansions")
+            or {}
+        ).items()
+    }
+    english_words = load_english_words(registries_dir)
+    if knowledge_db is not None and knowledge_db.exists():
+        from vdocs.kernel import knowledge_db as kdb
+
+        return build_artifacts_from_terms(
+            terms=kdb.read_terms(knowledge_db),
+            corrections=corrections,
+            expansions=expansions,
+            english_words=english_words,
+        )
     return build_artifacts(
-        products=products,
-        corrections=[c for c in corrections if isinstance(c, dict)],
-        expansions={str(k): str(v) for k, v in expansions.items()},
-        english_words=load_english_words(registries_dir),
+        products=kproducts.load_products(registries_dir),
+        corrections=corrections,
+        expansions=expansions,
+        english_words=english_words,
     )
 
 
@@ -130,21 +175,26 @@ def _render_substitutions(corrections: list[dict]) -> str:
     return yaml.safe_dump(style, sort_keys=False, allow_unicode=True)
 
 
-def _render_casing(
-    accept: list[str], products: dict[str, list[dict]], english_words: Set[str]
-) -> str:
-    """Vale ``substitution`` style enforcing canonical capitalization for the *safe* set only —
-    every accepted single-token term except those that opt out (``enforce_case: false``) or
-    collide with an English word (auto-derived, ``kernel.casing_pure``). With ``ignorecase: true``
-    each ``canonical→canonical`` entry flags any miscasing while leaving the correct form — and
-    every colliding word like "can" — untouched. This generated style replaces the hand-maintained
-    ``fileman-docs`` ``Brand.yml`` + ``Vale.Terms = NO`` workaround (SKL S1.3/S1.4)."""
+def _no_enforce_from_products(products: dict[str, list[dict]]) -> set[str]:
+    """The surfaces that opt out of casing enforcement (``enforce_case: false``) — the entry abbr +
+    its match aliases (a `full` name is never listed; it stays casing-eligible). The SKL projection
+    reproduces this exact set as `{term.surface for term in terms if not term.enforce_case}`."""
     no_enforce: set[str] = set()
     for entries in products.values():
         for e in entries:
             if e.get("enforce_case") is False:
                 no_enforce.add(str(e["abbr"]))
                 no_enforce.update(str(m) for m in (e.get("match") or []))
+    return no_enforce
+
+
+def _render_casing(accept: list[str], no_enforce: Set[str], english_words: Set[str]) -> str:
+    """Vale ``substitution`` style enforcing canonical capitalization for the *safe* set only —
+    every accepted single-token term except those that opt out (``no_enforce``) or collide with an
+    English word (auto-derived, ``kernel.casing_pure``). With ``ignorecase: true`` each
+    ``canonical→canonical`` entry flags any miscasing while leaving the correct form — and every
+    colliding word like "can" — untouched. This generated style replaces the hand-maintained
+    ``fileman-docs`` ``Brand.yml`` + ``Vale.Terms = NO`` workaround (SKL S1.3/S1.4)."""
     swap = casing_pure.selective_casing_swap(
         terms=accept, english_words=english_words, no_enforce=no_enforce
     )

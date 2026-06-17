@@ -303,13 +303,16 @@ def build_termbase(
     from vdocs.kernel import termbase
 
     cfg = Settings()
-    arts = termbase.termbase_artifacts(cfg.registries)
+    # S3.1: project from the SKL Term catalog (knowledge.db) when present — else the registries
+    # (equivalent by construction). One source, no hand-maintained parallel vocab (tenet #13).
+    arts = termbase.termbase_artifacts(cfg.registries, knowledge_db=cfg.knowledge_db)
+    src = "SKL (knowledge.db)" if cfg.knowledge_db.exists() else "registries"
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     for name, content in sorted(arts.items()):
         (out / name).write_text(content, encoding="utf-8")
     n_terms = sum(1 for ln in arts["accept.txt"].splitlines() if ln and not ln.startswith("#"))
-    typer.echo(f"wrote {len(arts)} termbase artifacts to {out}/ — {n_terms} approved terms:")
+    typer.echo(f"wrote {len(arts)} termbase artifacts to {out}/ — {n_terms} terms (from {src}):")
     for name in sorted(arts):
         typer.echo(f"  {name}")
 

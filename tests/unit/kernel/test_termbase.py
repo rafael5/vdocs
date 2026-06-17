@@ -150,3 +150,32 @@ def test_termbase_artifacts_tolerates_absent_registries(tmp_path):
     # No registry files at all → empty-but-well-formed artifacts (fail-soft on the optional inputs).
     arts = t.termbase_artifacts(tmp_path)
     assert set(arts) == {"accept.txt", "VistA.yml", "Casing.yml", "typos-extend.toml"}
+
+
+def test_termbase_projects_from_skl_identically_to_registries(tmp_path):
+    """S3.1 no-regression guarantee: projecting the gate artifacts from the SKL Term catalog
+    (knowledge.db, the full superset `classify` emits) is **byte-identical** to projecting from the
+    raw registries — and carries the full controlled vocab (≥600 terms), not just the ~23 in DI
+    gold. This is what lets `build-termbase` single-source the SKL with no coverage regression."""
+    from pathlib import Path
+
+    from vdocs.kernel import knowledge_db
+    from vdocs.kernel import products as kproducts
+    from vdocs.models.knowledge import Provenance
+    from vdocs.stages.resolve import resolve_pure as rp
+
+    reg = Path(__file__).resolve().parents[3] / "registries"
+    products = kproducts.load_products(reg)
+    english = t.load_english_words(reg)
+    terms = rp.classify_terms(
+        products, english_words=english, registry_provenance=Provenance(source_sha256="")
+    )
+    kdb = tmp_path / "knowledge.db"
+    knowledge_db.write_atomic(kdb, entities=[], terms=terms, relationships=[])
+
+    from_registry = t.termbase_artifacts(reg)
+    from_skl = t.termbase_artifacts(reg, knowledge_db=kdb)
+    for name in ("accept.txt", "Casing.yml", "VistA.yml", "typos-extend.toml"):
+        assert from_skl[name] == from_registry[name], f"{name} drifted: SKL vs registry projection"
+    n = sum(1 for ln in from_skl["accept.txt"].splitlines() if ln and not ln.startswith("#"))
+    assert n >= 600  # the full controlled vocab, not the ~23 corpus-seen terms

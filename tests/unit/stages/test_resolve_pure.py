@@ -101,7 +101,7 @@ _ENGLISH = frozenset({"can", "vista"})  # both lowercases are dictionary words
 
 
 def test_classify_folds_s1_facets_and_autoderives_collision():
-    terms = rp.classify_terms(_PRODUCTS, english_words=_ENGLISH, appears={"VistA", "CAN"})
+    terms = rp.classify_terms(_PRODUCTS, english_words=_ENGLISH)
     by_surface = {t.surface: t for t in terms}
     # brand: internal-capital typography → never collides → enforced
     assert by_surface["VistA"].collides_with_english is False
@@ -110,9 +110,27 @@ def test_classify_folds_s1_facets_and_autoderives_collision():
     assert by_surface["CAN"].collides_with_english is True
 
 
-def test_classify_only_emits_terms_that_appear():
-    terms = rp.classify_terms(_PRODUCTS, english_words=_ENGLISH, appears={"VistA"})
-    assert {t.surface for t in terms} == {"VistA"}
+def test_classify_emits_the_full_superset_regardless_of_appearance():
+    # S3.1 (friction #4): EVERY curated surface becomes a Term node (the superset build-termbase
+    # projects from), not only those seen in the corpus.
+    terms = rp.classify_terms(_PRODUCTS, english_words=_ENGLISH)
+    assert {t.surface for t in terms} == {"VistA", "CAN"}
+
+
+def test_classify_provenance_corpus_where_seen_else_registry_marker():
+    reg = Provenance(source_sha256="", doc="registry:product-names.yaml")
+    corpus = Provenance(source_sha256="deadbeef", doc="DI/fm")
+    terms = {
+        t.surface: t
+        for t in rp.classify_terms(
+            _PRODUCTS,
+            english_words=_ENGLISH,
+            provenance={"VistA": [corpus]},
+            registry_provenance=reg,
+        )
+    }
+    assert terms["VistA"].provenance == [corpus]  # seen in the corpus → corpus provenance
+    assert terms["CAN"].provenance == [reg]  # not seen → curated registry origin (still grounded)
 
 
 # --- relate (S2.3): closed registered edge set (Q3) ---

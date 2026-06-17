@@ -48,7 +48,10 @@ class ResolveStage(Stage):
     requires = [CONSOLIDATED, REGISTRIES]
     produces = [KNOWLEDGE_ENTITIES, KNOWLEDGE_TERMS, KNOWLEDGE_RELATIONSHIPS]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
-    contract_ver = 1  # bump when the knowledge.db node shape changes (re-runs downstream consumers)
+    # v2 (S3.1): classify now emits the full Term SUPERSET (every curated surface), not only the
+    # ~23 surfaces seen in DI gold — so `knowledge.db` is the term source build-termbase projects
+    # from with no coverage regression. The population change forces a re-run + reprojection.
+    contract_ver = 2  # bump when the knowledge.db node shape/population changes (re-runs consumers)
 
     def __init__(self) -> None:
         # the verify invariant (every node asserted) — checked in deep_gate
@@ -67,7 +70,6 @@ class ResolveStage(Stage):
         entity_prov: dict[str, list[Provenance]] = {}
         resolved_by_doc: dict[str, set[str]] = {}
         edge_prov: dict[str, list[Provenance]] = {}
-        term_appears: set[str] = set()
         term_prov: dict[str, list[Provenance]] = {}
         unresolved: list[tuple[str, str, str]] = []
 
@@ -89,14 +91,18 @@ class ResolveStage(Stage):
             if term_re is not None:
                 for m in term_re.finditer(body):
                     surface = _canonical_term(products, m.group(0))
-                    term_appears.add(surface)
                     term_prov.setdefault(surface, []).append(prov)
 
         # --- assemble the SKL nodes (S2.2/S2.3) ---
         resolved_ids = {nid for ids in resolved_by_doc.values() for nid in ids}
         entities = rp.entities_from_resolution(idx, resolved_ids, provenance=entity_prov)
+        # the Term superset (S3.1): every curated surface becomes a node; abbrs seen in the corpus
+        # carry that provenance, the rest cite their curated registry origin (still grounded, §10).
         terms = rp.classify_terms(
-            products, english_words=english, appears=term_appears, provenance=term_prov
+            products,
+            english_words=english,
+            provenance=term_prov,
+            registry_provenance=Provenance(source_sha256="", doc="registry:product-names.yaml"),
         )
         candidate_edges = rp.documented_in_edges(resolved_by_doc, provenance=edge_prov)
         edges, rejected = rp.partition_edges(candidate_edges, registered)

@@ -177,29 +177,67 @@ def classify_terms(
     products: dict[str, list[dict]],
     *,
     english_words: frozenset[str],
-    appears: set[str],
     provenance: dict[str, list[Provenance]] | None = None,
+    registry_provenance: Provenance | None = None,
 ) -> list[TermNode]:
-    """Build TermNodes for the curated product/brand terms that appear in the corpus (`appears` =
-    the set of surfaces seen). Each carries the S1 facets: `term_class`, `canonical_casing`,
-    `enforce_case`, and the auto-derived `collides_with_english` (`kernel.casing_pure`)."""
+    """Build the Term **superset** (S3.1, friction #4): a TermNode for **every** curated surface —
+    abbr, full name, and each match alias — across the product registry, so `knowledge.db` is the
+    single source `build-termbase` projects from (tenet #13), with no 624→23 coverage regression.
+
+    Status `approved`; provenance is the corpus `provenance` where the surface appears, else the
+    supplied `registry_provenance` marker (curated origin is still grounding, §10). Facets per S1:
+    `term_class` / `canonical_casing` / auto-derived `collides_with_english`. `enforce_case` mirrors
+    the registry termbase exactly — abbr/match inherit the entry's flag and a surface opts out of
+    casing if **any** contributing entry sets `enforce_case: false`; a `full` name is always
+    casing-eligible (the registry never lists full names in its no-enforce set)."""
     provenance = provenance or {}
-    seen: dict[str, TermNode] = {}
+    reg = [registry_provenance] if registry_provenance is not None else []
+
+    @dataclass
+    class _Facets:
+        term_class: str | None
+        canonical_casing: str
+        enforce_case: bool
+        expand_on_first_use: bool
+
+    info: dict[str, _Facets] = {}
+
+    def consider(surface: str, facets: _Facets) -> None:
+        surface = surface.strip()
+        if not surface:
+            return
+        cur = info.get(surface)
+        if cur is None:
+            info[surface] = facets
+        elif not facets.enforce_case:
+            cur.enforce_case = False  # opt-out wins on collision (matches the registry union)
+
     for entries in products.values():
         for e in entries:
-            surface = str(e["abbr"])
-            if surface not in appears or surface in seen:
-                continue
-            seen[surface] = TermNode(
-                surface=surface,
-                term_class=e.get("term_class"),
-                canonical_casing=str(e.get("canonical_casing") or surface),
-                enforce_case=bool(e.get("enforce_case", True)),
-                collides_with_english=casing_pure.collides_with_english(surface, english_words),
-                expand_on_first_use=bool(e.get("expand_on_first_use", False)),
-                provenance=provenance.get(surface, []),
-            )
-    return [seen[k] for k in sorted(seen)]
+            ec = bool(e.get("enforce_case", True))
+            tc = e.get("term_class")
+            expand = bool(e.get("expand_on_first_use", False))
+            abbr = str(e["abbr"])
+            consider(abbr, _Facets(tc, str(e.get("canonical_casing") or abbr), ec, expand))
+            full = str(e.get("full") or "")
+            if full:
+                consider(full, _Facets(tc, full, True, False))  # full → always casing-eligible
+            for m in e.get("match") or []:
+                ms = str(m)
+                consider(ms, _Facets(tc, ms, ec, False))
+
+    return [
+        TermNode(
+            surface=surface,
+            term_class=info[surface].term_class,
+            canonical_casing=info[surface].canonical_casing,
+            enforce_case=info[surface].enforce_case,
+            collides_with_english=casing_pure.collides_with_english(surface, english_words),
+            expand_on_first_use=info[surface].expand_on_first_use,
+            provenance=provenance.get(surface) or reg,
+        )
+        for surface in sorted(info)
+    ]
 
 
 # --- relate (S2.3): typed edges, closed registered set (Q3) --------------------------------------

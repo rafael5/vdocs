@@ -134,12 +134,12 @@ registries (`entities/entities.yaml`, `entities/dd-seed.di.yaml`, `relationships
 its order from `requires`/`produces` — no hand-maintained list (the `vdocs-design.md` §8 table is
 frozen/historical; this tracker + the proposal §6 are the live design surface for the SKL).
 
-### S3 — Re-point the projections 🟡 (S3.3 + S3.4 landed 2026-06-17; S3.1/S3.2 next)
+### S3 — Re-point the projections 🟡 (S3.3 + S3.4 + S3.1 landed 2026-06-17; S3.2 next)
 Make every downstream artifact a view of the SKL (proposal §6, §8).
 
 | ID | Step | Detail | Gate | Status |
 |----|------|--------|------|--------|
-| S3.1 | Termbase ← SKL | `build-termbase` reads Term nodes from the SKL instead of raw registries | termbase regenerates identically-or-better; tenet-13 single-source preserved | ⬜ |
+| S3.1 | Termbase ← SKL | `build-termbase` reads Term nodes from the SKL instead of raw registries | termbase regenerates identically-or-better; tenet-13 single-source preserved | ✅ classify emits the 483-surface Term superset; `build-termbase` projects from `knowledge.db` (registry fallback); **byte-identical** to the registry path (identity test + real-lake diff); accept.txt 1117 terms (no regression) |
 | S3.2 | Glossary + cross-links ← SKL | Generate `gold/glossary.md` and in-corpus cross-links from entities/synonyms/relationships | glossary non-empty + drift-gated; links resolve (lychee/strict-build) | ⬜ |
 | S3.3 | Entity-keyed `index.db` | New post-`resolve` **`merge`** stage augments `index.db` from `knowledge.db` (D-S3.3a/b below) | chunk about file #200 retrievable by `#200`/"NEW PERSON"/`^VA(200,`; non-DI coverage unchanged; read-contract version bumped (additive) | ✅ `bcd4bd0` (merge stage; read contract v1.5; real lake: 6 entities reconciled, 56 synonyms, 5786 chunk tags) |
 | S3.4 | Search wins (the precursor payoff) | Wire SKL synonym data into `fts_match_query` expansion (replaces empty-glossary L1.3) | a DI file#↔name golden query nDCG@10 0 → >0; mean nDCG@10 beats the lexical-only baseline; recorded via `baseline_golden.py` | ✅ DI query **0.131 → 0.406** (recall 0.5→1.0); mean (19-query, main lake) **0.313 → 0.328**; the delta is *only* that query (no regression) |
@@ -178,9 +178,22 @@ own (the win is the synonym table + chunk tags, which both options need). Additi
 > node (others as synonyms) — so the merge links index's per-surface mentions to the SKL's per-entity
 > node, then tags the chunks.
 
-**Deferred to S3.1 (friction #4, termbase superset):** whether `classify` emits a Term node for *every*
-registry term (SKL becomes the term superset) vs. the termbase projection unions SKL + registry — decided
-at S3.1 build time (build order is S3.3 → S3.4 first, then S3.1 → S3.2).
+**Decided (friction #4, termbase superset, 2026-06-17 — Rafael): `classify` emits a Term node for
+*every* registry term** (status `approved`; corpus provenance where it appears, a `registry:` provenance
+marker where it does not), so `knowledge.db` becomes the term **superset** and `build-termbase` projects
+purely from the SKL — true single-source (tenet #13). *Rejected* the union-of-SKL+registry path
+(termbase reads two sources, weaker single-source).
+
+**S3.1 build shape (no-regression is exacting).** `accept.txt` = abbr + full + match aliases +
+expansion keys; `Casing.yml` derives its `no_enforce` set from per-entry `enforce_case`. So `classify`
+emits a Term node per **distinct surface** (abbr, full, each match alias), carrying the entry's facets
+(a multi-word `full` is auto-skipped by the single-token casing projector). `build-termbase` projects
+the accept/casing/typos artifacts from the SKL Term catalog; `VistA.yml` (typo corrections) stays a
+registry read (corrections are forbidden→preferred maps, not Term nodes). To avoid coupling the
+repo-only termbase build (and the cross-repo `fileman-docs` `make termbase`) to a lake, the projection
+**falls back to the registries when `knowledge.db` is absent**, and an **identity test proves
+SKL-projection ≡ registry-projection** (the no-regression guarantee). The `fileman-docs` opt-in to the
+lake-backed path is a later one-repo session (as S1.4 was).
 
 **Build shape (S3.3 — refinements found while reading the live code/data).** The `merge` stage mirrors
 `relate` (a post-`index` stage that augments `index.db` via `kernel.db.replace_table_atomic`, never
@@ -234,7 +247,7 @@ Prove the model holds at thousands of documents / millions of words.
 | S0 | Model ratified; `knowledge.db` contract frozen | ✅ signed off 2026-06-17 (K1–K7 + Q1–Q6) |
 | S1 | Vocabulary classified; casing fixed at source; `fileman-docs` Brand.yml deleted | ✅ done (vdocs + S1.4) |
 | S2 | `resolve` stage + `knowledge.db` for FileMan | ✅ landed 2026-06-17 (21 entities, 23 terms, 111 edges, headline proven) |
-| S3 | Termbase/glossary/cross-links/index projected from SKL; search vocab-mismatch fixed | 🟡 S3.3+S3.4 done (entity-keyed index.db + the search payoff); S3.1/S3.2 next |
+| S3 | Termbase/glossary/cross-links/index projected from SKL; search vocab-mismatch fixed | 🟡 S3.3+S3.4+S3.1 done (entity-keyed index.db + search payoff + termbase ← SKL); S3.2 (glossary) next |
 | S4 | Semantic-fidelity CI gates + meaning-aware dashboard | ⬜ |
 | S5 | Templatized; proven on Kernel | ⬜ |
 
@@ -339,6 +352,17 @@ principle) → S2 → S3 (the search payoff) → S4 → S5.
 
 ## Changelog
 
+- 2026-06-17 — **S3.1 landed — the termbase projects from the SKL.** `classify` (`resolve_pure`) now
+  emits a Term node for **every** curated surface (abbr + full + each match alias) — the **483-surface
+  superset** (was the ~23 seen in DI gold) — status `approved`, corpus provenance where seen else a
+  `registry:` marker. `kernel/termbase.build_artifacts_from_terms` projects accept/Casing/typos from
+  the SKL Term catalog; `termbase_artifacts(reg, knowledge_db=…)` reads `knowledge.db` when present,
+  else the registries (the two are **byte-identical** — proven by an identity test that round-trips
+  classify → knowledge.db → project, and confirmed on the real lake with `diff`). `build-termbase`
+  passes `cfg.knowledge_db`; `resolve` `contract_ver` 1→2 (the population change forces a re-run).
+  accept.txt = **1117 terms** (no regression). Cleaned two whitespace-junk registry aliases (`"AP "`,
+  `"FM "`) so the data-as-source is clean (the "or-better" the gate allows). `make check` green (1051
+  tests, 97.71%). **`fileman-docs` opt-in to the lake-backed termbase is a later one-repo session.**
 - 2026-06-17 — **S3.3 + S3.4 landed — the SKL is folded into `index.db` and the search
   vocabulary-mismatch payoff is cashed.** S3.3 (`bcd4bd0`): a new post-`resolve` **`merge`** stage
   (D-S3.3a) augments `index.db` from `knowledge.db` **additively** (D-S3.3b) — `entity_skl` (the

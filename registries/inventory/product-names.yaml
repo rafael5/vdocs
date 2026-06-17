@@ -53,7 +53,7 @@ products:
 
   # ── Laboratory ──
   LR:
-    - { abbr: AP, full: Anatomic Pathology, match: ["Laboratory Anatomic Pathology", "AP "] }
+    - { abbr: AP, full: Anatomic Pathology, match: ["Laboratory Anatomic Pathology"] }
     - { abbr: Blood Bank, full: "Blood Bank (legacy)", match: ["Laboratory: Blood Bank"] }
     - { abbr: Lab, full: Laboratory, match: [Laboratory] }
   LA:
@@ -105,7 +105,7 @@ products:
   XU:
     - { abbr: Kernel, full: Kernel, match: [Kernel, "Assigning Person Class", "Reverse Negative Lock", "VistA Build Analyzer", KDC] }
   DI:
-    - { abbr: FileMan, full: VA FileMan, match: [FileMan, "FM ", "VA FileMan"] }
+    - { abbr: FileMan, full: VA FileMan, match: [FileMan, "FM", "VA FileMan"] }
 
   # ── single-product apps (Phase-2b sweep) — abbr from app_name's parenthetical
   # abbreviation where present, else app_code; match keeps the distinguishing suffix ──
