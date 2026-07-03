@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from vdocs.server.doctor import Check, DoctorReport, Health, coverage_check, integrity_check
+from vdocs.server.doctor import (
+    Check,
+    DoctorReport,
+    Health,
+    coverage_check,
+    integrity_check,
+    load_doctor_policy,
+)
 
 
 def test_coverage_full_is_pass():
@@ -120,3 +127,17 @@ def test_enum_coverage_fails_and_names_the_undefined_values():
     c = enum_coverage_check("function_category", ["Health Informatics", "Mystery Domain"])
     assert c.health is Health.FAIL
     assert "Health Informatics" in c.detail
+
+
+def test_policy_loads_accepted_anchorless_groups(tmp_path):
+    # D2: known anchorless version groups (upstream grouping drift) are declared in
+    # the policy registry — doctor WARNs on these, FAILs on any new one.
+    (tmp_path / "doctor-policy.yaml").write_text(
+        "accepted_anchorless_groups:\n  - 'PSO:PSO:UG:pso_um'\n", encoding="utf-8"
+    )
+    pol = load_doctor_policy(tmp_path)
+    assert "PSO:PSO:UG:pso_um" in pol.accepted_anchorless_groups
+
+
+def test_policy_defaults_have_no_accepted_anchorless_groups(tmp_path):
+    assert load_doctor_policy(tmp_path).accepted_anchorless_groups == frozenset()

@@ -159,6 +159,9 @@ class CoverageSpec:
 class DoctorPolicy:
     coverage: dict[str, CoverageSpec]
     accepted_anchor_edge_cases: frozenset[str]
+    # D2: version groups known to carry no is_latest anchor (upstream grouping drift —
+    # the latest lives under a sibling anchor_key spelling). WARN, never silent PASS.
+    accepted_anchorless_groups: frozenset[str] = frozenset()
 
 
 _DEFAULT_COVERAGE = {
@@ -185,7 +188,12 @@ def load_doctor_policy(registries_dir: Path) -> DoctorPolicy:
         for fld, spec in cov_raw.items()
     } or dict(_DEFAULT_COVERAGE)
     accepted = frozenset(raw.get("accepted_anchor_edge_cases") or [])
-    return DoctorPolicy(coverage=coverage, accepted_anchor_edge_cases=accepted)
+    anchorless = frozenset(raw.get("accepted_anchorless_groups") or [])
+    return DoctorPolicy(
+        coverage=coverage,
+        accepted_anchor_edge_cases=accepted,
+        accepted_anchorless_groups=anchorless,
+    )
 
 
 # --- the index.db driver ------------------------------------------------------------------------
@@ -251,6 +259,34 @@ def diagnose(
             offenders=over,
         )  # fmt: skip
     )
+
+    # anchor coverage (D2): exactly ONE is_latest per version group — a group with ZERO
+    # is as unsound as one with two: every doc in it vanishes from the is_latest surfaces.
+    # Policy-accepted groups (known upstream grouping drift) stay visible as WARN.
+    anchorless = ids(
+        "SELECT anchor_key FROM documents WHERE anchor_key<>'' "
+        "GROUP BY anchor_key HAVING sum(is_latest)=0"
+    )
+    unexpected = [k for k in anchorless if k not in policy.accepted_anchorless_groups]
+    accepted_hit = [k for k in anchorless if k in policy.accepted_anchorless_groups]
+    checks.append(
+        integrity_check(
+            "anchor coverage",
+            len(unexpected),
+            detail_ok="every version group carries exactly one is_latest anchor",
+            detail_bad="{n} version group(s) with NO is_latest anchor",
+            offenders=unexpected,
+        )  # fmt: skip
+    )
+    if accepted_hit:
+        checks.append(
+            Check(
+                "anchor coverage",
+                Health.WARN,
+                f"{len(accepted_hit)} known anchorless group(s) accepted by policy"
+                + _sample(accepted_hit),
+            )
+        )
 
     # gate fidelity: every gold doc_type is in the Tier-A keep set (no forbidden Tier-B/C/D leaked)
     forbidden = ids(

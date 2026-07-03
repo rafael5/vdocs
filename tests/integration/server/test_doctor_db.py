@@ -208,3 +208,53 @@ def test_enum_gate_passes_when_every_value_is_defined(tmp_path):
     conn.close()
     for field in ("function_category", "doc_type", "section", "app_user", "doc_user"):
         assert next(c for c in report.checks if c.name == f"vocab:{field}").health is Health.PASS
+
+
+def test_diagnose_red_on_anchorless_version_group(tmp_path):
+    # D2 (producer contracts): exactly ONE is_latest per version group — zero is as
+    # unsound as two: the whole group vanishes from every is_latest-filtered surface.
+    conn = _open(tmp_path)
+    _healthy(conn)
+    _doc(conn, doc_key="ADT/old1", doc_id="ADT:old1", anchor_key="ADT:DG:UM:um9", is_latest=0)
+    _doc(conn, doc_key="ADT/old2", doc_id="ADT:old2", anchor_key="ADT:DG:UM:um9", is_latest=0)
+    conn.commit()
+    rep = doc.diagnose(conn, kept_doctypes=_KEPT, policy=_POLICY)
+    assert rep.verdict() == "RED"
+    bad = [c for c in rep.checks if c.name == "anchor coverage"]
+    assert bad and bad[0].health is Health.FAIL and "um9" in bad[0].detail
+
+
+def test_diagnose_accepted_anchorless_group_warns_not_red(tmp_path):
+    # a policy-listed anchorless group (known upstream grouping drift) stays visible
+    # as WARN but never blocks the gate — declared, not silent.
+    conn = _open(tmp_path)
+    _healthy(conn)
+    _doc(conn, doc_key="ADT/old1", doc_id="ADT:old1", anchor_key="ADT:DG:UM:um9", is_latest=0)
+    conn.commit()
+    policy = doc.DoctorPolicy(
+        coverage=_POLICY.coverage,
+        accepted_anchor_edge_cases=_POLICY.accepted_anchor_edge_cases,
+        accepted_anchorless_groups=frozenset({"ADT:DG:UM:um9"}),
+    )
+    rep = doc.diagnose(conn, kept_doctypes=_KEPT, policy=policy)
+    assert rep.verdict() != "RED"
+    warns = [c for c in rep.checks if c.name == "anchor coverage" and c.health is Health.WARN]
+    assert warns and "um9" in warns[0].detail
+
+
+def test_diagnose_red_on_dangling_entity_mention(tmp_path):
+    # D2: entity_mentions must resolve to entities — a dangling id is corruption.
+    conn = _open(tmp_path)
+    _healthy(conn)
+    # the live builder enforces the FK; corruption arrives in shipped artifacts via
+    # FK-off writes or partial copies — seed it the same way
+    conn.execute("PRAGMA foreign_keys=OFF")
+    conn.execute("INSERT INTO entity_mentions VALUES ('routine:GONE', 'ADT/um1', 'ADT/um1/s')")
+    conn.commit()
+    conn.execute("PRAGMA foreign_keys=ON")
+    rep = doc.diagnose(conn, kept_doctypes=_KEPT, policy=_POLICY)
+    assert rep.verdict() == "RED"
+    assert any(
+        c.name == "entity graph" and c.health is Health.FAIL and "dangling" in c.detail
+        for c in rep.checks
+    )
