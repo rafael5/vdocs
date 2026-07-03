@@ -16,6 +16,7 @@ import structlog
 from vdocs.contracts.registry import (
     AI_MANIFEST,
     CONSOLIDATED,
+    CONTRACT_MANIFEST,
     CORPUS_CARD,
     CORPUS_MANIFEST,
     DISCOVERY_JSON,
@@ -48,12 +49,14 @@ class ManifestStage(Stage):
         KNOWLEDGE_ENTITIES,
         KNOWLEDGE_RELATIONSHIPS,
     ]
-    produces = [CORPUS_MANIFEST, DISCOVERY_JSON, AI_MANIFEST, CORPUS_CARD]
+    produces = [CORPUS_MANIFEST, DISCOVERY_JSON, AI_MANIFEST, CORPUS_CARD, CONTRACT_MANIFEST]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
     # v2 (S3.2): gold/glossary.md gains an Entities section projected from the SKL (knowledge.db) —
     # canonical names + aliases + documented-in cross-links; manifest now requires KNOWLEDGE_* (runs
     # after resolve). Bump re-runs so the glossary regenerates from the SKL.
-    contract_ver = 2  # bump when the published manifest JSON / glossary shape changes
+    # v3 (Track D1): + gold/contract-manifest.json — the producer-contract manifest carrying both
+    # version axes (read_schema_version, corpus_content_hash) read live off index.db meta.
+    contract_ver = 3  # bump when the published manifest JSON / glossary shape changes
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
@@ -77,8 +80,14 @@ class ManifestStage(Stage):
             characterization=_gather_characterization(cfg.index_db),
         )
         discovery = mp.discovery_descriptor(counts, tool_ver=cfg.tool_ver)
+        # Track D1: the producer-contract manifest — both version axes verbatim from the live
+        # index.db meta table (the spec file may already be ahead of the shipped database).
+        contract = mp.contract_manifest(
+            _gather_meta(cfg.index_db), tool_ver=cfg.tool_ver, generated_at=generated_at
+        )
         cas.atomic_write(cfg.corpus_manifest, _dumps(manifest))
         cas.atomic_write(cfg.discovery_json, _dumps(discovery))
+        cas.atomic_write(cfg.contract_manifest, _dumps(contract))
 
         # The AI corpus card (§14.7): the always-fresh catalog + entity index + query recipe an
         # agent reads to answer "based on the vdocs gold corpus, …" without re-discovering it.
@@ -147,6 +156,15 @@ def _load_boilerplate_entries(cfg) -> list:  # type: ignore[no-untyped-def]
 def _dumps(obj) -> bytes:  # type: ignore[no-untyped-def]
     """Deterministic JSON bytes (sorted keys) so a no-op re-run is byte-identical (content-skip)."""
     return (json.dumps(obj, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode("utf-8")
+
+
+def _gather_meta(index_db):  # type: ignore[no-untyped-def]
+    """The live meta table — the authoritative version axes of the database being shipped."""
+    conn = db.connect(index_db, read_only=True)
+    try:
+        return dict(conn.execute("SELECT key, value FROM meta").fetchall())
+    finally:
+        conn.close()
 
 
 def _gather_counts(index_db):  # type: ignore[no-untyped-def]

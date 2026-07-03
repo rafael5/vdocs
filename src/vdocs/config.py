@@ -188,6 +188,11 @@ class Settings(BaseSettings):
         return self.gold / "corpus-manifest.json"
 
     @property
+    def contract_manifest(self) -> Path:
+        """The producer-contract manifest (Track D1): live version axes off index.db meta."""
+        return self.gold / "contract-manifest.json"
+
+    @property
     def discovery_json(self) -> Path:
         return self.gold / "discovery.json"
 

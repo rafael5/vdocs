@@ -6,6 +6,8 @@ path was descoped (no `embedding` field, no `semantic` capability).
 
 from __future__ import annotations
 
+import pytest
+
 from vdocs.stages.manifest import manifest_pure as mp
 
 
@@ -285,3 +287,29 @@ def test_facet_distribution_counts_values_per_field():
     dist = mp.facet_distribution(rows, ("function_category", "doc_type"))
     assert dist["function_category"] == {"Laboratory": 1, "Pharmacy": 2}
     assert dist["doc_type"] == {"TM": 1, "UM": 3}
+
+
+def test_contract_manifest_surfaces_live_version_axes():
+    # D1 (producer contracts): both version axes verbatim from index.db meta —
+    # read_schema_version (structural) + corpus_content_hash (data identity).
+    doc = mp.contract_manifest(
+        {
+            "read_schema_version": "1.4",
+            "corpus_content_hash": "e" * 64,
+            "corpus_doc_count": "1034",
+        },
+        tool_ver="0.1.0",
+        generated_at="2026-07-03T00:00:00Z",
+    )
+    assert doc["artifact"] == "vdocs-data"
+    assert doc["read_schema_version"] == "1.4"
+    assert doc["corpus_content_hash"] == "e" * 64
+    assert doc["corpus_doc_count"] == 1034
+    assert doc["tool_ver"] == "0.1.0"
+    assert doc["generated_at"] == "2026-07-03T00:00:00Z"
+
+
+def test_contract_manifest_missing_axis_is_loud():
+    # a database without both axes must fail assembly, never emit a partial contract
+    with pytest.raises(KeyError):
+        mp.contract_manifest({"read_schema_version": "1.4"}, tool_ver="0.1.0", generated_at="t")

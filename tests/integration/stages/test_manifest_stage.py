@@ -38,6 +38,7 @@ def _seed(ctx):
           entity_id TEXT PRIMARY KEY, type TEXT, canonical_name TEXT, mention_count INTEGER
         );
         CREATE TABLE relations (src_id TEXT, rel TEXT, dst_id TEXT);
+        CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
         """
     )
     conn.executemany(
@@ -66,6 +67,11 @@ def _seed(ctx):
         "INSERT INTO relations VALUES (?, ?, ?)",
         [("d1", "mentions", "build:X"), ("d1", "xref", "d3")],
     )
+    conn.executemany(
+        "INSERT INTO meta VALUES (?, ?)",
+        [("read_schema_version", "9.9-live"), ("corpus_content_hash", "cafe" * 16),
+         ("corpus_doc_count", "3")],
+    )  # fmt: skip
     conn.commit()
     conn.close()
     # a consolidated bundle (the version-group rollup input)
@@ -231,3 +237,17 @@ def test_manifest_glossary_has_skl_entities_section(ctx):
     assert "**NEW PERSON** (FileMan file #200)" in glossary
     assert "`^VA(200,`" in glossary
     assert "[CPRS/or_um](consolidated/CPRS/or_um/body.md)" in glossary  # documented-in cross-link
+
+
+def test_manifest_emits_contract_manifest_from_live_meta(ctx):
+    # D1 (producer contracts): the contract manifest carries both version axes read
+    # from index.db meta at assembly time — NOT the spec file (the spec says 1.5;
+    # the seeded live DB deliberately says 9.9-live to prove the source).
+    _seed(ctx)
+    (result,) = Orchestrator([ManifestStage()]).run(ctx)
+    assert result.status == "ok"
+    doc = json.loads(ctx.cfg.contract_manifest.read_text())
+    assert doc["artifact"] == "vdocs-data"
+    assert doc["read_schema_version"] == "9.9-live"
+    assert doc["corpus_content_hash"] == "cafe" * 16
+    assert doc["corpus_doc_count"] == 3

@@ -307,6 +307,15 @@ AI_MANIFEST = ArtifactContract(
     produced_by="manifest",
     relpath="documents/gold/ai-manifest.json",
 )
+# `manifest`: the producer-contract manifest (Track D1) — read_schema_version +
+# corpus_content_hash read LIVE from index.db meta at assembly time (never the spec file).
+CONTRACT_MANIFEST = ArtifactContract(
+    key="gold/contract-manifest.json",
+    kind=Kind.FILE,
+    storage_class=StorageClass.STATE,
+    produced_by="manifest",
+    relpath="documents/gold/contract-manifest.json",
+)
 CORPUS_CARD = ArtifactContract(
     key="gold/CORPUS.md",
     kind=Kind.FILE,
@@ -367,6 +376,7 @@ def default_registry() -> ArtifactRegistry:
         DISCOVERY_JSON,
         AI_MANIFEST,
         CORPUS_CARD,
+        CONTRACT_MANIFEST,
         VALIDATION_REPORT,
     ):
         reg.register(contract)

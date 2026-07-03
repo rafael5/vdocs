@@ -378,6 +378,22 @@ def corpus_card(manifest: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def contract_manifest(meta: dict[str, str], *, tool_ver: str, generated_at: str) -> dict[str, Any]:
+    """The producer-contract manifest (Track D1): both version axes verbatim from the
+    live ``index.db`` ``meta`` table — ``read_schema_version`` (structural axis) and
+    ``corpus_content_hash`` (data-identity axis) — never from the spec file, so the
+    manifest can never describe a database other than the one being shipped. A missing
+    axis raises (KeyError): no partial contract is ever emitted."""
+    return {
+        "artifact": "vdocs-data",
+        "read_schema_version": meta["read_schema_version"],
+        "corpus_content_hash": meta["corpus_content_hash"],
+        "corpus_doc_count": int(meta["corpus_doc_count"]),
+        "tool_ver": tool_ver,
+        "generated_at": generated_at,
+    }
+
+
 def discovery_descriptor(counts: dict[str, Any], *, tool_ver: str) -> dict[str, Any]:
     """The machine discovery descriptor (`discovery.json`): corpus schema + entity-type vocabulary +
     the ID scheme + MCP capabilities — what an agent reads to understand the corpus without crawling
