@@ -120,3 +120,15 @@ def test_optional_capture_group_that_does_not_match_is_skipped():
     # a group1-canonical rule whose group 1 is optional and absent in a match yields no entity
     rules = ent.compile_rules([{"type": "opt", "pattern": r"a(b)?", "canonical": "group1"}])
     assert ent.extract("a then ab", rules) == [("opt", "b")]  # the bare "a" (group1=None) skipped
+
+
+def test_compile_rules_skips_excluded_types():
+    # D2.5 quarantine: an excluded type's recognizers never compile, so the type
+    # cannot be extracted — mentions and rebuilt relations cascade to zero.
+    entries = [
+        {"type": "global", "pattern": r"\^%?[A-Z][A-Z0-9]+\b", "casefold": True},
+        {"type": "option", "pattern": r"(?i)\boption\s+([A-Z]+)\b", "canonical": "group1"},
+    ]
+    rules = ent.compile_rules(entries, excluded_types=frozenset({"option"}))
+    assert [r.type for r in rules] == ["global"]
+    assert ent.extract("menu option XUMAINT uses ^DIC", rules) == [("global", "^DIC")]

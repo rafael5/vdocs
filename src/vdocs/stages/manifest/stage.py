@@ -27,7 +27,7 @@ from vdocs.contracts.registry import (
     REGISTRIES,
     RELATIONS,
 )
-from vdocs.kernel import cas, db, knowledge_db, read_contract
+from vdocs.kernel import cas, db, entity_quality, knowledge_db, read_contract
 from vdocs.kernel import csv as kcsv
 from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, RunResult
@@ -82,8 +82,16 @@ class ManifestStage(Stage):
         discovery = mp.discovery_descriptor(counts, tool_ver=cfg.tool_ver)
         # Track D1: the producer-contract manifest — both version axes verbatim from the live
         # index.db meta table (the spec file may already be ahead of the shipped database).
+        # Track D2.5: + the per-entity-type quality declaration (floor-verified /
+        # no-authoritative-vocabulary / excluded) with live counts; an undeclared shipping
+        # type fails assembly.
+        quality = entity_quality.load_entity_quality(cfg.registries)
         contract = mp.contract_manifest(
-            _gather_meta(cfg.index_db), tool_ver=cfg.tool_ver, generated_at=generated_at
+            _gather_meta(cfg.index_db),
+            tool_ver=cfg.tool_ver,
+            generated_at=generated_at,
+            entity_types=mp.entity_type_block(quality.types, counts.get("entities_by_type") or {}),
+            peer_vocabulary=quality.peer_vocabulary,
         )
         cas.atomic_write(cfg.corpus_manifest, _dumps(manifest))
         cas.atomic_write(cfg.discovery_json, _dumps(discovery))

@@ -313,3 +313,31 @@ def test_contract_manifest_missing_axis_is_loud():
     # a database without both axes must fail assembly, never emit a partial contract
     with pytest.raises(KeyError):
         mp.contract_manifest({"read_schema_version": "1.4"}, tool_ver="0.1.0", generated_at="t")
+
+
+def test_contract_manifest_carries_entity_type_declarations():
+    # D2.5: every shipped entity type enumerated with its quality status; excluded
+    # types carry their live residue count so zero-residue is a manifest fact.
+    doc = mp.contract_manifest(
+        {
+            "read_schema_version": "1.4",
+            "corpus_content_hash": "e" * 64,
+            "corpus_doc_count": "3",
+        },
+        tool_ver="0.1.0",
+        generated_at="t",
+        entity_types={
+            "routine": {
+                "status": "floor-verified",
+                "floor": 0.5,
+                "measured": 0.579,
+                "vocabulary": "code-model/routines.tsv:routine_name",
+                "count": 1953,
+            },
+            "option": {"status": "excluded", "count": 0},
+        },
+        peer_vocabulary={"artifact": "vista-meta-data", "content_hash": "23d0"},
+    )
+    assert doc["entity_types"]["routine"]["status"] == "floor-verified"
+    assert doc["entity_types"]["option"] == {"status": "excluded", "count": 0}
+    assert doc["peer_vocabulary"]["artifact"] == "vista-meta-data"

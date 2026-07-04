@@ -437,3 +437,36 @@ def test_index_records_per_doc_image_stats(ctx):
         conn.close()
     assert count == 1  # fig1.png resolves in the CAS; nope.png is skipped
     assert nbytes == len(img)
+
+
+def test_index_quarantines_excluded_entity_types(ctx):
+    # D2.5: registries/entity-quality.yaml excludes type=option (1.7% join vs the
+    # vista-meta vocabulary — prose noise). index never extracts the type, so
+    # mentions and rebuilt relations cascade to zero by construction.
+    opt_doc = _seed_bundle(
+        ctx,
+        "CPRS",
+        "or_opt",
+        "OR*3.0*77",
+        "Use menu option XUMAINT with EN^XQOR and the ^DIC global.",
+    )
+    # its own single-member group so the doc is is_latest (entities are a gold surface)
+    hist = {
+        "anchor_key": "CPRS:OR:IG2",
+        "member_count": 1,
+        "members": [{"doc_id": opt_doc, "doc_slug": "or_opt", "is_latest": True}],
+    }
+    cas.atomic_write(
+        ctx.cfg.gold_consolidated / "CPRS" / "or_opt" / "history.yaml",
+        yaml.safe_dump(hist, sort_keys=False).encode(),
+    )
+    _seed(ctx)
+    (result,) = Orchestrator([IndexStage()]).run(ctx)
+    assert result.status == "ok"
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        types = {t for (t,) in conn.execute("SELECT DISTINCT type FROM entities")}
+    finally:
+        conn.close()
+    assert {"global", "routine"} <= types  # extraction ran on the same text
+    assert "option" not in types  # quarantined by the shipped registry

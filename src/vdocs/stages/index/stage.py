@@ -37,7 +37,16 @@ from vdocs.contracts.registry import (
     TEXT_NORMALIZED,
 )
 from vdocs.kernel import csv as kcsv
-from vdocs.kernel import db, figures, frontmatter, personas, read_contract, titles, vocab
+from vdocs.kernel import (
+    db,
+    entity_quality,
+    figures,
+    frontmatter,
+    personas,
+    read_contract,
+    titles,
+    vocab,
+)
 from vdocs.kernel import products as kproducts
 from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, RunResult
@@ -162,7 +171,7 @@ class IndexStage(Stage):
     # v12 (SKL entity-keying, S3.3): index.db gained three EMPTY shells (entity_skl,
     # entity_synonyms, chunk_entities) + their v_* views — the schema owner stamps them so the read
     # version is consistent before `merge` populates them; read contract → v1.5 (additive MINOR).
-    contract_ver = 12
+    contract_ver = 13  # v13: D2.5 entity-type quarantine (entity-quality.yaml)
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
@@ -175,8 +184,12 @@ class IndexStage(Stage):
         latest_paths = _latest_bundle_paths(cfg.gold_consolidated)
         app_name_map = personas.app_names(cfg.registries)  # app_code → name (title fallback)
         products = kproducts.load_products(cfg.registries)  # app_code → [product] (abbr titles)
+        # D2.5: types quarantined by registries/entity-quality.yaml never compile —
+        # the exclusion cascades to mentions and (on rebuild) relations by construction.
+        quality = entity_quality.load_entity_quality(cfg.registries)
         rules = ent.compile_rules(
-            _load_entity_entries(cfg.registries / "entities" / "entities.yaml")
+            _load_entity_entries(cfg.registries / "entities" / "entities.yaml"),
+            excluded_types=quality.excluded_types(),
         )
 
         documents: list[tuple] = []

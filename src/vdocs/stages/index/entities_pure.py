@@ -23,14 +23,20 @@ class EntityRule:
     casefold: bool
 
 
-def compile_rules(entries: list[dict]) -> list[EntityRule]:
+def compile_rules(
+    entries: list[dict], *, excluded_types: frozenset[str] = frozenset()
+) -> list[EntityRule]:
     """Compile curated `registries/entities` entries into recognizers (pure).
 
     A `terms` rule is compiled to a single whole-word alternation regex, so both modes share one
-    fast scan path. A rule with neither `pattern` nor `terms` is a curation error — fail loud."""
+    fast scan path. A rule with neither `pattern` nor `terms` is a curation error — fail loud.
+    Types quarantined by `registries/entity-quality.yaml` (D2.5 `excluded`) never compile: the
+    type cannot be extracted, so mentions and rebuilt relations cascade to zero."""
     rules: list[EntityRule] = []
     for e in entries:
         etype = e["type"]
+        if etype in excluded_types:
+            continue
         if "pattern" in e:
             regex = re.compile(e["pattern"])
             group = 1 if e.get("canonical") == "group1" else 0

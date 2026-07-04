@@ -205,6 +205,7 @@ def diagnose(
     kept_doctypes: frozenset[str],
     policy: DoctorPolicy,
     read_spec: dict[str, Any] | None = None,
+    excluded_entity_types: frozenset[str] = frozenset(),
 ) -> DoctorReport:
     """Run every soundness check against ``index.db`` and assemble the report. ``kept_doctypes`` is
     the gate's Tier-A keep set (gold must contain only those). When ``read_spec`` (a read-contract)
@@ -286,6 +287,41 @@ def diagnose(
                 f"{len(accepted_hit)} known anchorless group(s) accepted by policy"
                 + _sample(accepted_hit),
             )
+        )
+
+    # entity quarantine (D2.5): an excluded type must have ZERO residue anywhere —
+    # entities, mentions (via the entity join), and relations endpoints (F2 cascade).
+    if excluded_entity_types:
+        marks = ",".join("?" * len(excluded_entity_types))
+        excl = sorted(excluded_entity_types)
+        residue = one(f"SELECT count(*) FROM entities WHERE type IN ({marks})", *excl)
+        residue += one(
+            "SELECT count(*) FROM entity_mentions m JOIN entities e "
+            f"ON e.entity_id = m.entity_id WHERE e.type IN ({marks})",
+            *excl,
+        )
+        # relations is appended by `relate` after index — absent on a fresh index.db
+        has_relations = one(
+            "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='relations'"
+        )
+        if has_relations:
+            residue += one(
+                "SELECT count(*) FROM relations r JOIN entities e ON e.entity_id = r.src_id "
+                f"WHERE r.src_type='entity' AND e.type IN ({marks})",
+                *excl,
+            )
+            residue += one(
+                "SELECT count(*) FROM relations r JOIN entities e ON e.entity_id = r.dst_id "
+                f"WHERE r.dst_type='entity' AND e.type IN ({marks})",
+                *excl,
+            )
+        checks.append(
+            integrity_check(
+                "entity quarantine",
+                residue,
+                detail_ok=f"zero residue for excluded type(s): {', '.join(excl)}",
+                detail_bad="{n} row(s) of quarantined entity type(s) shipped",
+            )  # fmt: skip
         )
 
     # gate fidelity: every gold doc_type is in the Tier-A keep set (no forbidden Tier-B/C/D leaked)

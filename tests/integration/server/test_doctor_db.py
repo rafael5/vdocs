@@ -258,3 +258,33 @@ def test_diagnose_red_on_dangling_entity_mention(tmp_path):
         c.name == "entity graph" and c.health is Health.FAIL and "dangling" in c.detail
         for c in rep.checks
     )
+
+
+def test_diagnose_red_on_quarantined_type_residue(tmp_path):
+    # D2.5: an excluded entity type must have ZERO residue in the shipped DB —
+    # entities, mentions, and relations endpoints (the quarantine cascade, F2).
+    conn = _open(tmp_path)
+    _healthy(conn)
+    conn.execute("INSERT INTO entities VALUES ('option:LEAK', 'option', 'LEAK', 1)")
+    conn.commit()
+    rep = doc.diagnose(
+        conn,
+        kept_doctypes=_KEPT,
+        policy=_POLICY,
+        excluded_entity_types=frozenset({"option"}),
+    )
+    assert rep.verdict() == "RED"
+    assert any(c.name == "entity quarantine" and c.health is Health.FAIL for c in rep.checks)
+
+
+def test_diagnose_quarantine_clean_passes(tmp_path):
+    conn = _open(tmp_path)
+    _healthy(conn)
+    rep = doc.diagnose(
+        conn,
+        kept_doctypes=_KEPT,
+        policy=_POLICY,
+        excluded_entity_types=frozenset({"option"}),
+    )
+    assert rep.verdict() != "RED"
+    assert any(c.name == "entity quarantine" and c.health is Health.PASS for c in rep.checks)

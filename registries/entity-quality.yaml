@@ -1,0 +1,45 @@
+# registries/entity-quality.yaml — the type-level entity-quality contract (Track D2.5).
+# =========================================================================================
+# Every entity type shipping in index.db is enumerated here with a status; the release
+# manifest embeds this declaration, `index` quarantines `excluded` types at extraction
+# (mentions + rebuilt relations cascade to zero), and `doctor` FAILs on any residue.
+#
+#   floor-verified            — canonical names join the named vista-meta data-v1 vocabulary
+#                               at a measured rate; `floor` is the release gate's regression
+#                               tripwire (a number, not an adjective).
+#   no-authoritative-vocabulary — no membership oracle exists; ships declared-unverified.
+#   excluded                  — quarantined at emit; zero residue enforced.
+#
+# Rates below were measured 2026-07-03 against the pinned peer artifact (re-measured at
+# every release gate against the corpus_content_hash being released).
+# =========================================================================================
+
+peer_vocabulary:
+  artifact: vista-meta-data
+  tag: data-v1
+  content_hash: "23d037f1e08adc206d251eea9adb4ec62051032c06b593737bebfcaf67e4c754"
+
+types:
+  # measured 0.853 (376/441)
+  fileman_file: {status: floor-verified, floor: 0.80, vocabulary: "data-model/files.tsv:file_number"}
+  # measured 0.730 (116/159)
+  rpc:          {status: floor-verified, floor: 0.65, vocabulary: "code-model/rpcs.tsv:name"}
+  # measured 0.579 (1131/1953) — docs cite %-routines and non-VEHU packages beyond the census;
+  # the R4 %-census adds only the 11 %-routine sources this instance ships
+  routine:      {status: floor-verified, floor: 0.50, vocabulary: "code-model/routines.tsv:routine_name"}
+  option:
+    status: excluded
+    reason: >-
+      measured 1.7% join (11/630) vs options.tsv:name — the keyword-anchored extraction
+      yields prose noise ("PATH EXAMPLE", "FOR FURTHER INFORMATION"); quarantined at emit
+      until the recognizer is rebuilt against the authoritative option-name vocabulary.
+  global:
+    status: no-authoritative-vocabulary
+    reason: >-
+      routine-globals.tsv is code-derived and positive-only (7.6% overlap measured) —
+      absence does not invalidate a doc-mentioned global, so it cannot serve as a
+      membership oracle.
+  build:        {status: no-authoritative-vocabulary}
+  mail_group:   {status: no-authoritative-vocabulary}
+  hl7_segment:  {status: no-authoritative-vocabulary, reason: "closed HL7 v2 terms list drives the recognizer; no VistA-instance vocabulary applies"}
+  package_namespace: {status: no-authoritative-vocabulary, reason: "curated terms list; package-namespace.tsv could floor-verify this in v1.x"}

@@ -378,13 +378,40 @@ def corpus_card(manifest: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def contract_manifest(meta: dict[str, str], *, tool_ver: str, generated_at: str) -> dict[str, Any]:
+def entity_type_block(
+    declared: dict[str, Any], live_counts: dict[str, int]
+) -> dict[str, dict[str, Any]]:
+    """The D2.5 per-type quality declaration + live counts. A type shipping in the
+    database without a declaration is a contract violation — fail loud, never emit."""
+    undeclared = sorted(set(live_counts) - set(declared))
+    if undeclared:
+        raise ValueError(f"entity types shipping without a quality declaration: {undeclared}")
+    block: dict[str, dict[str, Any]] = {}
+    for name, pol in sorted(declared.items()):
+        entry: dict[str, Any] = {"status": pol.status, "count": live_counts.get(name, 0)}
+        if pol.status == "floor-verified":
+            entry["floor"] = pol.floor
+            entry["vocabulary"] = pol.vocabulary
+        if pol.reason:
+            entry["reason"] = pol.reason
+        block[name] = entry
+    return block
+
+
+def contract_manifest(
+    meta: dict[str, str],
+    *,
+    tool_ver: str,
+    generated_at: str,
+    entity_types: dict[str, Any] | None = None,
+    peer_vocabulary: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """The producer-contract manifest (Track D1): both version axes verbatim from the
     live ``index.db`` ``meta`` table — ``read_schema_version`` (structural axis) and
     ``corpus_content_hash`` (data-identity axis) — never from the spec file, so the
     manifest can never describe a database other than the one being shipped. A missing
     axis raises (KeyError): no partial contract is ever emitted."""
-    return {
+    doc: dict[str, Any] = {
         "artifact": "vdocs-data",
         "read_schema_version": meta["read_schema_version"],
         "corpus_content_hash": meta["corpus_content_hash"],
@@ -392,6 +419,11 @@ def contract_manifest(meta: dict[str, str], *, tool_ver: str, generated_at: str)
         "tool_ver": tool_ver,
         "generated_at": generated_at,
     }
+    if entity_types is not None:
+        doc["entity_types"] = entity_types
+    if peer_vocabulary is not None:
+        doc["peer_vocabulary"] = peer_vocabulary
+    return doc
 
 
 def discovery_descriptor(counts: dict[str, Any], *, tool_ver: str) -> dict[str, Any]:

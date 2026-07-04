@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Callable
+from pathlib import Path
 
 import typer
 
@@ -432,13 +433,227 @@ def _emit_doctor(cfg: Settings) -> str:
     from vdocs.kernel import read_contract as rc
 
     spec = rc.load(rc.contract_path(base=cfg.read_contract_dir))
+    from vdocs.kernel.entity_quality import load_entity_quality
+
+    excluded = load_entity_quality(cfg.registries).excluded_types()
     conn = db.connect(cfg.index_db, read_only=True)
     try:
-        report = doc.diagnose(conn, kept_doctypes=kept, policy=policy, read_spec=spec)
+        report = doc.diagnose(
+            conn,
+            kept_doctypes=kept,
+            policy=policy,
+            read_spec=spec,
+            excluded_entity_types=excluded,
+        )
     finally:
         conn.close()
     doc.render_report(report, typer.echo)
     return report.verdict()
+
+
+@app.command("entity-quality")
+@_guarded
+def entity_quality_cmd(
+    vista_meta: Path = typer.Option(
+        ...,
+        "--vista-meta",
+        help="Path to an unpacked vista-meta data-v1 tree (the vocabulary peer)",
+    ),
+) -> None:
+    """Measure entity join rates against the vista-meta data-v1 vocabularies (D2.5).
+
+    Floors are numbers: every floor-verified type in registries/entity-quality.yaml must
+    measure rate >= its declared floor against the peer vocabulary named there; an entity
+    type shipping without a declaration is UNDECLARED. Exits 1 on FAIL — the release gate.
+    """
+    from vdocs.kernel import db
+    from vdocs.kernel.entity_quality import load_entity_quality
+    from vdocs.server import entity_quality_gate as eq
+
+    cfg = Settings()
+    quality = load_entity_quality(cfg.registries)
+    conn = db.connect(cfg.index_db, read_only=True)
+    try:
+        by_type: dict[str, list[str]] = {}
+        for etype, name in conn.execute("SELECT type, canonical_name FROM entities"):
+            by_type.setdefault(etype, []).append(name)
+    finally:
+        conn.close()
+    vocabs = {
+        name: eq.load_vocab(vista_meta, pol.vocabulary)
+        for name, pol in quality.types.items()
+        if pol.status == "floor-verified"
+    }
+    rows = eq.measure(by_type, vocabs, quality)
+    eq.render(rows, typer.echo)
+    out = eq.verdict(rows)
+    peer = quality.peer_vocabulary.get("content_hash", "?")[:12]
+    typer.echo(f"ENTITY QUALITY: {out}  (peer {peer}…)")
+    if out == "FAIL":
+        raise typer.Exit(code=1)
+
+
+@app.command()
+@_guarded
+def release(
+    vista_meta: Path = typer.Option(
+        ...,
+        "--vista-meta",
+        help="Path to an unpacked vista-meta data-v1 tree (the entity-quality peer)",
+    ),
+    publish: bool = typer.Option(False, "--publish", help="create the GitHub Release"),
+) -> None:
+    """Assemble (and optionally publish) the vdocs data-v1 release bundle (Track D3).
+
+    Preflight: lake quiescent (no live `vdocs run`, corpus_content_hash stable across
+    the assembly window), repo tree clean with HEAD == upstream (source_commit must
+    not lie), doctor GREEN, entity-quality floors PASS. Assets land in DATA_DIR/dist/.
+    """
+    import hashlib
+    import json
+    import subprocess
+
+    from vdocs.kernel import db
+    from vdocs.kernel.entity_quality import load_entity_quality
+    from vdocs.server import entity_quality_gate as eq
+    from vdocs.server import release as rel
+
+    cfg = Settings()
+    repo_root = Path(__file__).resolve().parents[3]
+
+    def _git(*args: str) -> str:
+        return subprocess.run(
+            ["git", *args], cwd=repo_root, capture_output=True, text=True, check=True
+        ).stdout.strip()
+
+    def _meta_hash() -> str:
+        conn = db.connect(cfg.index_db, read_only=True)
+        try:
+            row = conn.execute("SELECT value FROM meta WHERE key='corpus_content_hash'").fetchone()
+            return str(row[0])
+        finally:
+            conn.close()
+
+    # F15: lake quiescence — a live orchestrator would race the database being released
+    live = subprocess.run(
+        ["pgrep", "-f", "vdocs run"], capture_output=True, text=True
+    ).stdout.strip()
+    if live:
+        typer.echo(f"ERROR: live `vdocs run` (pid {live.splitlines()[0]}) — lake not quiescent")
+        raise typer.Exit(code=1)
+    hash_before = _meta_hash()
+
+    # F16: source_commit must not lie
+    if _git("status", "--porcelain"):
+        typer.echo("ERROR: repo tree not clean — commit or stash first")
+        raise typer.Exit(code=1)
+    head = _git("rev-parse", "HEAD")
+    if head != _git("rev-parse", "@{upstream}"):
+        typer.echo("ERROR: HEAD != upstream — push first")
+        raise typer.Exit(code=1)
+
+    # release gates: doctor GREEN + entity-quality floors PASS
+    if _emit_doctor(cfg) == "RED":
+        typer.echo("ERROR: doctor RED — not releasable")
+        raise typer.Exit(code=1)
+    quality = load_entity_quality(cfg.registries)
+    conn = db.connect(cfg.index_db, read_only=True)
+    try:
+        by_type: dict[str, list[str]] = {}
+        for etype, name in conn.execute("SELECT type, canonical_name FROM entities"):
+            by_type.setdefault(etype, []).append(name)
+    finally:
+        conn.close()
+    vocabs = {
+        n: eq.load_vocab(vista_meta, pol.vocabulary)
+        for n, pol in quality.types.items()
+        if pol.status == "floor-verified"
+    }
+    rows = eq.measure(by_type, vocabs, quality)
+    eq.render(rows, typer.echo)
+    if eq.verdict(rows) == "FAIL":
+        typer.echo("ERROR: entity quality below declared floors — not releasable")
+        raise typer.Exit(code=1)
+
+    # assemble
+    dist = cfg.lake / "dist"
+    dist.mkdir(parents=True, exist_ok=True)
+    shipped_db = dist / "index.db"
+    rel.strip_staged(cfg.index_db, shipped_db)
+    contract = json.loads(cfg.contract_manifest.read_text(encoding="utf-8"))
+    flat = {
+        "index.db": shipped_db,
+        **{f: cfg.gold / f for f in rel._GOLD_FILES if (cfg.gold / f).is_file()},
+    }
+    files = {
+        name: {
+            "sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
+            "bytes": p.stat().st_size,
+        }
+        for name, p in sorted(flat.items())
+    }
+    tree = {
+        str(p.relative_to(cfg.gold)): p.read_bytes()
+        for d in rel._GOLD_DIRS
+        for p in sorted((cfg.gold / d).rglob("*"))
+        if p.is_file()
+    }
+    manifest = rel.release_manifest(
+        contract,
+        source_commit=head,
+        files=files,
+        consolidated={"files": len(tree), "tree_sha256": rel.tree_hash(tree)},
+    )
+    bundle_sha = rel.write_bundle(
+        dist / rel.BUNDLE_NAME, index_db=shipped_db, gold_dir=cfg.gold, manifest=manifest
+    )
+    standalone = rel.standalone_manifest(manifest, bundle_sha)
+    (dist / rel.STANDALONE_NAME).write_text(
+        json.dumps(standalone, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    (dist / rel.SUMS_NAME).write_text(
+        rel.sha256sums([dist / rel.BUNDLE_NAME, dist / rel.STANDALONE_NAME]),
+        encoding="utf-8",
+    )
+
+    # F15: the assembly window must not have raced a mutation
+    if _meta_hash() != hash_before:
+        typer.echo("ERROR: corpus_content_hash moved during assembly — rerun")
+        raise typer.Exit(code=1)
+
+    for n in (rel.BUNDLE_NAME, rel.STANDALONE_NAME, rel.SUMS_NAME):
+        typer.echo(f"dist/{n}: {(dist / n).stat().st_size} bytes")
+    typer.echo(f"bundle_sha256: {bundle_sha}")
+    typer.echo(f"corpus_content_hash: {contract['corpus_content_hash']}")
+
+    if publish:
+        subprocess.run(
+            [
+                "gh",
+                "release",
+                "create",
+                rel.TAG,
+                str(dist / rel.BUNDLE_NAME),
+                str(dist / rel.STANDALONE_NAME),
+                str(dist / rel.SUMS_NAME),
+                "--title",
+                f"vdocs {rel.TAG}",
+                "--notes",
+                f"vdocs gold corpus + index.db data release.\n\n"
+                f"corpus_content_hash: `{contract['corpus_content_hash']}`\n"
+                f"bundle_sha256: `{bundle_sha}`\n"
+                f"peer: vista-meta data-v1 "
+                f"`{contract.get('peer_vocabulary', {}).get('content_hash', '?')[:16]}…`\n\n"
+                f"Verify: `sha256sum -c SHA256SUMS`, then compare against the in-repo "
+                f"record `docs/releases/{rel.STANDALONE_NAME}`.",
+            ],  # fmt: skip
+            cwd=repo_root,
+            check=True,
+        )
+        record = repo_root / "docs" / "releases" / rel.STANDALONE_NAME
+        record.parent.mkdir(parents=True, exist_ok=True)
+        record.write_text(json.dumps(standalone, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        typer.echo(f"published {rel.TAG}; in-repo record at {record.relative_to(repo_root)}")
 
 
 @app.command()
