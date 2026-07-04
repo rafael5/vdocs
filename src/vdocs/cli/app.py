@@ -543,10 +543,14 @@ def release(
         raise typer.Exit(code=1)
     hash_before = _meta_hash()
 
-    # F16: source_commit must not lie
-    if _git("status", "--porcelain"):
-        typer.echo("ERROR: repo tree not clean — commit or stash first")
+    # F16: source_commit must not lie. Tracked files only: untracked files are not
+    # part of the committed code, but surface them so a forgotten new module is seen.
+    if _git("status", "--porcelain", "--untracked-files=no"):
+        typer.echo("ERROR: repo tree not clean (tracked changes) — commit or stash first")
         raise typer.Exit(code=1)
+    untracked = _git("status", "--porcelain", "--untracked-files=normal")
+    if untracked:
+        typer.echo(f"WARN: untracked files present (not in source_commit):\n{untracked}")
     head = _git("rev-parse", "HEAD")
     if head != _git("rev-parse", "@{upstream}"):
         typer.echo("ERROR: HEAD != upstream — push first")
