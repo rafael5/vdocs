@@ -132,3 +132,52 @@ def test_compile_rules_skips_excluded_types():
     rules = ent.compile_rules(entries, excluded_types=frozenset({"option"}))
     assert [r.type for r in rules] == ["global"]
     assert ent.extract("menu option XUMAINT uses ^DIC", rules) == [("global", "^DIC")]
+
+
+_OPTION_VOCAB = frozenset({"XUMAINT", "PSO LM BACKDOOR", "OR CPRS GUI CHART"})
+
+
+def _vocab_rules():
+    return ent.compile_rules(
+        [
+            {
+                "type": "option",
+                "pattern": r"(?i)\boption\s+([A-Z][A-Z0-9]+(?:\s+[A-Z0-9]+){0,5})\b",
+                "canonical": "group1",
+                "casefold": True,
+                "vocab": "option-names",
+            }
+        ],
+        vocabularies={"option-names": _OPTION_VOCAB},
+    )
+
+
+def test_vocab_rule_keeps_only_authoritative_members():
+    # the un-quarantine design: the keyword anchor proposes, the vista-meta
+    # options.tsv vocabulary validates — prose noise cannot ship.
+    hits = ent.extract(
+        "Use option XUMAINT daily. See option PATH EXAMPLE for further information.",
+        _vocab_rules(),
+    )
+    assert hits == [("option", "XUMAINT")]
+
+
+def test_vocab_rule_trims_to_longest_vocabulary_prefix():
+    # the greedy capture may swallow trailing prose words in all-caps headings;
+    # trim word-by-word to the longest vocabulary member.
+    hits = ent.extract("THE OPTION PSO LM BACKDOOR IS USED", _vocab_rules())
+    assert hits == [("option", "PSO LM BACKDOOR")]
+
+
+def test_vocab_rule_drops_non_members_entirely():
+    assert ent.extract("option FOR FURTHER INFORMATION", _vocab_rules()) == []
+
+
+def test_vocab_rule_requires_the_named_vocabulary():
+    import pytest
+
+    with pytest.raises(ValueError, match="option-names"):
+        ent.compile_rules(
+            [{"type": "option", "pattern": "x", "vocab": "option-names"}],
+            vocabularies={},
+        )

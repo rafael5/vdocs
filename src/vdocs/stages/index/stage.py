@@ -171,7 +171,7 @@ class IndexStage(Stage):
     # v12 (SKL entity-keying, S3.3): index.db gained three EMPTY shells (entity_skl,
     # entity_synonyms, chunk_entities) + their v_* views — the schema owner stamps them so the read
     # version is consistent before `merge` populates them; read contract → v1.5 (additive MINOR).
-    contract_ver = 13  # v13: D2.5 entity-type quarantine (entity-quality.yaml)
+    contract_ver = 14  # v14: vocab-validated option recognizer (un-quarantined)
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
@@ -187,9 +187,13 @@ class IndexStage(Stage):
         # D2.5: types quarantined by registries/entity-quality.yaml never compile —
         # the exclusion cascades to mentions and (on rebuild) relations by construction.
         quality = entity_quality.load_entity_quality(cfg.registries)
+        entity_entries = _load_entity_entries(cfg.registries / "entities" / "entities.yaml")
         rules = ent.compile_rules(
-            _load_entity_entries(cfg.registries / "entities" / "entities.yaml"),
+            entity_entries,
             excluded_types=quality.excluded_types(),
+            vocabularies=kregistry.load_entity_vocabularies(
+                cfg.registries / "entities", entity_entries
+            ),
         )
 
         documents: list[tuple] = []

@@ -73,8 +73,21 @@ entities:
     pattern: '(?i)\bmenu option\s+([A-Z][A-Z0-9]+(?:\s+[A-Z0-9]+){0,5})\b'
     canonical: group1
     casefold: true
-    status: candidate
-    note: '"menu option XUMAINT" → XUMAINT (the "menu option" anchor keeps it precise).'
+    vocab: option-names
+    status: approved
+    note: >-
+      "menu option XUMAINT" → XUMAINT. Vocab-validated against option-names.txt (the
+      vista-meta data-v1 File-19 registry): the anchor proposes, the vocabulary decides —
+      this is what un-quarantined the type (was 1.7% join as a bare keyword rule).
+  - type: option
+    pattern: '(?i)\boption\s+([A-Z][A-Z0-9]+(?:\s+[A-Z0-9]+){0,5})\b'
+    canonical: group1
+    casefold: true
+    vocab: option-names
+    status: approved
+    note: >-
+      the bare "option NAME" form — safe only because membership in option-names.txt is
+      required; the candidate is trimmed to its longest vocabulary prefix or dropped.
   # NOTE: a bare `protocol NAME` pattern was tried and dropped — on the real corpus it matched any
   # uppercase word after "protocol" (e.g. "protocol FILED"), polluting the graph. Protocols (file
   # 101) need FileMan-context or a curated terms list (a discover follow-up), not a keyword anchor.

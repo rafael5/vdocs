@@ -44,3 +44,14 @@ def test_load_mapping_sidecar_absent_and_empty_collapse_to_empty(tmp_path):
     assert registry.load_mapping(empty, missing_ok=True) == {}
     assert registry.load_mapping(tmp_path / "absent_sidecar.yaml", missing_ok=True) == {}
     assert (registry.load_mapping(empty, missing_ok=True) or None) is None
+
+
+def test_load_anchor_aliases_reads_the_map(tmp_path):
+    (tmp_path / "anchor-aliases.yaml").write_text(
+        "aliases:\n  'A:B:UG:x': 'A:B:UM:x'\n", encoding="utf-8"
+    )
+    assert registry.load_anchor_aliases(tmp_path) == {"A:B:UG:x": "A:B:UM:x"}
+
+
+def test_load_anchor_aliases_missing_file_is_empty(tmp_path):
+    assert registry.load_anchor_aliases(tmp_path) == {}

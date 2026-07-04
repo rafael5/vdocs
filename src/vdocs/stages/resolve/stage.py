@@ -158,7 +158,11 @@ def _load_edge_types(cfg) -> frozenset[str]:  # type: ignore[no-untyped-def]
 def _load_rules(cfg) -> list[ent.EntityRule]:  # type: ignore[no-untyped-def]
     """The shared registry-driven recognizers (same source `index` compiles — no fork)."""
     data = kregistry.load_mapping(cfg.registries / "entities" / "entities.yaml", missing_ok=True)
-    return ent.compile_rules(data.get("entities") or [])
+    entries = data.get("entities") or []
+    return ent.compile_rules(
+        entries,
+        vocabularies=kregistry.load_entity_vocabularies(cfg.registries / "entities", entries),
+    )
 
 
 def _term_regex(products: dict[str, list[dict]]) -> re.Pattern[str] | None:

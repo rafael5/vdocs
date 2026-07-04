@@ -27,12 +27,10 @@ types:
   # measured 0.579 (1131/1953) — docs cite %-routines and non-VEHU packages beyond the census;
   # the R4 %-census adds only the 11 %-routine sources this instance ships
   routine:      {status: floor-verified, floor: 0.50, vocabulary: "code-model/routines.tsv:routine_name"}
-  option:
-    status: excluded
-    reason: >-
-      measured 1.7% join (11/630) vs options.tsv:name — the keyword-anchored extraction
-      yields prose noise ("PATH EXAMPLE", "FOR FURTHER INFORMATION"); quarantined at emit
-      until the recognizer is rebuilt against the authoritative option-name vocabulary.
+  # vocab-validated at extraction (entities/option-names.txt, derived from the same
+  # vocabulary this floor joins against) — the rate is ~1.0 by construction; the floor
+  # guards normalization drift between the extractor and the gate.
+  option:       {status: floor-verified, floor: 0.95, vocabulary: "code-model/options.tsv:name"}
   global:
     status: no-authoritative-vocabulary
     reason: >-

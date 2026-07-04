@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from vdocs.kernel.ids import bundle_key, bundle_path, doc_id
+from vdocs.kernel.ids import apply_anchor_alias, bundle_key, bundle_path, doc_id
 
 
 @dataclass
@@ -31,3 +31,13 @@ def test_bundle_key_is_the_sanitised_convert_layout_identity():
 def test_bundle_path_is_the_slash_joined_key():
     assert bundle_path("AR/WS", "x") == "AR_WS/x"
     assert bundle_path("RA", "ra_um") == "/".join(bundle_key("RA", "ra_um"))
+
+
+def test_apply_anchor_alias_maps_known_drift_and_passes_through():
+    # era drift in pkg_ns/doc_type spellings splits one version family across
+    # sibling anchor_keys, stranding old versions in anchorless groups; the
+    # curated alias map re-unifies them at the one formula seam (§9.2).
+    aliases = {"PSO:PSO:UG:pso_um": "PSO:PSO:UM:pso_um"}
+    assert apply_anchor_alias("PSO:PSO:UG:pso_um", aliases) == "PSO:PSO:UM:pso_um"
+    assert apply_anchor_alias("PSO:PSO:UM:pso_um", aliases) == "PSO:PSO:UM:pso_um"
+    assert apply_anchor_alias("", aliases) == ""

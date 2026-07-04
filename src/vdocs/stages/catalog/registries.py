@@ -71,6 +71,7 @@ class Registries:
     doc_labels: dict[str, str]
     typo_corrections: tuple[TypoCorrection, ...]
     packages: dict[str, PackageEntry] = field(default_factory=dict)
+    anchor_aliases: dict[str, str] = field(default_factory=dict)
 
 
 # --- pure parsers (YAML text → structures) ---------------------------------
@@ -165,12 +166,14 @@ def load_registries(d: Path) -> Registries:
     the pattern registries — phrases/templates/… — in their own sibling subdirs).
     """
     inv = d / "inventory"
+    anchor_aliases = kregistry.load_anchor_aliases(d)
     doc_types_text = (inv / "doc-types.yaml").read_text(encoding="utf-8")
     patterns, suffix_map, app_specific = parse_doc_types(doc_types_text)
     manual = _read(inv, "manual-labels")
     noise = _read(inv, "noise-domains")
     systypes = _read(inv, "system-types")
     return Registries(
+        anchor_aliases=anchor_aliases,
         section_code=dict(_read(inv, "section-codes").get("section_code", {})),
         abbrev_fallback=dict(_read(inv, "abbrev-fallback").get("abbrev_fallback", {})),
         doc_type_patterns=patterns,

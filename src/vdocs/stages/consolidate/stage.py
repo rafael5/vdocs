@@ -39,7 +39,7 @@ class ConsolidateStage(Stage):
     requires = [TEXT_NORMALIZED, ASSETS]
     produces = [CONSOLIDATED]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
-    contract_ver = 2  # bump when the gold anchor-bundle layout changes (re-runs index)
+    contract_ver = 3  # v3: anchor-alias re-grouping (anchor-aliases.yaml)
     # ^ v2: carry the latest member's tables/*.csv sidecars into the bundle (rich-reading tables P1)
 
     def __init__(self) -> None:
@@ -47,6 +47,8 @@ class ConsolidateStage(Stage):
         self._total = 0
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
+        # §9.2: the same curated anchor-alias map both derivation sites consume
+        anchor_aliases = kregistry.load_anchor_aliases(ctx.cfg.registries)
         normalized_root = ctx.cfg.silver_normalized
         consolidated_root = ctx.cfg.gold_consolidated
         bodies = cas.Cas(ctx.cfg.history_bodies)  # write-once store of retained normalized bodies
@@ -70,7 +72,9 @@ class ConsolidateStage(Stage):
             with loop.guard(str(rel)):
                 raw = body_path.read_bytes()
                 meta, _ = frontmatter.parse(raw.decode("utf-8"))
-                member = _member_from(meta, rel.parts[1], raw, bodies, body_path.parent)
+                member = _member_from(
+                    meta, rel.parts[1], raw, bodies, body_path.parent, anchor_aliases
+                )
                 members.append(member)
                 body_bytes[member.doc_id] = raw
                 flags_path = body_path.parent / "flags.yaml"
@@ -167,7 +171,7 @@ class ConsolidateStage(Stage):
         return self.doc_error_gate(self._errors, self._total)
 
 
-def _member_from(meta, doc_slug, raw, bodies, bundle_dir):  # type: ignore[no-untyped-def]
+def _member_from(meta, doc_slug, raw, bodies, bundle_dir, anchor_aliases):  # type: ignore[no-untyped-def]
     """Build a :class:`~consolidate_pure.Member` from a bundle's FM + folded revisions + retained
     body. The version-group identity is reconstructed from the FM exactly as ``catalog`` computed it
     (shared ``kernel.ids.anchor_key``), so a bundle groups identically end-to-end (§9.2)."""
@@ -180,7 +184,9 @@ def _member_from(meta, doc_slug, raw, bodies, bundle_dir):  # type: ignore[no-un
     # date baked into identity FM (§6.4) — so it populates even where no revision table exists.
     official_date = cp.official_date(revision_newest, str(meta.get("published", "")))
     return cp.Member(
-        anchor_key=kids.anchor_key(app_code, pkg_ns, doc_code, doc_slug),
+        anchor_key=kids.apply_anchor_alias(
+            kids.anchor_key(app_code, pkg_ns, doc_code, doc_slug), anchor_aliases
+        ),
         app_code=app_code,
         pkg_ns=pkg_ns,
         doc_code=doc_code,

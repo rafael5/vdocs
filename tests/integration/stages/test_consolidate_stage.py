@@ -204,10 +204,10 @@ def test_consolidate_isolates_a_single_doc_failure(ctx, monkeypatch):
 
     real = cs._member_from
 
-    def flaky(meta, slug, raw, bodies, bundle_dir):
+    def flaky(meta, slug, raw, bodies, bundle_dir, anchor_aliases):
         if slug == "bad_um":
             raise ValueError("boom")
-        return real(meta, slug, raw, bodies, bundle_dir)
+        return real(meta, slug, raw, bodies, bundle_dir, anchor_aliases)
 
     monkeypatch.setattr(cs, "_member_from", flaky)
     (result,) = Orchestrator([ConsolidateStage()]).run(ctx)

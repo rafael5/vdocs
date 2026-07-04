@@ -80,3 +80,13 @@ def bundle_path(app_code: str, doc_slug: str) -> str:
 
 
 __all__ = ["HasIdentity", "anchor_key", "bundle_key", "bundle_path", "doc_id", "slug_stem"]
+
+
+def apply_anchor_alias(key: str, aliases: dict[str, str]) -> str:
+    """Map a computed ``anchor_key`` to its curated canonical spelling (§9.2).
+
+    Era drift in ``pkg_ns``/``doc_code`` spellings splits one version family across
+    sibling anchor_keys, stranding older versions in groups with no ``is_latest``
+    anchor; ``registries/anchor-aliases.yaml`` re-unifies the known cases at both
+    derivation sites (catalog enrichment + consolidate). Identity when unmapped."""
+    return aliases.get(key, key)

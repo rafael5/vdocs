@@ -1,0 +1,18 @@
+# registries/anchor-aliases.yaml — computed→canonical anchor_key aliases (§9.2).
+# =========================================================================================
+# Era drift in pkg_ns / doc_type spellings splits one logical version family across
+# sibling anchor_keys, stranding the older versions in a group with NO is_latest anchor
+# (the doctor "anchor coverage" FAIL). Each entry re-unifies a known family under the
+# spelling its latest member carries; applied at BOTH derivation sites (catalog
+# enrichment Pass 5 and consolidate member construction), so grouping is stable
+# end-to-end. Individual documents' own doc_type/pkg_ns facets are untouched — only
+# the version-group key is canonicalized.
+# =========================================================================================
+
+aliases:
+  # BPS (e-pharmacy) docs: older upload tagged pkg_ns ECME, the family lives under BPS
+  "ECME:ECME:UM:bps_um": "ECME:BPS:UM:bps_um"
+  # 5 older PSO user-manual versions typed UG; the family's latest is typed UM
+  "PSO:PSO:UG:pso_um": "PSO:PSO:UM:pso_um"
+  # inverse drift: 5 older PXRM user manuals typed UM, the latest is typed UG
+  "PXRM:PXRM:UM:pxrm_um": "PXRM:PXRM:UG:pxrm_um"

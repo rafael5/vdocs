@@ -28,13 +28,3 @@ coverage:
 # corruption while staying quiet about these.
 accepted_anchor_edge_cases:
   - "AR/WS:p13"   # PSGW*2.3*13 "…User Manual Change Pages" — bare patch-token slug, no version stem
-
-# Version groups (anchor_keys) known to carry NO is_latest anchor — upstream grouping
-# drift where the family's latest lives under a SIBLING anchor_key spelling (pkg_ns or
-# doc_type normalization differs across eras), stranding the older versions. Declared
-# here so `doctor` WARNs on these (visible, non-blocking) while any NEW anchorless
-# group FAILs. Fix is upstream re-grouping (enrich/consolidate keying), tracked.
-accepted_anchorless_groups:
-  - "ECME:ECME:UM:bps_um"   # latest lives under ECME:BPS:UM:bps_um (pkg_ns ECME vs BPS)
-  - "PSO:PSO:UG:pso_um"     # 5 old versions typed UG; the family's latest is under PSO:PSO:UM:pso_um
-  - "PXRM:PXRM:UM:pxrm_um"  # 5 old versions; latest under a sibling pxrm anchor spelling

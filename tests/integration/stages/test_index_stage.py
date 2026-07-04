@@ -466,7 +466,10 @@ def test_index_quarantines_excluded_entity_types(ctx):
     conn = db.connect(ctx.cfg.index_db, read_only=True)
     try:
         types = {t for (t,) in conn.execute("SELECT DISTINCT type FROM entities")}
+        options = [
+            r[0] for r in conn.execute("SELECT canonical_name FROM entities WHERE type='option'")
+        ]
     finally:
         conn.close()
     assert {"global", "routine"} <= types  # extraction ran on the same text
-    assert "option" not in types  # quarantined by the shipped registry
+    assert options == ["XUMAINT"]  # vocab member ships; "PATH EXAMPLE" noise dropped
