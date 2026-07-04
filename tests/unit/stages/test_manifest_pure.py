@@ -236,6 +236,15 @@ def test_ai_manifest_assembles_card_with_recipe_and_fingerprint():
     assert m["schema_version"] == 1 and m["index_fingerprint"] == "deadbeef"
     assert m["counts"]["documents"] == 469
     assert "vdocs search" in m["query"]["command"]
+    # Tier-1 self-sufficiency: canonical sqlite3 recipes ship in the card so an agent with
+    # ONLY the bundle (no CLI binary) can search/filter/sort without rediscovering the
+    # ranking policy. The published bm25 weight vector is part of the contract surface.
+    rec = m["sql_recipes"]
+    assert rec["_notes"]["ranking"].startswith("bm25")
+    assert "2.5" in rec["search"]["sql"] and "chunks_fts MATCH" in rec["search"]["sql"]
+    assert "v_chunks" in rec["section_text"]["sql"]
+    assert "v_documents" in rec["filter_documents"]["sql"]
+    assert all("purpose" in r and "sql" in r for k, r in rec.items() if not k.startswith("_"))
     # the recipe advertises the REAL query-CLI hit shape: source_url in, body_path out
     assert "source_url" in m["query"]["returns"]
     assert "body_path" not in m["query"]["returns"]
@@ -256,6 +265,7 @@ def test_corpus_card_renders_usage_catalog_and_recipe():
     md = mp.corpus_card(m)
     assert md.startswith("# ")
     assert "vdocs search" in md  # the query recipe is rendered
+    assert "sqlite3" in md and "chunks_fts MATCH" in md  # the no-CLI SQL recipes are rendered
     assert "OR User Manual" in md  # the catalog is rendered
     assert "documents/gold/consolidated/CPRS/or_um/body.md" in md  # with resolvable paths
     assert "XLFSTR" in md  # entity highlights rendered

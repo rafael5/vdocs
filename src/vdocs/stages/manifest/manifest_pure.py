@@ -191,6 +191,68 @@ SOURCE_OF_TRUTH = (
 )
 
 
+# Tier-1 self-sufficiency (2026-07-04): canonical sqlite3 recipes published in the card so an
+# agent holding ONLY the bundle (no CLI binary, no server) can search/filter/sort correctly.
+# Strictly the READ-CONTRACT surface (v_* views + chunks_fts + meta — never physical tables,
+# ADR-0001). The bm25 weight vector IS the published ranking policy (search_pure.FTS_WEIGHTS:
+# doc_title 2.5 · title 2.0 · section_path 1.5 · body 1.0; the first three columns are
+# unindexed placeholders). Executed verbatim by tests/integration/stages/
+# test_manifest_recipes_db.py — a contract change that breaks a recipe breaks the build.
+SQL_RECIPES: dict[str, dict[str, str]] = {
+    "_notes": {
+        "engine": "sqlite3 (any stock build with FTS5, 2015+) against index.db",
+        "ranking": "bm25() is lower-is-better; ORDER BY score ascending returns best first",
+        "match_rule": "build :match from the question: alphanumeric tokens of length >=2, "
+        'each double-quoted, OR-joined — e.g. "kernel" OR "sign" OR "on"',
+        "contract": "query only v_* views, chunks_fts and meta (the versioned read contract); "
+        "check meta.read_schema_version before assuming column shapes",
+    },
+    "search": {
+        "purpose": "ranked lexical search over the latest searchable chunks (the vdocs "
+        "search equivalent, field-weighted bm25)",
+        "sql": "SELECT section_id, doc_key, doc_title, title AS section_title, "
+        "snippet(chunks_fts, 6, '[', ']', ' … ', 12) AS snippet, "
+        "bm25(chunks_fts, 1.0, 1.0, 1.0, 2.0, 2.5, 1.5, 1.0) AS score "
+        "FROM chunks_fts WHERE chunks_fts MATCH :match ORDER BY score LIMIT :k",
+    },
+    "section_text": {
+        "purpose": "read a cited section's full text (parts in order; the vdocs section "
+        "equivalent)",
+        "sql": "SELECT text FROM v_chunks WHERE section_id = :section_id ORDER BY part",
+    },
+    "filter_documents": {
+        "purpose": "facet filter + sort the current document set (drop a predicate to widen; "
+        "all facet columns are on v_documents)",
+        "sql": "SELECT doc_key, title, doc_type, app_code, pub_year, source_url "
+        "FROM v_documents WHERE is_latest = 1 AND app_code = :app AND doc_type = :doc_type "
+        "ORDER BY pub_year DESC",
+    },
+    "entity_lookup": {
+        "purpose": "find a VistA entity (routine/global/rpc/option/fileman_file/…) by type + "
+        "name pattern",
+        "sql": "SELECT entity_id, type, canonical_name, mention_count FROM v_entities "
+        "WHERE type = :type AND canonical_name LIKE :name "
+        "ORDER BY mention_count DESC LIMIT :k",
+    },
+    "entity_documents": {
+        "purpose": "every document that mentions an entity (graph hop: entity -> documents)",
+        "sql": "SELECT DISTINCT m.doc_key, d.title FROM v_entity_mentions m "
+        "JOIN v_documents d ON d.doc_key = m.doc_key WHERE m.entity_id = :entity_id",
+    },
+    "skl_synonyms": {
+        "purpose": "SKL synonym expansion: every known surface form of a resolved entity "
+        "(query-vocabulary mismatch fix)",
+        "sql": "SELECT s.surface, s.kind FROM v_entity_skl e "
+        "JOIN v_entity_synonyms s ON s.node_id = e.node_id WHERE e.canonical_name = :name",
+    },
+    "staleness": {
+        "purpose": "self-check: the schema version + corpus fingerprint this card was built "
+        "against",
+        "sql": "SELECT key, value FROM meta",
+    },
+}
+
+
 def _capabilities() -> dict[str, bool]:
     """The retrieval modes available off `index.db` (§14.1): lexical (FTS5), structured (facets),
     and graph (relations). The semantic/vector mode was descoped — lexical-first, offline."""
@@ -316,6 +378,7 @@ def ai_manifest(
         "id_scheme": ID_SCHEME,
         "citation": CITATION,
         "query": QUERY_RECIPE,
+        "sql_recipes": SQL_RECIPES,
         "counts": dict(counts),
         "documents": catalog,
         "entities": entity_index,
@@ -352,6 +415,20 @@ def corpus_card(manifest: dict[str, Any]) -> str:
         f"Returns {manifest['query']['returns']}. {manifest['query']['modes']}.",
         "",
         f"**Cite as:** `{manifest['citation']['format']}`",
+        "",
+        "### No CLI? sqlite3 is enough",
+        "",
+        f"_{manifest['sql_recipes']['_notes']['engine']}; "
+        f"{manifest['sql_recipes']['_notes']['ranking']}. "
+        f"{manifest['sql_recipes']['_notes']['contract']}._",
+        "",
+    ]
+    for rname, recipe in manifest["sql_recipes"].items():
+        if rname.startswith("_"):
+            continue
+        lines += [f"**{rname}** — {recipe['purpose']}:", "", "```sql", recipe["sql"], "```", ""]
+    lines += [
+        f"_match rule: {manifest['sql_recipes']['_notes']['match_rule']}_",
         "",
         "## Documents",
         "",
