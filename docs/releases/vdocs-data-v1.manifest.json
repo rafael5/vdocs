@@ -1,0 +1,102 @@
+{
+  "artifact": "vdocs-data",
+  "bundle_sha256": "a795659768acfaab1d4ba0f398113540d1169d871cf36509760a610809b17be8",
+  "consolidated": {
+    "files": 7786,
+    "tree_sha256": "8988cb17e54e256b7148f1c07d94af70b4c7f49153c5ae9fc62998dea1b5b225"
+  },
+  "corpus_content_hash": "54a26e072e5ea625666ea1f7ecac4978dfa9f0e3d1b23650518501b447cf47c1",
+  "corpus_doc_count": 1034,
+  "entity_types": {
+    "build": {
+      "count": 263,
+      "status": "no-authoritative-vocabulary"
+    },
+    "fileman_file": {
+      "count": 441,
+      "floor": 0.8,
+      "status": "floor-verified",
+      "vocabulary": "data-model/files.tsv:file_number"
+    },
+    "global": {
+      "count": 3593,
+      "reason": "routine-globals.tsv is code-derived and positive-only (7.6% overlap measured) \u2014 absence does not invalidate a doc-mentioned global, so it cannot serve as a membership oracle.",
+      "status": "no-authoritative-vocabulary"
+    },
+    "hl7_segment": {
+      "count": 23,
+      "reason": "closed HL7 v2 terms list drives the recognizer; no VistA-instance vocabulary applies",
+      "status": "no-authoritative-vocabulary"
+    },
+    "mail_group": {
+      "count": 43,
+      "status": "no-authoritative-vocabulary"
+    },
+    "option": {
+      "count": 0,
+      "reason": "measured 1.7% join (11/630) vs options.tsv:name \u2014 the keyword-anchored extraction yields prose noise (\"PATH EXAMPLE\", \"FOR FURTHER INFORMATION\"); quarantined at emit until the recognizer is rebuilt against the authoritative option-name vocabulary.",
+      "status": "excluded"
+    },
+    "package_namespace": {
+      "count": 19,
+      "reason": "curated terms list; package-namespace.tsv could floor-verify this in v1.x",
+      "status": "no-authoritative-vocabulary"
+    },
+    "routine": {
+      "count": 1953,
+      "floor": 0.5,
+      "status": "floor-verified",
+      "vocabulary": "code-model/routines.tsv:routine_name"
+    },
+    "rpc": {
+      "count": 159,
+      "floor": 0.65,
+      "status": "floor-verified",
+      "vocabulary": "code-model/rpcs.tsv:name"
+    }
+  },
+  "files": {
+    "CORPUS.md": {
+      "bytes": 79295,
+      "sha256": "37003c1144c251b9c7d489128bd1cb92d151e2e8bad81a98d93fdb6c338f8a78"
+    },
+    "ai-manifest.json": {
+      "bytes": 237742,
+      "sha256": "81ca0ccb9d62b47c93b4bea21d58ef0a4605e9b76b5766b0efcf0a461862dd97"
+    },
+    "contract-manifest.json": {
+      "bytes": 2111,
+      "sha256": "fb88e094d3f9cb47080de0121c600b682408c48df684e7b7d600c34a61452d61"
+    },
+    "corpus-manifest.json": {
+      "bytes": 2984,
+      "sha256": "81721c2343292c929ff7181edc7a6ffed97176669afe648a144192774885e7c1"
+    },
+    "discovery.json": {
+      "bytes": 812,
+      "sha256": "5c72efeedb9ffb2c9b7fea91c653c774d57b13ed958177afc240b406c3ac60a4"
+    },
+    "glossary.md": {
+      "bytes": 340151,
+      "sha256": "733ac027fdc5ea14e4cd3d44915e2a59a189d018cf41cc0eaa5e096b38073f29"
+    },
+    "index.db": {
+      "bytes": 337088512,
+      "sha256": "815bc236774af961dfff2e598e099b90ab91b9ee1cd09bbfb0bd144a0277c691"
+    }
+  },
+  "generated_at": "2026-07-04T00:31:17.323030+00:00",
+  "history_cas": "excluded",
+  "knowledge_db": "excluded",
+  "peer_vocabulary": {
+    "artifact": "vista-meta-data",
+    "content_hash": "23d037f1e08adc206d251eea9adb4ec62051032c06b593737bebfcaf67e4c754",
+    "tag": "data-v1"
+  },
+  "read_schema_version": "1.5",
+  "rich_assets": "excluded",
+  "rich_tables": "excluded",
+  "source_commit": "78fd3b90fa20b59e1961059eedd77a31f39df0ae",
+  "tag": "data-v1",
+  "tool_ver": "0.1.0"
+}
