@@ -390,6 +390,11 @@ without guessing. Lexical FTS5 over the latest searchable chunks; restrict with 
 For agents, the gold `CORPUS.md` / `ai-manifest.json` describe the corpus and the "answer from THIS
 corpus" query recipe.
 
+> **Two CLIs, one engine.** `vdocs ask` above is this repo's *pipeline* CLI (`.venv/bin/vdocs`).
+> The distributable **query CLI** (the `vdocs-cli` Go binary on `$PATH`) surfaces the same engine
+> as `vdocs search` / `section` / `document` / `facets` plus a TUI browser — that richer interface
+> is what the AI corpus card advertises to agents.
+
 ---
 
 ## 13. Airgapped operation

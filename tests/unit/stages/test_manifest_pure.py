@@ -235,8 +235,13 @@ def test_ai_manifest_assembles_card_with_recipe_and_fingerprint():
     )
     assert m["schema_version"] == 1 and m["index_fingerprint"] == "deadbeef"
     assert m["counts"]["documents"] == 469
-    assert "vdocs ask" in m["query"]["command"]
+    assert "vdocs search" in m["query"]["command"]
+    # the recipe advertises the REAL query-CLI hit shape: source_url in, body_path out
+    assert "source_url" in m["query"]["returns"]
+    assert "body_path" not in m["query"]["returns"]
     assert "section_id" in m["citation"]["format"]
+    assert "body_path" not in m["citation"]["format"]
+    assert "vdocs section" in m["citation"]["resolve"]
     assert m["documents"] == cat and m["entities"] == ents
     assert "semantic" not in m["capabilities"]  # semantic/vector path descoped
     assert "embedding" not in m
@@ -250,7 +255,7 @@ def test_corpus_card_renders_usage_catalog_and_recipe():
     )
     md = mp.corpus_card(m)
     assert md.startswith("# ")
-    assert "vdocs ask" in md  # the query recipe is rendered
+    assert "vdocs search" in md  # the query recipe is rendered
     assert "OR User Manual" in md  # the catalog is rendered
     assert "documents/gold/consolidated/CPRS/or_um/body.md" in md  # with resolvable paths
     assert "XLFSTR" in md  # entity highlights rendered

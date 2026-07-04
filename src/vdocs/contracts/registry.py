@@ -298,7 +298,7 @@ DISCOVERY_JSON = ArtifactContract(
     relpath="documents/gold/discovery.json",
 )
 # `manifest`: the AI corpus card (§14.7) — the always-fresh, denormalized catalog + entity index +
-# the `vdocs ask` query recipe + the index.db fingerprint for staleness. `ai-manifest.json` is the
+# the `vdocs search` recipe + the index.db fingerprint for staleness. `ai-manifest.json` is the
 # machine rendering; `CORPUS.md` is the same content rendered for direct context loading.
 AI_MANIFEST = ArtifactContract(
     key="gold/ai-manifest.json",

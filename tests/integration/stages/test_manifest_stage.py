@@ -179,7 +179,7 @@ def test_manifest_writes_ai_corpus_card(ctx):
 
     card = json.loads(ctx.cfg.ai_manifest.read_text())
     assert card["index_fingerprint"]  # the staleness stamp is recorded
-    assert "vdocs ask" in card["query"]["command"]
+    assert "vdocs search" in card["query"]["command"]
     by_key = {d["doc_key"]: d for d in card["documents"]}
     assert set(by_key) == {"CPRS/or_um", "KAAJEE/dibr"}  # prior version excluded
     # the grouped anchor resolves to the version-free consolidated body path

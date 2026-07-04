@@ -173,14 +173,15 @@ USAGE = (
     "never guess about VistA internals."
 )
 QUERY_RECIPE = {
-    "command": 'vdocs ask "<your question>" --k 8 --json',
-    "returns": "ranked hits: {section_id, doc_key, doc_title, section_title, snippet, score, "
-    "body_path}",
+    "command": 'vdocs search "<your question>" --k 8 --json',
+    "returns": "ranked hits: {section_id, doc_key, doc_title, section_title, app_code, doc_type, "
+    "snippet, score, uri, source_url}",
     "modes": "lexical FTS5 over the is_latest search chunks",
 }
 CITATION = {
-    "format": "<doc_title> — §<section_title>  [vdocs://section/<section_id>]  (<body_path>)",
-    "resolve": "section_id = <doc_key>/<heading_slug>; the gold anchor body is at body_path. "
+    "format": "<doc_title> — §<section_title>  [vdocs://section/<section_id>]  (<source_url>)",
+    "resolve": "section_id = <doc_key>/<heading_slug>; to read a section's text, run "
+    '`vdocs section "<section_id>" --json` (returns text + source_url + uri). '
     "The same stable IDs resolve in the published GitHub corpus (§14.5).",
 }
 SOURCE_OF_TRUTH = (
@@ -302,7 +303,7 @@ def ai_manifest(
 ) -> dict[str, Any]:
     """The AI corpus card (§14.7): a denormalized, self-describing descriptor an agent reads to
     answer "based on the vdocs gold corpus, …" questions without re-discovering the corpus — the
-    capability + ID/citation scheme, the `vdocs ask` query recipe, the counts, the full anchor
+    capability + ID/citation scheme, the `vdocs search` query recipe, the counts, the full anchor
     **catalog** (with resolvable `body_path`s), and the per-type **entity index**."""
     return {
         "schema_version": 1,
