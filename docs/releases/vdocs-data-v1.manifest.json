@@ -1,11 +1,11 @@
 {
   "artifact": "vdocs-data",
-  "bundle_sha256": "a795659768acfaab1d4ba0f398113540d1169d871cf36509760a610809b17be8",
+  "bundle_sha256": "c7dd7a26d58002383d623585c92eba242b000ef0514f32e816b4a3fd4351c1e3",
   "consolidated": {
-    "files": 7786,
-    "tree_sha256": "8988cb17e54e256b7148f1c07d94af70b4c7f49153c5ae9fc62998dea1b5b225"
+    "files": 7788,
+    "tree_sha256": "afd5c4a120770a5d662e4859d138a08bb9cc4fc7140b17a20e4affda2bebcaad"
   },
-  "corpus_content_hash": "54a26e072e5ea625666ea1f7ecac4978dfa9f0e3d1b23650518501b447cf47c1",
+  "corpus_content_hash": "3ce0872e32ec3187eabcee703165134710cc6b92f8c897f149575ddd6ffa01ad",
   "corpus_doc_count": 1034,
   "entity_types": {
     "build": {
@@ -33,9 +33,10 @@
       "status": "no-authoritative-vocabulary"
     },
     "option": {
-      "count": 0,
-      "reason": "measured 1.7% join (11/630) vs options.tsv:name \u2014 the keyword-anchored extraction yields prose noise (\"PATH EXAMPLE\", \"FOR FURTHER INFORMATION\"); quarantined at emit until the recognizer is rebuilt against the authoritative option-name vocabulary.",
-      "status": "excluded"
+      "count": 78,
+      "floor": 0.95,
+      "status": "floor-verified",
+      "vocabulary": "code-model/options.tsv:name"
     },
     "package_namespace": {
       "count": 19,
@@ -57,35 +58,35 @@
   },
   "files": {
     "CORPUS.md": {
-      "bytes": 79295,
-      "sha256": "37003c1144c251b9c7d489128bd1cb92d151e2e8bad81a98d93fdb6c338f8a78"
+      "bytes": 79526,
+      "sha256": "9e8b6adca1818354568058cd19ff35eec5e8e8d4df921e325f9810d21b7d482d"
     },
     "ai-manifest.json": {
-      "bytes": 237742,
-      "sha256": "81ca0ccb9d62b47c93b4bea21d58ef0a4605e9b76b5766b0efcf0a461862dd97"
+      "bytes": 239655,
+      "sha256": "5f29823d19eae8364c40ef0b395c43c89c230d1d5687fe92449cefd167e2b955"
     },
     "contract-manifest.json": {
-      "bytes": 2111,
-      "sha256": "fb88e094d3f9cb47080de0121c600b682408c48df684e7b7d600c34a61452d61"
+      "bytes": 1917,
+      "sha256": "0518076ea93aebacc3ec505c0f40d24d15a141303e5522715e7ecd733b5430fc"
     },
     "corpus-manifest.json": {
-      "bytes": 2984,
-      "sha256": "81721c2343292c929ff7181edc7a6ffed97176669afe648a144192774885e7c1"
+      "bytes": 3004,
+      "sha256": "dc0f1f52a9a50dd74128e6d9ebbe9460d49c4a73d936d7bffc8cbbb1f9c6cad3"
     },
     "discovery.json": {
-      "bytes": 812,
-      "sha256": "5c72efeedb9ffb2c9b7fea91c653c774d57b13ed958177afc240b406c3ac60a4"
+      "bytes": 826,
+      "sha256": "412f3cd5c51cbbbc95fd230727b709252f693d9af512a3b570ae6992957b6945"
     },
     "glossary.md": {
       "bytes": 340151,
       "sha256": "733ac027fdc5ea14e4cd3d44915e2a59a189d018cf41cc0eaa5e096b38073f29"
     },
     "index.db": {
-      "bytes": 337088512,
-      "sha256": "815bc236774af961dfff2e598e099b90ab91b9ee1cd09bbfb0bd144a0277c691"
+      "bytes": 337203200,
+      "sha256": "9473b35242e10c4a1cd37bbafd62138df4ba9b845da7ade8d5a99cde9cb1a7ff"
     }
   },
-  "generated_at": "2026-07-04T00:31:17.323030+00:00",
+  "generated_at": "2026-07-04T13:57:33.935245+00:00",
   "history_cas": "excluded",
   "knowledge_db": "excluded",
   "peer_vocabulary": {
@@ -96,7 +97,7 @@
   "read_schema_version": "1.5",
   "rich_assets": "excluded",
   "rich_tables": "excluded",
-  "source_commit": "78fd3b90fa20b59e1961059eedd77a31f39df0ae",
+  "source_commit": "ed203f6c21c1af65a781e15bb11f23789de98511",
   "tag": "data-v1",
   "tool_ver": "0.1.0"
 }
