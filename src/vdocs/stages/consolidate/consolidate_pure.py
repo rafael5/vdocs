@@ -67,6 +67,13 @@ def _sort_key(m: Member) -> tuple[bool, int, str, str]:
     return (m.patch_num is not None, m.patch_num or 0, m.official_date, m.doc_slug)
 
 
+def _entry_sort_key(e: dict[str, Any]) -> tuple[bool, int, str, str]:
+    """``_sort_key`` over a captured ``history.yaml`` entry (``patch_num`` re-derived from
+    ``patch_id`` — entries persist the id, not the parsed number)."""
+    num = parse_patch_num(e["patch_id"])
+    return (num is not None, num or 0, e["official_date"], e["doc_slug"])
+
+
 def anchor_relpath(app_code: str, pkg_ns: str, doc_code: str, *, doc_slug: str = "") -> str:
     """The **stable, version-free** ``<app>/<slug>`` path of a version group's anchor bundle (§6.6).
 
@@ -128,15 +135,19 @@ def build_history(anchor_key: str, ordered: list[Member]) -> dict[str, Any]:
 def merge_history(existing: dict[str, Any] | None, fresh: dict[str, Any]) -> dict[str, Any]:
     """Fold a freshly-built history into the prior one, **append-only** (§6.6).
 
-    A new VDL patch appears as a member in ``fresh`` not present in ``existing``; it is appended in
-    ``fresh``'s order. Members already captured keep every recorded fact unchanged — only the
-    derived ``is_latest`` pointer re-points to the new newest member. Re-running with the same
-    membership is a no-op (idempotent); a first run (``existing is None``) returns ``fresh``."""
+    A new VDL patch appears as a member in ``fresh`` not present in ``existing``; the merged
+    lineage is re-ordered oldest → newest (a late arrival can be an *older* patch). Members already
+    captured keep every recorded fact unchanged — only the derived order and ``is_latest`` pointer
+    are recomputed. Re-running with the same membership is a no-op (idempotent); a first run
+    (``existing is None``) returns ``fresh``."""
     if existing is None:
         return fresh
     seen = {e["doc_id"] for e in existing["members"]}
     appended = [e for e in fresh["members"] if e["doc_id"] not in seen]
-    members = [*existing["members"], *appended]
+    # A late arrival can be an OLDER patch (a broadened selection back-fills history), so the
+    # merged list is re-ordered with the same key as order_members — never flag the mere last
+    # arrival as latest. Facts stay append-only; only order and the derived pointer are recomputed.
+    members = sorted([*existing["members"], *appended], key=_entry_sort_key)
     last = len(members) - 1
     members = [{**e, "is_latest": (i == last)} for i, e in enumerate(members)]
     return {"anchor_key": fresh["anchor_key"], "member_count": len(members), "members": members}

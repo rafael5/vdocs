@@ -217,6 +217,20 @@ def test_merge_history_appends_new_patch_preserving_prior_entries():
     assert merged["member_count"] == 3
 
 
+def test_merge_history_late_arriving_older_patch_does_not_steal_is_latest():
+    # The group's newest patch is already captured; a later run acquires an OLDER patch
+    # (e.g. a broadened selection back-fills history). Appending it must not re-point
+    # is_latest at the late arrival — lineage stays oldest → newest.
+    b = _member(doc_slug="v2", patch_id="DG*5.3*2", official_date="2024-05-01")
+    existing = cp.build_history("CPRS:OR:RN", cp.order_members([b]))
+    a = _member(doc_slug="v1", patch_id="DG*5.3*1", official_date="2023-01-01")
+    fresh = cp.build_history("CPRS:OR:RN", cp.order_members([a, b]))
+
+    merged = cp.merge_history(existing, fresh)
+    assert [e["patch_id"] for e in merged["members"]] == ["DG*5.3*1", "DG*5.3*2"]
+    assert [e["is_latest"] for e in merged["members"]] == [False, True]
+
+
 def test_merge_history_is_idempotent_on_unchanged_inputs():
     a = _member(doc_slug="v1", patch_id="DG*5.3*1")
     b = _member(doc_slug="v2", patch_id="DG*5.3*2")

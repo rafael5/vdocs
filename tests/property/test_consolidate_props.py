@@ -72,9 +72,15 @@ def test_merge_history_is_append_only(base_members, extra_members):
     def _facts(e):  # the captured facts, minus the derived is_latest pointer
         return {k: v for k, v in e.items() if k != "is_latest"}
 
-    # every previously-captured member survives in its original position with facts untouched
-    n = len(existing["members"])
-    assert [_facts(e) for e in merged["members"][:n]] == [_facts(e) for e in existing["members"]]
-    # exactly one newest, and the member set is the union (nothing dropped, nothing duplicated)
-    assert sum(m["is_latest"] for m in merged["members"]) == 1
+    # every previously-captured member survives with facts untouched (a late-arriving OLDER
+    # patch may re-order the lineage, so match by doc_id, not position)
+    merged_facts = {e["doc_id"]: _facts(e) for e in merged["members"]}
+    for e in existing["members"]:
+        assert merged_facts[e["doc_id"]] == _facts(e)
+    # lineage stays oldest → newest by the canonical key
+    keys = [cp._entry_sort_key(e) for e in merged["members"]]
+    assert keys == sorted(keys)
+    # exactly one newest — the LAST member — and the set is the union (nothing dropped/duplicated)
+    flags = [m["is_latest"] for m in merged["members"]]
+    assert flags == [False] * (len(flags) - 1) + [True]
     assert {m["doc_id"] for m in merged["members"]} == set(by_id)
