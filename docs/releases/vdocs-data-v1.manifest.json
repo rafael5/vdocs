@@ -1,6 +1,6 @@
 {
   "artifact": "vdocs-data",
-  "bundle_sha256": "c7dd7a26d58002383d623585c92eba242b000ef0514f32e816b4a3fd4351c1e3",
+  "bundle_sha256": "56e6bd68c367eea57bc283c98ff068809169885e746e483e3d362673019d71a4",
   "consolidated": {
     "files": 7788,
     "tree_sha256": "afd5c4a120770a5d662e4859d138a08bb9cc4fc7140b17a20e4affda2bebcaad"
@@ -58,20 +58,20 @@
   },
   "files": {
     "CORPUS.md": {
-      "bytes": 79526,
-      "sha256": "9e8b6adca1818354568058cd19ff35eec5e8e8d4df921e325f9810d21b7d482d"
+      "bytes": 81797,
+      "sha256": "f8854cf5f612a1d8454f2006cd5a5d6d56fcdba2b7f110612b0ad9ddb1220c22"
     },
     "ai-manifest.json": {
-      "bytes": 239655,
-      "sha256": "5f29823d19eae8364c40ef0b395c43c89c230d1d5687fe92449cefd167e2b955"
+      "bytes": 242211,
+      "sha256": "7a1cc21b264be51288105e5ad5a4c06dc0906e71c5d05e984e6e269419806069"
     },
     "contract-manifest.json": {
       "bytes": 1917,
-      "sha256": "0518076ea93aebacc3ec505c0f40d24d15a141303e5522715e7ecd733b5430fc"
+      "sha256": "54195f864e188189f6e5cf5071bc6772ad68e217d655e443ba5fdb7ca2943b36"
     },
     "corpus-manifest.json": {
       "bytes": 3004,
-      "sha256": "dc0f1f52a9a50dd74128e6d9ebbe9460d49c4a73d936d7bffc8cbbb1f9c6cad3"
+      "sha256": "a01fbc0590a455d617f1efa216a29e02d665bd5fa319ad5edf425bc530370245"
     },
     "discovery.json": {
       "bytes": 826,
@@ -86,7 +86,7 @@
       "sha256": "9473b35242e10c4a1cd37bbafd62138df4ba9b845da7ade8d5a99cde9cb1a7ff"
     }
   },
-  "generated_at": "2026-07-04T13:57:33.935245+00:00",
+  "generated_at": "2026-07-04T14:48:04.895141+00:00",
   "history_cas": "excluded",
   "knowledge_db": "excluded",
   "peer_vocabulary": {
@@ -97,7 +97,7 @@
   "read_schema_version": "1.5",
   "rich_assets": "excluded",
   "rich_tables": "excluded",
-  "source_commit": "ed203f6c21c1af65a781e15bb11f23789de98511",
+  "source_commit": "9c88ce7cd550fc64b4c40c017f139183c6c7eacb",
   "tag": "data-v1",
   "tool_ver": "0.1.0"
 }
