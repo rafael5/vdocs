@@ -90,11 +90,12 @@ generic in-house orchestrator (the wired list lives in `cli/app.py:build_stages`
                                                         │ (gate-admitted documents)
         ┌───────────────────────────── DOCUMENT medallion (data plane) ────────────────-──────────────┐
         ▼
-      fetch ──▶ convert ──▶ enrich ──▶ normalize ──▶ consolidate ──▶ index ──▶ relate ─┬▶ merge ──▶ manifest
-      bronze    silver       silver      silver         gold  │       derived   graph   │  SKL→index  gold/agent
-      (CAS)    (markdown)   (identity)  (cleaned)    (anchors)│      (index.db)         │  (additive) (CORPUS.md)
-                  │                                           └──▶ resolve ─────────────┘
-              discover                        validate         (gold/knowledge.db — the SKL)
+      fetch ──▶ convert ──▶ enrich ──▶ normalize ──▶ consolidate ──▶ index ──▶ merge ─▶ relate ──▶ manifest
+      bronze    silver       silver      silver         gold  │       derived  SKL→index  graph      gold/agent
+      (CAS)    (markdown)   (identity)  (cleaned)    (anchors)│      (index.db) (additive)           (CORPUS.md)
+                  │                                           └──▶ resolve ──────┘
+                                                          (gold/knowledge.db — the SKL)
+              discover                        validate
             (advisory patterns)              (hard gate)
         └────────────────────────────────────────────────────────────────────────────────────────────┘
                                                         │
@@ -211,11 +212,11 @@ sort), so you never maintain an ordered list by hand. The table is in execution 
 | 7 | **enrich** | document · silver | Bakes **identity frontmatter** (app, title, version, personas) onto each bundle and stages doc metadata for the index. | converted + `catalog.enriched` → `silver/02-enriched` + staged meta | skip-if-unchanged |
 | 8 | **normalize** | document · silver | Produces gold-quality bodies: strips title-page/revision/TOC artifacts (capture-before-strip), subtracts dead phrases, lifts tables to CSV sidecars, regenerates `## Contents`. | enriched + registries → `silver/03-normalized` | skip-if-unchanged |
 | 9 | **consolidate** | document · gold | Collapses each version group to **one anchor document** at a stable path (latest body) + captures the append-only lineage (`history.yaml` + retained prior bodies). | normalized + assets → `gold/consolidated` | skip-if-unchanged |
-| 10 | **resolve** | derived · SKL | Builds the **Semantic Knowledge Layer**: recognize → resolve → classify → relate → verify over consolidated gold, DD-seeded (`registries/entities/dd-seed.di.yaml`); unresolved mentions go to a propose-only curator queue, never asserted. | consolidated + registries → `gold/knowledge.db` | skip-if-unchanged |
-| 11 | **index** | derived | Builds `index.db`: `documents` (+ persona/facet columns), `doc_sections`, `chunks` + **FTS5** over the latest searchable chunks, and `entities`. | normalized + consolidated + staged meta → `index.db` tables | skip-if-unchanged |
+| 11 | **resolve** | derived · SKL | Builds the **Semantic Knowledge Layer**: recognize → resolve → classify → relate → verify over consolidated gold, DD-seeded (`registries/entities/dd-seed.di.yaml`); unresolved mentions go to a propose-only curator queue, never asserted. | consolidated + registries → `gold/knowledge.db` | skip-if-unchanged |
+| 10 | **index** | derived | Builds `index.db`: `documents` (+ persona/facet columns), `doc_sections`, `chunks` + **FTS5** over the latest searchable chunks, and `entities`. | normalized + consolidated + staged meta → `index.db` tables | skip-if-unchanged |
 | 12 | **validate** | document · gate | **Hard gate**: typed-absence reconciliation, count drop check, ref resolution (severed cross-refs), and bundle-integrity (tamper) verification. | normalized + consolidated → `reports/validation` | `ALWAYS_RERUN` |
-| 13 | **relate** | derived · graph | Materializes the knowledge graph (doc↔entity, entity↔entity, doc↔doc) into `relations`. | index documents/entities/sections → `index.db:relations` | skip-if-unchanged |
-| 14 | **merge** | derived · SKL | Folds the SKL into the shipped `index.db` **additively** (`entity_skl`, `entity_synonyms`, `chunk_entities`) — reconciles the two entity-id schemes; non-SKL coverage unchanged. | `knowledge.db` + index entities/chunks → `index.db` SKL tables | skip-if-unchanged |
+| 14 | **relate** | derived · graph | Materializes the knowledge graph (doc↔entity, entity↔entity, doc↔doc) into `relations`. | index documents/entities/sections → `index.db:relations` | skip-if-unchanged |
+| 13 | **merge** | derived · SKL | Folds the SKL into the shipped `index.db` **additively** (`entity_skl`, `entity_synonyms`, `chunk_entities`) — reconciles the two entity-id schemes; non-SKL coverage unchanged. | `knowledge.db` + index entities/chunks → `index.db` SKL tables | skip-if-unchanged |
 | 15 | **manifest** | document · gold/agent | Assembles `corpus-manifest.json` + `discovery.json` + the AI corpus card (`ai-manifest.json` / `CORPUS.md`) + the SKL-projected glossary. | consolidated + index + relations + registries → gold cards | skip-if-unchanged |
 
 **Re-run policies** (the orchestrator's `Idempotency`):
@@ -267,11 +268,11 @@ commands take `--force/-f`. Run `vdocs <command> --help` for the in-tool guide.
 
 | Command | What it does |
 |---|---|
-| `vdocs build-termbase` | Generate the docs-as-code termbase gate artifacts (Vale `Casing.yml` etc.) from the SKL/registries (FileMan pilot L0c / SKL S3.1). |
+| `vdocs build-termbase` | Generate the docs-as-code termbase gate artifacts (Vale `Casing.yml` etc.) from the SKL/registries (FileMan pilot L0c / SKL S3.1). `--out-dir/-o` (default `termbase`). |
 | `vdocs publish-rich-assets` | Collect the curated docs' referenced figures (`registries/rich-publication.yaml`) into `$DATA_DIR/rich-assets/` — a flat CAS bundle that rides alongside `index.db`. |
 | `vdocs publish-rich-tables` | Copy every gold bundle's `tables/*.csv` sidecars into `$DATA_DIR/rich-tables/`, structure-preserving. |
-| `vdocs entity-quality` | Score entity extraction against the vista-meta ground truth → the per-entity-type quality contract (statuses land in the release manifest). |
-| `vdocs release` | Assemble the distributable data bundle under `$DATA_DIR/dist/` + its sha256 manifest (recorded in-repo under `docs/releases/`). |
+| `vdocs entity-quality` | Score entity extraction against the vista-meta ground truth → the per-entity-type quality contract (statuses land in the release manifest). Requires `--vista-meta <unpacked vista-meta data-v1 tree>`. |
+| `vdocs release` | Assemble the distributable data bundle under `$DATA_DIR/dist/` + its sha256 manifest (recorded in-repo under `docs/releases/`). Requires `--vista-meta`; `--publish` creates the GitHub Release. |
 
 > **Selection model (`fetch`).** There is **no blind download**: with no selection, `fetch` fetches
 > nothing and reports how many genuine in-scope documents are available. Narrow with the dimension
@@ -306,9 +307,9 @@ hardcoded paths**.
 | Setting | Env var | Default |
 |---|---|---|
 | Data lake root | `DATA_DIR` / `VDOCS_DATA_DIR` | `~/data/vdocs` |
-| VDL base URL | `VDL_BASE_URL` | `https://www.va.gov/vdl/` |
-| Crawl politeness delay | `CRAWL_DELAY` | `1.5` (seconds) |
-| Registries dir | `REGISTRIES_DIR` | `<repo>/registries` |
+| VDL base URL | `VDL_BASE_URL` / `VDOCS_VDL_BASE_URL` | `https://www.va.gov/vdl/` |
+| Crawl politeness delay | `CRAWL_DELAY` / `VDOCS_CRAWL_DELAY` | `1.5` (seconds) |
+| Registries dir | `REGISTRIES_DIR` / `VDOCS_REGISTRIES_DIR` | `<repo>/registries` |
 
 The curated **`registries/`** (version-controlled in the repo — *discovery is data, not code*):
 

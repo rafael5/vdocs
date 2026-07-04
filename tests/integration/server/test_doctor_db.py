@@ -288,3 +288,51 @@ def test_diagnose_quarantine_clean_passes(tmp_path):
     )
     assert rep.verdict() != "RED"
     assert any(c.name == "entity quarantine" and c.health is Health.PASS for c in rep.checks)
+
+
+def test_diagnose_red_when_skl_projections_wiped(tmp_path):
+    # `index --force` recreates the empty SKL shells, destroying `merge`'s output; with a
+    # populated knowledge.db that emptiness is a wipe, not "no coverage" — must be RED.
+    conn = _open(tmp_path)
+    _healthy(conn)
+    rep = doc.diagnose(conn, kept_doctypes=_KEPT, policy=_POLICY, skl_entities=21)
+    skl = [c for c in rep.checks if c.name == "SKL projections"]
+    assert skl and skl[0].health is Health.FAIL
+    assert rep.verdict() == "RED"
+
+
+def test_diagnose_skl_projections_pass_when_populated(tmp_path):
+    conn = _open(tmp_path)
+    _healthy(conn)
+    conn.execute(
+        "INSERT INTO entity_skl VALUES ('routine:XL', 'routine/XL', 'routine', 'XL', 'XL')"
+    )
+    conn.commit()
+    rep = doc.diagnose(conn, kept_doctypes=_KEPT, policy=_POLICY, skl_entities=21)
+    skl = [c for c in rep.checks if c.name == "SKL projections"]
+    assert skl and skl[0].health is Health.PASS
+
+
+def test_diagnose_skl_check_skipped_without_knowledge_db(tmp_path):
+    # no knowledge.db (skl_entities None) or an empty one (0): emptiness is by-construction
+    conn = _open(tmp_path)
+    _healthy(conn)
+    for n in (None, 0):
+        rep = doc.diagnose(conn, kept_doctypes=_KEPT, policy=_POLICY, skl_entities=n)
+        assert not [c for c in rep.checks if c.name == "SKL projections"]
+        assert rep.verdict() == "GREEN"
+
+
+def test_diagnose_flags_unknown_coverage_field_instead_of_crashing(tmp_path):
+    # a typo'd operator-edited coverage field must surface as a FAIL check, not an
+    # sqlite3.OperationalError crash (the field name is interpolated into SQL)
+    conn = _open(tmp_path)
+    _healthy(conn)
+    bad = doc.DoctorPolicy(
+        coverage={"app_user": doc.CoverageSpec(100), "nonexistent_col": doc.CoverageSpec(90)},
+        accepted_anchor_edge_cases=frozenset(),
+    )
+    rep = doc.diagnose(conn, kept_doctypes=_KEPT, policy=bad)
+    pol = [c for c in rep.checks if c.name == "doctor policy"]
+    assert pol and pol[0].health is Health.FAIL and "nonexistent_col" in pol[0].detail
+    assert rep.verdict() == "RED"

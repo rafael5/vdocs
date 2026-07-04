@@ -180,6 +180,12 @@ def load_doctor_policy(registries_dir: Path) -> DoctorPolicy:
     raw: dict[str, Any] = {}
     if path.exists():
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    known = {"coverage", "accepted_anchor_edge_cases", "accepted_anchorless_groups"}
+    unknown = set(raw) - known
+    if unknown:
+        raise ValueError(
+            f"doctor-policy.yaml: unknown key(s) {sorted(unknown)} — known keys: {sorted(known)}"
+        )
     cov_raw = raw.get("coverage") or {}
     coverage = {
         fld: CoverageSpec(
@@ -206,6 +212,7 @@ def diagnose(
     policy: DoctorPolicy,
     read_spec: dict[str, Any] | None = None,
     excluded_entity_types: frozenset[str] = frozenset(),
+    skl_entities: int | None = None,
 ) -> DoctorReport:
     """Run every soundness check against ``index.db`` and assemble the report. ``kept_doctypes`` is
     the gate's Tier-A keep set (gold must contain only those). When ``read_spec`` (a read-contract)
@@ -227,8 +234,23 @@ def diagnose(
         )
     ]
 
-    # coverage per configured field
+    # coverage per configured field — field names come from operator-edited YAML and are
+    # interpolated into SQL, so validate against the real columns first (a typo must surface
+    # as a FAIL check, never an OperationalError crash)
+    doc_columns = {r[1] for r in conn.execute("PRAGMA table_info(documents)").fetchall()}
+    bad_fields = sorted(set(policy.coverage) - doc_columns)
+    if bad_fields:
+        checks.append(
+            Check(
+                "doctor policy",
+                Health.FAIL,
+                f"coverage field(s) not in documents: {', '.join(bad_fields)} — fix "
+                "registries/doctor-policy.yaml",
+            )
+        )
     for fld, spec in policy.coverage.items():
+        if fld in bad_fields:
+            continue
         populated = one(f"SELECT count(*) FROM documents WHERE is_latest=1 AND {fld}<>''")
         offenders = (
             ids(f"SELECT doc_id FROM documents WHERE is_latest=1 AND {fld}='' LIMIT 50")
@@ -321,6 +343,23 @@ def diagnose(
                 residue,
                 detail_ok=f"zero residue for excluded type(s): {', '.join(excl)}",
                 detail_bad="{n} row(s) of quarantined entity type(s) shipped",
+            )  # fmt: skip
+        )
+
+    # SKL projections (S3.3): `index --force` recreates the empty shells, silently destroying
+    # `merge`'s output. With a populated knowledge.db, empty entity_skl means WIPED, not
+    # "no SKL coverage" — fail loud with the remediation. Skipped when knowledge.db is
+    # absent/empty (emptiness is then by construction).
+    if skl_entities:
+        has_skl = one("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='entity_skl'")
+        projected = one("SELECT count(*) FROM entity_skl") if has_skl else 0
+        checks.append(
+            integrity_check(
+                "SKL projections",
+                0 if projected > 0 else 1,
+                detail_ok=f"{projected} SKL-reconciled entities (knowledge.db: {skl_entities})",
+                detail_bad=f"knowledge.db carries {skl_entities} entities but entity_skl is "
+                "empty — index re-ran after merge; run: vdocs merge (then manifest)",
             )  # fmt: skip
         )
 

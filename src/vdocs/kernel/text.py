@@ -171,3 +171,15 @@ def clean(s: str) -> str:
             return out
         out = nxt
     return out
+
+
+def bounded_branch(surface: str) -> str:
+    """One regex-alternation branch for an entity surface: the escaped literal with a
+    non-alphanumeric boundary guard added **only** at an alphanumeric edge — so a name like
+    "NEW PERSON" can't match inside a longer word, while a punctuation-edged global (e.g.
+    ``^VA(200,``) stays matchable mid-token (followed by subscripts). Shared by the `resolve`
+    and `merge` recognizer/tagger (§9.2 — one kernel copy, not per-stage forks).
+    """
+    left = r"(?<![A-Za-z0-9])" if surface[:1].isalnum() else ""
+    right = r"(?![A-Za-z0-9])" if surface[-1:].isalnum() else ""
+    return f"{left}{re.escape(surface)}{right}"

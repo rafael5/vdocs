@@ -137,3 +137,17 @@ def test_month_year_iso_respects_line_window():
     body = "title\n" + "x\n" * 50 + "June 1995\n"
     assert text.month_year_iso(body, max_lines=40) is None
     assert text.month_year_iso(body) == "1995-06"
+
+
+def test_bounded_branch_guards_only_alphanumeric_edges():
+    import re
+
+    from vdocs.kernel.text import bounded_branch
+
+    # alnum-edged name: boundary-guarded on both sides — no mid-word match
+    r = re.compile(bounded_branch("NEW PERSON"), re.IGNORECASE)
+    assert r.search("the NEW PERSON file")
+    assert not r.search("RENEW PERSONAL")
+    # punctuation-edged global: stays matchable mid-token (followed by subscripts)
+    g = re.compile(bounded_branch("^VA(200,"), re.IGNORECASE)
+    assert g.search("kills ^VA(200,0) nodes")

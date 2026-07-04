@@ -438,6 +438,13 @@ def _emit_doctor(cfg: Settings) -> str:
     from vdocs.kernel.entity_quality import load_entity_quality
 
     excluded = load_entity_quality(cfg.registries).excluded_types()
+    skl_entities: int | None = None
+    if cfg.knowledge_db.exists():
+        kconn = db.connect(cfg.knowledge_db, read_only=True)
+        try:
+            skl_entities = int(kconn.execute("SELECT count(*) FROM entities").fetchone()[0])
+        finally:
+            kconn.close()
     conn = db.connect(cfg.index_db, read_only=True)
     try:
         report = doc.diagnose(
@@ -446,6 +453,7 @@ def _emit_doctor(cfg: Settings) -> str:
             policy=policy,
             read_spec=spec,
             excluded_entity_types=excluded,
+            skl_entities=skl_entities,
         )
     finally:
         conn.close()

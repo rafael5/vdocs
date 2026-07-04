@@ -23,6 +23,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from vdocs.kernel.text import bounded_branch
+
 # (entity_id, node_id, type, canonical, canonical_name) — the colon↔slash reconciliation row.
 EntitySklRow = tuple[str, str, str, str, str]
 # (node_id, surface, kind) — kind ∈ {canonical_name, synonym}.
@@ -106,16 +108,6 @@ def _norm(surface: str) -> str:
     return re.sub(r"\s+", " ", surface.strip()).upper()
 
 
-def _bounded(surface: str) -> str:
-    """One alternation branch with a non-alphanumeric boundary guard added **only** at an
-    alphanumeric edge — so a name like "NEW PERSON" can't match inside a longer word, but a global
-    ending in `,`/`(` (e.g. `^VA(200,`) stays matchable mid-token (followed by subscripts). Mirrors
-    `resolve_pure._bounded`."""
-    left = r"(?<![A-Za-z0-9])" if surface[:1].isalnum() else ""
-    right = r"(?![A-Za-z0-9])" if surface[-1:].isalnum() else ""
-    return f"{left}{re.escape(surface)}{right}"
-
-
 def tag_chunks(chunks: list[tuple[str, str]], entities: list[SklEntity]) -> list[ChunkTag]:
     """`(chunk_id, node_id)` tags: a chunk is tagged with an entity when any of that entity's
     *distinctive* surfaces occurs in the chunk text (case-insensitive, alnum-boundary-guarded).
@@ -128,7 +120,7 @@ def tag_chunks(chunks: list[tuple[str, str]], entities: list[SklEntity]) -> list
     if not surf_to_nodes:
         return []
     # longest-first so the most specific surface anchors the alternation (compile once).
-    branches = [_bounded(s) for s in sorted(surf_to_nodes, key=len, reverse=True)]
+    branches = [bounded_branch(s) for s in sorted(surf_to_nodes, key=len, reverse=True)]
     rx = re.compile("|".join(branches), re.IGNORECASE)
 
     out: set[ChunkTag] = set()

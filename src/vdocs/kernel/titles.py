@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import re
 
-__all__ = ["clean_title"]
+__all__ = ["display_title"]
 
 # Strip rules, applied in order. Each removes one class of version/patch noise.
 _STRIP: tuple[re.Pattern[str], ...] = (
@@ -50,22 +50,6 @@ _LABEL = re.compile(
     re.I,
 )
 _NON_ALNUM = re.compile(r"[^A-Za-z0-9]")
-
-
-def clean_title(raw: str, app_name: str = "") -> str:
-    """Return the display title for ``raw`` with version/patch tokens removed.
-
-    If the result is only a doc-type label (no product name — e.g. a title that
-    was just ``PSJ*5*279 Nurse's User Manual Change Pages``), it is prefixed with
-    ``app_name``. A fully-collapsed result falls back to ``app_name`` (or the
-    trimmed raw if no app name is known).
-    """
-    s = _denoise(raw)
-    if not s:
-        return app_name or (raw or "").strip()
-    if app_name and _label_only(s):
-        return f"{app_name} — {s}"
-    return s
 
 
 def _denoise(raw: str) -> str:
@@ -153,8 +137,3 @@ def _tidy(s: str) -> str:
     s = _TRAILING_PUNCT.sub("", s)
     s = _LEADING_JUNK.sub("", s)
     return s.strip()
-
-
-def _label_only(s: str) -> bool:
-    """True when ``s`` has no real name residue after removing doc-type labels."""
-    return len(_NON_ALNUM.sub("", _LABEL.sub("", s))) < 3

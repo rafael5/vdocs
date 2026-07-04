@@ -12,16 +12,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import yaml
+from vdocs.kernel.registry import load_mapping
 
 # (kind, code, label, description)
 VocabRow = tuple[str, str, str, str]
 
 
 def _load(path: Path) -> dict:
-    if not path.is_file():
-        return {}
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    data = load_mapping(path, missing_ok=True)
     return data if isinstance(data, dict) else {}
 
 

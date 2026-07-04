@@ -4,6 +4,8 @@ heading scan + GitHub-slug dedup is reused (§9.2)."""
 
 from __future__ import annotations
 
+import pytest
+
 from vdocs.stages.index import index_pure as ip
 
 _BODY = (
@@ -144,21 +146,27 @@ def _section(text, *, kind="ok", searchable=True, sid="SD/x/s", path=""):
     )
 
 
-def test_search_chunks_single_for_small_searchable_section():
-    chunks = ip.search_chunks(_section("## S\n\nshort body", sid="SD/x/s"))
+def _chunks_for(section):
+    """Chunk one section through the LIVE path the stage uses: chunk_units → chunks_for_unit."""
+    units = ip.chunk_units([section], merge=False)
+    return [c for u in units for c in ip.chunks_for_unit(u)]
+
+
+def test_chunking_single_for_small_searchable_section():
+    chunks = _chunks_for(_section("## S\n\nshort body", sid="SD/x/s"))
     assert len(chunks) == 1
     assert chunks[0].chunk_id == "SD/x/s" and chunks[0].section_id == "SD/x/s"
     assert chunks[0].part == 0 and "short body" in chunks[0].text
 
 
-def test_search_chunks_empty_for_non_searchable_section():
-    assert ip.search_chunks(_section("## C\n", kind="container", searchable=False)) == []
-    assert ip.search_chunks(_section("## H\n", kind="hollow", searchable=False)) == []
+def test_chunking_empty_for_non_searchable_section():
+    assert _chunks_for(_section("## C\n", kind="container", searchable=False)) == []
+    assert _chunks_for(_section("## H\n", kind="hollow", searchable=False)) == []
 
 
-def test_search_chunks_splits_oversized_with_pN_suffix_part0_bare():
+def test_chunking_splits_oversized_with_pN_suffix_part0_bare():
     big = "## S\n\n" + "\n\n".join(f"Paragraph {i}: " + "word " * 80 for i in range(40))
-    chunks = ip.search_chunks(_section(big, sid="SD/x/big"))
+    chunks = _chunks_for(_section(big, sid="SD/x/big"))
     assert len(chunks) > 1
     assert chunks[0].chunk_id == "SD/x/big" and chunks[0].part == 0  # part 0 keeps the bare id
     assert chunks[1].chunk_id == "SD/x/big#p2" and chunks[1].part == 1
@@ -387,7 +395,11 @@ def test_corpus_content_hash_changes_when_a_document_changes():
 
 
 def test_meta_rows_carry_schema_version_and_fingerprint():
-    rows = dict(ip.meta_rows(_DOCS_A))
-    assert rows["read_schema_version"] == ip.READ_SCHEMA_VERSION == "1.0"
+    # schema_version is REQUIRED — the read contract (contracts/read/v1.json) is the only
+    # version source; a module-level default here once stamped a stale "1.0" silently.
+    rows = dict(ip.meta_rows(_DOCS_A, schema_version="1.5"))
+    assert rows["read_schema_version"] == "1.5"
     assert rows["corpus_doc_count"] == "2"
     assert rows["corpus_content_hash"] == ip.corpus_content_hash(_DOCS_A)
+    with pytest.raises(TypeError):
+        ip.meta_rows(_DOCS_A)  # type: ignore[call-arg]

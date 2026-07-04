@@ -24,6 +24,7 @@ import re
 from dataclasses import dataclass, field
 
 from vdocs.kernel import casing_pure
+from vdocs.kernel.text import bounded_branch
 from vdocs.models.knowledge import (
     EntityNode,
     Provenance,
@@ -97,17 +98,9 @@ def resolution_index(dd_files: list[dict]) -> ResolutionIndex:
         # boundary guards, applied only at an *alphanumeric* edge: a name like "NEW PERSON" must not
         # match inside a longer word, but a global root ending in `,`/`(` (e.g. `^VA(200,`) is
         # deliberately followed by subscripts — guarding it would wrongly reject `^VA(200,0)`.
-        branches = [_bounded(s) for s in sorted(set(literals), key=len, reverse=True)]
+        branches = [bounded_branch(s) for s in sorted(set(literals), key=len, reverse=True)]
         idx._surface_re = re.compile("|".join(branches), re.IGNORECASE)
     return idx
-
-
-def _bounded(surface: str) -> str:
-    """One alternation branch: the escaped surface, with a non-alphanumeric boundary guard added
-    only at an alphanumeric edge (so punctuation-edged globals stay matchable mid-token)."""
-    left = r"(?<![A-Za-z0-9])" if surface[:1].isalnum() else ""
-    right = r"(?![A-Za-z0-9])" if surface[-1:].isalnum() else ""
-    return f"{left}{re.escape(surface)}{right}"
 
 
 @dataclass

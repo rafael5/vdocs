@@ -1,4 +1,4 @@
-"""Unit tests for kernel.titles — clean display title (strip version/patch tokens)."""
+"""Unit tests for kernel.titles — display titles (strip version/patch noise)."""
 
 import pytest
 
@@ -6,57 +6,48 @@ from vdocs.kernel import titles
 
 
 @pytest.mark.parametrize(
-    ("raw", "app_name", "want"),
+    ("raw", "want"),
     [
         # strip a leading NS*ver*patch token
         (
             "RMPR*3*59 Delayed Order Report (DOR) (GUI) User Manual",
-            "Prosthetics",
             "Delayed Order Report (DOR) (GUI) User Manual",
         ),
         # strip "Version N.N"
         (
             "Accounts Receivable Version 4.5 User Manual - Title Page",
-            "Accounts Receivable",
             "Accounts Receivable User Manual - Title Page",
         ),
         # inline patch parenthetical
         (
             "Consult/Request Tracking Technical Manual (GMRC*3.0*189)",
-            "Consult/Request Tracking",
             "Consult/Request Tracking Technical Manual",
         ),
         # "(Updated NS*v*p)"
         (
             "National Drug File - User Manual (Updated PSN*4.0*575)",
-            "National Drug File",
             "National Drug File - User Manual",
         ),
-        ("VistALink Version 1.5 Developer Guide", "VistALink", "VistALink Developer Guide"),
-        ("QUASAR Version 3 User Manual (Updated ACKQ*3*21)", "QUASAR", "QUASAR User Manual"),
+        ("VistALink Version 1.5 Developer Guide", "VistALink Developer Guide"),
+        ("QUASAR Version 3 User Manual (Updated ACKQ*3*21)", "QUASAR User Manual"),
         # multi-segment version
         (
             "Laboratory: VBECS Version 2.4.1 Admin User Guide",
-            "VBECS",
             "Laboratory: VBECS Admin User Guide",
         ),
         # bare dotted version, no keyword
         (
             "VistA Scheduling Enhancement (VSE) GUI 1.7.2.1 User Guide Addendum",
-            "VistA Scheduling Enhancement",
             "VistA Scheduling Enhancement (VSE) GUI User Guide Addendum",
         ),
-        # app-name fallback: title was only NS*v*p + a doc-type label
-        ("XWB*1.1*73 User Guide", "RPC Broker", "RPC Broker — User Guide"),
-        (
-            "PSJ*5*279 Nurse's User Manual Change Pages",
-            "Inpatient Medications",
-            "Inpatient Medications — Nurse's User Manual Change Pages",
-        ),
+        # a patch-only title collapses to empty (display_title falls back to the app)
+        ("PSO*7.0*123", ""),
     ],
 )
-def test_clean_title(raw: str, app_name: str, want: str) -> None:
-    assert titles.clean_title(raw, app_name) == want
+def test_denoise_strips_version_patch_noise(raw: str, want: str) -> None:
+    # _denoise is the shared strip pass behind display_title (clean_title, its
+    # superseded consumer, was deleted — the strip rules remain load-bearing).
+    assert titles._denoise(raw) == want
 
 
 @pytest.mark.parametrize(
@@ -68,26 +59,19 @@ def test_clean_title(raw: str, app_name: str, want: str) -> None:
         "RA HL7 Interface Spec for Voice Recognition Release Notes",  # "Release Notes" = doc type
     ],
 )
-def test_clean_title_preserves_word_senses(raw: str) -> None:
+def test_denoise_preserves_word_senses(raw: str) -> None:
     # Version/Release are stripped only when followed by a number.
-    assert titles.clean_title(raw, "CPRS") == raw
+    assert titles._denoise(raw) == raw
 
 
-def test_clean_title_never_empty() -> None:
-    # A patch-only title collapses → falls back to the app name.
-    assert titles.clean_title("PSO*7.0*123", "Outpatient Pharmacy") == "Outpatient Pharmacy"
-    # No app name and label-only → keep the label rather than vanish.
-    assert titles.clean_title("XWB*1.1*73 User Guide", "") == "User Guide"
-
-
-def test_clean_title_is_idempotent() -> None:
+def test_denoise_is_idempotent() -> None:
     for raw in [
         "Accounts Receivable Version 4.5 User Manual",
         "PSJ*5*279 Nurse's User Manual Change Pages",
         "CPRS User Manual: GUI Version",
     ]:
-        once = titles.clean_title(raw, "App Name")
-        assert titles.clean_title(once, "App Name") == once
+        once = titles._denoise(raw)
+        assert titles._denoise(once) == once
 
 
 # ── display_title (abbreviation-first, product-prefixed) ────────────────────

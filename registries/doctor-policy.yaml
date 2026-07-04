@@ -28,3 +28,8 @@ coverage:
 # corruption while staying quiet about these.
 accepted_anchor_edge_cases:
   - "AR/WS:p13"   # PSGW*2.3*13 "…User Manual Change Pages" — bare patch-token slug, no version stem
+
+# Version groups accepted as anchorless (known upstream grouping drift — the latest lives
+# under a sibling anchor_key spelling). Each entry stays visible as WARN, never silent PASS.
+# accepted_anchorless_groups:
+#   - "APP:PKG:DT:slug"

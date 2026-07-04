@@ -24,7 +24,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import structlog
-import yaml
+
+from vdocs.kernel.registry import load_mapping
 
 log = structlog.get_logger(__name__)
 
@@ -113,9 +114,7 @@ def app_names(registries_dir: Path) -> dict[str, str]:
 
 
 def _load_yaml(path: Path) -> dict:
-    if not path.is_file():
-        return {}
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    data = load_mapping(path, missing_ok=True)
     return data if isinstance(data, dict) else {}
 
 

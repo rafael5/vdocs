@@ -17,7 +17,7 @@ This file is for **what shipped**. For the *why* behind decisions
   fetched 1040/1044 → **615 `is_latest` gold docs**. B1–B5 quality/fidelity checks pass — gate
   fidelity (only Tier-A doc-types), persona columns (`app_user`/`software_class` 100%), FTS, all 9
   entity types, faceted + pre-cited search. GREEN authorizes the TUI build.
-- **Content-retention fidelity guardrail** (`fidelity/retention_pure.py`): scores each doc on how
+- **Content-retention fidelity guardrail** (`fidelity/retention_pure.py (now `stages/normalize/retention_pure.py` — fidelity retired)`): scores each doc on how
   much of its enriched body survived `normalize` (words relocated to table CSVs count as kept),
   catching a strip that deletes the body whole — the blind spot of the over-strip gate, which scores
   a body-less doc `0/0` → PASS. The `normalize` stage records a per-doc `low-retention` flag +

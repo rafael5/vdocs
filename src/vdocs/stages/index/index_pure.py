@@ -32,7 +32,6 @@ DEFAULT_TOC_DEPTH = (2, 3)
 # rebuilds to the same fingerprint — consumers/caches can tell "the corpus changed" from "same
 # corpus, rebuilt". The wall-clock build time is deliberately NOT hashed (and lives in the publish
 # manifest, not here) so index.db stays reproducible.
-READ_SCHEMA_VERSION = "1.0"
 
 
 def corpus_content_hash(documents: list[tuple]) -> str:
@@ -44,10 +43,11 @@ def corpus_content_hash(documents: list[tuple]) -> str:
     return h.hexdigest()
 
 
-def meta_rows(
-    documents: list[tuple], schema_version: str = READ_SCHEMA_VERSION
-) -> list[tuple[str, str]]:
-    """The `meta` rows written into index.db: the schema-version axis + the corpus fingerprint."""
+def meta_rows(documents: list[tuple], *, schema_version: str) -> list[tuple[str, str]]:
+    """The `meta` rows written into index.db: the schema-version axis + the corpus fingerprint.
+
+    ``schema_version`` is required — the read contract (``contracts/read/v1.json``) is the only
+    version source; a module-level default here once stamped a stale ``1.0`` silently."""
     return [
         ("read_schema_version", schema_version),
         ("corpus_content_hash", corpus_content_hash(documents)),
@@ -132,15 +132,6 @@ def _windows_to_chunks(section_id: str, text: str) -> list[Chunk]:
         Chunk(section_id if i == 0 else f"{section_id}#p{i + 1}", section_id, i, w)
         for i, w in enumerate(windows)
     ]
-
-
-def search_chunks(section: Section) -> list[Chunk]:
-    """Expand a single section into retrieval chunks (§5.5/§14.6). A non-searchable section
-    (container or hollow) yields **none** — it is kept off the search surface. A searchable leaf
-    yields one chunk (``chunk_id == section_id``), or several windowed parts if oversized."""
-    if not section.searchable:
-        return []
-    return _windows_to_chunks(section.section_id, section.text)
 
 
 @dataclass(frozen=True)

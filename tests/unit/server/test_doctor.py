@@ -141,3 +141,12 @@ def test_policy_loads_accepted_anchorless_groups(tmp_path):
 
 def test_policy_defaults_have_no_accepted_anchorless_groups(tmp_path):
     assert load_doctor_policy(tmp_path).accepted_anchorless_groups == frozenset()
+
+
+def test_policy_rejects_unknown_top_level_keys(tmp_path):
+    # operator typos (e.g. `coverge:`) must fail loud, not silently revert to defaults
+    (tmp_path / "doctor-policy.yaml").write_text("coverge:\n  app_user: {min_pct: 100}\n")
+    import pytest
+
+    with pytest.raises(ValueError, match="coverge"):
+        load_doctor_policy(tmp_path)

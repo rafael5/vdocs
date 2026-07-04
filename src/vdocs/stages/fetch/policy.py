@@ -12,13 +12,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import yaml
-
+from vdocs.kernel.registry import load_mapping
 from vdocs.stages.fetch.fetch_pure import GatePolicy
 
 
 def _read(path: Path) -> dict[str, Any]:
-    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return load_mapping(path)  # required policies — absent file fails loud (tenet #7)
 
 
 def load_gate_policy(registries_dir: Path) -> GatePolicy:
