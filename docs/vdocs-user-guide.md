@@ -70,7 +70,7 @@ version-controlled `registries/` in the repo.
 | **A clean markdown corpus** | One gold anchor document per logical manual, version-collapsed, with title-page/revision/TOC artifacts stripped and a regenerated `## Contents`. |
 | **Offline lexical search** | `index.db` (SQLite + FTS5) over the latest searchable chunks — `vdocs ask "<question>"` returns ranked, **pre-cited** hits with stable IDs. |
 | **Faceted / structured search** | Documents carry persona + identity facets (`app_user`, `doc_user`, `software_class`, `function_category`, `doc_type`, …) for narrow-by-facet queries. |
-| **A knowledge graph** | Extracted VistA entities (routines, globals, RPCs, options, FileMan files, builds, …) + doc↔entity / entity↔entity / doc↔doc relations. |
+| **A knowledge graph** | Extracted VistA entities (routines, globals, RPCs, options, FileMan files, builds, …) + doc↔entity / entity↔entity / doc↔doc relations; the **SKL** (`knowledge.db`) adds resolved canonical entities/terms/synonyms, merged additively into `index.db`. |
 | **An AI corpus card** | `CORPUS.md` + `ai-manifest.json` — a self-describing front door for agents (the "answer from THIS corpus" recipe). |
 | **A shipped soundness gate** | `vdocs doctor` → `GOLD LIBRARY: GREEN|RED`, separating by-design gaps from real defects. |
 | **A legible, self-narrating pipeline** | Per-stage banners, live `GREEN/WARN/ERROR` status, progress heartbeats, an end-of-run summary table, and a documented exit-code contract. |
@@ -79,8 +79,8 @@ version-controlled `registries/` in the repo.
 
 ## 3. The pipeline at a glance
 
-vdocs is a **17-section design** realized as a **13-stage DAG** over a **medallion lake**
-(bronze → silver → gold), driven by a generic in-house orchestrator. Two medallions run side by side:
+vdocs is a **15-stage DAG** over a **medallion lake** (bronze → silver → gold), driven by a
+generic in-house orchestrator (the wired list lives in `cli/app.py:build_stages`). Two medallions run side by side:
 
 ```
         ┌──────────────────────────── INVENTORY medallion (control plane) ───────────────────────────┐
@@ -90,12 +90,12 @@ vdocs is a **17-section design** realized as a **13-stage DAG** over a **medalli
                                                         │ (gate-admitted documents)
         ┌───────────────────────────── DOCUMENT medallion (data plane) ────────────────-──────────────┐
         ▼
-      fetch ──▶ convert ──▶ enrich ──▶ normalize ──▶ consolidate ──▶ index ──▶ relate ──▶ manifest
-      bronze    silver       silver      silver         gold          derived   graph      gold/agent
-      (CAS)    (markdown)   (identity)  (cleaned)     (anchors)      (index.db)            (CORPUS.md)
-                  │                                                      │
-              discover                                                validate
-            (advisory patterns)                                     (hard gate)
+      fetch ──▶ convert ──▶ enrich ──▶ normalize ──▶ consolidate ──▶ index ──▶ relate ─┬▶ merge ──▶ manifest
+      bronze    silver       silver      silver         gold  │       derived   graph   │  SKL→index  gold/agent
+      (CAS)    (markdown)   (identity)  (cleaned)    (anchors)│      (index.db)         │  (additive) (CORPUS.md)
+                  │                                           └──▶ resolve ─────────────┘
+              discover                        validate         (gold/knowledge.db — the SKL)
+            (advisory patterns)              (hard gate)
         └────────────────────────────────────────────────────────────────────────────────────────────┘
                                                         │
                                                         ▼
@@ -105,6 +105,9 @@ vdocs is a **17-section design** realized as a **13-stage DAG** over a **medalli
 - **`discover`** is an advisory side-branch: it mines candidate patterns and proposes registry
   updates; it mutates nothing.
 - **`validate`** is a hard gate near the end (sidecar verification + integrity); it always re-runs.
+- **`resolve` + `merge`** are the **Semantic Knowledge Layer** (SKL): `resolve` builds
+  `gold/knowledge.db` (canonical entities/terms/relationships, DD-seeded) after `consolidate`;
+  `merge` folds it **additively** into `index.db` after both `index` and `resolve`.
 
 ---
 
@@ -131,11 +134,15 @@ flowchart TD
         consolidate[consolidate<br/><i>gold: anchors</i>]
         index[index<br/><i>index.db + FTS5</i>]
         relate[relate<br/><i>knowledge graph</i>]
+        resolve[resolve<br/><i>knowledge.db — the SKL</i>]
+        merge[merge<br/><i>SKL → index.db, additive</i>]
         manifest[manifest<br/><i>CORPUS.md + cards</i>]
         discover[discover<br/><i>advisory patterns</i>]:::side
         validate[validate<br/><i>hard gate</i>]:::gate
 
-        fetch --> convert --> enrich --> normalize --> consolidate --> index --> relate --> manifest
+        fetch --> convert --> enrich --> normalize --> consolidate --> index --> relate --> merge --> manifest
+        consolidate --> resolve
+        resolve --> merge
         convert -.-> discover
         normalize --> validate
         consolidate --> validate
@@ -177,9 +184,12 @@ Data lives under `$DATA_DIR` (default `~/data/vdocs`) — **never in the repo**.
 │       ├── corpus-manifest.json           #     corpus schema/counts/capabilities
 │       ├── discovery.json                 #     machine discovery descriptor
 │       ├── ai-manifest.json · CORPUS.md   #     the AI corpus card
-│       └── glossary.md
+│       ├── knowledge.db                    #     resolve: the SKL (entities · terms · relationships)
+│       └── glossary.md                     #     SKL-projected glossary
 ├── state.db                               # orchestrator state: stage runs + acquisitions
-├── index.db                               # the search surface (documents/sections/chunks+FTS5/entities/relations)
+├── index.db                               # the search surface (documents/sections/chunks+FTS5/entities/relations + SKL tables)
+├── rich-assets/ · rich-tables/            # publish-rich-* bundles (curated figures · CSV table sidecars)
+├── dist/                                  # release: the distributable data bundle
 └── reports/                               # survey · headings · lexicon · patterns · validation · run logs
 ```
 
@@ -187,7 +197,7 @@ Data lives under `$DATA_DIR` (default `~/data/vdocs`) — **never in the repo**.
 
 ## 6. Stage-by-stage reference
 
-The DAG has **13 stages**. Order is derived from each stage's declared inputs/outputs (a topological
+The DAG has **15 stages**. Order is derived from each stage's declared inputs/outputs (a topological
 sort), so you never maintain an ordered list by hand. The table is in execution order.
 
 | # | Stage | Track | What it does | Reads → Writes | Re-run policy |
@@ -201,10 +211,12 @@ sort), so you never maintain an ordered list by hand. The table is in execution 
 | 7 | **enrich** | document · silver | Bakes **identity frontmatter** (app, title, version, personas) onto each bundle and stages doc metadata for the index. | converted + `catalog.enriched` → `silver/02-enriched` + staged meta | skip-if-unchanged |
 | 8 | **normalize** | document · silver | Produces gold-quality bodies: strips title-page/revision/TOC artifacts (capture-before-strip), subtracts dead phrases, lifts tables to CSV sidecars, regenerates `## Contents`. | enriched + registries → `silver/03-normalized` | skip-if-unchanged |
 | 9 | **consolidate** | document · gold | Collapses each version group to **one anchor document** at a stable path (latest body) + captures the append-only lineage (`history.yaml` + retained prior bodies). | normalized + assets → `gold/consolidated` | skip-if-unchanged |
-| 10 | **index** | derived | Builds `index.db`: `documents` (+ persona/facet columns), `doc_sections`, `chunks` + **FTS5** over the latest searchable chunks, and `entities`. | normalized + consolidated + staged meta → `index.db` tables | skip-if-unchanged |
-| 11 | **validate** | document · gate | **Hard gate**: typed-absence reconciliation, count drop check, ref resolution (severed cross-refs), and bundle-integrity (tamper) verification. | normalized + consolidated → `reports/validation` | `ALWAYS_RERUN` |
-| 12 | **relate** | derived · graph | Materializes the knowledge graph (doc↔entity, entity↔entity, doc↔doc) into `relations`. | index documents/entities/sections → `index.db:relations` | skip-if-unchanged |
-| 13 | **manifest** | document · gold/agent | Assembles `corpus-manifest.json` + `discovery.json` + the AI corpus card (`ai-manifest.json` / `CORPUS.md`) + the promoted glossary. | consolidated + index + relations + registries → gold cards | skip-if-unchanged |
+| 10 | **resolve** | derived · SKL | Builds the **Semantic Knowledge Layer**: recognize → resolve → classify → relate → verify over consolidated gold, DD-seeded (`registries/entities/dd-seed.di.yaml`); unresolved mentions go to a propose-only curator queue, never asserted. | consolidated + registries → `gold/knowledge.db` | skip-if-unchanged |
+| 11 | **index** | derived | Builds `index.db`: `documents` (+ persona/facet columns), `doc_sections`, `chunks` + **FTS5** over the latest searchable chunks, and `entities`. | normalized + consolidated + staged meta → `index.db` tables | skip-if-unchanged |
+| 12 | **validate** | document · gate | **Hard gate**: typed-absence reconciliation, count drop check, ref resolution (severed cross-refs), and bundle-integrity (tamper) verification. | normalized + consolidated → `reports/validation` | `ALWAYS_RERUN` |
+| 13 | **relate** | derived · graph | Materializes the knowledge graph (doc↔entity, entity↔entity, doc↔doc) into `relations`. | index documents/entities/sections → `index.db:relations` | skip-if-unchanged |
+| 14 | **merge** | derived · SKL | Folds the SKL into the shipped `index.db` **additively** (`entity_skl`, `entity_synonyms`, `chunk_entities`) — reconciles the two entity-id schemes; non-SKL coverage unchanged. | `knowledge.db` + index entities/chunks → `index.db` SKL tables | skip-if-unchanged |
+| 15 | **manifest** | document · gold/agent | Assembles `corpus-manifest.json` + `discovery.json` + the AI corpus card (`ai-manifest.json` / `CORPUS.md`) + the SKL-projected glossary. | consolidated + index + relations + registries → gold cards | skip-if-unchanged |
 
 **Re-run policies** (the orchestrator's `Idempotency`):
 - `skip-if-unchanged` — re-runs only when an input fingerprint, the contract version, or (for `fetch`)
@@ -230,6 +242,7 @@ commands take `--force/-f`. Run `vdocs <command> --help` for the in-tool guide.
 |---|---|---|
 | `vdocs build` | **Guided from-scratch build**: crawl → … → manifest → doctor, one command. | `--fresh` (wipe derived lake first), `--yes` (confirm the destructive wipe — required), `--skip-crawl` (reuse `catalog.raw.json`) |
 | `vdocs run` | Run the DAG, or a slice, through the orchestrator. | `--from <stage>`, `--to <stage>`, `--only <stage>`, `--force/-f`, `--verify` (strong content-hash fingerprints), `--strict` (exit 10 if any WARN) |
+| `vdocs preflight` | Environment GO/NO-GO **before** a run: converter binaries, writable `$DATA_DIR`, free disk, VDL reachability. Exit 1 on NO-GO. | *(none)* |
 
 ### Per-stage commands
 
@@ -239,7 +252,7 @@ commands take `--force/-f`. Run `vdocs <command> --help` for the in-tool guide.
 | `vdocs catalog` | `--force/-f` |
 | `vdocs serve-inventory` | `--force/-f` |
 | `vdocs fetch` | `--app`, `--section`, `--status`, `--doc-type`, `--group` (selection filters; AND across, OR within), `--select <file>` (curated doc-id list), `--all` (whole gated inventory), `--dry-run` (report match count, fetch nothing), `--refetch` (re-download even CAS-present docs), `--force/-f` |
-| `vdocs convert` · `discover` · `enrich` · `normalize` · `consolidate` · `index` · `relate` · `manifest` · `validate` | `--force/-f` |
+| `vdocs convert` · `discover` · `enrich` · `normalize` · `consolidate` · `index` · `relate` · `resolve` · `merge` · `manifest` · `validate` | `--force/-f` |
 
 ### Inspect / search / verify
 
@@ -249,6 +262,16 @@ commands take `--force/-f`. Run `vdocs <command> --help` for the in-tool guide.
 | `vdocs inventory` | Inspect the gold inventory; `--status` joins fetch status per document. | `--status` |
 | `vdocs ask` | Search the gold corpus → ranked, **pre-cited** hits. | `<query>` (arg), `--k/-k <n>`, `--app`, `--doc-type`, `--json` |
 | `vdocs doctor` | The shipped soundness gate → `GOLD LIBRARY: GREEN\|RED` (exit 1 on RED). | *(none)* |
+
+### Termbase / publish / release
+
+| Command | What it does |
+|---|---|
+| `vdocs build-termbase` | Generate the docs-as-code termbase gate artifacts (Vale `Casing.yml` etc.) from the SKL/registries (FileMan pilot L0c / SKL S3.1). |
+| `vdocs publish-rich-assets` | Collect the curated docs' referenced figures (`registries/rich-publication.yaml`) into `$DATA_DIR/rich-assets/` — a flat CAS bundle that rides alongside `index.db`. |
+| `vdocs publish-rich-tables` | Copy every gold bundle's `tables/*.csv` sidecars into `$DATA_DIR/rich-tables/`, structure-preserving. |
+| `vdocs entity-quality` | Score entity extraction against the vista-meta ground truth → the per-entity-type quality contract (statuses land in the release manifest). |
+| `vdocs release` | Assemble the distributable data bundle under `$DATA_DIR/dist/` + its sha256 manifest (recorded in-repo under `docs/releases/`). |
 
 > **Selection model (`fetch`).** There is **no blind download**: with no selection, `fetch` fetches
 > nothing and reports how many genuine in-scope documents are available. Narrow with the dimension
@@ -271,7 +294,7 @@ dedups versions, it never re-admits).
 | 4 | Doc-type policy | `registries/inventory/doctype-policy.yaml` | doc-types marked `decision: omit` (Tiers B/C/D); **untyped → kept (fail-safe)** |
 
 **Preview it before you run:** `vdocs gate`. **Change it:** edit the YAML, re-preview, re-run from
-`serve-inventory`. Full detail in [`gate-reference.md`](gate-reference.md).
+`serve-inventory`. Full detail in [`reference/gate-reference.md`](reference/gate-reference.md).
 
 ---
 
@@ -400,11 +423,11 @@ Everything from `convert` onward is pure local computation — no network, no ML
 ## 15. Further reading
 
 - **[`de-novo-run.md`](de-novo-run.md)** — the operator runbook (the canonical three-command build).
-- **[`gate-reference.md`](gate-reference.md)** — the admission gate, in depth.
-- **[`offline-lexical-search-plan.md`](offline-lexical-search-plan.md)** — the active project plan
-  (what/why) and its implementation tracker (how/status).
-- **[`doc-classification-filtering-summary.md`](doc-classification-filtering-summary.md)** — the
+- **[`reference/gate-reference.md`](reference/gate-reference.md)** — the admission gate, in depth.
+- **[`README.md`](README.md)** — the docs index: live workstreams in `proposals/` (SKL is the
+  active one), durable lookups in `reference/`, closed records in `historical/`.
+- **[`reference/doc-classification-filtering-summary.md`](reference/doc-classification-filtering-summary.md)** — the
   facet/doc-type taxonomy reference.
-- **[`pipeline-operability-hardening-findings.md`](pipeline-operability-hardening-findings.md)** — the
+- **[`historical/pipeline-operability-hardening-findings.md`](historical/pipeline-operability-hardening-findings.md)** — the
   review + design behind the current operator-facing UX.
 - `vdocs <command> --help` — the in-tool reference for any command.
