@@ -9,7 +9,7 @@
 # This is DATA (tenet #13): the `resolve` stage reads it; no file identity lives in stage code. It
 # is committed + content-addressable so the pipeline stays deterministic/offline at run time (the
 # live system is the seed source, not a run-time dependency — Q2/Q6). Regenerate via the
-# read-only export in docs/prompts/skl-s2-kickoff.md (option a).
+# read-only export in docs/prompts/historical/skl-s2-kickoff.md (option a).
 
 package: DI
 source:

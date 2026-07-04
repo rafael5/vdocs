@@ -1,5 +1,6 @@
 """Unit tests for stages.publish.codeblock_pure — recover fenced code from the VDL's defect-D-4
-patterns (FileMan docs-as-code pilot, L1.2; docs/fileman-docs-pilot-implementation-plan.md).
+patterns (FileMan docs-as-code pilot, L1.2;
+docs/proposals/fileman-docs-pilot-implementation-plan.md).
 
 FileMan gold has 0 fenced code blocks: every M example is a bold-inline statement or escaped prose.
 This transform fences the real patterns (standalone bold statements, escaped global listings, and

@@ -1,6 +1,6 @@
 # Functional taxonomy for the `function` facet (replaces the Monograph "SPM
 # Product Line", which is a VA ownership/portfolio axis, not a "what does it do"
-# axis — see docs/function-domain-taxonomy.md). One coherent, mutually-exclusive
+# axis — see docs/reference/function-domain-taxonomy.md). One coherent, mutually-exclusive
 # domain per application. `kernel.personas` reads `apps:` as the function_category
 # tag baked into gold frontmatter + index.db; `domains:` carries the definitions.
 #

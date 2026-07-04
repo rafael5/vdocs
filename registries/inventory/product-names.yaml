@@ -10,7 +10,7 @@
 # Every app is listed: the hand-curated multi-product namespaces first, then a
 # Phase-2b sweep of single-product apps (abbr from the app_name's parenthetical
 # where present, else the app_code; match keeps the distinguishing suffix).
-# Curated 2026-06-10 from the Phase-1 mining (docs/product-*.draft.yaml); edit
+# Curated 2026-06-10 from the Phase-1 mining (docs/product-*.draft.yaml — drafts since deleted); edit
 # freely (tenet #13) — change an entry and `vdocs run --only index --force`.
 
 products:

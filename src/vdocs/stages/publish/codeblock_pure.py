@@ -1,6 +1,6 @@
 """Code-block reconstruction for ``export-fileman`` (FileMan docs-as-code pilot, L1.2; see
-``docs/fileman-docs-pilot-implementation-plan.md`` and
-``docs/fileman-integrated-master-poc-proposal.md`` §5a).
+``docs/proposals/fileman-docs-pilot-implementation-plan.md`` and
+``docs/proposals/fileman-integrated-master-poc-proposal.md`` §5a).
 
 The FileMan gold has **zero** fenced code blocks (defect D-4): every M example is rendered as a
 bold-inline statement (``**S ^GLB(1)="x"**``) or an escaped-prose global listing

@@ -1,5 +1,5 @@
 """Unit tests for stages.publish.frontmatter_pure — the imported-baseline front-matter rewrite
-(FileMan docs-as-code pilot, L1; docs/fileman-docs-pilot-implementation-plan.md).
+(FileMan docs-as-code pilot, L1; docs/proposals/fileman-docs-pilot-implementation-plan.md).
 
 `export-fileman` materializes each gold doc into a fileman-docs topic. The first transform freezes
 the VDL provenance, adds the git-owned lifecycle fields, and — the load-bearing decision — rewrites

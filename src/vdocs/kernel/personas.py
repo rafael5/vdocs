@@ -90,7 +90,7 @@ def load_profile_maps(registries_dir: Path) -> ProfileMaps:
         software_class=_app_field(profiles, "software_class"),
         # function_category is the curated functional taxonomy (function-domains.yaml),
         # NOT the Monograph SPM product line (an ownership axis kept in app-profiles for
-        # provenance). See docs/function-domain-taxonomy.md.
+        # provenance). See docs/reference/function-domain-taxonomy.md.
         function_category=_load_function_domains(inv / "function-domains.yaml"),
         doc_user=_load_doc_user(inv / "doc-user.yaml"),
     )

@@ -15,26 +15,29 @@ developer can search **offline with zero ML dependencies**. Repo, import package
 
 ## THE SOURCE OF TRUTH
 
-Driven by the **go-forward plan** (with two frozen predecessors kept as record/background):
+`docs/README.md` is the index of all documentation and the lifecycle rule for filing it
+(`proposals/` → `historical/` as workstreams close). The load-bearing set:
 
-- **[`docs/offline-lexical-search-plan.md`](docs/offline-lexical-search-plan.md)** — ⭐ **the active
-  plan** (*what/why*). Go-forward scope: lexical-search quality, the zero-dependency distributable
-  search tool, the human `publish`/`push` deliverable, and the quality gate.
-- **[`docs/offline-lexical-search-implementation-plan.md`](docs/offline-lexical-search-implementation-plan.md)**
-  — the *how/status* tracker (detailed L0–L4 steps, per-phase changelog/discoveries/risks). **Update
-  it as work lands** (TDD → `make check` → update tracker → commit, per step).
-- **[`docs/historical/vdocs-implementation-plan.md`](docs/historical/vdocs-implementation-plan.md)** — **frozen** spike
-  execution record (per-phase status, discoveries, risks). See its 🏁 Closure section for the
-  decisive embed-vs-lexical finding. Read for *why*; do not execute its C/D phases.
-- **[`docs/historical/vdocs-remediation-plan.md`](docs/historical/vdocs-remediation-plan.md)** — the original *what/why*
-  audit. Background; superseded where it assumes a semantic/MCP finish.
+- **[`docs/vdocs-design.md`](docs/vdocs-design.md)** — the architecture (lake, Stage/contract
+  model, kernel, registries, stable IDs). Its header banner lists the sections superseded by the
+  direction reset; the wired stage list in `cli/app.py:build_stages` wins over its §8 table.
+- **Live workstreams in [`docs/proposals/`](docs/proposals/):**
+  - `skl-proposal.md` + `skl-implementation-plan.md` — ⭐ **the active workstream** (Semantic
+    Knowledge Layer; S0–S3 landed, S4/S5 open). **Update the tracker as work lands** (TDD →
+    `make check` → update tracker → commit, per step).
+  - `fileman-docs-pilot-implementation-plan.md` (+ `fileman-integrated-master-poc-proposal.md`,
+    `docs-as-code-master-publication-proposal.md`, `vdl-content-quality-and-ia-strategy.md`) —
+    the FileMan docs-as-code pilot, **paused at L1.4** (kickoff in `docs/prompts/`).
+  - `offline-lexical-search-plan.md` — the direction-reset record (*why lexical-first, no
+    vectors/MCP*). Its L-phase tracker is closed under `docs/historical/`.
+- **Frozen records** in [`docs/historical/`](docs/historical/): `vdocs-implementation-plan.md`
+  (🏁 Closure = the decisive embed-vs-lexical finding) and `vdocs-remediation-plan.md`
+  (original audit). Read for *why*; do not execute their phases.
 
 **If the code and the active plan disagree, the plan is the bug report.** Read it before changing
 anything structural; propose design changes by editing the plan first, not in code.
 
-The original architecture doc `vdocs-design.md` is archived under
-[`docs/historical/`](docs/historical/) as **reference only** (superseded by the plans above where
-they disagree). The fidelity-QA framework (`fidelity-framework.md` + the `compliance`/`overstrip`
+The fidelity-QA framework (`fidelity-framework.md`, deleted with the `compliance`/`overstrip`
 oracles) was **retired** — the lexical-first direction superseded it; the one live guardrail, the
 content-retention check, now lives in `normalize` (`stages/normalize/retention_pure.py`).
 
@@ -48,8 +51,10 @@ until that is green.
 
 - **Medallion lake** bronze → silver → gold (§4). Data lives in `~/data/vdocs` (`DATA_DIR`),
   **never in this repo**.
-- **17-stage DAG** of `Stage`/`ArtifactContract` driven by a generic in-house orchestrator (§7–§8).
-  The §8 table is authoritative; the orchestrator derives order from it.
+- **DAG** of `Stage`/`ArtifactContract` driven by a generic in-house orchestrator (§7–§8).
+  The wired stage list in `cli/app.py:build_stages` is authoritative (15 stages today —
+  design §8 predates `resolve`/`merge`/`publish` and still lists the retired
+  `embed`/`fidelity`/`push`/`analyze`).
 - **Pure functions in `*_pure.py`** (zero I/O); thin I/O **`stage.py`** drivers. Every pure
   function has a unit test written first.
 - **One shared `kernel/`** for cross-cutting primitives (text, frontmatter, fingerprint, cas,
@@ -98,8 +103,8 @@ Makefiles must use `.venv/bin/` prefixes (parent direnv hijacks bare tool names)
     bronze/raw/<sha256>.docx           #   fetch (content-addressed) + raw/index.json
     assets/<sha256>.<ext>              #   convert (CAS image store)
     silver/text/{01-converted,02-enriched,03-normalized}/...
-    gold/{consolidated,_shared,publish, corpus-manifest.json, discovery.json, glossary.md}
-  state.db · index.db · vectors.db     # cross-cutting (at the lake root, not per-track)
+    gold/{consolidated,_shared,publish, knowledge.db, corpus-manifest.json, discovery.json, glossary.md}
+  state.db · index.db                  # cross-cutting (at the lake root, not per-track)
   reports/{survey,headings,lexicon,patterns,fidelity}
 ```
 

@@ -171,8 +171,8 @@ half-present in the corpus:
    definition per term, transcluded (and ideally hover-rendered), retiring per-manual re-definitions.
 3. **A controlled vocabulary (termbase)** — the industry answer to multi-author/multi-decade drift is
    literally an **A–Z approved-term list with named forbidden synonyms** (Google's and Microsoft's word
-   lists; aerospace's ASD-STE100 "one word = one meaning"). The two **draft registries already on this
-   branch** — `docs/product-names.draft.yaml` and `docs/product-abbreviations.draft.yaml` — are the
+   lists; aerospace's ASD-STE100 "one word = one meaning"). The two draft registries mined in Phase 1 (since curated into
+   `registries/inventory/product-names.yaml`; the `docs/product-*.draft.yaml` drafts are deleted) are the
    seed of this termbase. The strategic move is to make them **machine-enforced** (§9): compile them
    into Vale substitution rules so "VistA" never re-drifts to "Vista"/"VISTA", `FileMan` stays
    `FileMan`, and every package name resolves to its approved spelling — *as a CI gate, not a manual
@@ -368,8 +368,8 @@ pipeline, and continuously publishable per the Diátaxis iterative method.
    prove the method on the Developer's Guide (reference) + one tutorial first, then expand?
 2. **Style-guide base** — Google (CC BY 4.0, developer-oriented, forkable) vs. Microsoft (broader,
    matches the "mirror Microsoft" framing) as the Vale base under the VistA overlay?
-3. **Termbase format/ownership** — promote `product-names.draft.yaml`/`abbreviations.draft.yaml` to a
-   committed termbase now (and who curates additions)? TBX-portable, or stay YAML?
+3. **Termbase format/ownership** — promote the mined drafts to a
+   committed termbase now (and who curates additions)? *(done — `registries/inventory/product-names.yaml`)* TBX-portable, or stay YAML?
 4. **Gap-fill authority** — net-new topics (§8.4) that no manual ever stated assert facts about VistA;
    who is the SME of record that signs off (an editorial/clinical call, not engineering)?
 5. **Reference-generation scope for FileMan** — generate the file/global/option/RPC reference from the

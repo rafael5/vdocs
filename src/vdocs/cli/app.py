@@ -239,7 +239,8 @@ def gate(
     Prints the effective, assembled policy in plain terms (app-scope prefixes + denied statuses,
     the kept vs omitted doc-types, and the fail-safe for untyped docs) so an operator can see and
     change the gate without reading code. With a gold inventory present it also reports how the gate
-    partitions it (admitted vs excluded, with a per-doc-type breakdown). See docs/gate-reference.md.
+    partitions it (admitted vs excluded, with a per-doc-type breakdown).
+    See docs/reference/gate-reference.md.
     """
     from vdocs.models.catalog import EnrichedInventory
     from vdocs.stages.fetch import fetch_pure as fp
@@ -296,7 +297,8 @@ def build_termbase(
     *casing* ``substitution`` style (``Casing.yml`` — enforces canonical capitalization only for
     terms that don't collide with English, SKL S1.3), and a ``typos`` extend-words snippet for a
     ``*-docs`` repo's gate (the VDL-modernization program; see
-    docs/vdl-content-quality-and-ia-strategy.md §6/§9). A registry edit re-flows here on re-run
+    docs/proposals/vdl-content-quality-and-ia-strategy.md §6/§9).
+    A registry edit re-flows here on re-run
     (tenet #13) — the docs gate never hand-maintains its own copy of the vocabulary.
     """
     from pathlib import Path

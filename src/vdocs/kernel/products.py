@@ -1,6 +1,6 @@
 """Product registry loader — `app_code → [product, …]` from function-domains'
 sibling ``registries/inventory/product-names.yaml`` (see
-``docs/title-normalization-proposal.md`` / the product-naming work).
+``docs/historical/title-normalization-proposal.md`` / the product-naming work).
 
 A VistA namespace (app_code) hosts one or more named products/modules; this maps
 each to a dense ``abbr`` (the faceted-browser label + display-title prefix), a
@@ -9,8 +9,9 @@ title-leading strings that resolve a document to the product). Pure-ish I/O: it
 reads one YAML and returns plain dicts; resolution itself lives in
 ``kernel.titles`` (pure).
 
-Each entry also carries the SKL **Term-classification facets** (``docs/skl-proposal.md`` §5,
-``docs/skl-implementation-plan.md`` S1.1) — the per-term meaning the flat termbase lacked:
+Each entry also carries the SKL **Term-classification facets**
+(``docs/proposals/skl-proposal.md`` §5,
+``docs/proposals/skl-implementation-plan.md`` S1.1) — the per-term meaning the flat termbase lacked:
 
 * ``term_class`` (YAML ``class``) — what the term *is* (``brand``/``product``/``acronym``/…);
   informational, ``None`` when unset.

@@ -1,5 +1,5 @@
 """Unit tests for kernel.casing_pure — the selective-casing core for the SKL S1 quick win
-(``docs/skl-implementation-plan.md`` S1.2/S1.3).
+(``docs/proposals/skl-implementation-plan.md`` S1.2/S1.3).
 
 The casing bug: ``build-termbase`` whitelists ~1,117 terms; turning on Vale's blanket
 case-enforcement then demands "use ``CAN``" on every ordinary "can" because acronyms collide

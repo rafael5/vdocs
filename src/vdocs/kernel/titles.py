@@ -1,7 +1,7 @@
 """Title de-noising — the clean display name (version/patch stripped) for a document.
 
 The single home of the title-normalization rules (see
-``docs/title-normalization-proposal.md``). A gold document title embeds version
+``docs/historical/title-normalization-proposal.md``). A gold document title embeds version
 and patch tokens that bury the application name and vary per app — yet that
 information is already parsed into the ``version``/``patch_id`` fields. This
 strips it from the *display* title so the application/product name leads.

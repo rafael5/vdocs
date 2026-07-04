@@ -97,7 +97,7 @@ extends the existing termbase projection.
 ### S2 — Formalize the SKL + the `resolve` stage (FileMan) ✅ (landed 2026-06-17)
 Promote semantic resolution to a named DAG layer producing `knowledge.db` for the `DI` gold (proposal
 §6). Re-centering, not rewrite — elevate `enrich`+`entities`+`relate`. **Kickoff (next session):**
-`docs/prompts/skl-s2-kickoff.md`. **Live-DD verified available** 2026-06-17 (`vehu`/`foia-t12` up; DD
+`docs/prompts/historical/skl-s2-kickoff.md`. **Live-DD verified available** 2026-06-17 (`vehu`/`foia-t12` up; DD
 populated — `file #200 → "NEW PERSON"` confirmed); access **must** go via the `m` toolchain
 (m-driver-sdk → m-ydb/m-iris), never raw `docker exec` (engine-stack guard). **`m vista exec`/`status`
 docker→engine binding is NOW WIRED** (fixed 2026-06-17, m-cli + m-ydb) — **option (a) is unblocked**.

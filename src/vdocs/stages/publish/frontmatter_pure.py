@@ -1,6 +1,6 @@
 """Imported-baseline front-matter rewrite for ``export-fileman`` (FileMan docs-as-code pilot, L1;
-see ``docs/fileman-docs-pilot-implementation-plan.md`` and
-``docs/vdl-content-quality-and-ia-strategy.md`` §3/§5).
+see ``docs/proposals/fileman-docs-pilot-implementation-plan.md`` and
+``docs/proposals/vdl-content-quality-and-ia-strategy.md`` §3/§5).
 
 When a gold VDL document is materialized into the ``fileman-docs`` master, three things change in
 its front matter, all here and all pure (gold meta dict → imported-baseline meta dict):

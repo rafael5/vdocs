@@ -1,5 +1,6 @@
 """Selective-casing core — the pure heart of the SKL S1 "fix the casing bug at the source"
-quick win (``docs/skl-proposal.md`` §7, ``docs/skl-implementation-plan.md`` S1.2/S1.3).
+quick win (``docs/proposals/skl-proposal.md`` §7,
+``docs/proposals/skl-implementation-plan.md`` S1.2/S1.3).
 
 The controlled vocabulary is a flat list of ~1,117 approved spellings. Enforcing each term's
 *exact capitalization* everywhere (Vale's blanket ``Vale.Terms``) is wrong for the acronyms that

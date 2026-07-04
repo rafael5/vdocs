@@ -1,6 +1,17 @@
 # vdocs — Pipeline Design Document
 
-**Status:** Founding design (greenfield rewrite). **Date:** 2026-06-01.
+> **Currency banner (2026-07-04).** Promoted back from `historical/` — this remains the only
+> full description of the architecture the code implements (lake §4–§5, Stage/contract model
+> §7, kernel rules §9.2, registries §9.6–§9.8, stable IDs §5.5, repo layout §11) and the
+> standing rule is to update it whenever a stage's inputs/outputs/CLI change (CLAUDE.md).
+> **Superseded by the 2026-06-08 direction reset**, read those sections as history only:
+> the §8 stage table (lists retired `embed`/`fidelity`/`push`/`analyze`; lacks the later
+> `resolve`/`merge` — SKL — and `publish` stages; `cli/app.py:build_stages` is authoritative,
+> 15 stages), everything semantic/vector/MCP (§14–§15, `vectors.db`), and all references to
+> the deleted `fidelity-framework.md`. The crawl/inventory companion spec now lives at
+> [`reference/vdl-crawl-spec.md`](reference/vdl-crawl-spec.md).
+
+**Status:** Founding design (greenfield rewrite; see currency banner). **Date:** 2026-06-01.
 **Supersedes:** the v1 implementation in this repo (kept for *reference only* — see §16).
 **Audience:** the implementer(s) of the new repo, and any third-party author who must
 understand the whole system from cold.
@@ -17,10 +28,12 @@ choice is an explicit decision with rationale (the ADR tables in §10). If the c
 this document disagree, the document is the bug report.
 
 **Companion specs.** Two documents specify a layer in full and are subordinate-but-authoritative
-for it: **[`vdl-crawl-spec.md`](vdl-crawl-spec.md)** — the crawl→**enriched-inventory** layer (`crawl` +
+for it: **[`vdl-crawl-spec.md`](reference/vdl-crawl-spec.md)** — the crawl→**enriched-inventory** layer (`crawl` +
 `catalog`), a *foundational layer* that must be built and validated **green before any document is
-fetched** (it is the gate on `fetch`, §8); and **[`fidelity-framework.md`](fidelity-framework.md)** — the
-per-document QA verdict that gates `publish`/`push`. Both are bounded by, and consistent with, this design.
+fetched** (it is the gate on `fetch`, §8); and `fidelity-framework.md` — the per-document QA
+verdict that gated `publish`/`push` *(retired with the 2026-06-08 direction reset and deleted;
+the surviving guardrail is the content-retention check in `stages/normalize/retention_pure.py`)*.
+Both are bounded by, and consistent with, this design.
 
 ---
 
@@ -189,7 +202,7 @@ These are non-negotiable. Every later section is an application of one of these.
     code edit. The inductive discovery step is kept strictly separate from the deterministic
     application step; the registry is the seam between them. (Mechanism: §9.6.)
 14. **Discoverability is built upstream of the gate, then measured — a gate cannot create it.**
-    (Earned from the v1 real-corpus run; see [`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md).)
+    (Earned from the v1 real-corpus run; see [`v1-lessons-and-v2-priorities.md`](historical/v1-lessons-and-v2-priorities.md).)
     Retrieval and navigation quality are *produced* by good chunking, recovered structure, and rich
     typed entities (§14.6, §5.5) — **before** any verification stage runs. The `validate` HARD GATE and
     the `fidelity` axes **certify** that quality; they never substitute for it. Therefore the build
@@ -529,7 +542,7 @@ uses as its `doc_id`/`stable_id` base (`anchors_pure` "Decision 1"). So `index.d
 the one the published anchors, FTS rows, graph nodes, and (later) vector keys share.
 
 **Sections are anchors; chunks are the retrieval unit (added 2026-06-04, A1 — see
-[`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md), §14.6).** A heading-anchored
+[`v1-lessons-and-v2-priorities.md`](historical/v1-lessons-and-v2-priorities.md), §14.6).** A heading-anchored
 **section** and a **search chunk** are not 1:1, so they are now distinct tables. `index.db:doc_sections`
 holds **one row per heading** — the addressable, structure-complete map (every heading, `is_latest`,
 `toc_level`, the `<doc_key>/<slug>` stable id the published anchors, the graph, and MCP
@@ -1090,7 +1103,7 @@ plane), **DOC** = the document medallion (data plane) (§4). The inventory track
 | Layer | Stage | requires | produces | idempotency |
 |---|---|---|---|---|
 | 🥉 INV | **crawl** | `vdl` (external) | `inventory/bronze:catalog.raw` (raw scraped catalog — immutable evidence) | FORCE_ONLY (network) |
-| 🥈 INV | **catalog** | `catalog.raw` | `inventory/silver:catalog.enriched` — the **conformed enriched inventory**: full multi-pass enrichment + system classification per **[`vdl-crawl-spec.md`](vdl-crawl-spec.md)** (patch identity incl. multi-NS, doc-type/labels, `group_key` + version-free `anchor_key`, **noise classification**, companion pairing). **`catalog.enriched` is a pure function of one crawl** — drift detection (NEW/SUPERSEDED/CHANGED-IN-PLACE/UNCHANGED/WITHDRAWN) is *temporal* (it compares a fresh crawl against prior state) and therefore belongs to the §7.6 scheduled/incremental layer (Phase 7), **not** to this deterministic artifact. | SKIP_IF_UNCHANGED |
+| 🥈 INV | **catalog** | `catalog.raw` | `inventory/silver:catalog.enriched` — the **conformed enriched inventory**: full multi-pass enrichment + system classification per **[`vdl-crawl-spec.md`](reference/vdl-crawl-spec.md)** (patch identity incl. multi-NS, doc-type/labels, `group_key` + version-free `anchor_key`, **noise classification**, companion pairing). **`catalog.enriched` is a pure function of one crawl** — drift detection (NEW/SUPERSEDED/CHANGED-IN-PLACE/UNCHANGED/WITHDRAWN) is *temporal* (it compares a fresh crawl against prior state) and therefore belongs to the §7.6 scheduled/incremental layer (Phase 7), **not** to this deterministic artifact. | SKIP_IF_UNCHANGED |
 | 🥇 INV | **serve-inventory** | `catalog.enriched` | `inventory/gold` — the **GOLD INVENTORY** (curated · browsable + machine-queryable selection surface; a pure function of `catalog.enriched`). **Postflight HARD GATE** — complete vs. the crawl, enriched, noise-classified, no information loss + sane distributions (crawl-spec §7); `ok` only if green. **This `ok` is the fetch gate.** | SKIP_IF_UNCHANGED |
 | 🥉 DOC | **fetch** | **gold inventory `ok` (the gate, green)** + an explicit **selection** (the selection surface, §5.6); reads `state.db:acquisitions` (prior status — *out-of-contract* mutable state, §5.5) | `documents/bronze:raw` (CAS docx), `raw/index.json` (derived CAS manifest); writes `state.db:acquisitions` (per-doc fetch status — the system of record, *out-of-contract* mutable state, §5.5) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **convert** | `raw`, `raw/index.json` | `text@converted`, `assets` (CAS) | SKIP_IF_UNCHANGED |
@@ -1112,7 +1125,7 @@ Notes:
 - **The inventory medallion is a foundational track and a hard gate before any fetch.** `crawl` →
   `catalog` → `serve-inventory` build a complete, enriched, noise-classified inventory of the *entire*
   VDL site — metadata only, no documents downloaded — its own bronze→silver→gold (§4), specified in full
-  by **[`vdl-crawl-spec.md`](vdl-crawl-spec.md)** (the authoritative component spec for that track).
+  by **[`vdl-crawl-spec.md`](reference/vdl-crawl-spec.md)** (the authoritative component spec for that track).
   `serve-inventory`'s postflight is a **HARD GATE**: it blesses the **gold inventory** as `ok` only when
   the inventory is complete relative to the crawl, fully enriched, noise-classified, and passes the
   crawl-spec §7 acceptance (no information loss + sane distributions). **`fetch` (document-bronze) cannot
@@ -1181,7 +1194,7 @@ Notes:
     discovery-rich types an agent or engineer actually searches the VistA corpus *for* — **RPCs,
     options, routines, protocols, HL7 segments, mail groups** — are **absent**. Seeding the full
     `registries/entities` set is therefore a load-bearing discoverability task (priority **A3** in
-    [`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md)), not a nicety: it is the
+    [`v1-lessons-and-v2-priorities.md`](historical/v1-lessons-and-v2-priorities.md)), not a nicety: it is the
     largest available lift for the **structured + graph** retrieval modes. Conversely, raw **globals
     are ubiquitous and low-signal** (the design already excludes them from `xref` edges for that
     reason): they must be **de-weighted / demoted** from the primary discovery surface — retained as
@@ -1438,7 +1451,7 @@ version-controlled config consumed by the inventory track — the catalog-track 
 (`package-master`, `doc-types`, `manual-labels`, `system-types`, `section-codes`, `doc-labels`,
 `noise-domains`, `abbrev-fallback`, `typo-corrections`). These live under **`registries/inventory/`**
 (discovered by the inventory crawl/curation, consumed by `catalog` enrichment per
-[`vdl-crawl-spec.md`](vdl-crawl-spec.md)); they share the `registries/` tree (and its
+[`vdl-crawl-spec.md`](reference/vdl-crawl-spec.md)); they share the `registries/` tree (and its
 fingerprint) but carry no §9.6 disposition.
 
 One subtlety the disposition table understates: **templates are STRIP-from-body but their
@@ -1830,7 +1843,7 @@ retrieves badly.
 >
 > This is enforced by the `fidelity` over-strip / hollow-chunk metric (`overstrip_pure`,
 > fidelity-framework §10.5), whose target is ≈ 0 hollow content chunks **before** `embed` runs. It is
-> priority **A1** in the substrate-first plan (see [`v1-lessons-and-v2-priorities.md`](v1-lessons-and-v2-priorities.md)).
+> priority **A1** in the substrate-first plan (see [`v1-lessons-and-v2-priorities.md`](historical/v1-lessons-and-v2-priorities.md)).
 
 **Keep the canonical boilerplate indexed once.** Occasionally the boilerplate *is* the answer (a
 compliance/legal query). The single-sourced copy in `gold/_shared/` is indexed **once** — so it is
@@ -1921,7 +1934,7 @@ Each phase ends with a runnable, tested increment. Build the spine before the st
 2. **Inventory medallion (its own bronze→silver→gold), then document-bronze:** `crawl` (inv-bronze) →
    `catalog` (inv-silver) → `serve-inventory` (inv-gold + the gate) → **fetch gate** → `fetch`
    (doc-bronze), with the CAS raw store, `acquisitions` status, and lineage. Build the **gold inventory
-   first** ([`vdl-crawl-spec.md`](vdl-crawl-spec.md)): a complete, enriched, noise-classified inventory of
+   first** ([`vdl-crawl-spec.md`](reference/vdl-crawl-spec.md)): a complete, enriched, noise-classified inventory of
    the whole site (metadata only). `serve-inventory`'s postflight HARD GATE must be **green** (complete +
    enriched + crawl-spec §7 acceptance) before `fetch` may download anything, and `fetch` pulls only a
    curated **selection** — never a blind full download. The inventory medallion is the foundation the

@@ -145,8 +145,8 @@ airgapped posture:
 | Rendered a11y | **pa11y-ci** (WCAG 2.1 AA) against built `site/` | `.pa11yci` | contrast/ARIA/heading-order violation |
 | Front matter | schema check (small Python) | `schema/topic.yml` | missing field, `doc_type` ∉ Diátaxis vocab, `status` ∉ vocab |
 
-**Termbase wiring (the §6 single-sourcing move):** `docs/product-names.draft.yaml` +
-`docs/product-abbreviations.draft.yaml` (already on this branch) are promoted to a committed termbase and
+**Termbase wiring (the §6 single-sourcing move):** the Phase-1 mining drafts (curated into `registries/inventory/product-names.yaml`;
+draft files since deleted) are promoted to a committed termbase and
 **compiled** into (a) Vale `accept.txt`/`reject.txt` + a `Vale.Terms` substitution style and (b) the
 `typos.toml` whitelist by a tiny `vdocs build-termbase` generator — one source, two enforcers, drift-gated.
 

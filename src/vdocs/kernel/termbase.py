@@ -1,7 +1,7 @@
 """Compile the curated registries into docs-as-code **quality-gate config** — the substrate for
 ``vdocs build-termbase`` (the docs-as-code/VDL-modernization program; see
-``docs/vdl-content-quality-and-ia-strategy.md`` §6/§9 and
-``docs/fileman-docs-pilot-implementation-plan.md`` L0c).
+``docs/proposals/vdl-content-quality-and-ia-strategy.md`` §6/§9 and
+``docs/proposals/fileman-docs-pilot-implementation-plan.md`` L0c).
 
 The controlled vocabulary already exists as curated data, not prose: ``product-names.yaml``
 (canonical ``abbr``/``full``/``match``), ``typo-corrections.yaml`` (``source``→``corrected``), and

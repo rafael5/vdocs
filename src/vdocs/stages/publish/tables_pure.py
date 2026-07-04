@@ -1,5 +1,6 @@
 """Table materialization for ``export-fileman`` (FileMan docs-as-code pilot, L1.3; see
-``docs/fileman-docs-pilot-implementation-plan.md`` and the master-publication proposal §4).
+``docs/proposals/fileman-docs-pilot-implementation-plan.md`` and the
+master-publication proposal §4).
 
 Gold renders every extracted table as a dead ``_[Table N](tables/table-NN.csv)_`` link (D-5) —
 invisible on github.com. This pure transform turns a parsed table into something the fileman-docs

@@ -4,11 +4,11 @@
 - **Owner:** vdocs (the producer owns the contract)
 - **Consumers in scope:** `vdocs-tui` (Go TUI), `vdocs-web` (Go server + SvelteKit, planned),
   a future MCP endpoint, and `vdocs-cli`.
-- **Supersedes / relates to:** the lexical-search plans (`docs/offline-lexical-search-plan.md`),
+- **Supersedes / relates to:** the lexical-search plans (`docs/proposals/offline-lexical-search-plan.md`),
   the vdocs-web direction (option A, server-backed). This ADR is authoritative for the
   producer→consumer data contract.
 - **Implementation tracker (how/status):**
-  [`docs/read-contract-implementation-plan.md`](../read-contract-implementation-plan.md) — staged
+  [`docs/proposals/read-contract-implementation-plan.md`](../proposals/read-contract-implementation-plan.md) — staged
   phases P0–P6 with per-phase changelog/discoveries/risks. Update it as work lands.
 
 ## Context
@@ -191,7 +191,7 @@ target is airgapped/offline.
 ## References
 
 - Topology and rationale: this session's design discussion (2026-06-11).
-- Architecture tenet #13 "discovery is data, not code" (`docs/historical/vdocs-design.md`) — this
+- Architecture tenet #13 "discovery is data, not code" (`docs/vdocs-design.md`) — this
   ADR extends it across the producer/consumer boundary.
 - vdocs-web direction: option A (local Go server + SvelteKit + auto-download DB), facets + fuzzy +
   FTS5.

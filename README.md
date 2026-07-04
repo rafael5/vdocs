@@ -6,8 +6,8 @@ SQLite + FTS5) that any developer can search **offline with zero ML dependencies
 rewrite of `vista-docs`.
 
 **Source of truth:** the go-forward plan
-[`docs/offline-lexical-search-plan.md`](docs/offline-lexical-search-plan.md) (*what/why*) and its
-[implementation tracker](docs/offline-lexical-search-implementation-plan.md) (*how/status*). New to
+[`docs/proposals/offline-lexical-search-plan.md`](docs/proposals/offline-lexical-search-plan.md) (*what/why*) and its
+[implementation tracker](docs/historical/offline-lexical-search-implementation-plan.md) (*how/status*). New to
 the project? Start with the [user guide](docs/vdocs-user-guide.md); to **run** the pipeline, follow
 the [operator runbook](docs/de-novo-run.md). The original `vdocs-design.md` is archived under
 [`docs/historical/`](docs/historical/) as superseded reference (the semantic / vector / MCP surface
