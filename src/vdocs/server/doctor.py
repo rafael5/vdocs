@@ -164,22 +164,17 @@ class DoctorPolicy:
     accepted_anchorless_groups: frozenset[str] = frozenset()
 
 
-_DEFAULT_COVERAGE = {
-    "app_user": CoverageSpec(100),
-    "doc_user": CoverageSpec(100),
-    "software_class": CoverageSpec(100),
-    "function_category": CoverageSpec(90, "fallback-profile apps have no Monograph SPM line"),
-    "doc_type": CoverageSpec(100),
-}
-
-
 def load_doctor_policy(registries_dir: Path) -> DoctorPolicy:
-    """Load ``registries/doctor-policy.yaml`` (expected-coverage floors + accepted edge cases);
-    fall back to sensible defaults if the file is absent."""
+    """Load ``registries/doctor-policy.yaml`` (expected-coverage floors + accepted edge cases).
+    The file is required and must carry a ``coverage:`` block — no hardcoded fallback that
+    could silently drift from the YAML."""
     path = registries_dir / "doctor-policy.yaml"
-    raw: dict[str, Any] = {}
-    if path.exists():
-        raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not path.exists():
+        raise FileNotFoundError(
+            f"{path}: the doctor policy registry is required (it ships in the repo; a missing "
+            "file is a broken install — fail loud, tenet #7)"
+        )
+    raw: dict[str, Any] = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     known = {"coverage", "accepted_anchor_edge_cases", "accepted_anchorless_groups"}
     unknown = set(raw) - known
     if unknown:
@@ -192,7 +187,9 @@ def load_doctor_policy(registries_dir: Path) -> DoctorPolicy:
             float((spec or {}).get("min_pct", 100)), str((spec or {}).get("by_design", ""))
         )
         for fld, spec in cov_raw.items()
-    } or dict(_DEFAULT_COVERAGE)
+    }
+    if not coverage:
+        raise ValueError("doctor-policy.yaml: a non-empty `coverage:` block is required")
     accepted = frozenset(raw.get("accepted_anchor_edge_cases") or [])
     anchorless = frozenset(raw.get("accepted_anchorless_groups") or [])
     return DoctorPolicy(

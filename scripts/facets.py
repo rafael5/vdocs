@@ -1,4 +1,8 @@
-"""Faceted (focused) search over `index.db` (LF) — narrow by structured facets, then content-search
+"""[DEMOTED 2026-07-04: measurement harness, not a serving API — the Go query
+CLI (vdocs-cli) is the user-facing faceting surface. Lives beside its eval consumer
+(faceted_eval.py); imports vdocs.* from the installed package.]
+
+Faceted (focused) search over `index.db` (LF) — narrow by structured facets, then content-search
 within the narrowed set.
 
 The "focused information retrieval" path: declare facets (doc_type / persona / package / entity)
@@ -17,8 +21,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import facets_pure as fp
+
 from vdocs.kernel import db
-from vdocs.server import facets_pure as fp
 from vdocs.server import ids
 from vdocs.server import search_pure as sp
 

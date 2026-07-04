@@ -20,12 +20,15 @@ import argparse
 import math
 import os
 import sqlite3
+import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from vdocs.server.facets import faceted_search
+sys.path.insert(0, str(Path(__file__).parent))
+from facets import faceted_search  # noqa: E402
+
 from vdocs.server.search import lexical_search
 
 

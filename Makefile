@@ -36,12 +36,16 @@ mypy:
 cov:
 	$(PYTEST) --cov --cov-report=term-missing
 
-check: lint mypy cov
+check: lint mypy cov contract-lint
 
 # read-contract semver guard (ADR-0001 P1.6): a breaking change to contracts/read/ may not ship as
 # a MINOR. No-op until a v2 spec exists.
 contract-lint:
 	$(PYTHON) -c "import sys; from vdocs.kernel import read_contract as rc; p = rc.lint_latest(); [print('CONTRACT-LINT:', x) for x in p]; sys.exit(1 if p else 0)"
+
+# search-quality baseline: golden queries -> nDCG report (registries/golden-queries.yaml)
+eval:
+	$(PYTHON) scripts/baseline_golden.py
 
 pull:
 	git pull origin $(BRANCH)

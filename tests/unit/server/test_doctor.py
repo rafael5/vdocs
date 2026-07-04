@@ -133,14 +133,29 @@ def test_policy_loads_accepted_anchorless_groups(tmp_path):
     # D2: known anchorless version groups (upstream grouping drift) are declared in
     # the policy registry — doctor WARNs on these, FAILs on any new one.
     (tmp_path / "doctor-policy.yaml").write_text(
-        "accepted_anchorless_groups:\n  - 'PSO:PSO:UG:pso_um'\n", encoding="utf-8"
+        "coverage:\n  doc_type: {min_pct: 100}\n"
+        "accepted_anchorless_groups:\n  - 'PSO:PSO:UG:pso_um'\n",
+        encoding="utf-8",
     )
     pol = load_doctor_policy(tmp_path)
     assert "PSO:PSO:UG:pso_um" in pol.accepted_anchorless_groups
 
 
-def test_policy_defaults_have_no_accepted_anchorless_groups(tmp_path):
-    assert load_doctor_policy(tmp_path).accepted_anchorless_groups == frozenset()
+def test_policy_file_is_required(tmp_path):
+    # the policy registry ships in the repo; a missing file is a broken install — fail loud
+    # (tenet #7), never silently fall back to hardcoded floors that can drift from the YAML
+    import pytest
+
+    with pytest.raises(FileNotFoundError, match="doctor-policy.yaml"):
+        load_doctor_policy(tmp_path)
+
+
+def test_policy_requires_a_coverage_block(tmp_path):
+    (tmp_path / "doctor-policy.yaml").write_text("accepted_anchor_edge_cases: []\n")
+    import pytest
+
+    with pytest.raises(ValueError, match="coverage"):
+        load_doctor_policy(tmp_path)
 
 
 def test_policy_rejects_unknown_top_level_keys(tmp_path):
