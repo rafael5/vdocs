@@ -205,3 +205,31 @@ def test_replace_table_atomic_preserves_old_on_failed_build(tmp_path):
         assert ro.execute("SELECT a FROM rel").fetchone()[0] == "keep"  # prior table survives
     finally:
         ro.close()
+
+
+def test_replace_table_atomic_under_a_dependent_view(tmp_path):
+    # merge replaces entity_skl while v_entity_skl (read-contract 1.5) references it —
+    # ALTER TABLE RENAME must not choke revalidating the view mid-swap (the table is
+    # dropped inside the transaction; the rename restores the exact name it expects).
+    path = tmp_path / "index.db"
+    conn = db.connect(path)
+    conn.executescript(
+        """
+        CREATE TABLE t (x TEXT);
+        INSERT INTO t VALUES ('old');
+        CREATE VIEW v_t AS SELECT x FROM t;
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    def build_new(conn, new):
+        conn.execute(f"CREATE TABLE {new} (x TEXT)")
+        conn.execute(f"INSERT INTO {new} VALUES ('new')")
+
+    db.replace_table_atomic(path, "t", build_new)
+    conn = db.connect(path, read_only=True)
+    try:
+        assert [r["x"] for r in conn.execute("SELECT x FROM v_t")] == ["new"]
+    finally:
+        conn.close()

@@ -100,6 +100,11 @@ def replace_table_atomic(
         conn.execute(f"DROP TABLE IF EXISTS {new}")
         build_new(conn, new)
         conn.commit()
+        # the rename must not revalidate dependent views mid-swap: `table` is dropped
+        # inside this transaction while read-contract views still reference it, and the
+        # rename restores the exact name they expect (measured: merge replacing
+        # entity_skl under v_entity_skl fails without this on a fresh 1.5 index.db)
+        conn.execute("PRAGMA legacy_alter_table=ON")
         conn.execute("BEGIN IMMEDIATE")
         conn.execute(f"DROP TABLE IF EXISTS {table}")
         conn.execute(f"ALTER TABLE {new} RENAME TO {table}")
