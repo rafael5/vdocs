@@ -139,3 +139,35 @@ def write_bundle(out_path: Path, *, index_db: Path, gold_dir: Path, manifest: di
 
 def sha256sums(paths: list[Path]) -> str:
     return "".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n" for p in paths)
+
+
+def release_notes(contract: dict, bundle_sha: str) -> str:
+    """The GitHub Release body — one text for create AND edit, so a
+    re-publish refreshes the fingerprints instead of stranding stale ones."""
+    peer = contract.get("peer_vocabulary", {}).get("content_hash", "?")[:16]
+    return (
+        f"vdocs gold corpus + index.db data release.\n\n"
+        f"corpus_content_hash: `{contract['corpus_content_hash']}`\n"
+        f"bundle_sha256: `{bundle_sha}`\n"
+        f"peer: vista-meta data-v1 `{peer}…`\n\n"
+        f"Verify: `sha256sum -c SHA256SUMS`, then compare against the in-repo "
+        f"record `docs/releases/{STANDALONE_NAME}`."
+    )
+
+
+def publish_commands(tag_exists: bool, dist: Path, notes: str) -> list[list[str]]:
+    """The gh argv sequences that publish the assembled assets.
+
+    ``gh release create`` fails on an existing tag — that stranded the
+    2026-07-04 re-cut (assets assembled + recorded in-repo, never uploaded).
+    Existing tag → replace the assets (``--clobber``) and refresh the notes;
+    only a genuinely new tag gets ``create``.
+    """
+    assets = [str(dist / n) for n in (BUNDLE_NAME, STANDALONE_NAME, SUMS_NAME)]
+    title = ["--title", f"vdocs {TAG}"]
+    if tag_exists:
+        return [
+            ["gh", "release", "upload", TAG, *assets, "--clobber"],
+            ["gh", "release", "edit", TAG, *title, "--notes", notes],
+        ]
+    return [["gh", "release", "create", TAG, *assets, *title, "--notes", notes]]

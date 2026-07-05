@@ -118,3 +118,35 @@ def test_bundle_is_deterministic_and_manifest_inside(tmp_path):
     # excluded-and-declared payload never leaks into the bundle
     assert not [n for n in names if "history" in n or "knowledge.db" in n]
     assert "bundle_sha256" not in json.loads(raw)
+
+
+def test_release_notes_carries_both_fingerprints():
+    notes = rel.release_notes(_CONTRACT, bundle_sha="b" * 64)
+    assert "e" * 64 in notes  # corpus_content_hash
+    assert "b" * 64 in notes  # bundle_sha256
+    assert "23d0" in notes  # peer pin prefix
+    assert rel.STANDALONE_NAME in notes  # points at the in-repo record
+
+
+def test_publish_commands_create_when_tag_absent(tmp_path):
+    cmds = rel.publish_commands(tag_exists=False, dist=tmp_path, notes="N")
+    assert len(cmds) == 1
+    assert cmds[0][:3] == ["gh", "release", "create"]
+    assert str(tmp_path / rel.BUNDLE_NAME) in cmds[0]
+    assert "--notes" in cmds[0] and "N" in cmds[0]
+    assert "--clobber" not in cmds[0]
+
+
+def test_publish_commands_clobber_and_edit_when_tag_exists(tmp_path):
+    # `gh release create` fails on an existing tag — the 2026-07-05 stranded
+    # re-cut. Existing tag → replace assets + refresh notes, never create.
+    cmds = rel.publish_commands(tag_exists=True, dist=tmp_path, notes="N")
+    assert [c[:3] for c in cmds] == [
+        ["gh", "release", "upload"],
+        ["gh", "release", "edit"],
+    ]
+    upload, edit = cmds
+    assert upload[3] == rel.TAG and "--clobber" in upload
+    for name in (rel.BUNDLE_NAME, rel.STANDALONE_NAME, rel.SUMS_NAME):
+        assert str(tmp_path / name) in upload
+    assert edit[3] == rel.TAG and "--notes" in edit and "N" in edit

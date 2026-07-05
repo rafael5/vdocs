@@ -641,33 +641,26 @@ def release(
     typer.echo(f"corpus_content_hash: {contract['corpus_content_hash']}")
 
     if publish:
-        subprocess.run(
-            [
-                "gh",
-                "release",
-                "create",
-                rel.TAG,
-                str(dist / rel.BUNDLE_NAME),
-                str(dist / rel.STANDALONE_NAME),
-                str(dist / rel.SUMS_NAME),
-                "--title",
-                f"vdocs {rel.TAG}",
-                "--notes",
-                f"vdocs gold corpus + index.db data release.\n\n"
-                f"corpus_content_hash: `{contract['corpus_content_hash']}`\n"
-                f"bundle_sha256: `{bundle_sha}`\n"
-                f"peer: vista-meta data-v1 "
-                f"`{contract.get('peer_vocabulary', {}).get('content_hash', '?')[:16]}…`\n\n"
-                f"Verify: `sha256sum -c SHA256SUMS`, then compare against the in-repo "
-                f"record `docs/releases/{rel.STANDALONE_NAME}`.",
-            ],  # fmt: skip
-            cwd=repo_root,
-            check=True,
+        # `gh release create` fails on an existing tag (it stranded the
+        # 2026-07-04 re-cut) — probe first, then upload --clobber + edit.
+        tag_exists = (
+            subprocess.run(
+                ["gh", "release", "view", rel.TAG],
+                cwd=repo_root,
+                capture_output=True,
+            ).returncode
+            == 0
         )
+        notes = rel.release_notes(contract, bundle_sha)
+        for cmd in rel.publish_commands(tag_exists, dist, notes):
+            subprocess.run(cmd, cwd=repo_root, check=True)
         record = repo_root / "docs" / "releases" / rel.STANDALONE_NAME
         record.parent.mkdir(parents=True, exist_ok=True)
         record.write_text(json.dumps(standalone, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        typer.echo(f"published {rel.TAG}; in-repo record at {record.relative_to(repo_root)}")
+        typer.echo(
+            f"published {rel.TAG} ({'assets replaced' if tag_exists else 'release created'}); "
+            f"in-repo record at {record.relative_to(repo_root)}"
+        )
 
 
 @app.command()
