@@ -1726,6 +1726,14 @@ out-of-scope chunks. Each mode is also independently callable for agents that wa
 
 ### 14.3 MCP surface
 
+> **Partially shipped 2026-07-05 — the lexical slice.** `vdocs serve-mcp`
+> (`src/vdocs/server/mcp.py`) serves MCP over stdio with four tools, ALIGNED with
+> vista-meta's MCP server (the peer front door, same conventions): the shared trio
+> `orientation` / `query` (read-only SQL) / `lookup` (doc | section | entity,
+> pre-cited), plus `search` (the `ask` FTS5 engine) here — vista-meta's extra is
+> `bridge`. The Resources/Prompts/hybrid-mode surface below remains parked per the
+> 2026-06-08 direction reset; treat it as the v-next design.
+
 Modeled on the three MCP primitives — **Resources** (addressable data), **Tools** (callable
 functions), **Prompts** (templated workflows):
 

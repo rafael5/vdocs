@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "vdocs": {
+      "command": ".venv/bin/vdocs",
+      "args": ["serve-mcp"]
+    }
+  }
+}

@@ -420,6 +420,28 @@ def ask(
         typer.echo(f"   {h['snippet']}")
 
 
+@app.command("serve-mcp")
+@_guarded
+def serve_mcp() -> None:
+    """Serve the gold corpus over MCP stdio — the machine front door (§14, lexical slice).
+
+    Tools: search (the `ask` engine, pre-cited hits) / lookup (doc | section | entity) /
+    query (read-only SQL over index.db) / orientation (pins + surface + citation contract).
+    Aligned with vista-meta's MCP server, the peer front door for measured facts.
+    """
+    import sys
+
+    from vdocs.server import mcp
+
+    cfg = Settings()
+    if not cfg.index_db.exists():
+        typer.echo("no index.db yet — run: vdocs index (then relate, manifest)")
+        raise typer.Exit(code=1)
+    handler = mcp.Handler(cfg.index_db)
+    for out in mcp.serve_lines(handler, sys.stdin):
+        print(out, flush=True)  # noqa: T201 — the MCP transport itself, not operator chatter
+
+
 def _emit_doctor(cfg: Settings) -> str:
     """Run the doctor checks against index.db, render the report, and return the verdict (shared by
     the ``doctor`` command and ``build``). Returns ``"RED"`` if there is no index.db to check."""
