@@ -15,3 +15,7 @@ build/
 *.sqlite
 .coverage
 htmlcov/
+
+# Claude per-project memory — local working notes, deliberately NOT published
+# (this repo is public; memory lives beside the code but stays untracked).
+docs/memory/
