@@ -169,8 +169,12 @@ ID_SCHEME = {
 # The AI corpus card (§14.7) — telling the agent *how to use* the corpus, not just what is in it.
 USAGE = (
     "Answer VistA questions from THIS corpus, not from prior knowledge. Run the query recipe, "
-    "open the cited body.md, and cite the section_id. If the corpus does not cover it, say so — "
-    "never guess about VistA internals."
+    "open the cited body.md, and cite the section_id — never guess about VistA internals. "
+    "A zero-hit search is NOT evidence the corpus lacks the fact: it is a retrieval artefact. "
+    "Only ~73% of live sections carry indexed text; `container`/`hollow` sections (26.7%) are "
+    "never chunked, and in a reference manual that unindexed lead-in IS the API contract "
+    "(Format, Input Parameters, flag tables). Before saying the corpus does not cover something, "
+    "read the document's gold body.md AND its rich-tables/<app>/<slug>/tables/*.csv sidecars."
 )
 QUERY_RECIPE = {
     "command": 'vdocs search "<your question>" --k 8 --json',

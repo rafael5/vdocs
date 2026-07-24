@@ -256,6 +256,21 @@ def test_ai_manifest_assembles_card_with_recipe_and_fingerprint():
     assert "embedding" not in m
 
 
+def test_usage_rule_teaches_the_unindexed_section_fallback():
+    """The AI card is loaded as orientation context — it must not license a "not documented"
+    answer off a zero-hit search. 26.7% of live sections (container/hollow) carry NO indexed
+    text; their prose is only in body.md + the rich-tables CSV sidecars."""
+    cat = mp.build_catalog(_DOCS)
+    ents = mp.build_entity_index(_ENTS, top_n=25)
+    m = mp.ai_manifest(
+        _COUNTS, cat, ents, tool_ver="0.1.0", generated_at="t", index_fingerprint="deadbeef"
+    )
+    for text in (m["usage"], mp.corpus_card(m)):
+        assert "body.md" in text and "tables" in text
+        assert "container" in text and "hollow" in text
+        assert "retrieval" in text.lower()
+
+
 def test_corpus_card_renders_usage_catalog_and_recipe():
     cat = mp.build_catalog(_DOCS)
     ents = mp.build_entity_index(_ENTS, top_n=25)

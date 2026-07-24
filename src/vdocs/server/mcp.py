@@ -33,13 +33,35 @@ MENTION_SAMPLE = 25
 
 _SELECT_ONLY = re.compile(r"^\s*(select|with)\b", re.IGNORECASE)
 
+# --- "an index miss is not corpus absence" -------------------------------------------------------
+# MEASURED on index.db (latest-version documents): of 52,048 live sections, 13,899 (26.7%) return
+# NO text — every `hollow` section (2,627) and nearly every `container` (11,272 of 11,526). A
+# container's own lead-in prose is not chunked, and in a reference manual that lead-in *is* the API
+# contract (Format, Input Parameters, flag tables). It exists only in the gold `body.md` and the
+# extracted `table-NN.csv` sidecars. Telling an agent to answer "not in the gold corpus" off an
+# empty index result therefore manufactures false negatives — four researchers once retracted a
+# report of "missing" FileMan APIs whose text had been present the whole time. Every client-facing
+# surface below (instructions · orientation · tool descriptions · search · lookup) states the rule.
+NOT_INDEXED_RULE = (
+    "An empty result is a RETRIEVAL artefact, not a documentation gap: only ~73% of live sections "
+    "carry indexed text — `container`/`hollow` sections (26.7%) return nothing. Their prose lives "
+    "in the gold body.md and its rich-tables `tables/*.csv` sidecars. Read BOTH before you ever "
+    'answer "not in the vdocs gold corpus".'
+)
+# One-liner for the tool-description slot (some clients surface only that).
+TOOL_RULE = (
+    "An empty result means NOT INDEXED, not absent — ~27% of sections (container/hollow) carry no "
+    "indexed text; read the gold body.md + tables/*.csv before concluding the corpus lacks it."
+)
+
 TOOLS = [
     {
         "name": "search",
         "description": (
             "Lexical FTS5 search over the gold corpus (the `vdocs ask` engine): ranked, "
             "pre-cited hits (section_id, doc/section titles, snippet, vdocs:// URI, gold "
-            "body_path). Optional structured pre-filters: app (app codes), doc_type (doc codes)."
+            "body_path). Optional structured pre-filters: app (app codes), doc_type (doc codes). "
+            f"ZERO HITS IS NOT ABSENCE — {TOOL_RULE}"
         ),
         "inputSchema": {
             "type": "object",
@@ -56,7 +78,10 @@ TOOLS = [
         "name": "lookup",
         "description": (
             "Keyed lookup with a ready-made citation. kind: doc (doc_key, e.g. 'CPRS/or_um') | "
-            "section (section_id) | entity (entity_id '<type>:<canonical_name>')."
+            "section (section_id) | entity (entity_id '<type>:<canonical_name>'). A miss means "
+            "the KEY is not in the INDEX, never that the corpus lacks the fact; a hit carries "
+            f"`has_indexed_text` — when false the section's text is NOT retrievable here. "
+            f"{TOOL_RULE}"
         ),
         "inputSchema": {
             "type": "object",
@@ -132,7 +157,14 @@ class Handler:
             app=args.get("app") or None,
             doc_type=args.get("doc_type") or None,
         )
-        return _dumps({"hits": hits, "hit_count": len(hits)})
+        out: dict[str, Any] = {"hits": hits, "hit_count": len(hits)}
+        if not hits:
+            # A bare `[]` reads as "nothing exists" — say what zero hits actually mean. Only on
+            # the empty case: a warning attached to every response trains clients to skip it.
+            out["warning"] = (
+                f"NO INDEXED MATCH — this is not evidence of absence. {NOT_INDEXED_RULE}"
+            )
+        return _dumps(out)
 
     def _lookup_doc(self, key: str) -> dict[str, Any] | None:
         cur = self.con.execute("SELECT * FROM documents WHERE doc_key = ?", (key,))
@@ -145,6 +177,20 @@ class Handler:
         )
         return {"rows": rows, "citation": {"doc_key": key, "body_path": body}}
 
+    def _has_chunks(self, section_id: str) -> bool:
+        """Does this section actually have retrievable text? Answered by **probing `chunks`**, not
+        by trusting `doc_sections.kind`: `kind` is a good predictor, not a fact — 254 of the 11,526
+        live `container` sections DO carry chunks, and a kind-based guess would tell an agent to go
+        read a body file for text the index could have handed it. On a `chunks`-less index.db the
+        probe answers False, so the client gets the read-the-body guidance rather than a crash."""
+        try:
+            row = self.con.execute(
+                "SELECT 1 FROM chunks WHERE section_id = ? LIMIT 1", (section_id,)
+            ).fetchone()
+        except sqlite3.OperationalError:
+            return False
+        return row is not None
+
     def _lookup_section(self, key: str) -> dict[str, Any] | None:
         cur = self.con.execute(
             "SELECT s.*, d.title AS doc_title, d.app_code, d.pkg_ns, d.doc_type AS d_doc_type "
@@ -155,11 +201,29 @@ class Handler:
         if not rows:
             return None
         s = rows[0]
-        body = ids.gold_body_relpath(
+        anchor = (
             s.get("app_code") or "", s.get("pkg_ns") or "", s.get("d_doc_type") or "",
             s.get("doc_key") or "",
         )  # fmt: skip
-        return {"rows": rows, "citation": {"uri": ids.section_uri(key), "body_path": body}}
+        body = ids.gold_body_relpath(*anchor)
+        citation: dict[str, Any] = {"uri": ids.section_uri(key), "body_path": body}
+        out: dict[str, Any] = {
+            "rows": rows,
+            "has_indexed_text": self._has_chunks(key),
+            "citation": citation,
+        }
+        if not out["has_indexed_text"]:
+            tables = ids.gold_tables_reldir(*anchor)
+            citation["tables_dir"] = tables
+            out["guidance"] = (
+                f"This section EXISTS but has NO indexed text (kind={s.get('kind')!r}) — its "
+                f"prose was never chunked, so `search`/`lookup` cannot return it. That is a "
+                f"retrieval gap, NOT a documentation gap: do not report it as undocumented. "
+                f"Read the gold body at {body} (find the '{s.get('title')}' heading — in a "
+                f"reference manual this lead-in is the API contract: Format, Input Parameters, "
+                f"flag tables) and the extracted tables in {tables}/table-NN.csv."
+            )
+        return out
 
     def _lookup_entity(self, key: str) -> dict[str, Any] | None:
         cur = self.con.execute("SELECT * FROM entities WHERE entity_id = ?", (key,))
@@ -188,8 +252,13 @@ class Handler:
         found = finder(key)
         if found is None:
             return (
-                f"not in the vdocs gold corpus ({kind} {key!r}) — report this as the answer; "
-                "do not substitute general knowledge."
+                f"NOT FOUND IN THE INDEX: no {kind} row keyed {key!r}. This is a statement about "
+                f"the KEY, not about the corpus — do NOT report it as 'not documented'. Misses "
+                f"are routine: a mistyped/renamed/versioned key, or a fact whose text sits in an "
+                f"unindexed container/hollow section. Before concluding absence: (1) `search` the "
+                f"plain term, (2) `query` for candidates (LIKE over documents/doc_sections), "
+                f"(3) read the nearest document's gold body.md and its tables/*.csv sidecars. "
+                f"Only if all three come up empty may you say the corpus does not cover it."
             )
         return _dumps(found)
 
@@ -234,8 +303,18 @@ class Handler:
             f"Tables: {', '.join(tables)}\n\n"
             "Citation contract — cite every claim with its stable section anchor:\n"
             "  vdocs://section/<section_id>  (+ the gold body_path)\n"
-            "(`search` and `lookup` return these ready-made). If nothing matches, the correct "
-            'answer is "not in the vdocs gold corpus" — say so and stop.\n\n'
+            "(`search` and `lookup` return these ready-made).\n\n"
+            "THREE SOURCES — the index is only the first. Nothing matching the index is NOT "
+            "nothing in the corpus:\n"
+            "  1. `search`/`lookup` — indexed text; covers ~73% of the 52,048 live sections.\n"
+            "  2. documents/gold/consolidated/<app>/<slug>/body.md — the full document. The other "
+            "13,899 sections (26.7%, kind `container`/`hollow`) are NEVER chunked, and in a "
+            "reference manual that unindexed lead-in IS the API contract (Format, Input "
+            "Parameters, flag tables).\n"
+            "  3. rich-tables/<app>/<slug>/tables/*.csv — the extracted tables (4,246 corpus-wide)."
+            "\n\nAn empty result is a RETRIEVAL artefact, never proof of absence. You MUST read "
+            'sources 2 and 3 before answering "not in the vdocs gold corpus" — reporting a '
+            "documented API as missing is the worst failure this server has.\n\n"
             "Peer front door: the vista-meta MCP server holds what the system measurably IS "
             "(same tool conventions; its extra tool is `bridge` — vdocs entity_id → measured "
             "row). Label findings documented: (here) vs measured: (there); never reconcile "
@@ -271,9 +350,17 @@ class Handler:
                     "capabilities": {"tools": {}},
                     "serverInfo": SERVER_INFO,
                     "instructions": (
-                        "Documented VistA facts only — call `orientation` first, cite every "
-                        'claim by section anchor, and answer "not in the vdocs gold corpus" '
-                        "when nothing matches."
+                        "Documented VistA facts only — call `orientation` first; cite every "
+                        "claim by section anchor.\n"
+                        "THREE SOURCES, in order: (1) `search`/`lookup` — indexed text, ~73% of "
+                        "live sections; (2) the gold body.md at the cited `body_path` — "
+                        "`container`/`hollow` "
+                        "sections (26.7%) are NEVER chunked, and in a reference manual that "
+                        "unindexed lead-in IS the API contract (Format, Input Parameters, flag "
+                        "tables); (3) the `tables/*.csv` sidecars beside it.\n"
+                        "An empty search or a lookup miss is a RETRIEVAL artefact, not a "
+                        "documentation gap. Read sources 2 and 3 before ever answering "
+                        '"not in the vdocs gold corpus".'
                     ),
                 },
             )

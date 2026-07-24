@@ -34,6 +34,9 @@ def _build(index_db):
           entity_id TEXT PRIMARY KEY, type TEXT, canonical_name TEXT, mention_count INTEGER
         );
         CREATE TABLE entity_mentions (entity_id TEXT, doc_key TEXT, section_id TEXT);
+        CREATE TABLE chunks (
+          chunk_id TEXT PRIMARY KEY, section_id TEXT, doc_key TEXT, part INTEGER, text TEXT
+        );
         CREATE VIRTUAL TABLE chunks_fts USING fts5(
           chunk_id UNINDEXED, section_id UNINDEXED, doc_key UNINDEXED, title, doc_title,
           section_path, body
@@ -55,9 +58,24 @@ def _build(index_db):
             ("KAAJEE/dibr", "KAAJEE:dibr", "KAAJEE DIBR", "KAAJEE", "", "", 1),
         ],
     )
-    conn.execute(
+    conn.executemany(
+        "INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [("DI/fm22_2dg", "DI:fm22_2dg", "FileMan Developer's Guide", "DI", "DG", "DI", 1)],
+    )
+    conn.executemany(
         "INSERT INTO doc_sections VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ("CPRS/or_um/auth", "CPRS/or_um", "auth", "Authentication", 2, 2, 1, "section", 1, "OR", 1),
+        [
+            ("CPRS/or_um/auth", "CPRS/or_um", "auth", "Authentication",
+             2, 2, 1, "section", 1, "OR", 1),
+            # a real container section: its lead-in prose (the API contract) is NOT chunked,
+            # so lookup/search return nothing for it — the false-"not documented" trap.
+            ("DI/fm22_2dg/updatedie-updater", "DI/fm22_2dg", "updatedie-updater",
+             "UPDATE^DIE(): Updater", 2, 2, 1, "container", 0, "DI", 2),
+        ],
+    )  # fmt: skip
+    conn.execute(
+        "INSERT INTO chunks VALUES (?, ?, ?, ?, ?)",
+        ("CPRS/or_um/auth", "CPRS/or_um/auth", "CPRS/or_um", 0, "KAAJEE handles authentication."),
     )
     conn.execute(
         "INSERT INTO entities VALUES (?, ?, ?, ?)",
@@ -147,7 +165,7 @@ def test_lookup_miss_and_bad_kind(tmp_path):
     h = _handler(tmp_path)
     miss = _call(h, "lookup", {"kind": "doc", "key": "NOPE/nope"})
     assert not miss["result"]["isError"]
-    assert "not in the vdocs gold corpus" in _text(miss)
+    assert "NOPE/nope" in _text(miss)
     bad = _call(h, "lookup", {"kind": "widget", "key": "x"})
     assert bad["result"]["isError"]
 
@@ -171,6 +189,116 @@ def test_orientation_carries_pin_contract_and_peer_pointer(tmp_path):
     assert "vdocs://section/" in text  # citation contract
     assert "not in the vdocs gold corpus" in text  # the miss answer
     assert "vista-meta" in text  # cross-pointer to the peer front door
+
+
+# -- the "index miss ≠ corpus absence" contract ------------------------------
+# Four researchers once concluded documented FileMan APIs were "missing from the corpus"
+# when the text was present the whole time: 26.7% of live sections (container/hollow) carry
+# NO indexed text, so search/lookup return empty for prose that exists in the gold body.
+# These tests are the regression gate — every client-facing surface must name the fallbacks.
+
+_FALLBACK_TOKENS = ("body.md", "tables")
+
+
+def test_initialize_instructions_teach_the_three_source_protocol(tmp_path):
+    init = _handler(tmp_path).handle(
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+         "params": {"protocolVersion": "2024-11-05"}}
+    )  # fmt: skip
+    text = init["result"]["instructions"]
+    assert all(tok in text for tok in _FALLBACK_TOKENS), text
+    assert "container" in text and "hollow" in text
+    # the empty result must be framed as a retrieval artefact, never as corpus absence
+    assert "retrieval" in text.lower()
+    # the exact clause that caused the incident must not be reinstated
+    assert 'answer "not in the vdocs gold corpus" when nothing matches' not in text
+
+
+def test_orientation_replaces_say_so_and_stop_with_the_fallback_rule(tmp_path):
+    text = _text(_call(_handler(tmp_path), "orientation", {}))
+    assert all(tok in text for tok in _FALLBACK_TOKENS), text
+    assert "container" in text and "hollow" in text
+    # regression gate: the "stop" directive is what told agents not to check the fallbacks
+    assert "say so and stop" not in text
+    assert "and stop" not in text
+
+
+def test_lookup_container_section_reports_no_indexed_text_with_guidance(tmp_path):
+    out = json.loads(
+        _text(_call(_handler(tmp_path), "lookup",
+                    {"kind": "section", "key": "DI/fm22_2dg/updatedie-updater"}))
+    )  # fmt: skip
+    assert out["has_indexed_text"] is False
+    body = out["citation"]["body_path"]
+    tables = out["citation"]["tables_dir"]
+    # the two sidecars must point at the SAME gold bundle
+    assert tables == body.replace("documents/gold/consolidated/", "rich-tables/").replace(
+        "/body.md", "/tables"
+    )
+    guidance = out["guidance"]
+    assert body in guidance and tables in guidance
+    assert "not" in guidance.lower() and "gap" in guidance.lower()
+
+
+def test_lookup_normal_section_is_unchanged_and_flagged_indexed(tmp_path):
+    out = json.loads(
+        _text(_call(_handler(tmp_path), "lookup", {"kind": "section", "key": "CPRS/or_um/auth"}))
+    )
+    assert out["has_indexed_text"] is True
+    assert "guidance" not in out
+    assert out["citation"] == {
+        "uri": "vdocs://section/CPRS/or_um/auth",
+        "body_path": out["citation"]["body_path"],
+    }
+    assert out["rows"][0]["title"] == "Authentication"
+
+
+def test_lookup_miss_does_not_claim_corpus_absence(tmp_path):
+    text = _text(_call(_handler(tmp_path), "lookup", {"kind": "section", "key": "DI/nope/nope"}))
+    # the miss is about the INDEX, not the corpus
+    assert "index" in text.lower()
+    assert "not in the vdocs gold corpus" not in text
+    assert "report this as the answer" not in text
+    assert all(tok in text for tok in _FALLBACK_TOKENS), text
+
+
+def test_zero_hit_search_carries_the_warning_not_a_bare_empty_list(tmp_path):
+    h = _handler(tmp_path)
+    out = json.loads(_text(_call(h, "search", {"query": "zzzznomatchzzzz"})))
+    assert out["hits"] == [] and out["hit_count"] == 0
+    warning = out["warning"]
+    assert all(tok in warning for tok in _FALLBACK_TOKENS), warning
+    assert "container" in warning and "hollow" in warning
+    # a hit-bearing search must NOT carry the warning (it would train clients to ignore it)
+    hit = json.loads(_text(_call(h, "search", {"query": "KAAJEE"})))
+    assert hit["hits"] and "warning" not in hit
+
+
+def test_chunkless_index_degrades_to_guidance_not_a_crash(tmp_path):
+    """The emptiness probe reads `chunks`. On an index.db without it, answer "not indexed" —
+    the client then gets the read-the-body guidance instead of a server-killing exception."""
+    h = _handler(tmp_path)
+    h.con.close()
+    index_db = tmp_path / "index.db"
+    conn = db.connect(index_db)
+    conn.execute("DROP TABLE chunks")
+    conn.commit()
+    conn.close()
+    out = json.loads(
+        _text(_call(mcp.Handler(index_db), "lookup",
+                    {"kind": "section", "key": "CPRS/or_um/auth"}))
+    )  # fmt: skip
+    assert out["has_indexed_text"] is False
+    assert out["citation"]["body_path"] in out["guidance"]
+    assert out["citation"]["tables_dir"].startswith("rich-tables/")
+
+
+def test_tool_descriptions_carry_the_one_line_rule(tmp_path):
+    tools = {t["name"]: t["description"] for t in mcp.TOOLS}
+    for name in ("search", "lookup"):
+        desc = tools[name]
+        assert "body.md" in desc, f"{name}: {desc}"
+        assert "absen" in desc.lower() or "gap" in desc.lower(), f"{name}: {desc}"
 
 
 def test_serve_lines_survives_malformed_input(tmp_path):
