@@ -53,20 +53,30 @@ def build_atomic(path: Path, build: Callable[[sqlite3.Connection], None]) -> Non
     WAL hardening (R7): the temp is built in ``journal_mode=DELETE`` so SQLite never creates a
     ``.<name>.tmp-wal``/``.tmp-shm`` sibling that the single-file ``os.replace`` would orphan; any
     such siblings (and a stale ``.tmp`` from a prior crash) are swept on both the success and
-    failure paths."""
+    failure paths.
+
+    **Target-side WAL hardening (P1.4 — measured corruption, 2026-08-01).** ``os.replace`` swaps
+    only the main file, so a **pre-existing** ``<name>-wal``/``-shm`` belonging to the database
+    being *replaced* survives the swap. The next WAL-mode connection then replays that unrelated
+    database's pages into the fresh file — observed as
+    ``DatabaseError: database disk image is malformed`` in the stage after a rebuild. The old
+    journal describes a database that no longer exists, so it is swept **with** the replace; the
+    two operations must never be separable, or a crash between them re-arms the same trap."""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.tmp")
-    wal_siblings = (
+    tmp_siblings = (
         path.with_name(f".{path.name}.tmp-wal"),
         path.with_name(f".{path.name}.tmp-shm"),
     )
+    # the TARGET's own journal siblings — stale the moment the main file is replaced
+    target_siblings = (path.with_name(f"{path.name}-wal"), path.with_name(f"{path.name}-shm"))
 
-    def _sweep() -> None:
-        for sib in wal_siblings:
+    def _sweep(paths: tuple[Path, ...]) -> None:
+        for sib in paths:
             sib.unlink(missing_ok=True)
 
     tmp.unlink(missing_ok=True)  # discard a leftover temp from a prior crash
-    _sweep()  # …and any orphaned WAL siblings beside it
+    _sweep(tmp_siblings)  # …and any orphaned WAL siblings beside it
     conn = connect(tmp, journal_mode="DELETE")
     try:
         build(conn)
@@ -74,12 +84,15 @@ def build_atomic(path: Path, build: Callable[[sqlite3.Connection], None]) -> Non
     except BaseException:
         conn.close()
         tmp.unlink(missing_ok=True)
-        _sweep()
+        _sweep(tmp_siblings)
         raise
     else:
         conn.close()
-    _sweep()
+    _sweep(tmp_siblings)
     os.replace(tmp, path)
+    # Sweep the replaced database's journal LAST: it describes bytes that are gone, and leaving it
+    # beside the new file is the corruption vector above.
+    _sweep(target_siblings)
 
 
 def replace_table_atomic(

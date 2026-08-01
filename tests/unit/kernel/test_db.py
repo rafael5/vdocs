@@ -1,5 +1,6 @@
 """Unit tests for kernel.db — the one place that knows SQLite pragmas (§9.2)."""
 
+import os
 import sqlite3
 from pathlib import Path
 
@@ -112,6 +113,39 @@ def test_build_atomic_sweeps_orphaned_wal_siblings_from_prior_crash(tmp_path):
     path.with_name(".index.db.tmp-shm").write_bytes(b"stale-shm")
     db.build_atomic(path, lambda conn: conn.execute("CREATE TABLE t (a TEXT)"))
     assert sorted(p.name for p in tmp_path.iterdir()) == ["index.db"]
+
+
+def test_build_atomic_replacing_a_live_wal_database_leaves_it_readable(tmp_path):
+    """MEASURED CORRUPTION (2026-08-01, P1 acceptance run): rebuilding index.db over a database
+    that still had its own ``-wal``/``-shm`` beside it produced
+    ``DatabaseError: database disk image is malformed`` in the very next stage.
+
+    ``os.replace`` swaps only the main file, so the OLD database's WAL survives the swap and the
+    next WAL-mode connection replays an unrelated database's pages into the fresh file. The R7
+    hardening swept the *temp's* siblings; it never swept the **target's**. A rebuild must leave
+    the target readable no matter what state the previous database was in."""
+    path = tmp_path / "index.db"
+    # a real prior database, left with a live WAL (the state an unclean close leaves behind)
+    old = db.connect(path)  # WAL mode by default
+    old.execute("CREATE TABLE old_table (a TEXT)")
+    old.execute("INSERT INTO old_table VALUES ('stale')")
+    old.commit()
+    os.close(os.open(path, os.O_RDONLY))  # keep the -wal/-shm on disk: no clean close/checkpoint
+    assert path.with_name("index.db-wal").exists()
+
+    db.build_atomic(path, lambda conn: conn.execute("CREATE TABLE fresh (b TEXT)"))
+
+    # the stale siblings must be gone — they belong to a database that no longer exists
+    assert not path.with_name("index.db-wal").exists()
+    assert not path.with_name("index.db-shm").exists()
+    # …and the rebuilt database must be sound, with only the new schema
+    conn = db.connect(path)
+    try:
+        assert conn.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+        names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        assert names == {"fresh"}
+    finally:
+        conn.close()
 
 
 def test_build_atomic_makes_parent_dirs(tmp_path):
