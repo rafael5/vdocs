@@ -23,6 +23,7 @@ from vdocs.stages.consolidate.stage import ConsolidateStage
 from vdocs.stages.convert.stage import ConvertStage
 from vdocs.stages.crawl.stage import CrawlStage
 from vdocs.stages.discover.stage import DiscoverStage
+from vdocs.stages.doctor.stage import DoctorStage
 from vdocs.stages.enrich.stage import EnrichStage
 from vdocs.stages.fetch.stage import FetchStage
 from vdocs.stages.index.stage import IndexStage
@@ -78,6 +79,7 @@ def build_stages() -> list[Stage]:
         MergeStage(),
         ManifestStage(),
         ValidateStage(),
+        DoctorStage(),
     ]
 
 
@@ -443,44 +445,40 @@ def serve_mcp() -> None:
 
 
 def _emit_doctor(cfg: Settings) -> str:
-    """Run the doctor checks against index.db, render the report, and return the verdict (shared by
-    the ``doctor`` command and ``build``). Returns ``"RED"`` if there is no index.db to check."""
-    from vdocs.kernel import db
-    from vdocs.server import doctor as doc
-    from vdocs.stages.fetch.policy import load_gate_config
+    """Render the written ``reports/doctor/doctor.json`` and return its verdict.
 
+    The diagnosis itself belongs to the ``doctor`` stage (P2.1) — this only *renders* the gate's
+    record, so there is exactly one diagnosis path (§7.1). ``"RED"`` when no report exists."""
+    import json
+
+    from vdocs.server import doctor as doc
+    from vdocs.stages.doctor import doctor_pure as dp
+
+    if not cfg.doctor_report.is_file():
+        typer.echo("no doctor report — run: vdocs doctor")
+        return "RED"
+    payload = json.loads(cfg.doctor_report.read_text(encoding="utf-8"))
+    doc.render_report(dp.report_from_payload(payload), typer.echo)
+    return str(payload.get("verdict", "RED"))
+
+
+def _run_doctor(cfg: Settings) -> str:
+    """Run the ``doctor`` STAGE (a fresh diagnosis), then render its report; returns the verdict.
+
+    Used by the ``doctor`` command and the ``release`` gate — both need a verdict about the
+    database *now*, never a possibly-stale report on disk. Anything that prevents the stage from
+    completing (a missing index.db, a preflight FAIL, a RED verdict) yields ``"RED"``: a gate that
+    could not certify the corpus must not report GREEN (degrade loud, never fail open)."""
     if not cfg.index_db.exists():
         typer.echo("no index.db to check — run `vdocs build` (or vdocs index, relate, manifest).")
         return "RED"
-    kept = frozenset(r.code for r in load_gate_config(cfg.registries).kept)
-    policy = doc.load_doctor_policy(cfg.registries)
-    from vdocs.kernel import read_contract as rc
-
-    spec = rc.load(rc.contract_path(base=cfg.read_contract_dir))
-    from vdocs.kernel.entity_quality import load_entity_quality
-
-    excluded = load_entity_quality(cfg.registries).excluded_types()
-    skl_entities: int | None = None
-    if cfg.knowledge_db.exists():
-        kconn = db.connect(cfg.knowledge_db, read_only=True)
-        try:
-            skl_entities = int(kconn.execute("SELECT count(*) FROM entities").fetchone()[0])
-        finally:
-            kconn.close()
-    conn = db.connect(cfg.index_db, read_only=True)
+    completed = True
     try:
-        report = doc.diagnose(
-            conn,
-            kept_doctypes=kept,
-            policy=policy,
-            read_spec=spec,
-            excluded_entity_types=excluded,
-            skl_entities=skl_entities,
-        )
-    finally:
-        conn.close()
-    doc.render_report(report, typer.echo)
-    return report.verdict()
+        _drive(only="doctor", force=True)
+    except typer.Exit:
+        completed = False  # RED (or an unusable input) — rendered below for triage
+    verdict = _emit_doctor(cfg) if cfg.doctor_report.is_file() else "RED"
+    return verdict if completed else "RED"
 
 
 @app.command("entity-quality")
@@ -589,7 +587,7 @@ def release(
         raise typer.Exit(code=1)
 
     # release gates: doctor GREEN + entity-quality floors PASS
-    if _emit_doctor(cfg) == "RED":
+    if _run_doctor(cfg) == "RED":
         typer.echo("ERROR: doctor RED — not releasable")
         raise typer.Exit(code=1)
     quality = load_entity_quality(cfg.registries)
@@ -694,9 +692,12 @@ def doctor() -> None:
     coverage (against doctor-policy.yaml floors), anchor integrity, gate fidelity (only Tier-A
     doc-types in gold), the FTS search surface, and the entity graph. By-design gaps (e.g. the
     fallback-profile function_category) are separated from real defects. Exits 1 on RED.
+
+    A thin alias for the terminal ``doctor`` DAG stage (P2.1) — same diagnosis, same
+    ``reports/doctor/doctor.json``, whether it runs here or at the end of ``vdocs run``.
     """
     cfg = Settings()
-    if _emit_doctor(cfg) == "RED":
+    if _run_doctor(cfg) == "RED":
         raise typer.Exit(code=1)
 
 
@@ -891,14 +892,27 @@ def _wipe_lake(cfg: Settings) -> None:
     """The from-scratch wipe (F9/F11): delete every DERIVED artifact so the build is truly de-novo.
 
     Removes documents/ (incl. the bronze CAS), index.db, **state.db** (so fetch re-downloads — the
-    idempotent resume must not skip-present bytes that were wiped), reports/, the inventory
-    silver+gold, and stray lake clutter (select-*.txt, leftover vectors.db tmp). KEEPS
-    inventory/bronze/catalog.raw.json (so --skip-crawl reuses it) and the repo registries."""
+    idempotent resume must not skip-present bytes that were wiped), the derived report trees, the
+    inventory silver+gold, and stray lake clutter (select-*.txt, leftover vectors.db tmp). KEEPS
+    inventory/bronze/catalog.raw.json (so --skip-crawl reuses it) and the repo registries.
+
+    R‑14: it also keeps **``reports/validation/``**. That report is validate's cross-run count
+    baseline — *evidence*, not derived state — and wiping it disarms the §5.2 drop detection on
+    exactly the run most likely to lose documents. Same argument that already spares
+    catalog.raw.json."""
     import shutil
 
-    for tree in (cfg.documents, cfg.reports, cfg.inventory_silver, cfg.inventory_gold):
+    for tree in (cfg.documents, cfg.inventory_silver, cfg.inventory_gold):
         if tree.exists():
             shutil.rmtree(tree)
+    if cfg.reports.is_dir():
+        for child in cfg.reports.iterdir():
+            if child == cfg.validation_report.parent:
+                continue
+            if child.is_dir():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
     for pattern in ("index.db*", "state.db*", "vectors.db*", ".vectors.db.tmp*", "select-*.txt"):
         for f in cfg.lake.glob(pattern):
             f.unlink()
@@ -949,17 +963,27 @@ def build(
     for stage in stages:
         if stage.name == "fetch":
             stage.selection = Selection(all_=True)  # type: ignore[attr-defined]
-    # one orchestrator run, crawl→manifest (includes validate); force so a de-novo build re-runs.
-    _drive(
-        from_stage="catalog" if skip_crawl else "crawl",
-        to_stage="manifest",
-        force=True,
-        stages=stages,
-    )
+    # One orchestrator run, crawl→doctor (includes validate and, since P2.1, the terminal
+    # soundness gate — the bound must reach `doctor` or the guided build stops short of it);
+    # force so a de-novo build re-runs.
+    code = 0
+    try:
+        _drive(
+            from_stage="catalog" if skip_crawl else "crawl",
+            to_stage="doctor",
+            force=True,
+            stages=stages,
+        )
+    except typer.Exit as exc:
+        code = exc.exit_code or 1
 
+    # Render the gate's report even when the run stopped on it — the check table IS the operator's
+    # triage surface, and it must not be swallowed by the non-zero exit.
     typer.echo("")
-    if _emit_doctor(cfg) == "RED":
-        raise typer.Exit(code=1)
+    if cfg.doctor_report.is_file():
+        _emit_doctor(cfg)
+    if code:
+        raise typer.Exit(code=code)
 
 
 if __name__ == "__main__":  # pragma: no cover

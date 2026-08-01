@@ -336,6 +336,19 @@ VALIDATION_REPORT = ArtifactContract(
 )
 
 
+# `doctor`: the corpus-soundness verdict as a **computable artifact** (P2.1, audit R‑6/[S18]).
+# The 19 checks were only ever stdout a human read, so a `vdocs run` could finish green over a
+# RED-able index.db. Emitting the verdict + every check as a file makes the gate a DAG node with
+# a diffable output — the same discipline as validate's verification.json.
+DOCTOR_REPORT = ArtifactContract(
+    key="reports/doctor",
+    kind=Kind.FILE,
+    storage_class=StorageClass.STATE,
+    produced_by="doctor",
+    relpath="reports/doctor/doctor.json",
+)
+
+
 def foundational_registry() -> ArtifactRegistry:
     """Build a registry seeded with the artifacts that exist before any stage runs."""
     reg = ArtifactRegistry()
@@ -378,6 +391,7 @@ def default_registry() -> ArtifactRegistry:
         CORPUS_CARD,
         CONTRACT_MANIFEST,
         VALIDATION_REPORT,
+        DOCTOR_REPORT,
     ):
         reg.register(contract)
     return reg

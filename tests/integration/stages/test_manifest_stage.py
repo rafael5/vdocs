@@ -251,3 +251,30 @@ def test_manifest_emits_contract_manifest_from_live_meta(ctx):
     assert doc["read_schema_version"] == "9.9-live"
     assert doc["corpus_content_hash"] == "cafe" * 16
     assert doc["corpus_doc_count"] == 3
+
+
+def test_index_fingerprint_reflects_content_still_in_the_wal(tmp_path):
+    """R‑13: the AI card's staleness stamp must hash the *live* database view.
+
+    ``index.db`` runs in WAL mode, so a committed write lives in the ``-wal`` sibling until a
+    checkpoint — streaming the main file alone stamps a stale view, and a consumer comparing
+    fingerprints concludes "unchanged" over a corpus that did change."""
+    from vdocs.kernel import db
+    from vdocs.stages.manifest.stage import _index_fingerprint
+
+    index_db = tmp_path / "index.db"
+    conn = db.connect(index_db)
+    conn.execute("CREATE TABLE t (x TEXT)")
+    conn.execute("INSERT INTO t VALUES ('a')")
+    conn.commit()
+    conn.close()
+    first = _index_fingerprint(index_db)
+
+    conn = db.connect(index_db)
+    conn.execute("INSERT INTO t VALUES ('b')")
+    conn.commit()  # committed, but sitting in index.db-wal — the main file is unchanged
+    assert index_db.with_name("index.db-wal").stat().st_size > 0
+    second = _index_fingerprint(index_db)
+    conn.close()
+
+    assert second != first

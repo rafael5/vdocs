@@ -273,6 +273,12 @@ class Settings(BaseSettings):
         return self.reports / "knowledge" / "proposals.json"
 
     @property
+    def doctor_report(self) -> Path:
+        """``doctor`` output (P2.1): the GOLD LIBRARY verdict + every check as a computable
+        artifact — the gate's record, so a run's soundness verdict is a file, not stdout."""
+        return self.reports / "doctor" / "doctor.json"
+
+    @property
     def validation_report(self) -> Path:
         """``validate`` output: the sidecar-verification findings (typed-absence + count
         reconciliation + ref-resolution) — the gate's record + the cross-run count baseline (§8)."""

@@ -198,7 +198,7 @@ Data lives under `$DATA_DIR` (default `~/data/vdocs`) — **never in the repo**.
 
 ## 6. Stage-by-stage reference
 
-The DAG has **15 stages**. Order is derived from each stage's declared inputs/outputs (a topological
+The DAG has **16 stages**. Order is derived from each stage's declared inputs/outputs (a topological
 sort), so you never maintain an ordered list by hand. The table is in execution order.
 
 | # | Stage | Track | What it does | Reads → Writes | Re-run policy |
@@ -218,12 +218,13 @@ sort), so you never maintain an ordered list by hand. The table is in execution 
 | 14 | **relate** | derived · graph | Materializes the knowledge graph (doc↔entity, entity↔entity, doc↔doc) into `relations`. | index documents/entities/sections → `index.db:relations` | skip-if-unchanged |
 | 13 | **merge** | derived · SKL | Folds the SKL into the shipped `index.db` **additively** (`entity_skl`, `entity_synonyms`, `chunk_entities`) — reconciles the two entity-id schemes; non-SKL coverage unchanged. | `knowledge.db` + index entities/chunks → `index.db` SKL tables | skip-if-unchanged |
 | 15 | **manifest** | document · gold/agent | Assembles `corpus-manifest.json` + `discovery.json` + the AI corpus card (`ai-manifest.json` / `CORPUS.md`) + the SKL-projected glossary. | consolidated + index + relations + registries → gold cards | skip-if-unchanged |
+| 16 | **doctor** | derived · gate | **Hard gate, terminal**: the 19 corpus-soundness checks (coverage floors, anchor integrity + coverage, entity quarantine, SKL-projection wipe, gate fidelity, latest-only FTS, vocab closure, read-contract verbatim) → `GOLD LIBRARY: GREEN\|RED`. RED fails the run. | `index.db` + relations + contract manifest + registries → `reports/doctor/doctor.json` | `ALWAYS_RERUN` |
 
 **Re-run policies** (the orchestrator's `Idempotency`):
 - `skip-if-unchanged` — re-runs only when an input fingerprint, the contract version, or (for `fetch`)
   the selection/gate changed. A clean re-run is a no-op.
 - `FORCE_ONLY` — never runs as part of a slice unless explicitly invoked/forced (e.g. `crawl`).
-- `ALWAYS_RERUN` — re-runs every time (e.g. `validate`, the gate).
+- `ALWAYS_RERUN` — re-runs every time (e.g. `validate` and `doctor`, the two gates).
 
 Every stage shares one generic `preflight → run → postflight` path: preflight checks inputs +
 upstream completion + the skip decision; postflight validates outputs + runs the stage's deep gate
@@ -374,6 +375,12 @@ per anchor), **gate fidelity** (only Tier-A doc-types in gold), the **FTS search
 **entity graph**. `doctor` exits 1 on RED — it is the authoritative gate (it replaces a manual
 sign-off).
 
+Since P2.1 the same checks run as the **terminal stage of the DAG**, so a plain `vdocs run` ends on
+the verdict instead of leaving it to a human to remember: a RED corpus stops the run with a non-zero
+exit, and every run leaves its record at `reports/doctor/doctor.json` (verdict + each check). The
+`vdocs doctor` command is a thin alias for that stage — one diagnosis path, whichever way you reach
+it. WARN and BY-DESIGN never fail the run.
+
 ---
 
 ## 12. Searching the corpus: `vdocs ask`
@@ -406,7 +413,7 @@ corpus" query recipe.
    (downloads every gate-admitted document into the bronze CAS).
 2. **Copy the lake** (`~/data/vdocs` — at minimum `documents/bronze/`, `inventory/`, `state.db`) to the
    airgapped box.
-3. **Airgapped box (offline):** `vdocs run --from convert --to manifest && vdocs doctor`.
+3. **Airgapped box (offline):** `vdocs run --from convert` (the DAG ends on the `doctor` gate).
 
 Everything from `convert` onward is pure local computation — no network, no ML, nothing to vendor.
 

@@ -52,7 +52,7 @@ until that is green.
 - **Medallion lake** bronze → silver → gold (§4). Data lives in `~/data/vdocs` (`DATA_DIR`),
   **never in this repo**.
 - **DAG** of `Stage`/`ArtifactContract` driven by a generic in-house orchestrator (§7–§8).
-  The wired stage list in `cli/app.py:build_stages` is authoritative (15 stages today —
+  The wired stage list in `cli/app.py:build_stages` is authoritative (16 stages today —
   design §8 predates `resolve`/`merge`/`publish` and still lists the retired
   `embed`/`fidelity`/`push`/`analyze`).
 - **Pure functions in `*_pure.py`** (zero I/O); thin I/O **`stage.py`** drivers. Every pure

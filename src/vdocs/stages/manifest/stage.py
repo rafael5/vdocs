@@ -278,7 +278,17 @@ def _gather_entity_rows(index_db):  # type: ignore[no-untyped-def]
 
 def _index_fingerprint(index_db: Path) -> str:
     """A content fingerprint of `index.db` (streamed sha256) — the staleness stamp the AI card
-    records so a consumer can tell whether the card still matches the live index."""
+    records so a consumer can tell whether the card still matches the live index.
+
+    R‑13: `index.db` runs in WAL mode, so committed writes live in the `-wal` sibling until a
+    checkpoint — hashing the main file alone stamps a **stale view**, and a consumer comparing
+    fingerprints would conclude "unchanged" over a corpus that did change. Fold the WAL back
+    into the main file first, so the stamp describes what a reader actually sees."""
+    conn = db.connect(index_db)
+    try:
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    finally:
+        conn.close()
     h = hashlib.sha256()
     with index_db.open("rb") as fh:
         for block in iter(lambda: fh.read(1 << 20), b""):

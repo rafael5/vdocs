@@ -24,9 +24,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
+
+if TYPE_CHECKING:
+    from vdocs.config import Settings
 
 # --- the check model ----------------------------------------------------------------------------
 
@@ -470,6 +473,47 @@ def diagnose(
     return DoctorReport(gold_count=gold, checks=checks)
 
 
+# --- the one lake-level diagnosis path ------------------------------------------------------------
+
+
+def diagnose_lake(cfg: Settings) -> DoctorReport:
+    """Load every doctor input from typed config and run :func:`diagnose` over the live
+    ``index.db`` — **the** diagnosis path, shared by the ``doctor`` stage and the CLI (§7.1: no
+    second execution route). Inputs the corpus may legitimately lack stay optional exactly as
+    before: a lake with no ``knowledge.db`` yields ``skl_entities=None`` (its SKL check is then
+    skipped, not failed).
+
+    Callers must ensure ``cfg.index_db`` exists — in the DAG that is the ``INDEX_DOCUMENTS``
+    preflight edge; the CLI checks it explicitly to keep its "run vdocs index" remediation."""
+    from vdocs.kernel import db, read_contract
+    from vdocs.kernel.entity_quality import load_entity_quality
+    from vdocs.stages.fetch.policy import load_gate_config
+
+    kept = frozenset(r.code for r in load_gate_config(cfg.registries).kept)
+    policy = load_doctor_policy(cfg.registries)
+    spec = read_contract.load(read_contract.contract_path(base=cfg.read_contract_dir))
+    excluded = load_entity_quality(cfg.registries).excluded_types()
+    skl_entities: int | None = None
+    if cfg.knowledge_db.exists():
+        kconn = db.connect(cfg.knowledge_db, read_only=True)
+        try:
+            skl_entities = int(kconn.execute("SELECT count(*) FROM entities").fetchone()[0])
+        finally:
+            kconn.close()
+    conn = db.connect(cfg.index_db, read_only=True)
+    try:
+        return diagnose(
+            conn,
+            kept_doctypes=kept,
+            policy=policy,
+            read_spec=spec,
+            excluded_entity_types=excluded,
+            skl_entities=skl_entities,
+        )
+    finally:
+        conn.close()
+
+
 # --- rendering ------------------------------------------------------------------------------------
 
 _GLYPH = {Health.PASS: "✅", Health.BY_DESIGN: "◎", Health.WARN: "⚠️", Health.FAIL: "❌"}
@@ -498,6 +542,7 @@ __all__ = [
     "Health",
     "coverage_check",
     "diagnose",
+    "diagnose_lake",
     "integrity_check",
     "load_doctor_policy",
     "render_report",
