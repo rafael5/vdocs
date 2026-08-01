@@ -1,10 +1,14 @@
 # Pipeline audit remediation — tracker
 
-Plan: [`pipeline-audit-remediation-plan.md`](pipeline-audit-remediation-plan.md) · Audit:
-[`../reference/pipeline-adversarial-audit.md`](../reference/pipeline-adversarial-audit.md).
+Plan:
+[`pipeline-audit-remediation-implementation-plan.md`](pipeline-audit-remediation-implementation-plan.md)
+· Kickoff prompts: [`../prompts/pipeline-audit-remediation/`](../prompts/pipeline-audit-remediation/)
+· Audit: [`../reference/pipeline-adversarial-audit.md`](../reference/pipeline-adversarial-audit.md).
 Update this table **per landed step** (TDD → `make check` → commit → tick). A step is DONE
 only when its plan-stated measure is demonstrated (green *and*, where specified, red on the
-broken fixture). Record the commit hash and any measured number in Notes.
+broken fixture). Record the commit hash and any measured number in Notes. A `P<n> ✓` row
+additionally requires the **next** phase's kickoff prompt written (execution protocol in the
+plan).
 
 Baseline (2026-08-01, `corpus_content_hash 3ce0872e…`): 1,040 fetched / 1,034 indexed (6
 doc_ids collapsed); doctor advisory-only; 7 low-retention docs in gold; SQLite fp = row

@@ -1,0 +1,18 @@
+# Kickoff prompts — pipeline audit remediation (P1–P7)
+
+One kickoff prompt per phase of
+[`../../proposals/pipeline-audit-remediation-implementation-plan.md`](../../proposals/pipeline-audit-remediation-implementation-plan.md)
+(tracker beside it). Prompts exist for **un-executed** work only: each phase's closing step
+writes the *next* phase's prompt (baking in the measured results of the phase just landed)
+and retires the executed one. Do not write P3's prompt while P1 is open — the numbers it
+needs don't exist yet.
+
+| Prompt | Phase | Status |
+|---|---|---|
+| [`P1-acquisition-chain-integrity-kickoff.md`](P1-acquisition-chain-integrity-kickoff.md) | P1 — re-key `raw/index.json`, chain-reconciliation gate, DOCX magic check | **ready to run** |
+| `P2-doctor-into-the-dag-kickoff.md` | P2 — doctor as terminal DAG stage | written at P1 close |
+| `P3-retention-gates-kickoff.md` | P3 — retention verdicts gate via validate | written at P2 close |
+| `P4-sound-sqlite-fingerprints-kickoff.md` | P4 — content-hash SQLite fingerprints | written at P3 close |
+| `P5-history-lineage-truth-kickoff.md` | P5 — history.yaml supersedes + stale-lineage check | written at P4 close |
+| `P6-container-leadin-chunking-kickoff.md` | P6 — chunk substantive container lead-ins | written at P5 close |
+| `P7-close-out-kickoff.md` | P7 — full rerun, strike audit register, republish constants | written at P6 close |

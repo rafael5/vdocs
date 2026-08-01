@@ -1,7 +1,9 @@
-# Pipeline audit remediation plan — findings 1–5
+# Pipeline audit remediation — implementation plan (findings 1–5)
 
 **Status: ACCEPTED · in progress** · Tracker:
-[`pipeline-audit-remediation-tracker.md`](pipeline-audit-remediation-tracker.md) · Source:
+[`pipeline-audit-remediation-tracker.md`](pipeline-audit-remediation-tracker.md) · Kickoff
+prompts: [`../prompts/pipeline-audit-remediation/`](../prompts/pipeline-audit-remediation/)
+(one per phase) · Source:
 [`../reference/pipeline-adversarial-audit.md`](../reference/pipeline-adversarial-audit.md)
 (2026-08-01, live lake `corpus_content_hash 3ce0872e…`).
 
@@ -26,6 +28,33 @@ House rules apply to every step: **TDD** (failing test first), `make check` gree
 commit, `contract_ver` bump on any produced-shape change, pure logic in `*_pure.py`,
 update `vdocs-design.md` in the same commit when a stage's inputs/outputs change, and tick the
 tracker per landed step.
+
+## Execution protocol (one phase ↔ one session ↔ one kickoff prompt)
+
+Each phase is executed by a fresh session driven by its kickoff prompt in
+[`docs/prompts/pipeline-audit-remediation/`](../prompts/pipeline-audit-remediation/):
+
+| Phase | Kickoff prompt | Written |
+|---|---|---|
+| P1 | `P1-acquisition-chain-integrity-kickoff.md` | ✅ |
+| P2 | `P2-doctor-into-the-dag-kickoff.md` | at P1 close |
+| P3 | `P3-retention-gates-kickoff.md` | at P2 close |
+| P4 | `P4-sound-sqlite-fingerprints-kickoff.md` | at P3 close |
+| P5 | `P5-history-lineage-truth-kickoff.md` | at P4 close |
+| P6 | `P6-container-leadin-chunking-kickoff.md` | at P5 close |
+| P7 | `P7-close-out-kickoff.md` | at P6 close |
+
+Prompts are written **one phase ahead, at the previous phase's close** (the repo rule: prompts
+exist for *un-executed* work only), so each prompt bakes in the previous phase's measured
+results (count shifts, re-baselines) instead of guessing them. The closing step of every phase
+is therefore: tick the tracker `P<n> ✓` row **and write the next phase's kickoff prompt**,
+then delete the executed prompt (or move it under `prompts/historical/` with the others).
+
+Session protocol per phase: `cd ~/projects/vdocs`; read `CLAUDE.md`, this plan's phase
+section, and the kickoff prompt; check no other vdocs process is live on the shared lake
+(`pgrep -af "vdocs run"`) before any lake-touching command; TDD each step; `make check`; one
+commit per plan step (P1.1, P1.2, …) with the step id in the commit subject; tick the tracker
+row in the same commit that lands the step.
 
 ---
 
