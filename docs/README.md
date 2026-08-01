@@ -29,6 +29,8 @@ Documentation here is classified by **lifecycle state, not topic**:
 
 - **Active workstream:** SKL — [`proposals/skl-implementation-plan.md`](proposals/skl-implementation-plan.md)
   (S0–S3 landed; S4 semantic-fidelity gates and S5 generalize-to-Kernel open).
+- **Active workstream:** pipeline audit remediation — [`proposals/pipeline-audit-remediation-plan.md`](proposals/pipeline-audit-remediation-plan.md)
+  (+ [tracker](proposals/pipeline-audit-remediation-tracker.md); fixes audit findings 1–5, P1–P7 open).
 - **Paused:** FileMan docs-as-code pilot at L1.4
   ([`prompts/L1.4-export-fileman-driver-kickoff.md`](prompts/L1.4-export-fileman-driver-kickoff.md));
   manifest query-recipe staleness fix
