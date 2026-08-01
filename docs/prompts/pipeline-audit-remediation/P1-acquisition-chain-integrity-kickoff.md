@@ -13,8 +13,9 @@ before any command that touches `~/data/vdocs`, confirm no other pipeline proces
 The audit found — and verified against the live lake — that `fetch` writes `raw/index.json`
 keyed by **content sha256**, so two doc_ids whose DOCX bytes are identical collapse into one
 entry (last writer wins). Live damage: **1,040 `fetched` acquisitions → 1,034 index entries**;
-the six losers (`CPRS:cprsguitm_0_636`, `PSJ:psj_5_nurse_um`, `PSJ:psj_5_supr_um`,
-`PSJ:psj_5_tm`, `PSN:psn_4_um`, `PSN:psn_4_tm`) have **no bundle anywhere downstream** yet
+the six losers (measured at P1 close: `CPRS:cprsguitm`, `PSJ:psj_5_0_nurse_um`,
+`PSJ:psj_5_0_supr_um`, `PSJ:psj_5_0_tm`, `PSN:psn_4_tm_r`, `PSN:psn_4_um_r` — the audit had
+named the *survivors* of each pair) have **no bundle anywhere downstream** yet
 report `fetched` in `inventory --status`. Three aggravators in the current code
 (`stages/fetch/stage.py:96-105, 148-156`):
 

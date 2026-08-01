@@ -162,9 +162,15 @@ comparing against the *persisted* `catalog.raw.json` row count instead of skippi
 
 [S4]: **fetch — gaps (one measured).** (a) **Measured on the live lake:** `raw/index.json`
 is keyed by content sha; 1,040 fetched acquisitions → 1,034 index entries. Six doc_ids
-(`CPRS:cprsguitm_0_636`, `PSJ:psj_5_{nurse,supr}_um`, `PSJ:psj_5_tm`, `PSN:psn_4_{um,tm}`)
-share bytes with a sibling and were silently collapsed — last writer's provenance wins, the
-loser gets no bundle, yet `inventory --status` reports it `fetched`. These six happen to be
+were silently collapsed — last writer's provenance wins, the loser gets no bundle, yet
+`inventory --status` reports it `fetched`. **Correction (2026-08-01):** this footnote originally
+named the six as `CPRS:cprsguitm_0_636` / `PSJ:psj_5_{nurse,supr}_um` / `PSJ:psj_5_tm` /
+`PSN:psn_4_{um,tm}` — those are the *survivors*. The audit read the first element of each
+duplicate pair instead of computing the set difference against the index. The documents actually
+lost were **`CPRS:cprsguitm`, `PSJ:psj_5_0_{nurse,supr}_um`, `PSJ:psj_5_0_tm`,
+`PSN:psn_4_{tm,um}_r`** (measured by re-deriving and diffing, P1 close). The count (6), the
+mechanism, and the impact were right; the identifiers were not — a reminder that "name the rows"
+only helps if the naming is itself derived, not eyeballed. These six happen to be
 duplicate listings of the same manual, but the mechanism is content-blind and would equally
 eat a genuinely distinct doc republished byte-identically under a new identity. (b) No
 content validation: `get_bytes` returns any 2xx body; a WAF/error HTML page becomes
@@ -467,6 +473,7 @@ Ordered by (impact × likelihood). "Live evidence" = observed on the 2026‑08�
 | ~~R‑10~~ **FIXED** `6ba05eb`+`38190e9` (P1.1/P1.2) | Withdrawn/renamed VDL docs are never removed (add-only raw index) → stale gold + double-convert of re-fetched docs | fetch/convert, [S4]c, §8 | latent | Corpus over-statement; wasted work; order-dependent winner | ✅ Derivation drops non-admitted docs (so `prune_bundles` can fire); the chain gate's `fetched-not-admitted` finding blocks any residue. |
 | R‑11 | CLI `ask` empty result asserts "no matches in the gold corpus" — the exact false-negative the MCP layer documents against | [S16] | code-confirmed | Agents/scripts on the CLI/JSON path inherit the trap | Emit the shared NOT_INDEXED warning on all three surfaces |
 | R‑12 | SKL reach: 6/21 entities reconciled, expansions nearly empty; 4,415 unresolved proposals uncurated | merge/resolve, [S11][S13] | counts live | The semantic layer's promised search lift mostly isn't happening | Unreconciled-remainder sidecar + floor WARN; curation-loop instrumentation; generalize past DI |
+| ~~R‑17~~ **FIXED** `6668a26` (P1.4) | **`build_atomic` left the REPLACED database's `-wal`/`-shm` beside the new file → the next WAL connection replays an unrelated DB's pages** | kernel/db.py | **MEASURED 2026‑08‑01: `merge` died with `database disk image is malformed`; `integrity_check` showed btree damage (error 11, page referenced twice)** | Silent corruption of a derived store; any rebuild-through-`build_atomic` stage (serve-inventory/index/relate) could produce it | ✅ Target-side siblings swept immediately after the rename. **Found by the P1 acceptance RUN, not by reading code — this audit missed it.** The sharper form of R‑13's WAL hazard: corruption, not a stale hash. |
 | R‑13 | AI-card fingerprint hashes `index.db` main file under WAL — may not reflect reader-visible state | manifest, [S15] | `index.db-wal` present at audit | Staleness detector that can itself be stale | `PRAGMA wal_checkpoint(TRUNCATE)` (or `VACUUM INTO`) before hashing |
 | R‑14 | `--fresh` wipes `reports/`, deleting the validate drop-detection baseline exactly when everything is rebuilt | validate, [S12] | code-confirmed | The cross-run net is absent on de-novo builds | Exempt `reports/validation/` from the wipe (it is evidence, not derived state — same argument that spared `catalog.raw.json`) |
 | R‑15 | Per-doc error budget of 50% is generous and unconsumed downstream; `stage_runs` keeps only the last run | §2, [R‑2] | 0 errors live | A degrading corpus can trend toward 50% invisibly | Tighten to ~5% for convert/normalize; append-only `stage_run_history` table |

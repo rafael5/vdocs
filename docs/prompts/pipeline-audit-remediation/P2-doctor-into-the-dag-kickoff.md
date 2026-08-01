@@ -8,14 +8,30 @@
 
 ## Where we are
 
-**P1 is complete** (`6ba05eb`, `38190e9`, `fa66309`): `raw/index.json` is derived and
-`doc_id`-keyed, `validate` Step 5 joins the acquisition chain, and non-DOCX payloads are refused
-at the CAS door. The live lake was re-derived and re-run end-to-end — the six previously-lost
-documents are back with zero downloads, and the corpus is now **1,040 documents**
-(*fill in the final consolidate group count + doctor verdict from the P1-close tracker row*).
+**P1 is complete** (`6ba05eb`, `38190e9`, `fa66309`, `6668a26`): `raw/index.json` is derived
+and `doc_id`-keyed, `validate` Step 5 joins the acquisition chain, non-DOCX payloads are refused
+at the CAS door, and `build_atomic` sweeps the replaced database's stale WAL.
 
-P1 proved the value of a gate that *runs*. P2 fixes the inverse problem: the strongest gate in
-the system **does not run**.
+Live lake after the P1 acceptance run (**this is your baseline**):
+
+| | |
+|---|---|
+| documents | **1,040** (was 1,034 — the six lost docs restored with zero downloads) |
+| gold anchors / version groups | **615** (unchanged: all six folded into existing groups) |
+| sections / chunks | 83,745 / 48,769 |
+| entities / relations | 6,567 / 203,272 |
+| `validate` | GREEN — `chain_findings=0`, `blocking=0` |
+| `doctor` | **GOLD LIBRARY: GREEN**, 19 pass / 0 warn / 0 fail |
+| low-retention docs (the P3 input) | **7** |
+
+P1 proved the value of a gate that *runs* — and cost a lesson worth carrying into P2: the
+acceptance run found a **corruption bug the audit never saw** (P1.4). Rebuilding `index.db` over
+a database that still had its own `-wal` beside it produced
+`DatabaseError: database disk image is malformed` in the next stage. No fixture reproduced it;
+only a real lake in a real WAL state did. **Budget time for the live run in every phase; it is
+not a formality.**
+
+P2 fixes the inverse problem: the strongest gate in the system **does not run**.
 
 `server/doctor.py` is 19 checks — coverage floors, anchor integrity + coverage, entity
 quarantine cascade, SKL projection wipe detection, gate fidelity, latest-only FTS, vocab
