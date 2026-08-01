@@ -83,6 +83,7 @@ _STATUS_ORDER = (
     "fetched",
     "pending",
     "failed",
+    "bad_content",  # a 2xx non-DOCX payload refused at the CAS door (P1.3)
     "permanent_missing",
     "withdrawn",
     "not_acquired",

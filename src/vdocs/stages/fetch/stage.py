@@ -28,11 +28,22 @@ def _url_list(urls: list[str], sample: int = 8) -> str:
 
 
 def _fetch_warnings(
-    failed: int, failed_urls: list[str], permanent: int, permanent_urls: list[str]
+    failed: int,
+    failed_urls: list[str],
+    permanent: int,
+    permanent_urls: list[str],
+    bad_content: int = 0,
+    bad_content_urls: list[str] | None = None,
 ) -> list[str]:
     """Human-readable WARN lines for the run summary (F3): permanently-unavailable docs (give up,
-    here is the list) and transient failures (re-run to retry). Empty when every fetch succeeded."""
+    here is the list), transient failures (re-run to retry), and non-DOCX payloads refused at the
+    CAS door (P1.3). Empty when every fetch succeeded."""
     warnings: list[str] = []
+    if bad_content:
+        warnings.append(
+            f"{bad_content} document(s) served a non-DOCX payload (error/WAF page?) and were "
+            f"NOT stored: {_url_list(bad_content_urls or [])}"
+        )
     if permanent:
         warnings.append(
             f"{permanent} document(s) permanently unavailable after {MAX_FETCH_ATTEMPTS} attempts "
@@ -101,9 +112,10 @@ class FetchStage(Stage):
         admitted = fp.select_fetch_targets(inventory.records, fp.Selection(all_=True), policy)
 
         store = Cas(ctx.cfg.bronze_raw)
-        fetched = skipped = failed = permanent = 0
+        fetched = skipped = failed = permanent = bad_content = 0
         failed_urls: list[str] = []
         permanent_urls: list[str] = []
+        bad_content_urls: list[str] = []
         now = ctx.clock()
         for i, doc in enumerate(targets, 1):
             did = doc_id(doc)
@@ -147,6 +159,28 @@ class FetchStage(Stage):
                     )
                 )
                 continue
+            if not fp.is_docx_payload(data):
+                # CAS ADMISSION (P1.3, audit R-8): a 2xx body that is not a DOCX (a VA error/WAF
+                # page, a login redirect) must never enter the write-once store — a mistake there
+                # is permanent, and the document would fail much later as an isolated convert
+                # error, leaving the corpus quietly one document smaller. Retried like a transient
+                # failure: a WAF hiccup must not permanently blacklist a real document.
+                bad_content += 1
+                bad_content_urls.append(url)
+                ctx.state.record_acquisition(
+                    Acquisition(
+                        doc_id=did,
+                        source_url=url,
+                        status="bad_content",
+                        bytes=len(data),
+                        attempts=attempts,
+                        first_attempt_at=first_at,
+                        last_attempt_at=now,
+                        error="not a DOCX (magic mismatch)",
+                        tool_ver=ctx.cfg.tool_ver,
+                    )
+                )
+                continue
             ext = fp.url_ext(url) or doc.doc_format
             sha = store.put(data, ext=ext)
             ctx.state.record_acquisition(
@@ -181,6 +215,9 @@ class FetchStage(Stage):
                 "skipped": skipped,
                 "failed": failed,
                 "permanent_missing": permanent,
+                "bad_content": bad_content,
             },
-            warnings=_fetch_warnings(failed, failed_urls, permanent, permanent_urls),
+            warnings=_fetch_warnings(
+                failed, failed_urls, permanent, permanent_urls, bad_content, bad_content_urls
+            ),
         )

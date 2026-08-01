@@ -102,6 +102,7 @@ def test_bronze_dag_runs_end_to_end(bronze_ctx):
         "skipped": 0,
         "failed": 0,
         "permanent_missing": 0,
+        "bad_content": 0,
     }
     # the index is doc_id-keyed and DERIVED from acquisitions ⋈ admitted targets (P1.1)
     index = fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text()))
@@ -336,3 +337,48 @@ def test_fetch_records_failure_when_docx_unavailable(bronze_ctx):
     acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_um")
     assert acq is not None and acq.status == "failed" and acq.error == "docx unavailable"
     assert fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text())) == {}
+
+
+def test_fetch_refuses_a_non_docx_payload_at_the_cas_door(bronze_ctx):
+    # P1.3 (audit R-8): VA can serve an error/WAF page with a 200. Storing it would put a
+    # permanent non-document in the write-once CAS and surface much later as an isolated convert
+    # error, leaving the corpus quietly one document smaller. Refuse at the door instead.
+    ctx = bronze_ctx
+    _inventory_only(ctx)
+    html = lambda _u: b"<!DOCTYPE html><html>403 Forbidden</html>"  # noqa: E731
+
+    from vdocs.orchestrator.report import RunReporter, Status
+
+    rep = RunReporter(echo=lambda _s: None)
+    (sr,) = Orchestrator([FetchStage(fetch_bytes=html, selection=Selection(all_=True))]).run(
+        ctx, force=True, reporter=rep
+    )
+    assert sr.counts["bad_content"] == 1 and sr.counts["fetched"] == 0
+    assert not list(ctx.cfg.bronze_raw.glob("*.docx"))  # nothing entered the write-once store
+    acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_um")
+    assert acq.status == "bad_content" and acq.sha256 is None
+    assert "not a DOCX" in acq.error
+    # the operator is told loudly, with the URL — never a silent drop
+    assert rep.reports[-1].status is Status.WARN
+    assert any("non-DOCX payload" in w and DOCX_URL in w for w in rep.reports[-1].warnings)
+    # …and it is NOT indexed: only `fetched` acquisitions reach raw/index.json
+    assert fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text())) == {}
+
+
+def test_a_bad_content_doc_is_retried_like_a_transient_failure(bronze_ctx):
+    # a WAF hiccup must not permanently blacklist a real document: the next run re-GETs it and,
+    # when the real bytes come back, it fetches normally.
+    ctx = bronze_ctx
+    _inventory_only(ctx)
+    html = lambda _u: b"<html>error</html>"  # noqa: E731
+    Orchestrator([FetchStage(fetch_bytes=html, selection=Selection(all_=True))]).run(
+        ctx, force=True
+    )
+    assert ctx.state.get_acquisition("ADT:dg_5_3_1057_um").status == "bad_content"
+
+    (sr,) = Orchestrator([FetchStage(fetch_bytes=fake_bytes, selection=Selection(all_=True))]).run(
+        ctx, force=True
+    )
+    assert sr.counts["fetched"] == 1
+    acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_um")
+    assert acq.status == "fetched" and acq.attempts == 2  # attempts accrued across both runs

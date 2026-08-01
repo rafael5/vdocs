@@ -94,8 +94,10 @@ class Acquisition(BaseModel):
     doc_id: str
     source_url: str
     # ``failed`` is a transient miss (will be retried); ``permanent_missing`` is a doc that gave up
-    # after MAX_FETCH_ATTEMPTS cross-run attempts (F3) — reported, never re-GET.
-    status: Literal["pending", "fetched", "failed", "permanent_missing", "withdrawn"]
+    # after MAX_FETCH_ATTEMPTS cross-run attempts (F3) — reported, never re-GET. ``bad_content`` is
+    # a 2xx response whose bytes are not a DOCX (an error/WAF page): refused at the CAS door so the
+    # write-once store stays clean, and retried like a transient miss (P1.3, audit R-8).
+    status: Literal["pending", "fetched", "failed", "permanent_missing", "withdrawn", "bad_content"]
     sha256: str | None = None
     bytes: int | None = None
     http_status: int | None = None
