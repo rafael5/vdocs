@@ -18,7 +18,7 @@ Documentation here is classified by **lifecycle state, not topic**:
 | Location | Contents | Lifetime |
 |---|---|---|
 | `docs/` root | The canonical four: this index, [`vdocs-design.md`](vdocs-design.md) (architecture), [`vdocs-user-guide.md`](vdocs-user-guide.md) (onboarding/operator guide), [`de-novo-run.md`](de-novo-run.md) (from-scratch runbook) | evergreen, kept current |
-| [`reference/`](reference/) | Durable lookups: gate reference, inventory/crawl column spec, classification & persona model, function-domain taxonomy, discovery-UX research | evergreen, consult as needed |
+| [`reference/`](reference/) | Durable lookups: gate reference, inventory/crawl column spec, classification & persona model, function-domain taxonomy, discovery-UX research, [pipeline adversarial audit](reference/pipeline-adversarial-audit.md) (per-stage logic/IO/gates table + risk register, 2026-08-01) | evergreen, consult as needed |
 | [`proposals/`](proposals/) | Live or parked-unfinished workstreams (proposal + tracker pairs) | until the workstream closes |
 | [`prompts/`](prompts/) | Kickoff prompts for **un-executed** work only | until the work lands |
 | [`adr/`](adr/) | Numbered architecture decision records | permanent |
