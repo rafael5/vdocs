@@ -10,8 +10,8 @@ needs don't exist yet.
 | Prompt | Phase | Status |
 |---|---|---|
 | ~~`P1-acquisition-chain-integrity-kickoff.md`~~ → [`historical/`](../historical/) | P1 — re-key `raw/index.json`, chain-reconciliation gate, DOCX magic check (+ P1.4 WAL fix) | ✅ **complete** `6ba05eb` `38190e9` `fa66309` `6668a26` |
-| [`P2-doctor-into-the-dag-kickoff.md`](P2-doctor-into-the-dag-kickoff.md) | P2 — doctor as terminal DAG stage | **ready to run** |
-| `P3-retention-gates-kickoff.md` | P3 — retention verdicts gate via validate | written at P2 close |
+| ~~`P2-doctor-into-the-dag-kickoff.md`~~ → [`historical/`](../historical/) | P2 — doctor as terminal DAG stage (+ riders R‑13, R‑14) | ✅ **complete** `74b136b` |
+| [`P3-retention-gates-kickoff.md`](P3-retention-gates-kickoff.md) | P3 — retention verdicts gate via validate | **ready to run** |
 | `P4-sound-sqlite-fingerprints-kickoff.md` | P4 — content-hash SQLite fingerprints | written at P3 close |
 | `P5-history-lineage-truth-kickoff.md` | P5 — history.yaml supersedes + stale-lineage check | written at P4 close |
 | `P6-container-leadin-chunking-kickoff.md` | P6 — chunk substantive container lead-ins | written at P5 close |
