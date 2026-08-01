@@ -177,6 +177,15 @@ per run with dict-insertion order deciding the winner. **Improvements:** key the
 `doc_id` with sha as a value (one entry per logical doc, dedup preserved via CAS); magic-byte
 check (`PK\x03\x04` for DOCX) before `store.put`; reconcile the index against the current
 gate-admitted target set each run (drop rows whose doc_id vanished, with a report line).
+> **✅ ALL THREE FIXED 2026-08-01 (P1.1 `6ba05eb`, P1.3 `fa66309`).** The index is now *derived*
+> each run from acquisitions ⋈ the gate-admitted targets, keyed by `doc_id` (format 2; a v1 file
+> is refused with a remediation). Re-derivation on the live lake restored all six documents with
+> **zero downloads** (pure CAS hits) — 1,040 acquisitions == 1,040 entries. A fourth defect the
+> audit missed also falls out: a lost entry could not previously self-heal, because
+> `SKIP_PRESENT` returns *before* the index write. Non-DOCX 2xx payloads are refused at the CAS
+> door as `bad_content`. Design §5.5 had specified "a derived projection of acquisitions" all
+> along — the sha-keyed merge was the code deviating from its own spec, which is why no doc
+> review caught it.
 
 [S5]: **convert — gaps.** No output floor: `pandoc` returning near-empty markdown (corrupt
 DOCX, image-only scan) still writes the bundle; nothing measures converted words vs source
@@ -260,6 +269,12 @@ the runs that rebuild everything. **Improvements:** add an inventory-reconciliat
 (gate-admitted targets = acquisitions fetched = raw-index doc_ids = converted bundles =
 indexed docs — one COUNT chain, five seams, all currently unjoined); move doctor into the DAG
 as a terminal stage or make `run --to manifest` finish with it.
+> **✅ (c) FIXED 2026-08-01 (P1.2 `38190e9`) — Step 5, the chain gate.** `chain_pure` joins the
+> five seams as *sets*, not counts, so each finding names the lost `doc_id`; each set is read
+> from a different source, so no producer can satisfy the check by agreeing with itself.
+> validate gained four real contract edges for the inputs it now reads. Still open from this
+> footnote: (a) index.db is checked only by `doctor` — **P2**; (b) retention flags — **P3**;
+> (d) manifest runs after validate; and the `--fresh` baseline wipe (R‑14).
 
 [S13]: **merge — gaps.** Reconciliation joins on `(type, canonical)` string equality; live
 result 6/21. The 15 unreconciled SKL entities (and therefore most SKL synonyms/expansions)
@@ -441,15 +456,15 @@ Ordered by (impact × likelihood). "Live evidence" = observed on the 2026‑08�
 | ID | Risk | Where | Live evidence | Impact | Mitigation |
 |----|------|-------|---------------|--------|------------|
 | R‑1 | Row-count SQLite fingerprints let content-only changes skip consumers (stale index metadata) | §2, fingerprint.py | latent | Wrong published metadata that no gate reds | Content-hash cheap fingerprints (xxhash) or fold a `max(rowid), sum-of-hash` digest; interim: document `--verify` as the post-registry-edit norm |
-| R‑2 | Six documents measurably collapsed out of `raw/index.json` (sha-keyed, last-writer-wins); mechanism content-blind | fetch, [S4] | **1,040 fetched vs 1,034 entries; 6 doc_id pairs listed** | Silent corpus omission + provenance loss; `inventory --status` claims fetched | Re-key index by `doc_id`; add validate check: fetched doc_ids ⊆ raw-index doc_ids ⊆ bundles |
-| R‑3 | No gate joins the acquisition→bundle→index count chain; each seam self-reports | validate scope, [S12] | the R‑2 six raised zero findings anywhere | An entire silent-loss *class*, not one bug | One reconciliation check across the five counts (gate-admitted = fetched = indexed-raw = converted = indexed docs), in `validate` |
+| ~~R‑2~~ **FIXED** `6ba05eb` (P1.1) | Six documents measurably collapsed out of `raw/index.json` (sha-keyed, last-writer-wins); mechanism content-blind | fetch, [S4] | **was 1,040 fetched vs 1,034 entries; now 1,040 == 1,040, all six restored with zero downloads (CAS hits)** | Silent corpus omission + provenance loss; `inventory --status` claims fetched | ✅ Index re-keyed by `doc_id` and *derived* from acquisitions ⋈ admitted targets each run (format 2; v1 refused with a remediation). Also closes R‑10. |
+| ~~R‑3~~ **FIXED** `38190e9` (P1.2) | No gate joins the acquisition→bundle→index count chain; each seam self-reports | validate scope, [S12] | the R‑2 six raised zero findings anywhere | An entire silent-loss *class*, not one bug | ✅ `validate` Step 5 joins five doc_id sets (`admitted ⊇ fetched == raw_index == converted == normalized`), each read from a *different* source; six typed finding kinds, each naming the lost doc_id. |
 | R‑4 | Crawl has no completeness floor; a degraded VDL page yields a quietly smaller blessed world; empty crawl overwrites bronze | crawl, [S1] | 0 skipped this run (healthy) | Losing whole sections of the library invisibly | Crawl deep_gate vs prior catalog (≥90% floor, per-section non-zero); refuse shrunken overwrite without force |
 | R‑5 | Retention verdicts don't gate; `blocks_publish` is dead code; QUARANTINE docs ship | normalize, [S8] | 7 low-retention docs in gold | Over-stripped documents presented as gold | Wire QUARANTINE (and un-signed-off REVIEW) into `validate`; credit relocated table words |
 | R‑6 | Doctor (the only index.db gate) is advisory — `vdocs run` never executes it | [S18] | doctor GREEN, but only because it was run by hand/build | A RED-able corpus can sit under a green pipeline | Make doctor a terminal DAG stage (or auto-append to any run reaching `manifest`) |
 | R‑7 | 27.2% of live sections unsearchable by construction (container lead-ins + hollow) | index, [S10] | 14,153 / 52,048 sections chunk-less | Systematic false negatives; mitigated today only by prompt discipline | Chunk container lead-in text passing the substantive floor (highest-leverage fix in this audit) |
-| R‑8 | Fetched bytes never validated (no magic check) — an HTML error page enters the write-once CAS as `.docx` | fetch, [S4]b | latent (0 convert errors live) | Doc silently missing; CAS pollution is permanent | `PK\x03\x04` magic check before `put`; record a typed `bad_content` acquisition status |
+| ~~R‑8~~ **FIXED** `fa66309` (P1.3) | Fetched bytes never validated (no magic check) — an HTML error page enters the write-once CAS as `.docx` | fetch, [S4]b | latent (0 convert errors live) | Doc silently missing; CAS pollution is permanent | ✅ ZIP-magic check before `put`; typed `bad_content` status, WARN naming the URL, retried like a transient miss. |
 | R‑9 | `history.yaml` append-only merge never refreshes changed member facts (stale `body_sha256`) | consolidate, [S9] | latent (no member reprocessed since capture) | The lineage record — the replay source — lies about current bodies | Supersedes-entry pattern on sha change; validate check: latest member's recorded sha == sha(body.md) |
-| R‑10 | Withdrawn/renamed VDL docs are never removed (add-only raw index) → stale gold + double-convert of re-fetched docs | fetch/convert, [S4]c, §8 | latent | Corpus over-statement; wasted work; order-dependent winner | Reconcile raw index against current admitted targets each run |
+| ~~R‑10~~ **FIXED** `6ba05eb`+`38190e9` (P1.1/P1.2) | Withdrawn/renamed VDL docs are never removed (add-only raw index) → stale gold + double-convert of re-fetched docs | fetch/convert, [S4]c, §8 | latent | Corpus over-statement; wasted work; order-dependent winner | ✅ Derivation drops non-admitted docs (so `prune_bundles` can fire); the chain gate's `fetched-not-admitted` finding blocks any residue. |
 | R‑11 | CLI `ask` empty result asserts "no matches in the gold corpus" — the exact false-negative the MCP layer documents against | [S16] | code-confirmed | Agents/scripts on the CLI/JSON path inherit the trap | Emit the shared NOT_INDEXED warning on all three surfaces |
 | R‑12 | SKL reach: 6/21 entities reconciled, expansions nearly empty; 4,415 unresolved proposals uncurated | merge/resolve, [S11][S13] | counts live | The semantic layer's promised search lift mostly isn't happening | Unreconciled-remainder sidecar + floor WARN; curation-loop instrumentation; generalize past DI |
 | R‑13 | AI-card fingerprint hashes `index.db` main file under WAL — may not reflect reader-visible state | manifest, [S15] | `index.db-wal` present at audit | Staleness detector that can itself be stale | `PRAGMA wal_checkpoint(TRUNCATE)` (or `VACUUM INTO`) before hashing |
