@@ -14,13 +14,22 @@ import json
 import pytest
 import yaml
 
-from vdocs.contracts.registry import CONSOLIDATED, TEXT_NORMALIZED
+from vdocs.contracts.registry import (
+    CONSOLIDATED,
+    GOLD_INVENTORY,
+    RAW_INDEX,
+    TEXT_CONVERTED,
+    TEXT_NORMALIZED,
+)
 from vdocs.kernel import bundle as kbundle
 from vdocs.kernel import cas, frontmatter
-from vdocs.models.stage import StageRun
+from vdocs.models.catalog import EnrichedInventory, EnrichedRecord
+from vdocs.models.stage import Acquisition, StageRun
 from vdocs.orchestrator.engine import Orchestrator
 from vdocs.orchestrator.stage import PostflightError
+from vdocs.stages.fetch.fetch_pure import RAW_INDEX_FORMAT
 from vdocs.stages.normalize import capture_pure as cap
+from vdocs.stages.validate import chain_pure as ch
 from vdocs.stages.validate.stage import ValidateStage
 
 
@@ -54,10 +63,83 @@ def _seed_consolidated_ok(ctx):
     _bless(ctx, "consolidate", CONSOLIDATED)
 
 
-def _bless_normalize(ctx, counts):
-    """Bless both upstreams validate now requires: normalize (with counts) + a clean consolidate."""
+def _normalized_slugs(ctx):
+    """The slugs the test actually seeded into the normalized tree — the chain is seeded to match
+    it, so a chain finding in these tests always means a real Step-5 defect, never fixture skew."""
+    root = ctx.cfg.silver_normalized
+    return sorted(p.parent.name for p in root.rglob("body.md")) if root.is_dir() else []
+
+
+def _seed_chain(ctx, slugs, *, converted_slugs=None, unadmitted=()):
+    """Seed an intact acquisition chain for ``slugs`` — gold inventory ⋈ acquisitions ⋈
+    raw/index.json ⋈ converted bundles — so validate's Step-5 chain gate (P1.2) has all five
+    seams to join. Each record must clear the REAL admission gate (VistA app, kept doc-type),
+    since the gate policy is read from the repo registries.
+
+    ``converted_slugs`` (default: all of ``slugs``) narrows which docs get a converted bundle, so
+    a test can seed a *broken* chain **before** blessing — mutating the tree afterwards would trip
+    the upstream-drift preflight instead of the gate under test. ``unadmitted`` slugs get the full
+    downstream treatment (acquisition + index entry + both bundles) but **no inventory record** —
+    the withdrawn/renamed document the gate no longer admits."""
+    converted_slugs = slugs if converted_slugs is None else converted_slugs
+    records = [
+        EnrichedRecord(
+            doc_title=slug,
+            doc_url=f"https://va.gov/d/{slug}.docx",
+            doc_filename=f"{slug}.docx",
+            doc_format="docx",
+            app_name_abbrev="ADT",
+            section_code="CLIN",
+            app_status="active",
+            system_type="VistA",
+            doc_slug=slug,
+            doc_code="UM",
+            anchor_key=f"ADT:ADT:UM:{slug}",
+        )
+        for slug in slugs
+    ]
+    cas.atomic_write(
+        ctx.cfg.gold_inventory_json,
+        EnrichedInventory(records=records).model_dump_json().encode(),
+    )
+    docs = {}
+    for slug in [*slugs, *unadmitted]:
+        ctx.state.record_acquisition(
+            Acquisition(
+                doc_id=f"ADT:{slug}",
+                source_url=f"https://va.gov/d/{slug}.docx",
+                status="fetched",
+                sha256=f"sha-{slug}",
+                tool_ver=ctx.cfg.tool_ver,
+            )
+        )
+        docs[f"ADT:{slug}"] = {
+            "sha256": f"sha-{slug}",
+            "app_code": "ADT",
+            "doc_slug": slug,
+            "title": slug,
+            "source_url": f"https://va.gov/d/{slug}.docx",
+            "ext": "docx",
+        }
+        if slug in converted_slugs or slug in unadmitted:
+            cas.atomic_write(ctx.cfg.silver_converted / "ADT" / slug / "body.md", b"# Doc\n")
+        if slug in unadmitted:  # it made it all the way through before the gate changed
+            cas.atomic_write(ctx.cfg.silver_normalized / "ADT" / slug / "body.md", b"# Doc\n")
+    cas.atomic_write(
+        ctx.cfg.raw_index,
+        json.dumps({"format": RAW_INDEX_FORMAT, "docs": docs}).encode(),
+    )
+    _bless(ctx, "serve-inventory", GOLD_INVENTORY)
+    _bless(ctx, "fetch", RAW_INDEX)
+    _bless(ctx, "convert", TEXT_CONVERTED)
+
+
+def _bless_normalize(ctx, counts, slugs=None):
+    """Bless every upstream validate requires: normalize (with counts), a clean consolidate, and
+    an intact fetch-side chain matching the seeded bundles (the Step-5 gate joins it)."""
     _bless(ctx, "normalize", TEXT_NORMALIZED, counts)
     _seed_consolidated_ok(ctx)
+    _seed_chain(ctx, slugs if slugs is not None else _normalized_slugs(ctx))
 
 
 def _seed_bundle(ctx, slug, *, captures, anchors=("intro",), outbound=None):
@@ -224,6 +306,7 @@ def test_validate_blocks_on_tampered_bundle(ctx):
     # bundle-integrity gate catches the tamper (recompute-to-verify).
     _seed_bundle(ctx, "a", captures={"refs": "captured"})
     _bless(ctx, "normalize", TEXT_NORMALIZED, {"documents": 1})
+    _seed_chain(ctx, _normalized_slugs(ctx))  # intact chain: the bundle gate is what must fire
     anchor = ctx.cfg.gold_consolidated / "ADT" / "doc"
     cas.atomic_write(anchor / "body.md", b"# Real body\n")
     bad = kbundle.build_manifest(
@@ -245,6 +328,7 @@ def test_validate_blocks_on_unmanifested_bundle(ctx):
     # a gold bundle with no bundle.yaml cannot be verified → blocks (not silently skipped)
     _seed_bundle(ctx, "a", captures={"refs": "captured"})
     _bless(ctx, "normalize", TEXT_NORMALIZED, {"documents": 1})
+    _seed_chain(ctx, _normalized_slugs(ctx))  # intact chain: the bundle gate is what must fire
     anchor = ctx.cfg.gold_consolidated / "ADT" / "doc"
     cas.atomic_write(anchor / "body.md", b"# No manifest\n")  # no bundle.yaml
     _bless(ctx, "consolidate", CONSOLIDATED)
@@ -321,3 +405,74 @@ def test_validate_blocks_on_injected_silent_table_miss(ctx):
     _bless_normalize(ctx, {"documents": 1, "refs_sidecars": 1, "absent_unexpected": 1})
     with pytest.raises(PostflightError):
         Orchestrator([ValidateStage()]).run(ctx)
+
+
+# --- Step 5: the acquisition-chain gate (P1.2, audit R-3) ------------------------------------
+
+
+def test_validate_blocks_when_a_fetched_doc_is_missing_from_the_raw_index(ctx):
+    # THE regression test for the measured defect: six documents were recorded `fetched`, fell out
+    # of the sha-keyed raw/index.json, had no bundle anywhere — and raised a finding NOWHERE.
+    # After P1.2 that state is a blocking, per-doc-id finding.
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _bless_normalize(ctx, {"documents": 1, "refs_sidecars": 1})
+    ctx.state.record_acquisition(
+        Acquisition(
+            doc_id="ADT:lost_um",  # fetched…
+            source_url="https://va.gov/d/lost_um.docx",
+            status="fetched",
+            sha256="sha-lost",
+            tool_ver=ctx.cfg.tool_ver,
+        )
+    )  # …but never added to raw/index.json → no bundle will ever be produced
+
+    with pytest.raises(PostflightError):
+        Orchestrator([ValidateStage()]).run(ctx)
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    assert report["blocking"] is True
+    kinds = {(f["kind"], f["doc_id"]) for f in report["chain_findings"]}
+    assert (ch.FETCHED_NOT_INDEXED, "ADT:lost_um") in kinds
+    # the finding names the LOST DOCUMENT, not just a count — that is what makes it actionable
+    assert any("re-run" in f["detail"] for f in report["chain_findings"])
+
+
+def test_validate_blocks_when_an_indexed_doc_never_converted(ctx):
+    # The index claims two docs; convert only ever produced one. Seeded broken BEFORE blessing so
+    # the CHAIN gate is what fires (mutating the tree after would trip the drift preflight, and
+    # emptying it would trip the "empty tree" input check — both coarser, different guards).
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _seed_bundle(ctx, "b", captures={"refs": "captured"})
+    _bless(ctx, "normalize", TEXT_NORMALIZED, {"documents": 2, "refs_sidecars": 2})
+    _seed_consolidated_ok(ctx)
+    _seed_chain(ctx, ["a", "b"], converted_slugs=["b"])
+
+    with pytest.raises(PostflightError):
+        Orchestrator([ValidateStage()]).run(ctx)
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    assert any(f["kind"] == ch.INDEXED_NOT_CONVERTED for f in report["chain_findings"])
+
+
+def test_validate_blocks_on_a_doc_the_gate_no_longer_admits(ctx):
+    # audit R-10: a withdrawn/renamed document (or one a policy edit narrowed out) stays in the
+    # corpus until something reconciles it. It is fully present downstream — fetched, indexed,
+    # converted, normalized — and only the inventory disagrees, so no per-stage count can see it.
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _seed_chain(ctx, ["a"], unadmitted=["stale"])  # writes the stale bundles…
+    _bless(ctx, "normalize", TEXT_NORMALIZED, {"documents": 2, "refs_sidecars": 1})  # …then bless
+    _seed_consolidated_ok(ctx)
+
+    with pytest.raises(PostflightError):
+        Orchestrator([ValidateStage()]).run(ctx)
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    assert any(
+        f["kind"] == ch.FETCHED_NOT_ADMITTED and f["doc_id"] == "ADT:stale"
+        for f in report["chain_findings"]
+    )
+
+
+def test_an_intact_chain_produces_no_chain_findings(ctx):
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _bless_normalize(ctx, {"documents": 1, "refs_sidecars": 1})
+    (result,) = Orchestrator([ValidateStage()]).run(ctx)
+    assert result.counts["chain_findings"] == 0
+    assert json.loads(ctx.cfg.validation_report.read_text())["chain_findings"] == []

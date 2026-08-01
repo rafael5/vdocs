@@ -32,12 +32,22 @@ import json
 
 import structlog
 
-from vdocs.contracts.registry import CONSOLIDATED, TEXT_NORMALIZED, VALIDATION_REPORT
+from vdocs.contracts.registry import (
+    CONSOLIDATED,
+    GOLD_INVENTORY,
+    RAW_INDEX,
+    REGISTRIES,
+    TEXT_CONVERTED,
+    TEXT_NORMALIZED,
+    VALIDATION_REPORT,
+)
 from vdocs.kernel import bundle as kbundle
 from vdocs.kernel import cas
+from vdocs.kernel import ids as kids
 from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
+from vdocs.stages.validate import chain_pure as ch
 from vdocs.stages.validate import reconcile_pure as rc
 from vdocs.stages.validate import refs_pure as rp
 
@@ -60,7 +70,17 @@ class ValidateStage(Stage):
     description = (
         "sidecar-verification gate: typed absence + count reconcile + refs + bundle integrity"
     )
-    requires = [TEXT_NORMALIZED, CONSOLIDATED]
+    # The chain gate (Step 5, P1.2) joins the acquisition seams, so the fetch-side artifacts are
+    # real inputs of this stage — declared as contract edges rather than read behind the DAG's
+    # back. REGISTRIES carries the gate policy the admitted set is computed from.
+    requires = [
+        TEXT_NORMALIZED,
+        CONSOLIDATED,
+        GOLD_INVENTORY,
+        RAW_INDEX,
+        TEXT_CONVERTED,
+        REGISTRIES,
+    ]
     produces = [VALIDATION_REPORT]
     idempotency = Idempotency.ALWAYS_RERUN
 
@@ -92,6 +112,10 @@ class ValidateStage(Stage):
         # verifiable unit, not asserted. A bundle with no manifest can't be verified (unmanifested).
         bundle_findings = _verify_bundles(ctx.cfg.gold_consolidated)
 
+        # CHAIN GATE (Step 5, P1.2): join the five acquisition seams. Each stage counts only its
+        # own work, so a document lost *between* stages was previously invisible everywhere.
+        chain_findings = _reconcile_chain(ctx)
+
         reconcile_findings = rc.reconcile(
             manifests=manifests,
             current_counts=current_counts,
@@ -113,6 +137,8 @@ class ValidateStage(Stage):
         # cross-refs are reported as a C5 metric, never gated — a high _Toc unmapped rate reflects
         # the recoverable bookmark-capture gap, not a defect (see UNMAPPED_RATE_TARGET).
         blocked_by: list[str] = []
+        if chain_findings:
+            blocked_by.append(f"{len(chain_findings)} acquisition-chain finding(s)")
         if reconcile_findings:
             blocked_by.append(f"{len(reconcile_findings)} reconciliation finding(s)")
         if severed:
@@ -128,6 +154,9 @@ class ValidateStage(Stage):
             "blocked_by": blocked_by,
             "documents": documents,
             "counts": current_counts,  # the cross-run baseline for the next run's drop check
+            "chain_findings": [
+                {"kind": f.kind, "doc_id": f.doc_id, "detail": f.detail} for f in chain_findings
+            ],
             "reconcile_findings": [
                 {"kind": f.kind, "sidecar": f.sidecar, "detail": f.detail}
                 for f in reconcile_findings
@@ -151,6 +180,7 @@ class ValidateStage(Stage):
         return RunResult(
             counts={
                 "documents": documents,
+                "chain_findings": len(chain_findings),
                 "reconcile_findings": len(reconcile_findings),
                 "severed_refs": len(severed),
                 "unmapped_refs": len(unmapped),
@@ -169,6 +199,58 @@ class ValidateStage(Stage):
 
 def _ref_dict(f: rp.RefFinding) -> dict:
     return {"doc_id": f.doc_id, "bookmark": f.bookmark, "target": f.target, "kind": f.kind}
+
+
+def _bundle_doc_ids(root, by_bundle_path: dict[str, str]) -> set[str]:  # type: ignore[no-untyped-def]
+    """The ``doc_id`` of every ``<app>/<slug>/body.md`` bundle under ``root``.
+
+    A bundle's directory is its identity (``kernel.ids.bundle_path``), so the index's own
+    ``app_code``/``doc_slug`` fields give the mapping back to ``doc_id``. A bundle the index
+    cannot account for is reported under its bundle path — it is exactly the orphan the
+    ``normalized-not-converted`` / ``indexed-not-converted`` findings are for, and inventing a
+    doc_id for it would hide which artifact is actually on disk."""
+    if not root.is_dir():
+        return set()
+    return {
+        by_bundle_path.get(p.parent.relative_to(root).as_posix())
+        or f"(unindexed bundle) {p.parent.relative_to(root).as_posix()}"
+        for p in root.rglob("body.md")
+    }
+
+
+def _reconcile_chain(ctx: StageContext) -> list[ch.ChainFinding]:
+    """Build the five ``doc_id`` sets from the real artifacts and run the pure join (P1.2).
+
+    Deliberately reads each set from a *different* source — the gate policy over the gold
+    inventory, ``state.db:acquisitions``, the on-disk ``raw/index.json``, and the two silver
+    trees — so the check is independent of any one producer's self-report (the audit's
+    "a self-consistency gate cannot see an omission" lesson)."""
+    import json
+
+    from vdocs.models.catalog import EnrichedInventory
+    from vdocs.stages.fetch import fetch_pure as fp
+    from vdocs.stages.fetch.policy import load_gate_policy
+
+    cfg = ctx.cfg
+    records = EnrichedInventory.model_validate_json(
+        cfg.gold_inventory_json.read_text(encoding="utf-8")
+    ).records
+    policy = load_gate_policy(cfg.registries)
+    admitted = {
+        kids.doc_id(r) for r in fp.select_fetch_targets(records, fp.Selection(all_=True), policy)
+    }
+    fetched = {did for did, acq in ctx.state.all_acquisitions().items() if acq.status == "fetched"}
+    index = fp.parse_raw_index(json.loads(cfg.raw_index.read_text(encoding="utf-8")))
+    by_bundle_path = {
+        kids.bundle_path(e["app_code"], e["doc_slug"]): did for did, e in index.items()
+    }
+    return ch.reconcile_chain(
+        admitted=admitted,
+        fetched=fetched,
+        raw_index=set(index),
+        converted=_bundle_doc_ids(cfg.silver_converted, by_bundle_path),
+        normalized=_bundle_doc_ids(cfg.silver_normalized, by_bundle_path),
+    )
 
 
 def _verify_bundles(consolidated_root) -> list[dict]:  # type: ignore[no-untyped-def]
