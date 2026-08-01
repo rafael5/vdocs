@@ -9,8 +9,10 @@ and *how* to address it.
 
 import hashlib
 from collections import Counter
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 from urllib.parse import urlparse
 
 from vdocs.kernel.ids import doc_id
@@ -20,6 +22,26 @@ from vdocs.models.catalog import EnrichedRecord
 #: unavailable (F3). The HTTP layer already retries 5xx/429 within a single attempt; this caps the
 #: *cross-run* re-attempts so a re-run loop terminates instead of re-GETting broken URLs forever.
 MAX_FETCH_ATTEMPTS = 3
+
+#: ``raw/index.json`` schema marker. **Format 2 is keyed by ``doc_id``**; format 1 was keyed by the
+#: content sha256, which silently collapsed two logical documents whose DOCX bytes were identical
+#: (measured: 1,040 fetched acquisitions → 1,034 entries, 6 documents left with no bundle). A v1
+#: file is refused by :func:`parse_raw_index` rather than half-read (P1.1).
+RAW_INDEX_FORMAT = 2
+
+#: The ZIP local-file-header magic every DOCX (an OPC/ZIP container) starts with. A 2xx response
+#: that lacks it is not a document — a VA error/WAF page, a login redirect body — and must never
+#: enter the write-once CAS (P1.3 / audit R-8).
+_DOCX_MAGIC = b"PK\x03\x04"
+
+
+def is_docx_payload(data: bytes) -> bool:
+    """Whether ``data`` looks like a DOCX (ZIP container) — the CAS admission check (P1.3).
+
+    Deliberately a *magic-byte* test, not a full parse: it is the cheap, high-signal guard that
+    keeps an HTML error page served with a 200 out of the content-addressed store, where a
+    write-once mistake is permanent."""
+    return data.startswith(_DOCX_MAGIC)
 
 
 class FetchAction(Enum):
@@ -247,8 +269,9 @@ def summarize_gate(records: list[EnrichedRecord], policy: GatePolicy) -> GateSum
 def index_entry(
     *, app_code: str, doc_slug: str, title: str, source_url: str, ext: str
 ) -> dict[str, str]:
-    """A ``raw/index.json`` entry: sha256 → provenance. ``app_code``/``doc_slug`` give the
-    downstream bundle path (``<app>/<slug>/`` in ``text@converted``)."""
+    """A ``raw/index.json`` entry's provenance fields. ``app_code``/``doc_slug`` give the
+    downstream bundle path (``<app>/<slug>/`` in ``text@converted``); ``sha256`` is added by
+    :func:`build_raw_index`, which owns the (doc_id-keyed) entry shape."""
     return {
         "app_code": app_code,
         "doc_slug": doc_slug,
@@ -256,3 +279,59 @@ def index_entry(
         "source_url": source_url,
         "ext": ext,
     }
+
+
+def build_raw_index(
+    targets: Sequence[EnrichedRecord], acquisitions: Mapping[str, Any]
+) -> dict[str, Any]:
+    """**Derive** ``raw/index.json`` (format 2) from the admitted targets ⋈ the acquisitions.
+
+    One entry per **``doc_id``** — never per content sha (P1.1). Deriving instead of merging the
+    prior file is what fixes three coupled defects at once:
+
+    * **duplicate content no longer collapses.** Two logical documents published as byte-identical
+      DOCX (e.g. ``PSJ:psj_5_tm`` / ``PSJ:psj_5_0_tm``) each keep an entry pointing at the one
+      shared CAS blob, instead of the second silently overwriting the first and losing a bundle.
+    * **withdrawn documents leave.** Membership is recomputed from the *current* admitted target
+      set, so a doc the gate no longer admits drops out and ``convert``'s stale-bundle pruning can
+      finally fire outside ``build --fresh`` (audit R-10).
+    * **a lost entry self-heals.** The index no longer depends on what this run downloaded, so a
+      ``SKIP_PRESENT`` document (already in the CAS) is re-emitted every run.
+
+    ``targets`` is the gate-admitted target set (``select_fetch_targets(records, Selection(all_=
+    True), policy)``) — the operator's narrower per-run selection must NOT narrow the index, or a
+    focused re-fetch would drop every other document from the corpus. ``acquisitions`` is keyed by
+    ``doc_id`` and duck-typed (``.status`` / ``.sha256``), so this stays pure and import-light.
+    Only ``fetched`` rows contribute; the mapping is sorted for byte-stable output.
+    """
+    docs: dict[str, dict[str, str]] = {}
+    for rec in sorted(targets, key=doc_id):
+        did = doc_id(rec)
+        acq = acquisitions.get(did)
+        if acq is None or getattr(acq, "status", "") != "fetched":
+            continue
+        docs[did] = {
+            "sha256": str(getattr(acq, "sha256", "") or ""),
+            **index_entry(
+                app_code=rec.app_name_abbrev,
+                doc_slug=rec.doc_slug,
+                title=rec.doc_title,
+                source_url=rec.doc_url,
+                ext=url_ext(rec.doc_url) or rec.doc_format,
+            ),
+        }
+    return {"format": RAW_INDEX_FORMAT, "docs": docs}
+
+
+def parse_raw_index(data: Mapping[str, Any]) -> dict[str, dict[str, str]]:
+    """The ``doc_id → entry`` mapping of a format-2 ``raw/index.json``; a legacy file fails loud.
+
+    Format 1 was sha-keyed with the same *entry* shape, so a v1 file read as v2 would silently key
+    every bundle by a sha256 — half-working, corpus-wide. Refusing it with the remediation is the
+    honest failure (tenet #7); ``vdocs fetch`` re-derives the index with no network (CAS hits)."""
+    if data.get("format") != RAW_INDEX_FORMAT:
+        raise ValueError(
+            "raw/index.json is format 1 (sha-keyed) and cannot be read — "
+            "re-derive it with: vdocs fetch --all"
+        )
+    return dict(data.get("docs") or {})

@@ -17,7 +17,7 @@ count; 27.2% of 52,048 latest sections chunk-less; golden nDCG@10 = 0.469 (L1.2 
 | Step | What lands | Status | Commit / notes |
 |------|-----------|--------|----------------|
 | **P1 — acquisition-chain integrity** | | | |
-| P1.1 | `raw/index.json` v2: derived from acquisitions ⋈ inventory, keyed by `doc_id`; fetch `contract_ver=2`; convert/normalize readers adapted | ☐ | |
+| P1.1 | `raw/index.json` v2: derived from acquisitions ⋈ inventory, keyed by `doc_id`; fetch `contract_ver=2`; convert/normalize readers adapted | ☑ | `make check` green (1,118 tests, 96.22%). Design §5.5 already *specified* "derived projection of acquisitions" — the sha-keyed merge was the deviation, now corrected. v1 files refused with a remediation (`parse_raw_index`). Obsolete merge test replaced by two behavior tests (narrow re-fetch keeps every fetched doc; a no-longer-admitted doc leaves). New count `indexed`. |
 | P1.2 | `validate` Step 5 chain reconciliation (fetched ⊆ admitted; raw-index == fetched; converted == normalized == indexed-raw), findings by doc_id | ☐ | |
 | P1.3 | DOCX magic check before CAS put; `bad_content` acquisition status | ☐ | |
 | P1 ✓ | Live: 1,040 == 1,040 == 1,040 == 1,040; six doc_ids in `doc_meta_staged`; gate red on hand-broken seam | ☐ | group count shift from 615: ___ |

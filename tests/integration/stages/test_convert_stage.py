@@ -20,6 +20,13 @@ from vdocs.orchestrator.engine import Orchestrator
 from vdocs.orchestrator.stage import PostflightError
 from vdocs.stages.convert.convert_pure import ConvertedDoc, ConvertedImage
 from vdocs.stages.convert.stage import ConvertStage
+from vdocs.stages.fetch.fetch_pure import RAW_INDEX_FORMAT
+
+
+def raw_index(docs: dict) -> dict:
+    """A ``raw/index.json`` payload (format 2, P1.1) around a ``doc_id → entry`` mapping."""
+    return {"format": RAW_INDEX_FORMAT, "docs": docs}
+
 
 _IMG = b"\x89PNG fake image bytes"
 _IMG_SHA = hashlib.sha256(_IMG).hexdigest()
@@ -40,15 +47,18 @@ def _seed_fetched(ctx):
     """Place one fetched DOCX in the raw CAS + its index entry, and record fetch ok."""
     raw = Cas(ctx.cfg.bronze_raw)
     sha = raw.put(b"PK\x03\x04 fake docx", ext="docx")
-    index = {
-        sha: {
-            "app_code": "ADT",
-            "doc_slug": "dg_5_3_1057_dibr",
-            "title": "DG*5.3*1057 Installation Guide",
-            "source_url": "https://va.gov/d/dg_5_3_1057_dibr.docx",
-            "ext": "docx",
+    index = raw_index(
+        {
+            "ADT:dg_5_3_1057_dibr": {
+                "sha256": sha,
+                "app_code": "ADT",
+                "doc_slug": "dg_5_3_1057_dibr",
+                "title": "DG*5.3*1057 Installation Guide",
+                "source_url": "https://va.gov/d/dg_5_3_1057_dibr.docx",
+                "ext": "docx",
+            }
         }
-    }
+    )
     ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
     ctx.cfg.raw_index.write_text(json.dumps(index))
     ctx.state.record(
@@ -145,10 +155,11 @@ def test_convert_skips_on_clean_rerun(ctx):
 def _seed_many(ctx, slugs):
     """Place one fetched DOCX per slug in the raw CAS + index, and record fetch ok."""
     raw = Cas(ctx.cfg.bronze_raw)
-    index = {}
+    docs = {}
     for slug in slugs:
         sha = raw.put(f"docx-{slug}".encode(), ext="docx")
-        index[sha] = {
+        docs[f"ADT:{slug}"] = {
+            "sha256": sha,
             "app_code": "ADT",
             "doc_slug": slug,
             "title": slug,
@@ -156,7 +167,7 @@ def _seed_many(ctx, slugs):
             "ext": "docx",
         }
     ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
-    ctx.cfg.raw_index.write_text(json.dumps(index))
+    ctx.cfg.raw_index.write_text(json.dumps(raw_index(docs)))
     ctx.state.record(
         StageRun(
             stage="fetch",

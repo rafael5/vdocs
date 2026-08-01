@@ -15,6 +15,8 @@ deterministic application, and that the application is a pure function of `(docu
 
 from __future__ import annotations
 
+import json
+
 import yaml
 
 from vdocs.contracts.registry import CATALOG_ENRICHED, RAW_INDEX, TEXT_CONVERTED, TEXT_ENRICHED
@@ -24,7 +26,14 @@ from vdocs.models.stage import StageRun
 from vdocs.orchestrator.engine import Orchestrator
 from vdocs.stages.discover.discover_pure import PatternReport
 from vdocs.stages.discover.stage import DiscoverStage
+from vdocs.stages.fetch.fetch_pure import RAW_INDEX_FORMAT
 from vdocs.stages.normalize.stage import NormalizeStage
+
+
+def raw_index(docs: dict) -> dict:
+    """A ``raw/index.json`` payload (format 2, P1.1) around a ``doc_id → entry`` mapping."""
+    return {"format": RAW_INDEX_FORMAT, "docs": docs}
+
 
 _APP = "DEP"
 _BOILER = (
@@ -124,7 +133,18 @@ def _seed_enriched_doc(ctx):
     cas.atomic_write(ctx.cfg.silver_enriched / _APP / "dep_doc" / "body.md", enriched.encode())
     ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
     ctx.cfg.raw_index.write_text(
-        '{"sha": {"app_code": "%s", "doc_slug": "dep_doc", "ext": "docx"}}' % _APP
+        json.dumps(
+            raw_index(
+                {
+                    f"{_APP}:dep_doc": {
+                        "sha256": "sha",
+                        "app_code": _APP,
+                        "doc_slug": "dep_doc",
+                        "ext": "docx",
+                    }
+                }
+            )
+        )
     )
     _bless(ctx, ("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX))
 

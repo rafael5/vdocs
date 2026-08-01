@@ -5,6 +5,8 @@ PDF-only documents are never fetch targets. Selection (§5.6) narrows the genuin
 inventory; it never reaches noise or out-of-scope rows.
 """
 
+import pytest
+
 from vdocs.models.catalog import EnrichedRecord
 from vdocs.stages.fetch import fetch_pure as fp
 
@@ -269,3 +271,99 @@ def test_index_entry_shape():
         "source_url": "https://va.gov/x.docx",
         "ext": "docx",
     }
+
+
+# --- P1.1: the raw index is DERIVED and keyed by doc_id (format 2) ---------------------------
+# The v1 index was keyed by content sha256, so two doc_ids with byte-identical DOCX collapsed
+# into one entry (last writer wins) — MEASURED on the live lake: 1,040 fetched acquisitions but
+# only 1,034 entries, 6 documents with no bundle anywhere downstream. Derivation (not merge)
+# also drops withdrawn docs and re-emits entries for SKIP_PRESENT docs every run.
+
+
+class _Fetched:
+    """An acquisition row as `build_raw_index` duck-types it (status + sha256)."""
+
+    def __init__(self, sha256: str, status: str = "fetched") -> None:
+        self.status = status
+        self.sha256 = sha256
+
+
+def test_build_raw_index_keys_by_doc_id_and_marks_the_format():
+    targets = [_rec("a_um", doc_code="UM")]
+    index = fp.build_raw_index(targets, {"ADT:a_um": _Fetched("sha_a")})
+    assert index["format"] == fp.RAW_INDEX_FORMAT == 2
+    assert index["docs"] == {
+        "ADT:a_um": {
+            "sha256": "sha_a",
+            "app_code": "ADT",
+            "doc_slug": "a_um",
+            "title": "T",
+            "source_url": "https://va.gov/d/a_um.docx",
+            "ext": "docx",
+        }
+    }
+
+
+def test_build_raw_index_keeps_both_doc_ids_of_a_duplicate_content_pair():
+    # THE live defect: identical bytes must NOT collapse two logical documents into one entry.
+    targets = [_rec("psj_5_tm", doc_code="TM"), _rec("psj_5_0_tm", doc_code="TM")]
+    acqs = {"ADT:psj_5_tm": _Fetched("same"), "ADT:psj_5_0_tm": _Fetched("same")}
+    docs = fp.build_raw_index(targets, acqs)["docs"]
+    assert sorted(docs) == ["ADT:psj_5_0_tm", "ADT:psj_5_tm"]
+    assert {d["sha256"] for d in docs.values()} == {"same"}  # one CAS blob, two entries
+
+
+def test_build_raw_index_omits_targets_that_are_not_fetched():
+    targets = [_rec("ok_um", doc_code="UM"), _rec("bad_um", doc_code="UM")]
+    acqs = {
+        "ADT:ok_um": _Fetched("sha_ok"),
+        "ADT:bad_um": _Fetched("", status="permanent_missing"),
+    }
+    assert list(fp.build_raw_index(targets, acqs)["docs"]) == ["ADT:ok_um"]
+    # …and a target never attempted at all simply has no acquisition row
+    assert fp.build_raw_index(targets, {})["docs"] == {}
+
+
+def test_build_raw_index_drops_an_acquisition_that_is_no_longer_an_admitted_target():
+    # Derivation, not merge (R-10): a withdrawn/renamed document LEAVES the index, so convert's
+    # stale-bundle pruning can finally fire outside `build --fresh`.
+    acqs = {"ADT:gone_um": _Fetched("sha_gone"), "ADT:live_um": _Fetched("sha_live")}
+    assert list(fp.build_raw_index([_rec("live_um", doc_code="UM")], acqs)["docs"]) == [
+        "ADT:live_um"
+    ]
+
+
+def test_build_raw_index_is_deterministic_and_sorted():
+    targets = [_rec("z_um", doc_code="UM"), _rec("a_um", doc_code="UM")]
+    acqs = {"ADT:z_um": _Fetched("s1"), "ADT:a_um": _Fetched("s2")}
+    assert list(fp.build_raw_index(targets, acqs)["docs"]) == ["ADT:a_um", "ADT:z_um"]
+
+
+def test_build_raw_index_falls_back_to_doc_format_when_the_url_has_no_extension():
+    rec = _rec("noext_um", doc_code="UM").model_copy(
+        update={"doc_url": "https://va.gov/download?id=7", "doc_format": "docx"}
+    )
+    entry = fp.build_raw_index([rec], {"ADT:noext_um": _Fetched("sha")})["docs"]["ADT:noext_um"]
+    assert entry["ext"] == "docx"
+
+
+def test_parse_raw_index_returns_the_docs_mapping_for_format_2():
+    data = {"format": 2, "docs": {"ADT:a_um": {"sha256": "s", "ext": "docx"}}}
+    assert fp.parse_raw_index(data) == {"ADT:a_um": {"sha256": "s", "ext": "docx"}}
+
+
+def test_parse_raw_index_rejects_the_legacy_sha_keyed_file_with_a_remediation():
+    # Fail LOUD, never half-work: a v1 file silently read as v2 would key bundles by sha.
+    legacy = {"deadbeef": {"app_code": "ADT", "doc_slug": "a_um", "ext": "docx"}}
+    with pytest.raises(ValueError, match="vdocs fetch"):
+        fp.parse_raw_index(legacy)
+
+
+# --- P1.3: content admission at the CAS door (audit R-8) -------------------------------------
+
+
+def test_is_docx_payload_accepts_a_zip_container_and_rejects_everything_else():
+    assert fp.is_docx_payload(b"PK\x03\x04rest-of-a-real-docx")
+    assert not fp.is_docx_payload(b"<!DOCTYPE html><html>403 Forbidden</html>")
+    assert not fp.is_docx_payload(b"")
+    assert not fp.is_docx_payload(b"PK")  # truncated magic

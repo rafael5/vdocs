@@ -313,6 +313,11 @@ def _load_structure_toc_titles(path) -> frozenset[str]:  # type: ignore[no-untyp
 
 
 def _sha_by_bundle_path(raw_index):  # type: ignore[no-untyped-def]
-    """Map ``(safe app, safe slug)`` → source sha256 from ``raw/index.json`` (bronze provenance)."""
-    index = json.loads(raw_index.read_text(encoding="utf-8"))
-    return {ids.bundle_key(e["app_code"], e["doc_slug"]): sha for sha, e in index.items()}
+    """Map ``(safe app, safe slug)`` → source sha256 from ``raw/index.json`` (bronze provenance).
+
+    The index is doc_id-keyed (format 2, P1.1), so the sha comes off the entry; two documents
+    sharing one upstream blob correctly stamp the same ``source_sha256``."""
+    from vdocs.stages.fetch.fetch_pure import parse_raw_index
+
+    index = parse_raw_index(json.loads(raw_index.read_text(encoding="utf-8")))
+    return {ids.bundle_key(e["app_code"], e["doc_slug"]): e["sha256"] for e in index.values()}

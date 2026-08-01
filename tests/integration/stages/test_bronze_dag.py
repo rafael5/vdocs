@@ -11,9 +11,11 @@ import pytest
 
 from vdocs.kernel.http import Page
 from vdocs.models.catalog import EnrichedInventory
+from vdocs.models.stage import Acquisition
 from vdocs.orchestrator.engine import Orchestrator
 from vdocs.stages.catalog.stage import CatalogStage
 from vdocs.stages.crawl.stage import CrawlStage
+from vdocs.stages.fetch import fetch_pure as fp
 from vdocs.stages.fetch.fetch_pure import Selection
 from vdocs.stages.fetch.stage import FetchStage
 from vdocs.stages.serve_inventory.stage import ServeInventoryStage
@@ -95,15 +97,17 @@ def test_bronze_dag_runs_end_to_end(bronze_ctx):
     fetch_run = ctx.state.get("fetch")
     assert fetch_run.counts == {
         "targets": 1,
+        "indexed": 1,
         "fetched": 1,
         "skipped": 0,
         "failed": 0,
         "permanent_missing": 0,
     }
-    index = json.loads(ctx.cfg.raw_index.read_text())
-    assert len(index) == 1
+    # the index is doc_id-keyed and DERIVED from acquisitions ⋈ admitted targets (P1.1)
+    index = fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text()))
+    assert list(index) == ["ADT:dg_5_3_1057_um"]
     (entry,) = index.values()
-    assert entry["app_code"] == "ADT" and entry["ext"] == "docx"
+    assert entry["app_code"] == "ADT" and entry["ext"] == "docx" and entry["sha256"]
     assert list(ctx.cfg.bronze_raw.glob("*.docx"))  # the content-addressed file exists
 
     # fetch recorded the per-document acquisition status (§5.5) keyed by doc_id
@@ -243,32 +247,53 @@ def test_fetch_gives_up_after_attempt_cap_and_warns(bronze_ctx):
     assert sr.counts["permanent_missing"] == 1
 
 
-def test_fetch_merges_into_existing_raw_index(bronze_ctx):
+def test_a_narrow_refetch_keeps_every_previously_fetched_doc_in_the_index(bronze_ctx):
     ctx = bronze_ctx
-    # bring the inventory track up so fetch can run
+    # R1's requirement, under P1.1's mechanism: the index is DERIVED from the whole admitted
+    # target set ⋈ acquisitions, so a narrow selection re-fetch can never strand a document
+    # fetched by an earlier run. (Pre-P1.1 this was a merge of the prior file; the merge also
+    # kept stale entries alive forever, which the derivation now correctly drops.)
     Orchestrator([CrawlStage(page_fetcher=fake_page), CatalogStage(), ServeInventoryStage()]).run(
         ctx, force=True
     )
-    # a prior run fetched a DIFFERENT document — its index entry must survive this run (R1):
-    # a selective re-fetch must merge, never overwrite away previously-fetched docs.
-    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
-    prior = {
-        "deadbeef": {
-            "app_code": "LR",
-            "doc_slug": "lr_um",
-            "title": "Lab UM",
-            "source_url": "https://vdl.test/lr.docx",
-            "ext": "docx",
-        }
-    }
-    ctx.cfg.raw_index.write_text(json.dumps(prior))
-
     Orchestrator([FetchStage(fetch_bytes=fake_bytes, selection=Selection(all_=True))]).run(
         ctx, force=True
     )
-    index = json.loads(ctx.cfg.raw_index.read_text())
-    assert index["deadbeef"]["app_code"] == "LR"  # prior entry preserved
-    assert any(e["app_code"] == "ADT" for e in index.values())  # this run's doc merged in
+    assert list(fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text()))) == [
+        "ADT:dg_5_3_1057_um"
+    ]
+
+    # now a *narrow* run that selects nothing this document matches: it is already in the CAS,
+    # so it must STILL be indexed afterwards (a SKIP_PRESENT doc is re-emitted, not dropped).
+    narrow = Selection(apps=frozenset({"NOSUCHAPP"}))
+    Orchestrator([FetchStage(fetch_bytes=fake_bytes, selection=narrow)]).run(ctx, force=True)
+    index = fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text()))
+    assert list(index) == ["ADT:dg_5_3_1057_um"]
+    assert index["ADT:dg_5_3_1057_um"]["app_code"] == "ADT"
+
+
+def test_raw_index_drops_a_doc_the_gate_no_longer_admits(bronze_ctx):
+    ctx = bronze_ctx
+    # Derivation, not merge (audit R-10): an acquisition for a document that is no longer an
+    # admitted target leaves the index, so convert stops regenerating its stale bundle.
+    Orchestrator([CrawlStage(page_fetcher=fake_page), CatalogStage(), ServeInventoryStage()]).run(
+        ctx, force=True
+    )
+    ctx.state.record_acquisition(
+        Acquisition(
+            doc_id="LR:lr_um",
+            source_url="https://vdl.test/lr.docx",
+            status="fetched",
+            sha256="deadbeef",
+            tool_ver="test",
+        )
+    )
+    Orchestrator([FetchStage(fetch_bytes=fake_bytes, selection=Selection(all_=True))]).run(
+        ctx, force=True
+    )
+    index = fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text()))
+    assert "LR:lr_um" not in index  # never an admitted target → not in the corpus
+    assert list(index) == ["ADT:dg_5_3_1057_um"]
 
 
 def test_fetch_does_not_fall_back_to_pdf(bronze_ctx):
@@ -289,7 +314,8 @@ def test_fetch_does_not_fall_back_to_pdf(bronze_ctx):
         ctx.state.get("fetch").counts["failed"] == 1
         and ctx.state.get("fetch").counts["fetched"] == 0
     )
-    assert json.loads(ctx.cfg.raw_index.read_text()) == {}  # the PDF was never stored
+    # the PDF was never stored: a well-formed (format-2) index with no documents in it
+    assert fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text())) == {}
     acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_um")
     assert acq is not None and acq.status == "failed"
 
@@ -309,4 +335,4 @@ def test_fetch_records_failure_when_docx_unavailable(bronze_ctx):
     assert ctx.state.get("fetch").counts["failed"] == 1
     acq = ctx.state.get_acquisition("ADT:dg_5_3_1057_um")
     assert acq is not None and acq.status == "failed" and acq.error == "docx unavailable"
-    assert json.loads(ctx.cfg.raw_index.read_text()) == {}
+    assert fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text())) == {}

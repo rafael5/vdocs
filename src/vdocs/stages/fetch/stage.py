@@ -54,6 +54,10 @@ class FetchStage(Stage):
     requires = [GOLD_INVENTORY]
     produces = [RAW_TREE, RAW_INDEX]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
+    # v2 (P1.1): RAW_INDEX is keyed by `doc_id` and DERIVED from acquisitions ⋈ the admitted
+    # targets (was: sha256-keyed and merged, which collapsed duplicate-content documents). The
+    # bump folds into convert/normalize's inputs_fp, so they re-run against the new shape.
+    contract_ver = 2
 
     def __init__(
         self,
@@ -91,14 +95,12 @@ class FetchStage(Stage):
         # omitted doc-types never enter the corpus, regardless of the operator's selection.
         policy = load_gate_policy(ctx.cfg.registries)
         targets = fp.select_fetch_targets(inventory.records, self.selection, policy)
+        # The index covers the WHOLE admitted corpus, not this run's (possibly narrow) selection:
+        # deriving it from the operator's selection would drop every unselected document from
+        # `raw/index.json` and strand its bundle (P1.1).
+        admitted = fp.select_fetch_targets(inventory.records, fp.Selection(all_=True), policy)
 
         store = Cas(ctx.cfg.bronze_raw)
-        # Merge into the existing index so a selective re-fetch never drops previously-fetched docs
-        # (R1): this run's entries are unioned over the prior index (new keys added, re-fetched
-        # keys refreshed), never an overwrite that would strand docs `convert` then skips.
-        index: dict[str, dict[str, str]] = {}
-        if ctx.cfg.raw_index.exists():
-            index = json.loads(ctx.cfg.raw_index.read_text(encoding="utf-8"))
         fetched = skipped = failed = permanent = 0
         failed_urls: list[str] = []
         permanent_urls: list[str] = []
@@ -147,13 +149,6 @@ class FetchStage(Stage):
                 continue
             ext = fp.url_ext(url) or doc.doc_format
             sha = store.put(data, ext=ext)
-            index[sha] = fp.index_entry(
-                app_code=doc.app_name_abbrev,
-                doc_slug=doc.doc_slug,
-                title=doc.doc_title,
-                source_url=url,
-                ext=ext,
-            )
             ctx.state.record_acquisition(
                 Acquisition(
                     doc_id=did,
@@ -170,10 +165,18 @@ class FetchStage(Stage):
             )
             fetched += 1
 
-        atomic_write(ctx.cfg.raw_index, json.dumps(index, indent=2).encode("utf-8"))
+        # DERIVE the index from the acquisitions this run just updated ⋈ the admitted targets
+        # (P1.1) — not a merge of the prior file. So a SKIP_PRESENT document is re-emitted every
+        # run (a lost entry self-heals), duplicate-content documents each keep an entry, and a
+        # doc the gate no longer admits leaves.
+        index = fp.build_raw_index(admitted, ctx.state.all_acquisitions())
+        atomic_write(
+            ctx.cfg.raw_index, (json.dumps(index, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        )
         return RunResult(
             counts={
                 "targets": len(targets),
+                "indexed": len(index["docs"]),
                 "fetched": fetched,
                 "skipped": skipped,
                 "failed": failed,

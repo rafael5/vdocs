@@ -18,7 +18,14 @@ from vdocs.kernel import cas, frontmatter
 from vdocs.models.stage import StageRun
 from vdocs.orchestrator.engine import Orchestrator
 from vdocs.orchestrator.stage import PostflightError
+from vdocs.stages.fetch.fetch_pure import RAW_INDEX_FORMAT
 from vdocs.stages.normalize.stage import NormalizeStage
+
+
+def raw_index(docs: dict) -> dict:
+    """A ``raw/index.json`` payload (format 2, P1.1) around a ``doc_id → entry`` mapping."""
+    return {"format": RAW_INDEX_FORMAT, "docs": docs}
+
 
 _SHA = hashlib.sha256(b"the source docx bytes").hexdigest()
 _ENRICHED = frontmatter.emit(
@@ -32,7 +39,18 @@ def _seed(ctx):
     cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "ig_doc" / "body.md", _ENRICHED.encode())
     ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
     ctx.cfg.raw_index.write_text(
-        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "ig_doc", "ext": "docx"}})
+        json.dumps(
+            raw_index(
+                {
+                    "ADT:ig_doc": {
+                        "sha256": _SHA,
+                        "app_code": "ADT",
+                        "doc_slug": "ig_doc",
+                        "ext": "docx",
+                    }
+                }
+            )
+        )
     )
     for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
         ctx.state.record(
@@ -125,7 +143,18 @@ def test_normalize_writes_revisions_sidecar_and_strips_table(ctx):
     cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "tm_doc" / "body.md", enriched.encode())
     ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
     ctx.cfg.raw_index.write_text(
-        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "tm_doc", "ext": "docx"}})
+        json.dumps(
+            raw_index(
+                {
+                    "ADT:tm_doc": {
+                        "sha256": _SHA,
+                        "app_code": "ADT",
+                        "doc_slug": "tm_doc",
+                        "ext": "docx",
+                    }
+                }
+            )
+        )
     )
     for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
         ctx.state.record(
@@ -165,7 +194,18 @@ def test_normalize_lifts_large_table_to_csv_sidecar(ctx):
     cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "dd_doc" / "body.md", enriched.encode())
     ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
     ctx.cfg.raw_index.write_text(
-        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "dd_doc", "ext": "docx"}})
+        json.dumps(
+            raw_index(
+                {
+                    "ADT:dd_doc": {
+                        "sha256": _SHA,
+                        "app_code": "ADT",
+                        "doc_slug": "dd_doc",
+                        "ext": "docx",
+                    }
+                }
+            )
+        )
     )
     for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
         ctx.state.record(
@@ -211,7 +251,18 @@ def test_normalize_references_curated_boilerplate(ctx, tmp_path):
     cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "bp_doc" / "body.md", enriched.encode())
     ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
     ctx.cfg.raw_index.write_text(
-        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "bp_doc", "ext": "docx"}})
+        json.dumps(
+            raw_index(
+                {
+                    "ADT:bp_doc": {
+                        "sha256": _SHA,
+                        "app_code": "ADT",
+                        "doc_slug": "bp_doc",
+                        "ext": "docx",
+                    }
+                }
+            )
+        )
     )
     for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
         ctx.state.record(
@@ -256,7 +307,18 @@ def test_normalize_stamps_template_id_and_strips_scaffold(ctx, tmp_path):
     cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "dg_doc" / "body.md", enriched.encode())
     ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
     ctx.cfg.raw_index.write_text(
-        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "dg_doc", "ext": "docx"}})
+        json.dumps(
+            raw_index(
+                {
+                    "ADT:dg_doc": {
+                        "sha256": _SHA,
+                        "app_code": "ADT",
+                        "doc_slug": "dg_doc",
+                        "ext": "docx",
+                    }
+                }
+            )
+        )
     )
     for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
         ctx.state.record(
@@ -292,7 +354,18 @@ def test_normalize_strips_legacy_toc_no_duplicate(ctx):
     cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "lm_doc" / "body.md", enriched.encode())
     ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
     ctx.cfg.raw_index.write_text(
-        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "lm_doc", "ext": "docx"}})
+        json.dumps(
+            raw_index(
+                {
+                    "ADT:lm_doc": {
+                        "sha256": _SHA,
+                        "app_code": "ADT",
+                        "doc_slug": "lm_doc",
+                        "ext": "docx",
+                    }
+                }
+            )
+        )
     )
     for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
         ctx.state.record(
@@ -327,7 +400,18 @@ def test_normalize_writes_refs_yaml_sidecar(ctx):
     cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "rm_doc" / "body.md", enriched.encode())
     ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
     ctx.cfg.raw_index.write_text(
-        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "rm_doc", "ext": "docx"}})
+        json.dumps(
+            raw_index(
+                {
+                    "ADT:rm_doc": {
+                        "sha256": _SHA,
+                        "app_code": "ADT",
+                        "doc_slug": "rm_doc",
+                        "ext": "docx",
+                    }
+                }
+            )
+        )
     )
     for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
         ctx.state.record(
@@ -363,7 +447,7 @@ def test_no_refs_yaml_when_no_headings(ctx):
     )
     cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "flat_doc" / "body.md", enriched.encode())
     ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
-    ctx.cfg.raw_index.write_text("{}")
+    ctx.cfg.raw_index.write_text(json.dumps(raw_index({})))
     for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
         ctx.state.record(
             StageRun(
@@ -391,7 +475,7 @@ def test_normalize_is_idempotent(ctx):
 def test_normalize_without_matching_sha_omits_source_sha256(ctx):
     # raw/index has no entry for this bundle → source_sha256 simply isn't stamped (no crash)
     _seed(ctx)
-    ctx.cfg.raw_index.write_text("{}")
+    ctx.cfg.raw_index.write_text(json.dumps(raw_index({})))
     ctx.state.record(  # re-bless fetch for the (now empty) index so preflight sees it current
         StageRun(
             stage="fetch",
@@ -415,15 +499,16 @@ def test_normalize_without_matching_sha_omits_source_sha256(ctx):
 
 def _seed_many(ctx, slugs):
     """Seed N enriched bundles + a raw/index.json covering them, and bless enrich + fetch."""
-    index = {}
+    docs = {}
     for slug in slugs:
         body = frontmatter.emit({"title": slug, "app_code": "ADT"}, f"# {slug}\n\nbody text\n")
         cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / slug / "body.md", body.encode())
-        index[hashlib.sha256(slug.encode()).hexdigest()] = {
+        docs[f"ADT:{slug}"] = {
+            "sha256": hashlib.sha256(slug.encode()).hexdigest(),
             "app_code": "ADT", "doc_slug": slug, "ext": "docx",
         }  # fmt: skip
     ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
-    ctx.cfg.raw_index.write_text(json.dumps(index))
+    ctx.cfg.raw_index.write_text(json.dumps(raw_index(docs)))
     for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
         ctx.state.record(
             StageRun(
@@ -507,7 +592,18 @@ def test_normalize_capture_flags_silent_detector_miss(ctx):
     cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "ch_doc" / "body.md", enriched.encode())
     ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
     ctx.cfg.raw_index.write_text(
-        json.dumps({_SHA: {"app_code": "ADT", "doc_slug": "ch_doc", "ext": "docx"}})
+        json.dumps(
+            raw_index(
+                {
+                    "ADT:ch_doc": {
+                        "sha256": _SHA,
+                        "app_code": "ADT",
+                        "doc_slug": "ch_doc",
+                        "ext": "docx",
+                    }
+                }
+            )
+        )
     )
     for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
         ctx.state.record(

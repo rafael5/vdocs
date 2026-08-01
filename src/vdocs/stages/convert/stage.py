@@ -77,7 +77,11 @@ class ConvertStage(Stage):
         routing = _load_converter_routing(
             ctx.cfg.registries / "converter-routing" / "converter-routing.yaml"
         )
-        index: dict[str, dict[str, str]] = json.loads(ctx.cfg.raw_index.read_text(encoding="utf-8"))
+        from vdocs.stages.fetch.fetch_pure import parse_raw_index
+
+        # doc_id → entry (format 2, P1.1): two documents may share one `sha256` (byte-identical
+        # DOCX upstream) — each still converts into its own bundle from the one CAS blob.
+        index = parse_raw_index(json.loads(ctx.cfg.raw_index.read_text(encoding="utf-8")))
         raw = Cas(ctx.cfg.bronze_raw)
         assets = Cas(ctx.cfg.assets)
 
@@ -88,17 +92,17 @@ class ConvertStage(Stage):
         # failure never abandons the batch; the postflight gate fails the stage only if the error
         # *rate* is systemic (doc_error_gate). The shared guard lives in kernel.docloop (§9.2).
         loop = DocLoop("convert", log)
-        for n, (sha, entry) in enumerate(index.items(), 1):
+        for n, (doc_id, entry) in enumerate(sorted(index.items()), 1):
             if n % 25 == 0 or n == total:
                 ctx.progress(f"{n}/{total} converted")
             # route by bundle identity (safe app / safe slug) — Docling for the curated
             # bare-marker-explosion allowlist (ADR-010, §9.6), Pandoc otherwise
             key = f"{safe_component(entry['app_code'])}/{safe_component(entry['doc_slug'])}"
             kept.add(key)
-            with loop.guard(key):
+            with loop.guard(f"{doc_id} ({key})"):
                 ext = entry["ext"]
                 use_docling = key in routing
-                doc = (docling if use_docling else pandoc)(raw.get(sha, ext=ext), ext)
+                doc = (docling if use_docling else pandoc)(raw.get(entry["sha256"], ext=ext), ext)
                 n_docling += use_docling
 
                 # key by basename — converters reference media by full/absolute path and as HTML
