@@ -83,6 +83,29 @@ without writing any code:
 (52,100 vs the index's 52,128: my re-shred skipped the generated `## Contents`/bookmark-heading
 handling and the heading-less-body fallback. A ~0.05% discrepancy, irrelevant to the ratio.)
 
+**Is the residual real, or an upstream artifact?** Fair question, since `normalize` rewrites heading
+levels (`infer_heading_levels`) and a mis-levelled sibling would *manufacture* a container that
+never was one. Measured 2026-08-02, and the answer is **real**:
+
+| | |
+|---|---|
+| containers created by re-leveling alone (enriched body, before vs after `infer_heading_levels`) | **7** across 612 docs (4 created, 3 dissolved) |
+| containers created by **all** of normalize (enriched → shipped gold body, aligned by heading title) | **173** created, 481 dissolved |
+| …of the 173, the ones that are **bare** (no lead-in, i.e. would still be unsearchable after P6.1) | **72** |
+
+So at most **72 of the 4,764** bare containers (1.5%, ≈0.14 pp of the corpus) are artifacts of our
+own processing. Fixing every one of them moves the residual from 14.19% to ~14.05%. The floor is
+the documents, not the pipeline — **don't spend P6 on it.**
+
+*(The 7 flips have a real cause worth one line: `infer_heading_levels` counts **empty-titled**
+headings — pandoc's rendering of Word bookmark-only heading paragraphs, 1,932 of 85,829 enriched
+headings across 320 docs — as genuine ancestors, while `shred_sections`/`parse_headings` discard
+them. Re-leveling therefore bakes an invisible heading's hierarchy into the visible ones, and a leaf
+can come out a container. Its docstring's "slugs depend on heading text, not level, so the anchor
+map is unaffected" is true and beside the point: the **container predicate** depends on level. Two
+components disagreeing about what counts as a heading — the same shape as the P6 defect itself. A
+footnote for P7's register, not P6 work.)*
+
 **So P6.1 roughly halves the chunk-less share — 27% → ~14% — and does not reach the plan's `< 8%`
 target.** The gap is 4,764 bare containers plus 2,627 hollow sections, and neither has lead-in prose
 to chunk: for them "unsearchable" is *correct*, not a defect. Decide this explicitly and record it:
