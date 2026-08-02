@@ -12,7 +12,7 @@ plan).
 
 Baseline (2026-08-01, `corpus_content_hash 3ce0872e…`): 1,040 fetched / 1,034 indexed (6
 doc_ids collapsed); doctor advisory-only; 7 low-retention docs in gold; SQLite fp = row
-count; 27.2% of 52,048 latest sections chunk-less; golden nDCG@10 = 0.469 (L1.2 sweep).
+count; 27.2% of 52,048 latest sections chunk-less; golden nDCG@10 = 0.469 (L1.2 sweep) — ⚠️ **corrected 2026-08-02: that 0.469 is a `~/data/vdocs-dev` number** (451 docs), not production, and is not comparable to any figure below; the true production pre-P6.1 baseline is **0.2770** over 24 labeled queries (`reports/p6-golden-PROD-before-p61.*`).
 
 | Step | What lands | Status | Commit / notes |
 |------|-----------|--------|----------------|
