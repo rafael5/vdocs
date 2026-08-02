@@ -668,3 +668,62 @@ def test_legacy_toc_relocation_is_credited_not_penalised(ctx):
     if flags.is_file():
         recorded = yaml.safe_load(flags.read_text())["flags"]
         assert not [f for f in recorded if str(f).startswith("low-retention")]
+
+
+def test_capture_manifest_records_the_retention_verdict(ctx):
+    """P3.2: the verdict is a dense typed record on every bundle, not a sparse flag string."""
+    import yaml
+
+    _seed(ctx)
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.status == "ok"
+
+    manifest = yaml.safe_load(
+        (ctx.cfg.silver_normalized / "ADT" / "ig_doc" / "capture.yaml").read_text()
+    )
+    block = manifest["retention"]
+    assert block["verdict"] in {"PASS", "REVIEW", "QUARANTINE"}
+    assert block["kept_words"] > 0 and block["enriched_words"] > 0
+    assert 0.0 <= block["retention"] <= 1.0
+
+
+def test_over_strip_is_scored_quarantine_end_to_end(ctx):
+    """P3.3 acceptance: a body most of which does not survive normalize scores QUARANTINE.
+
+    Uses the real curated phrase registry rather than a mock, so this exercises the whole scoring
+    path — subtract → score → record — and is the permanent counterpart to the validate gate's
+    red-path tests (a scratch-lake demonstration cannot rot)."""
+    import yaml
+
+    dead = "\n\n".join(["This page intentionally left blank."] * 120)
+    enriched = frontmatter.emit(
+        {"title": "Mostly Dead", "app_code": "ADT", "tool_ver": "0.1.0"},
+        f"# Mostly Dead\n\n## Setup\n\n{dead}\n\nOne real line.\n",
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "md_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(
+        json.dumps(
+            raw_index(
+                {"ADT:md_doc": {"sha256": _SHA, "app_code": "ADT", "doc_slug": "md_doc",
+                                "ext": "docx"}}
+            )
+        )
+    )  # fmt: skip
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.counts["low_retention"] == 1
+
+    manifest = yaml.safe_load(
+        (ctx.cfg.silver_normalized / "ADT" / "md_doc" / "capture.yaml").read_text()
+    )
+    assert manifest["retention"]["verdict"] == "QUARANTINE"
+    assert manifest["retention"]["retention"] < 0.5

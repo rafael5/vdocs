@@ -35,6 +35,7 @@ from dataclasses import dataclass
 
 from vdocs.kernel.markdown import heading_furniture_text, iter_headings, strip_tags
 from vdocs.stages.normalize import tables_pure
+from vdocs.stages.normalize.retention_pure import RetentionVerdict
 
 CAPTURED = "captured"
 FAILED = "failed"
@@ -183,15 +184,26 @@ def classify(
     }
 
 
-def manifest_dict(doc_id: str, outcomes: dict[str, CaptureOutcome], residue: Residue) -> dict:
-    """Serialise the classified outcomes + residue into the ``capture.yaml`` mapping (§6.4)."""
+def manifest_dict(
+    doc_id: str,
+    outcomes: dict[str, CaptureOutcome],
+    residue: Residue,
+    retention: RetentionVerdict | None = None,
+) -> dict:
+    """Serialise the classified outcomes + residue into the ``capture.yaml`` mapping (§6.4).
+
+    P3.2: when a ``retention`` verdict is supplied it rides here as a typed, dense block on every
+    bundle — the same record on every document, rather than a sparse ``flags.yaml`` string a
+    consumer would have to parse. ``capture.yaml`` travels to the gold anchor bundle at
+    ``consolidate`` and is covered by ``bundle.yaml``'s signed manifest, so the ``validate``
+    retention gate reads a *verified* record."""
     captures: dict[str, dict] = {}
     for kind, outcome in outcomes.items():
         entry: dict[str, object] = {"outcome": outcome.outcome}
         if outcome.count is not None:
             entry["count"] = outcome.count
         captures[kind] = entry
-    return {
+    manifest: dict = {
         "doc_id": doc_id,
         "captures": captures,
         "residue": {
@@ -201,6 +213,23 @@ def manifest_dict(doc_id: str, outcomes: dict[str, CaptureOutcome], residue: Res
             "qualifying_table_count": residue.qualifying_table_count,
         },
     }
+    if retention is not None:
+        manifest["retention"] = {
+            "retention": round(retention.retention, 4),
+            "verdict": retention.verdict,
+            "enriched_words": retention.enriched_words,
+            "kept_words": retention.kept_words,
+        }
+    return manifest
+
+
+def retention_verdict(manifest: dict) -> str:
+    """The recorded content-retention verdict, or ``""`` when the bundle carries no block.
+
+    Absence is **UNKNOWN, never PASS** (P3.2): a bundle written before the block existed has not
+    been scored, and a gate that reads "no record" as "fine" is the fail-open shape this whole
+    remediation exists to remove. The caller decides what an unscored bundle means."""
+    return str((manifest.get("retention") or {}).get("verdict", ""))
 
 
 def build_manifest(
@@ -214,6 +243,7 @@ def build_manifest(
     refs_count: int,
     toc_count: int,
     title_date_captured: bool,
+    retention: RetentionVerdict | None = None,
 ) -> dict:
     """Scan the residue, classify each attempt, and return the serialisable ``capture.yaml`` dict —
     the one call the ``stage.py`` driver makes (§6.4)."""
@@ -227,7 +257,7 @@ def build_manifest(
         title_date_captured=title_date_captured,
         residue=residue,
     )
-    return manifest_dict(doc_id, outcomes, residue)
+    return manifest_dict(doc_id, outcomes, residue, retention)
 
 
 def has_unexpected_absence(manifest: dict) -> bool:

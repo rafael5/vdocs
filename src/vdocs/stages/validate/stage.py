@@ -50,6 +50,7 @@ from vdocs.orchestrator.stage import Stage, StageContext
 from vdocs.stages.validate import chain_pure as ch
 from vdocs.stages.validate import reconcile_pure as rc
 from vdocs.stages.validate import refs_pure as rp
+from vdocs.stages.validate import retention_pure as rtn
 
 log = structlog.get_logger(__name__)
 
@@ -116,6 +117,12 @@ class ValidateStage(Stage):
         # own work, so a document lost *between* stages was previously invisible everywhere.
         chain_findings = _reconcile_chain(ctx)
 
+        # RETENTION GATE (Step 6, P3.3): the verdict `normalize` has scored since Phase 3 finally
+        # decides what ships. Read off the GOLD anchor bundles — what actually ships — where
+        # `capture.yaml` travels under `bundle.yaml`'s signed manifest, so the gate reads a
+        # *verified* record rather than a silver-side sidecar.
+        retention_findings = _gate_retention(ctx)
+
         reconcile_findings = rc.reconcile(
             manifests=manifests,
             current_counts=current_counts,
@@ -145,6 +152,9 @@ class ValidateStage(Stage):
             blocked_by.append(f"{len(severed)} severed cross-ref(s)")
         if bundle_findings:
             blocked_by.append(f"{len(bundle_findings)} bundle-integrity finding(s)")
+        blocking_retention = [f for f in retention_findings if f.blocking]
+        if blocking_retention:
+            blocked_by.append(f"{len(blocking_retention)} content-retention finding(s)")
         self._blocking = bool(blocked_by)
         self._reason = "; ".join(blocked_by)
 
@@ -160,6 +170,10 @@ class ValidateStage(Stage):
             "reconcile_findings": [
                 {"kind": f.kind, "sidecar": f.sidecar, "detail": f.detail}
                 for f in reconcile_findings
+            ],
+            "retention_findings": [
+                {"kind": f.kind, "doc_id": f.doc_id, "detail": f.detail, "blocking": f.blocking}
+                for f in retention_findings
             ],
             "ref_findings": {
                 "severed": [_ref_dict(f) for f in severed],  # gated: hard floor zero
@@ -182,6 +196,7 @@ class ValidateStage(Stage):
                 "documents": documents,
                 "chain_findings": len(chain_findings),
                 "reconcile_findings": len(reconcile_findings),
+                "retention_findings": len(blocking_retention),
                 "severed_refs": len(severed),
                 "unmapped_refs": len(unmapped),
                 "expected_unmapped_refs": len(expected_unmapped),
@@ -251,6 +266,40 @@ def _reconcile_chain(ctx: StageContext) -> list[ch.ChainFinding]:
         converted=_bundle_doc_ids(cfg.silver_converted, by_bundle_path),
         normalized=_bundle_doc_ids(cfg.silver_normalized, by_bundle_path),
     )
+
+
+def _load_signoffs(registries) -> frozenset[str]:  # type: ignore[no-untyped-def]
+    """The curated retention sign-off doc_ids (P3.3). Absent registry ⇒ no sign-offs — which is
+    strict, not lenient: nothing is excused by a missing file."""
+    data = kregistry.load_mapping(registries / "retention-signoff.yaml", missing_ok=True)
+    return frozenset(
+        str(e["doc_id"])
+        for e in (data.get("signoffs") or [])
+        if isinstance(e, dict) and e.get("doc_id")
+    )
+
+
+def _gate_retention(ctx: StageContext) -> list[rtn.RetentionFinding]:
+    """Read each GOLD anchor bundle's recorded retention verdict and apply the gate (Step 6).
+
+    The verdict is read from the bundle's ``capture.yaml`` — which travels to gold with the anchor
+    and is covered by ``bundle.yaml``'s signed manifest — so this gates what actually **ships**,
+    not a silver-side sidecar. A gold bundle with no ``capture.yaml`` at all is scored as unknown
+    (blocking), never skipped."""
+    root = ctx.cfg.gold_consolidated
+    if not root.is_dir():
+        return []
+    scored: list[tuple[str, str, float | None]] = []
+    for body_path in sorted(root.rglob("body.md")):
+        bundle = body_path.parent
+        manifest = kregistry.load_mapping(bundle / "capture.yaml", missing_ok=True) or {}
+        doc_id = str(manifest.get("doc_id") or bundle.relative_to(root).as_posix())
+        block = manifest.get("retention") or {}
+        value = block.get("retention")
+        scored.append(
+            (doc_id, str(block.get("verdict", "")), float(value) if value is not None else None)
+        )
+    return rtn.gate_retention(scored, signed_off=_load_signoffs(ctx.cfg.registries))
 
 
 def _verify_bundles(consolidated_root) -> list[dict]:  # type: ignore[no-untyped-def]

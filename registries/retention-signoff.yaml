@@ -1,0 +1,26 @@
+# registries/retention-signoff.yaml
+# =========================================================================================
+# Human sign-offs for the content-retention gate (P3.3, audit R‑5 / [S8]).
+#
+# `normalize` scores how much of each document's body survived normalization and records the
+# verdict in that bundle's `capture.yaml`; `validate` Step 6 turns the verdict into a gate:
+#
+#   PASS        never blocks.
+#   REVIEW      blocks UNLESS its doc_id is listed here with a reason — the human in the loop
+#               is a registry entry (tenet #13), reviewable in a diff, and fingerprinted into
+#               validate's inputs like every other curated registry.
+#   QUARANTINE  ALWAYS blocks. A gutted document is not a judgement call; there is no entry
+#               you can write here to ship one. Fix `normalize`, or drop the document.
+#
+# A sign-off says "this document really is mostly non-body material (a title page, a change-
+# pages partial, a pure index) and the low score is honest" — NOT "make the gate green".
+# A sign-off for a document that no longer needs one is reported as `retention-signoff-stale`
+# (never blocking) so this file stays honest as the corpus changes.
+#
+#   signoffs:
+#     - doc_id: PSD:psd_3_p71_tm_cp
+#       reason: Change-pages partial — body is the revision table, lifted to revisions.yaml.
+#       date: 2026-08-01
+# =========================================================================================
+
+signoffs: []

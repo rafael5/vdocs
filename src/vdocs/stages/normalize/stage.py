@@ -44,6 +44,10 @@ class NormalizeStage(Stage):
     requires = [TEXT_ENRICHED, RAW_INDEX, REGISTRIES]
     produces = [TEXT_NORMALIZED]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
+    # v2 (P3.2): every bundle's `capture.yaml` gains a typed `retention` block, and the legacy-TOC
+    # capture now records the anchorless paper dialect (P3.1) — both change the produced sidecar
+    # shape, so the bump re-runs normalize and cascades to its consumers.
+    contract_ver = 2
 
     def __init__(self) -> None:
         self._errors = 0  # per-document failures isolated this run (R6 — see doc_error_gate)
@@ -235,6 +239,7 @@ class NormalizeStage(Stage):
                     refs_count=len(anchor_map.rows),
                     toc_count=len(anchor_map.legacy_toc),
                     title_date_captured=bool(published),
+                    retention=retention,  # P3.2: the verdict as a typed record on every bundle
                 )
                 cas.atomic_write(
                     normalized_root / rel / "capture.yaml",

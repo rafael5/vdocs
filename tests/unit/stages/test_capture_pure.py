@@ -254,3 +254,55 @@ def test_has_unexpected_absence_helper():
     )  # fmt: skip
     assert cp.has_unexpected_absence(clean) is False
     assert cp.has_unexpected_absence(dirty) is True
+
+
+# --- P3.2: the retention verdict as a typed, dense record ----------------------------------------
+
+
+def test_manifest_carries_the_retention_block():
+    from vdocs.stages.normalize import retention_pure as rp
+
+    verdict = rp.score_retention(1000, 600)
+    m = cp.build_manifest(
+        "ADT/doc",
+        "# T\n\nbody\n",
+        frozenset(),
+        revisions_count=0,
+        revision_failed=False,
+        tables_count=0,
+        refs_count=1,
+        toc_count=0,
+        title_date_captured=True,
+        retention=verdict,
+    )
+    assert m["retention"] == {
+        "retention": 0.6,
+        "verdict": "REVIEW",
+        "enriched_words": 1000,
+        "kept_words": 600,
+    }
+
+
+def test_manifest_retention_block_is_optional():
+    # a caller with no verdict to record (fixtures, older bundles) must not crash the gate
+    m = cp.build_manifest(
+        "ADT/doc",
+        "# T\n\nbody\n",
+        frozenset(),
+        revisions_count=0,
+        revision_failed=False,
+        tables_count=0,
+        refs_count=1,
+        toc_count=0,
+        title_date_captured=True,
+    )
+    assert "retention" not in m
+
+
+def test_retention_verdict_reads_the_manifest():
+    from vdocs.stages.normalize import retention_pure as rp
+
+    m = {"retention": {"verdict": "QUARANTINE", "retention": 0.05}}
+    assert cp.retention_verdict(m) == rp.QUARANTINE
+    # a bundle predating the block is not silently treated as PASS — absence is UNKNOWN
+    assert cp.retention_verdict({}) == ""

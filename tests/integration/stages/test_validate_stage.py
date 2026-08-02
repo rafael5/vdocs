@@ -50,13 +50,33 @@ def _bless(ctx, stage, art, counts=None):
     )
 
 
-def _seed_consolidated_ok(ctx):
-    """One valid gold anchor bundle (body.md + a correct bundle.yaml) so validate's CONSOLIDATED
-    requirement + bundle-integrity gate pass by default; bundle-gate tests tamper it instead."""
+def _seed_consolidated_ok(ctx, *, verdict="PASS", retention=0.97, with_capture=True):
+    """One valid gold anchor bundle (body.md + the travelling capture.yaml + a correct
+    bundle.yaml) so validate's CONSOLIDATED requirement, the bundle-integrity gate and the Step-6
+    retention gate all pass by default; the gate tests vary this instead.
+
+    The retention block is what P3.3 reads: it rides in the gold bundle's capture.yaml and is
+    covered by bundle.yaml's part hashes, so the gate reads a *verified* record."""
     anchor = ctx.cfg.gold_consolidated / "ADT" / "doc"
+    capture = yaml.safe_dump(
+        {
+            "doc_id": "ADT:doc",
+            "captures": {},
+            "retention": {
+                "retention": retention,
+                "verdict": verdict,
+                "enriched_words": 100,
+                "kept_words": int(100 * retention),
+            },
+        }
+    ).encode()
+    parts = {"body.md": b"# Anchor\n"}
     cas.atomic_write(anchor / "body.md", b"# Anchor\n")
+    if with_capture:  # an unscored bundle is seeded that way, never mutated after blessing
+        parts["capture.yaml"] = capture
+        cas.atomic_write(anchor / "capture.yaml", capture)
     manifest = kbundle.build_manifest(
-        {"body.md": b"# Anchor\n"}, doc_id="ADT/doc", anchor_key="ADT:ADT:DOC",
+        parts, doc_id="ADT/doc", anchor_key="ADT:ADT:DOC",
         tool_ver=ctx.cfg.tool_ver, source_sha256=["abc"],
     )  # fmt: skip
     cas.atomic_write(anchor / "bundle.yaml", yaml.safe_dump(manifest).encode())
@@ -476,3 +496,95 @@ def test_an_intact_chain_produces_no_chain_findings(ctx):
     (result,) = Orchestrator([ValidateStage()]).run(ctx)
     assert result.counts["chain_findings"] == 0
     assert json.loads(ctx.cfg.validation_report.read_text())["chain_findings"] == []
+
+
+# --- Step 6: the content-retention gate (P3.3, audit R‑5 / [S8]) ---------------------------------
+# `score_retention` has fired since Phase 3 and `blocks_publish` has encoded the rule since then,
+# but nothing called it — so QUARANTINE documents shipped into gold under a green pipeline. These
+# are the permanent red-path tests for the wiring (a scratch-lake demonstration cannot rot).
+
+
+def _signoffs(ctx, *doc_ids, reason="measured: change-pages partial"):
+    (ctx.cfg.registries / "retention-signoff.yaml").write_text(
+        yaml.safe_dump(
+            {"signoffs": [{"doc_id": d, "reason": reason, "date": "2026-08-01"} for d in doc_ids]}
+        )
+    )
+
+
+@pytest.fixture
+def repo_registries(ctx, tmp_path):
+    """Point cfg.registries at a writable copy so a test can curate the sign-off registry."""
+    import shutil
+
+    dst = tmp_path / "registries"
+    shutil.copytree(ctx.cfg.registries, dst)
+    ctx.cfg.registries_dir = dst
+    return dst
+
+
+def test_quarantined_document_blocks_the_gate(ctx, repo_registries):
+    # the measured live case: a document whose body was over-stripped must not ship
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _bless_normalize(ctx, {"documents": 1, "refs_sidecars": 1})
+    _seed_consolidated_ok(ctx, verdict="QUARANTINE", retention=0.05)
+
+    with pytest.raises(PostflightError, match="content-retention"):
+        Orchestrator([ValidateStage()]).run(ctx)
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    (finding,) = report["retention_findings"]
+    assert finding["kind"] == "retention-quarantine" and finding["blocking"] is True
+    assert "0.05" in finding["detail"]
+
+
+def test_quarantine_cannot_be_signed_off(ctx, repo_registries):
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _bless_normalize(ctx, {"documents": 1, "refs_sidecars": 1})
+    _seed_consolidated_ok(ctx, verdict="QUARANTINE", retention=0.05)
+    _signoffs(ctx, "ADT:doc")
+
+    with pytest.raises(PostflightError, match="content-retention"):
+        Orchestrator([ValidateStage()]).run(ctx)
+
+
+def test_review_blocks_until_signed_off(ctx, repo_registries):
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _bless_normalize(ctx, {"documents": 1, "refs_sidecars": 1})
+    _seed_consolidated_ok(ctx, verdict="REVIEW", retention=0.61)
+
+    with pytest.raises(PostflightError, match="content-retention"):
+        Orchestrator([ValidateStage()]).run(ctx)
+
+    _signoffs(ctx, "ADT:doc")
+    (result,) = Orchestrator([ValidateStage()]).run(ctx)
+    assert result.counts["retention_findings"] == 0
+    assert json.loads(ctx.cfg.validation_report.read_text())["blocking"] is False
+
+
+def test_gold_bundle_with_no_retention_record_blocks(ctx, repo_registries):
+    # UNKNOWN is not PASS: a bundle that was never scored has not been cleared. Seeded unscored
+    # from the start — mutating the tree after blessing trips the upstream-drift preflight (a
+    # coarser guard) instead of the gate under test.
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _bless(ctx, "normalize", TEXT_NORMALIZED, {"documents": 1, "refs_sidecars": 1})
+    _seed_consolidated_ok(ctx, with_capture=False)
+    _seed_chain(ctx, _normalized_slugs(ctx))
+
+    with pytest.raises(PostflightError):
+        Orchestrator([ValidateStage()]).run(ctx)
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    assert any(f["kind"] == "retention-unscored" for f in report["retention_findings"])
+
+
+def test_stale_signoff_is_reported_without_blocking(ctx, repo_registries):
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _bless_normalize(ctx, {"documents": 1, "refs_sidecars": 1})
+    _seed_consolidated_ok(ctx)  # PASS
+    _signoffs(ctx, "ADT:withdrawn")
+
+    (result,) = Orchestrator([ValidateStage()]).run(ctx)
+    assert result.counts["retention_findings"] == 0  # counts the BLOCKING ones
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    assert report["blocking"] is False
+    (stale,) = report["retention_findings"]
+    assert stale["kind"] == "retention-signoff-stale" and stale["blocking"] is False
