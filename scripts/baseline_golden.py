@@ -115,6 +115,16 @@ def _section_texts(index_db: Path, section_ids: list[str]) -> dict[str, str]:
     return out
 
 
+def _live_sections(index_db: Path) -> set[str]:
+    """Every `is_latest` section id in the corpus — used to tell a retrieval failure (the answer is
+    indexed and we did not find it) from scope rot (the answer is not in the corpus at all)."""
+    conn = sqlite3.connect(f"file:{index_db}?mode=ro", uri=True)
+    try:
+        return {r[0] for r in conn.execute("SELECT section_id FROM doc_sections WHERE is_latest=1")}
+    finally:
+        conn.close()
+
+
 def _corpus_provenance(index_db: Path) -> dict[str, Any]:
     """What corpus produced this number — the fields that make a report self-identifying.
 
@@ -154,8 +164,16 @@ def evaluate(
     ndcgs: list[float] = []
     mrrs: list[float] = []
     recalls: list[float] = []
+    live_sections = _live_sections(index_db)
     for q in spec["queries"]:
         judged = {r["section_id"]: int(r["grade"]) for r in (q.get("relevant") or [])}
+        # SCOPE ROT (2026-08-02): a query whose judged sections are ALL absent from the corpus
+        # cannot score above 0 no matter how good retrieval is — it is measuring the label set, not
+        # the engine. Six of 24 queries had rotted this way (they cite XOBW/HWSC, KAAJEE and LEX,
+        # three applications the admission gate excludes as non-VistA `system_type`), and they were
+        # silently dragging the reported mean down by ~13 points. Excluded from the means and
+        # reported loudly: a zero you cannot act on is not a measurement.
+        unscoreable = bool(judged) and not any(s in live_sections for s in judged)
         raw_hits = lexical_search(index_db, q["query"], k=max(k, 10), expansions=expansions)
         # redundancy is measured over the RAW top-k chunk hits (their text); nDCG/MRR/recall over
         # the unique-section reduction.
@@ -180,7 +198,8 @@ def evaluate(
                 for i, h in enumerate(hits[:5])
             ],
         }
-        if judged:  # graded metrics only where we have labels
+        entry["unscoreable"] = unscoreable
+        if judged and not unscoreable:  # graded metrics only where the corpus CAN answer
             ndcg = _ndcg(ranked_grades, list(judged.values()), k)
             rel_ranks = [i + 1 for i, g in enumerate(ranked_grades[:k]) if g >= 1]
             mrr = 1.0 / rel_ranks[0] if rel_ranks else 0.0
@@ -204,6 +223,7 @@ def evaluate(
         # `~/data/vdocs-dev` (the old default). Every report now carries what it read.
         **_corpus_provenance(index_db),
         "labeled_queries": n,
+        "unscoreable_queries": sum(1 for e in per_query if e.get("unscoreable")),
         "total_queries": len(spec["queries"]),
         "mean_ndcg@k": round(sum(ndcgs) / n, 4) if n else None,
         "mean_mrr": round(sum(mrrs) / n, 4) if n else None,
@@ -222,7 +242,13 @@ def _render_md(result: dict[str, Any], data_dir: Path) -> str:
         "# Phase 0.4 baseline — lexical retrieval quality (golden set)",
         "",
         f"- **Lake:** `{data_dir}`  ·  **mode:** {r['mode']}  ·  **k:** {r['k']}",
-        f"- **Labeled queries:** {r['labeled_queries']} of {r['total_queries']}",
+        f"- **Labeled queries:** {r['labeled_queries']} of {r['total_queries']}"
+        + (
+            f"  ·  ⚠️ **{r['unscoreable_queries']} UNSCOREABLE** (every judged section is "
+            f"outside corpus scope — excluded from the means; re-label or retire them)"
+            if r.get("unscoreable_queries")
+            else ""
+        ),
         f"- **mean nDCG@{r['k']}:** {r['mean_ndcg@k']}",
         f"- **mean MRR:** {r['mean_mrr']}",
         f"- **mean recall@{r['k']}:** {r['mean_recall@k']}",

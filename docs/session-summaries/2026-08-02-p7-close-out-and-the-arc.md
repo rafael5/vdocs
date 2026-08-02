@@ -26,7 +26,8 @@ caught.
 | SQLite fingerprints | `rows:N` — blind to content-only change | all content hashes; 0 legacy records left |
 | gold anchors whose lineage misdescribed their own body | **615 of 615** | **0 of 615**, gated |
 | live sections carrying no indexed text | 13,916 (26.7%) | **5,469 (10.5%)**, and provably contentless |
-| golden retrieval, 24 labeled queries | 0.2770 | **0.3979 (+44%)** |
+| golden retrieval, 18 *answerable* queries | 0.3694 | **0.5305 (+44%)** |
+| golden queries that cannot score at all (cite excluded apps) | unknown | **6, now flagged** |
 
 Everything in that table is a number I re-measured on the production lake, several of them twice,
 for reasons the next section explains.
