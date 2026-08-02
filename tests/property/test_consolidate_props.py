@@ -61,6 +61,33 @@ def test_merge_history_idempotent_on_same_membership(members):
     assert cp.merge_history(fresh, fresh) == fresh
 
 
+@given(_members, st.lists(st.booleans(), min_size=8, max_size=8))
+def test_merge_history_never_discards_a_captured_body(members, changed):
+    """P5.1's thesis as a property: re-processing any subset of a group's members refreshes the
+    top-level facts, and **every** previously-captured ``body_sha256`` is still reachable — in
+    place or demoted onto ``superseded``. Nothing is discarded, ever."""
+    ordered = cp.order_members(members)
+    existing = cp.build_history("A:B:C", ordered)
+    fresh = cp.build_history(
+        "A:B:C",
+        [
+            cp.Member(**{**m.__dict__, "body_sha256": f"{m.body_sha256}-NEW"}) if flag else m
+            for m, flag in zip(ordered, changed, strict=False)
+        ],
+    )
+    merged = cp.merge_history(existing, fresh)
+
+    by_id = {e["doc_id"]: e for e in merged["members"]}
+    for old, flag in zip(existing["members"], changed, strict=False):
+        entry = by_id[old["doc_id"]]
+        expected = f"{old['body_sha256']}-NEW" if flag else old["body_sha256"]
+        assert entry["body_sha256"] == expected  # the record describes the CURRENT body
+        captured = [entry["body_sha256"], *(p["body_sha256"] for p in entry.get("superseded", []))]
+        assert old["body_sha256"] in captured  # …and the prior one is still on file
+    # a second fold of the same fresh chain adds nothing (no per-run growth)
+    assert cp.merge_history(merged, fresh) == merged
+
+
 @given(_members, _members)
 def test_merge_history_is_append_only(base_members, extra_members):
     existing = cp.build_history("A:B:C", cp.order_members(base_members))

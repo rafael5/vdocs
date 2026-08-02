@@ -6,8 +6,10 @@ orders them oldest→newest, and collapses each group to **one anchor document**
 version-free path whose ``body.md`` is the *latest* normalized body. The full lineage is captured
 into a travel-with ``history.yaml`` (ordered patch chain, each member folding its own
 ``revisions.yaml`` + a content-addressed ref to its **retained** normalized body), and every prior
-body is kept write-once in the gold body CAS (``gold/_shared/history``). Capture is **append-only**
-(§6.6): a later patch appends one entry + retains its body; nothing already captured is rewritten.
+body is kept write-once in the gold body CAS (``gold/_shared/history``). Capture is **append-only
+preserved** (§6.6): a later patch appends one entry + retains its body; a member re-processed into a
+different body adopts the fresh facts and demotes the prior ones onto its ``superseded`` list —
+nothing captured is discarded, and no entry is left describing a body the bundle no longer holds.
 This is the captured replay source for the deferred ``push --replay-history`` — the git replay is
 **not** built here.
 
@@ -39,7 +41,8 @@ class ConsolidateStage(Stage):
     requires = [TEXT_NORMALIZED, ASSETS]
     produces = [CONSOLIDATED]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
-    contract_ver = 3  # v3: anchor-alias re-grouping (anchor-aliases.yaml)
+    contract_ver = 4  # v4: history.yaml supersedes a re-processed member's stale facts (P5.1)
+    # ^ v3: anchor-alias re-grouping (anchor-aliases.yaml)
     # ^ v2: carry the latest member's tables/*.csv sidecars into the bundle (rich-reading tables P1)
 
     def __init__(self) -> None:

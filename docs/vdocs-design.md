@@ -817,9 +817,22 @@ self-describing and a later replay needs nothing else:
 
 This is the "appropriate sidecar files that travel with the anchor document": everything required
 to reconstruct history is captured next to the living doc, at document grain. Capture is
-**append-only** — a later run in which a new VDL patch becomes the latest body appends one entry to
-`history.yaml` and retains the previous body; nothing already captured is rewritten (only the
-derived `is_latest` flag re-points to the new newest member).
+**append-only preserved** — a later run in which a new VDL patch becomes the latest body appends one
+entry to `history.yaml` and retains the previous body; nothing already captured is *deleted* (only
+the derived `is_latest` flag re-points to the new newest member).
+
+Append-only is not the same as *frozen*, and the difference is the P5.1 fix. A member can be
+**re-processed under its own `doc_id`** — a registry fix or converter upgrade changes its normalized
+body with no new patch. Keeping that member's captured facts would leave the replay source
+describing a body the bundle no longer holds (measured 2026-08-01: **615 of 615** gold anchors
+carried a latest-member `body_sha256` that disagreed with their `body.md`). So on a changed
+`body_sha256` `merge_history` **adopts the fresh facts and appends the prior fact-dict to that
+entry's `superseded` list** — oldest first, flat (the demoted dict drops the derived `is_latest` and
+its own `superseded`, which would nest exponentially). Nothing is discarded: the demoted capture
+rides on in the entry, and its body is still in the retained-body CAS by construction (write-once).
+An unchanged member is untouched, so an identical re-run stays a byte-for-byte no-op — a lineage
+record that grew on every run would be its own kind of lie. `validate` Step 4 gates the resulting
+invariant (§8): the `is_latest` member's `body_sha256` **is** `sha256(body.md)`.
 
 **Concrete layout (the `consolidated` artifact).** `consolidate` reconstructs each member's
 version-group key from its normalized bundle's identity frontmatter — `anchor_key =
@@ -838,8 +851,10 @@ stable id as tiebreaks. The output tree is:
 
 `history.yaml` is `{anchor_key, member_count, members:[…]}`, each member entry carrying `doc_id`,
 `doc_slug`, `version`, `patch_id`, `official_date`, `source_sha256` (bronze provenance),
-`body_sha256` (CAS ref to the retained normalized body), `is_latest`, and the member's folded
-`revisions` (its own `revisions.yaml` entries, §6.4).
+`body_sha256` (CAS ref to the retained normalized body), `is_latest`, the member's folded
+`revisions` (its own `revisions.yaml` entries, §6.4), and — only on a member that has been
+re-processed into a different body — `superseded`, the oldest-first list of that member's prior
+fact-dicts (each the same shape minus `is_latest`/`superseded`).
 
 **Signed bundle manifest (`bundle.yaml`) — the bundle is a verifiable unit, not asserted.** Provenance
 proves the body came from the source (`history.source_sha256`) and Step-1 `capture.yaml` records that

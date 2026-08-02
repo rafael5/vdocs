@@ -3,9 +3,11 @@
 Zero I/O: the thin ``stage.py`` driver reads each normalized bundle (frontmatter + folded
 ``revisions.yaml`` + retained body sha), builds a :class:`Member` per document, and hands plain
 values here; these functions group members by ``anchor_key``, order each group oldest→newest, and
-fold the ordered chain into the ``history.yaml`` lineage. **Append-only** (§6.6): a later run in
-which a new patch becomes the latest body appends one entry and re-points the derived ``is_latest``
-flag — it never rewrites a captured member's facts.
+fold the ordered chain into the ``history.yaml`` lineage. **Append-only preserved** (§6.6): a later
+run in which a new patch becomes the latest body appends one entry and re-points the derived
+``is_latest`` flag; a member re-processed into a *different* body adopts the fresh facts and demotes
+the prior ones onto its ``superseded`` list (P5.1) — nothing captured is ever deleted, and the
+top-level record never misdescribes the body actually in the bundle.
 """
 
 from __future__ import annotations
@@ -132,22 +134,46 @@ def build_history(anchor_key: str, ordered: list[Member]) -> dict[str, Any]:
     return {"anchor_key": anchor_key, "member_count": len(members), "members": members}
 
 
+def _supersede(captured: dict[str, Any], fresh: dict[str, Any] | None) -> dict[str, Any]:
+    """One captured entry folded against its fresh counterpart — the P5.1 supersede rule.
+
+    A member whose normalized body changed (registry fix, converter upgrade) is re-processed under
+    the *same* ``doc_id``; keeping the captured facts would leave ``history.yaml`` describing a body
+    that is no longer in the bundle (audit [S9]a). So on a changed ``body_sha256`` the fresh facts
+    are adopted and the prior fact-dict is appended to this entry's ``superseded`` list — nothing is
+    deleted, it is demoted with its capture intact (and its body is still in the ``_shared/history``
+    CAS by construction, since retention is write-once).
+
+    The demoted dict carries the **captured facts only**: ``is_latest`` is a derived pointer, and a
+    nested ``superseded`` would grow exponentially — the chain is kept flat, oldest first. A member
+    absent from ``fresh`` (nothing re-processed it this run) or one whose body is unchanged is
+    returned untouched, so an identical re-run stays byte-for-byte a no-op."""
+    if fresh is None or fresh["body_sha256"] == captured["body_sha256"]:
+        return captured
+    prior = {k: v for k, v in captured.items() if k not in ("is_latest", "superseded")}
+    return {**fresh, "superseded": [*captured.get("superseded", []), prior]}
+
+
 def merge_history(existing: dict[str, Any] | None, fresh: dict[str, Any]) -> dict[str, Any]:
-    """Fold a freshly-built history into the prior one, **append-only** (§6.6).
+    """Fold a freshly-built history into the prior one, **append-only preserved** (§6.6).
 
     A new VDL patch appears as a member in ``fresh`` not present in ``existing``; the merged
-    lineage is re-ordered oldest → newest (a late arrival can be an *older* patch). Members already
-    captured keep every recorded fact unchanged — only the derived order and ``is_latest`` pointer
-    are recomputed. Re-running with the same membership is a no-op (idempotent); a first run
-    (``existing is None``) returns ``fresh``."""
+    lineage is re-ordered oldest → newest (a late arrival can be an *older* patch). A member already
+    captured keeps its recorded facts unless its **body changed**, in which case the fresh facts are
+    adopted and the prior ones are demoted onto ``superseded`` (see :func:`_supersede`) — no
+    recorded fact is ever discarded, but the top-level record always describes the current bundle.
+    Re-running with the same membership is a no-op (idempotent); a first run (``existing is None``)
+    returns ``fresh``."""
     if existing is None:
         return fresh
     seen = {e["doc_id"] for e in existing["members"]}
+    fresh_by_id = {e["doc_id"]: e for e in fresh["members"]}
     appended = [e for e in fresh["members"] if e["doc_id"] not in seen]
+    refreshed = [_supersede(e, fresh_by_id.get(e["doc_id"])) for e in existing["members"]]
     # A late arrival can be an OLDER patch (a broadened selection back-fills history), so the
     # merged list is re-ordered with the same key as order_members — never flag the mere last
-    # arrival as latest. Facts stay append-only; only order and the derived pointer are recomputed.
-    members = sorted([*existing["members"], *appended], key=_entry_sort_key)
+    # arrival as latest. Only order and the derived pointer are recomputed here.
+    members = sorted([*refreshed, *appended], key=_entry_sort_key)
     last = len(members) - 1
     members = [{**e, "is_latest": (i == last)} for i, e in enumerate(members)]
     return {"anchor_key": fresh["anchor_key"], "member_count": len(members), "members": members}

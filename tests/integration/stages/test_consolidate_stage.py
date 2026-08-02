@@ -171,6 +171,40 @@ def test_consolidate_appends_a_later_patch(ctx):
     assert (ctx.cfg.history_bodies / f"{hist['members'][0]['body_sha256']}.md").is_file()
 
 
+def test_consolidate_supersedes_a_re_normalized_member(ctx):
+    # P5.1 measure of done: the SAME member is re-normalized into a different body (a registry fix
+    # / converter upgrade — no new patch). The lineage must describe the body now in the bundle and
+    # keep the prior capture, rather than silently carrying the stale sha the audit measured.
+    _seed_two_patches(ctx)
+    orch = Orchestrator([ConsolidateStage()])
+    orch.run(ctx)
+    anchor = ctx.cfg.gold_consolidated / "CPRS" / "or_ig"
+    stale_sha = yaml.safe_load((anchor / "history.yaml").read_text())["members"][1]["body_sha256"]
+
+    _seed_member(
+        ctx,
+        slug="or_3_566_ig",
+        patch_id="OR*3.0*566",
+        body="# IG\n\nv566 latest, re-normalized\n",
+        date="2022-06",
+    )
+    _bless(ctx, "normalize", TEXT_NORMALIZED)  # the input tree changed → re-fingerprint
+    orch.run(ctx, force=True)
+
+    hist = yaml.safe_load((anchor / "history.yaml").read_text())
+    assert hist["member_count"] == 2  # a re-processed member is not a new member
+    latest = hist["members"][1]
+    # the truthfulness property P5.2 gates: the recorded sha IS the bundle's body
+    assert latest["body_sha256"] == hashlib.sha256((anchor / "body.md").read_bytes()).hexdigest()
+    assert latest["body_sha256"] != stale_sha
+    # nothing discarded: the prior capture is demoted, and its body is still in the CAS
+    assert [p["body_sha256"] for p in latest["superseded"]] == [stale_sha]
+    assert "v566 latest\n" in (ctx.cfg.history_bodies / f"{stale_sha}.md").read_text()
+    # the member nobody re-processed is untouched — no spurious supersede
+    assert "superseded" not in hist["members"][0]
+    assert hist["members"][0]["patch_id"] == "OR*3*190"
+
+
 def test_consolidate_member_without_revisions_sidecar(ctx):
     # a heading-less doc gets no revisions.yaml — it still consolidates (revisions=[], no date)
     _seed_member(

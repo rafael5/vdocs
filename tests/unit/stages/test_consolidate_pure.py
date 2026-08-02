@@ -237,3 +237,74 @@ def test_merge_history_is_idempotent_on_unchanged_inputs():
     fresh = cp.build_history("CPRS:OR:RN", cp.order_members([a, b]))
     # re-running with the same membership rewrites nothing and adds nothing
     assert cp.merge_history(fresh, fresh) == fresh
+
+
+# --- merge_history SUPERSEDES (P5.1): a re-processed member's facts are refreshed, the prior
+# --- capture demoted onto `superseded` — append-only PRESERVED, never append-only STALE.
+
+
+def test_merge_history_adopts_fresh_facts_and_demotes_the_prior_capture():
+    old = _member(doc_slug="v1", patch_id="DG*5.3*1", source_sha256="s1", body_sha256="b1")
+    existing = cp.build_history("CPRS:OR:RN", [old])
+    # the same member re-normalized: a new body (registry fix / converter upgrade) and, with it,
+    # the freshly-parsed revision facts the audit [S9]a names as going stale alongside the sha
+    fresh_member = _member(
+        doc_slug="v1",
+        patch_id="DG*5.3*1",
+        source_sha256="s1",
+        body_sha256="b1-NEW",
+        revisions=[{"date": "2024-02", "change": "re-parsed"}],
+    )
+    fresh = cp.build_history("CPRS:OR:RN", [fresh_member])
+
+    merged = cp.merge_history(existing, fresh)
+    (entry,) = merged["members"]
+    assert entry["body_sha256"] == "b1-NEW"  # the lineage now describes the bundle on disk
+    assert entry["revisions"] == [{"date": "2024-02", "change": "re-parsed"}]
+    assert entry["is_latest"] is True
+    # nothing discarded: the prior capture rides on, intact, one level down
+    (prior,) = entry["superseded"]
+    assert prior["body_sha256"] == "b1"
+    assert prior["revisions"] == []
+    # the demoted dict carries captured FACTS only — the derived pointer and the list itself
+    # (which would nest exponentially) are not facts
+    assert "is_latest" not in prior and "superseded" not in prior
+
+
+def test_merge_history_unchanged_member_gains_no_superseded_key():
+    a = _member(doc_slug="v1", patch_id="DG*5.3*1", body_sha256="b1")
+    fresh = cp.build_history("CPRS:OR:RN", [a])
+    merged = cp.merge_history(fresh, fresh)
+    assert merged == fresh  # byte-identical output — a lineage that grows every run is its own lie
+    assert "superseded" not in merged["members"][0]
+
+
+def test_merge_history_stacks_successive_supersedes_oldest_first():
+    def _hist(sha):
+        return cp.build_history(
+            "CPRS:OR:RN", [_member(doc_slug="v1", patch_id="DG*5.3*1", body_sha256=sha)]
+        )
+
+    merged = cp.merge_history(_hist("b1"), _hist("b2"))
+    merged = cp.merge_history(merged, _hist("b3"))
+    (entry,) = merged["members"]
+    assert entry["body_sha256"] == "b3"
+    # ORDER: append-only — each demotion is appended, so the list reads oldest → newest, the
+    # same direction as the member chain itself (and the file only ever grows at the tail).
+    assert [p["body_sha256"] for p in entry["superseded"]] == ["b1", "b2"]
+    assert all("superseded" not in p for p in entry["superseded"])  # no nesting
+
+
+def test_merge_history_refreshes_a_non_latest_member_too():
+    # the re-processed member need not be the newest: an older patch's body can be re-normalized
+    a = _member(doc_slug="v1", patch_id="DG*5.3*1", body_sha256="a1")
+    b = _member(doc_slug="v2", patch_id="DG*5.3*2", body_sha256="b1")
+    existing = cp.build_history("CPRS:OR:RN", cp.order_members([a, b]))
+    a2 = _member(doc_slug="v1", patch_id="DG*5.3*1", body_sha256="a1-NEW")
+    fresh = cp.build_history("CPRS:OR:RN", cp.order_members([a2, b]))
+
+    merged = cp.merge_history(existing, fresh)
+    assert [e["body_sha256"] for e in merged["members"]] == ["a1-NEW", "b1"]
+    assert [p["body_sha256"] for p in merged["members"][0]["superseded"]] == ["a1"]
+    assert "superseded" not in merged["members"][1]
+    assert [e["is_latest"] for e in merged["members"]] == [False, True]
