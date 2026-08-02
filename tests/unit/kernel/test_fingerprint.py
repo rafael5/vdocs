@@ -117,3 +117,54 @@ def test_sqlite_fingerprint_strong_detects_single_cell_change(tmp_path):
     _make_tie_db(a, [("g", "1"), ("g", "2")])
     _make_tie_db(b, [("g", "1"), ("g", "3")])  # one cell differs
     assert fp.sqlite_fingerprint(a, "t", verify=True) != fp.sqlite_fingerprint(b, "t", verify=True)
+
+
+# --- P4.1: the cheap SQLite path stops lying (audit R‑1 / finding 5a) -----------------------------
+# `rows:<count>` cannot see a content-only change, so a consumer's SKIP_IF_UNCHANGED preflight
+# decided "nothing changed" over a table whose every cell may have changed. Measured live: the
+# whole contracted lake strong-hashes in ~1.1s (largest table 203,272 rows → 0.33s), so there is
+# no cost argument for keeping a fingerprint that cannot do its job.
+
+
+def test_cheap_sqlite_fingerprint_detects_a_same_rowcount_cell_change(tmp_path):
+    a, b = tmp_path / "a.db", tmp_path / "b.db"
+    _make_db(a, [(1, "a"), (2, "b")])
+    _make_db(b, [(1, "a"), (2, "CHANGED")])  # same row count, one cell differs
+    assert fp.sqlite_fingerprint(a, "t") != fp.sqlite_fingerprint(b, "t")
+
+
+def test_cheap_and_strong_sqlite_fingerprints_agree(tmp_path):
+    # one signature, not two: `--verify` keeps its meaning for files/trees only.
+    db = tmp_path / "x.db"
+    _make_db(db, [(1, "a"), (2, "b")])
+    assert fp.sqlite_fingerprint(db, "t") == fp.sqlite_fingerprint(db, "t", verify=True)
+
+
+def test_cheap_sqlite_fingerprint_is_row_order_independent(tmp_path):
+    a, b = tmp_path / "a.db", tmp_path / "b.db"
+    _make_tie_db(a, [("g", "1"), ("g", "2")])
+    _make_tie_db(b, [("g", "2"), ("g", "1")])
+    assert fp.sqlite_fingerprint(a, "t") == fp.sqlite_fingerprint(b, "t")
+
+
+def test_sqlite_fingerprint_distinguishes_null_from_empty_string(tmp_path):
+    a, b = tmp_path / "a.db", tmp_path / "b.db"
+    _make_db(a, [(1, None)])
+    _make_db(b, [(1, "")])
+    assert fp.sqlite_fingerprint(a, "t") != fp.sqlite_fingerprint(b, "t")
+
+
+def test_sqlite_fingerprint_no_longer_emits_the_rows_format(tmp_path):
+    # the legacy format is what P4.2 migrates FROM; nothing may still produce it
+    db = tmp_path / "x.db"
+    _make_db(db, [(1, "a")])
+    assert not fp.sqlite_fingerprint(db, "t").startswith("rows:")
+
+
+def test_is_legacy_sqlite_fingerprint_recognises_only_the_old_format():
+    assert fp.is_legacy_sqlite_fingerprint("rows:0") is True
+    assert fp.is_legacy_sqlite_fingerprint("rows:203272") is True
+    assert fp.is_legacy_sqlite_fingerprint("rows:") is False
+    assert fp.is_legacy_sqlite_fingerprint("rows:12x") is False
+    assert fp.is_legacy_sqlite_fingerprint("a" * 64) is False
+    assert fp.is_legacy_sqlite_fingerprint("") is False

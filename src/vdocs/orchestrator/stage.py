@@ -17,7 +17,9 @@ from datetime import UTC, datetime
 import structlog
 
 from vdocs.config import Settings
-from vdocs.models.artifact import ArtifactContract
+from vdocs.kernel import db
+from vdocs.kernel import fingerprint as fp
+from vdocs.models.artifact import ArtifactContract, Kind
 from vdocs.models.stage import (
     Idempotency,
     PostflightResult,
@@ -59,6 +61,39 @@ class StageContext:
     # a heartbeat sink for long stages (``fetch``/``convert``) — the orchestrator binds it to the
     # run reporter so the operator sees progress instead of a silent loop; no-op by default.
     progress: Callable[[str], None] = field(default=_noop_progress)
+
+
+def _migrated_sqlite_fingerprint(contract: ArtifactContract, recorded: str, cfg: Settings) -> bool:
+    """Whether a recorded/current mismatch is only the **P4.1 format change**, not real drift.
+
+    P4.1 made ``sqlite_fingerprint`` a content hash, so every value recorded by an earlier run is
+    in a format the new one cannot equal. Reading that as upstream drift would FAIL every consumer
+    on the first run after the change (13 recorded values on the live lake). Accept it once — the
+    run re-records the new format in postflight — but **only when the old format's own signal
+    still agrees**: the row count it encoded must match the table's row count today. A legacy
+    record whose count no longer matches describes a change the retired fingerprint *could* see,
+    and swallowing that would trade a false alarm for a silent one (P4.2).
+
+    Delete this once no lake carries a ``rows:`` record (one release).
+    """
+    if contract.kind is not Kind.SQLITE_TABLE or not fp.is_legacy_sqlite_fingerprint(recorded):
+        return False
+    resolved = contract.locate(cfg)
+    assert resolved.path is not None
+    conn = db.connect(resolved.path, read_only=True)
+    try:
+        (count,) = conn.execute(f"SELECT COUNT(*) FROM {contract.table}").fetchone()  # noqa: S608
+    finally:
+        conn.close()
+    if recorded != f"rows:{count}":
+        return False
+    log.info(
+        "sqlite-fingerprint-format-migrated",
+        artifact=contract.key,
+        recorded=recorded,
+        detail="pre-P4.1 row-count fingerprint accepted once; re-recorded as a content hash",
+    )
+    return True
 
 
 class PostflightError(RuntimeError):
@@ -146,7 +181,10 @@ class Stage(ABC):
                     f"upstream {c.produced_by} has not completed ok for scope {ctx.scope!r}",
                     remediation=f"Run: vdocs {c.produced_by}",
                 )
-            if up.outputs_fp.get(c.key) != c.fingerprint(cfg, verify=ctx.verify):
+            recorded = up.outputs_fp.get(c.key, "")
+            if recorded != c.fingerprint(cfg, verify=ctx.verify):
+                if _migrated_sqlite_fingerprint(c, recorded, cfg):
+                    continue
                 return PreflightResult.fail(
                     f"{c.key} changed since {c.produced_by} produced it",
                     remediation=f"re-run {c.produced_by}",
@@ -164,8 +202,18 @@ class Stage(ABC):
             # A produces[] shape change is signalled by a contract_ver bump; it must re-run
             # even when inputs are unchanged (§7.3 step 2; design.md:786).
             same_contract = prior.contract_ver == self.contract_ver
+            # P4.2: a stage whose OWN record is still in the retired `rows:<count>` format must
+            # re-run once, so the migration actually migrates. Skipping here would leave the
+            # legacy value in place forever and turn "accept once" into permanent leniency for
+            # every consumer of this artifact.
+            legacy_record = any(
+                fp.is_legacy_sqlite_fingerprint(v) for v in prior.outputs_fp.values()
+            )
             if same_contract and prior.inputs_fp == self._input_fps(ctx) and produces_ok:
-                return PreflightResult.skip("inputs unchanged")
+                if legacy_record:
+                    log.info("sqlite-fingerprint-format-rerun", stage=self.name)
+                else:
+                    return PreflightResult.skip("inputs unchanged")
         return PreflightResult.proceed()
 
     # --- generic postflight (§7.3) ---
