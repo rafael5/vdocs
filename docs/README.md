@@ -23,6 +23,7 @@ Documentation here is classified by **lifecycle state, not topic**:
 | [`prompts/`](prompts/) | Kickoff prompts for **un-executed** work only | until the work lands |
 | [`adr/`](adr/) | Numbered architecture decision records | permanent |
 | [`releases/`](releases/) | Release manifests/records for shipped data bundles | permanent |
+| [`session-summaries/`](session-summaries/) | The narrative record of Claude working sessions — what was attempted, what happened, what was got wrong; **frozen** (corrections go in later entries) | append-only |
 | [`historical/`](historical/) | Closed workstreams, dated snapshots, superseded designs — kept for the *why*, never updated | archive |
 
 ## Current state (2026-07-04)
