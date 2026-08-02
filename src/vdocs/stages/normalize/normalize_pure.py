@@ -264,6 +264,30 @@ class LegacyTocEntry:
     anchor: str
 
 
+def parse_plain_toc_entry(line: str) -> LegacyTocEntry | None:
+    """Parse the **anchorless** paper form of a legacy TOC entry — ``Introduction .......... 1``,
+    ``Glossary 113`` — into ``(title, page, anchor="")``, or ``None`` when there is no trailing
+    page number.
+
+    P3.1: the pre-anchor VistA manuals Pandoc converts emit exactly this shape (no ``](#…)`` link
+    survives), and the TOC strip drops those lines like any other inside a confirmed TOC region.
+    Without this parser they left the body with **no record at all** — a capture-before-strip
+    violation (§6.4/§6.7) invisible to every other net (the typed-capture residue scan only asks
+    whether a legacy-TOC *heading* survived, and the strip removed that too), and the measured root
+    cause of both live QUARANTINE documents. Trusted **only inside a confirmed TOC block** (like the
+    loose form), never globally: a bare "Title 12" line is ambiguous with ordinary prose."""
+    s = _TOC_PREFIX_RE.sub("", line.strip())
+    if _TOC_TARGET_RE.search(s):
+        return None  # an anchored entry — parse_legacy_toc_entry owns the linked dialects
+    # drop the dot/space leader ("....", " . . . ") that separates the title from its page number
+    s = re.sub(r"[.\s]{2,}(?=" + _PAGE + r"$)", " ", s, flags=re.IGNORECASE)
+    m = _TRAILING_PAGE_RE.search(s)
+    if m is None:
+        return None
+    title = strip_tags(s[: m.start()]).strip().strip(".").strip("*_ ").strip()
+    return LegacyTocEntry(title, m.group(1), "") if title else None
+
+
 def parse_legacy_toc_entry(line: str) -> LegacyTocEntry | None:
     """Parse a legacy TOC entry line into ``(title, page, anchor)`` across every corpus dialect, or
     ``None`` when the line is not an entry. The page is the inner ``[n]`` bracket when present
@@ -290,6 +314,21 @@ def parse_legacy_toc_entry(line: str) -> LegacyTocEntry | None:
 
 def _is_loose_toc_entry(line: str) -> bool:
     return _LOOSE_TOC_ENTRY_RE.match(line) is not None
+
+
+def _capture_toc_entry(line: str) -> LegacyTocEntry | None:
+    """The capture half of the strip/capture pair (P3.1): parse a TOC-region line into a
+    :class:`LegacyTocEntry` in **either** dialect — anchored (``parse_legacy_toc_entry``) or the
+    anchorless paper form (``parse_plain_toc_entry``) — or ``None`` for a blank/leader line that
+    carries no entry.
+
+    The invariant this exists to hold: **anything the strip drops that is an entry is captured.**
+    Keeping the two halves in one function is what stops them drifting apart again — the previous
+    split (drop every region line, capture only linked ones) deleted ~1,000 words of paper TOC per
+    affected document with no record."""
+    if _is_loose_toc_entry(line) and (e := parse_legacy_toc_entry(line)) is not None:
+        return e
+    return parse_plain_toc_entry(line)
 
 
 def _is_toc_nav_line(line: str) -> bool:
@@ -372,7 +411,7 @@ def _scan_legacy_toc(
                 if has_prose and not _is_toc_nav_line(lines[j]):
                     break  # first body-prose line ends the bounded TOC region
                 drop.add(j)
-                if _is_loose_toc_entry(lines[j]) and (e := parse_legacy_toc_entry(lines[j])):
+                if (e := _capture_toc_entry(lines[j])) is not None:
                     entries.append(e)
                 j += 1
             i = j
@@ -399,7 +438,7 @@ def _scan_legacy_toc(
                     break
                 if _is_loose_toc_entry(lines[j]):
                     drop.add(j)
-                    if (e := parse_legacy_toc_entry(lines[j])) is not None:
+                    if (e := _capture_toc_entry(lines[j])) is not None:
                         entries.append(e)
                     j += 1
                     continue
@@ -627,9 +666,12 @@ def normalize_body(
         a = anchor.lstrip("#")
         return a in slugs or a in recovered
 
+    # Only an entry that CARRIED an anchor can be unresolved: an anchorless paper entry
+    # (``Introduction .......... 1``) never pointed anywhere, so counting it would manufacture a
+    # fidelity flag out of printed pagination (P3.1).
     toc_unresolved = [
         a
-        for a in correlate_legacy_toc([e.anchor for e in toc_entries], headings)
+        for a in correlate_legacy_toc([e.anchor for e in toc_entries if e.anchor], headings)
         if a.lstrip("#") not in recovered
     ]
     legacy_toc = [

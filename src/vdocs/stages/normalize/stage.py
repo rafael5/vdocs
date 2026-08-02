@@ -23,6 +23,7 @@ Recognised bundle sidecars written next to ``body.md`` (the ``TEXT_NORMALIZED`` 
 from __future__ import annotations
 
 import json
+import re
 
 import structlog
 import yaml
@@ -152,7 +153,18 @@ class NormalizeStage(Stage):
                 body, anchor_map = nz.normalize_body(
                     body, phrases, doc_id=str(rel), boilerplate=boilerplate, toc_titles=toc_titles
                 )
-                retention = rtn.score_retention(pre_norm_words, len(body.split()))
+                # Credit what `normalize_body` RELOCATED rather than deleted: the legacy TOC it
+                # captured verbatim into toc.yaml and the boilerplate it REFERENCEd to
+                # gold/_shared. Only IN-WINDOW relocations may be credited — revisions and tables
+                # left the body before `pre_norm_words` was taken, so they are not in the
+                # denominator and crediting them would inflate the score (P3.1; see retention_pure).
+                relocated = rtn.relocated_word_count(
+                    legacy_toc=anchor_map.legacy_toc,
+                    boilerplate_keys=_referenced_boilerplate_keys(body, boilerplate),
+                )
+                retention = rtn.score_retention(
+                    pre_norm_words, len(body.split()), relocated_words=relocated
+                )
                 if retention.verdict != rtn.PASS:
                     doc_flags.append(f"low-retention:{retention.verdict}:{retention.retention:.2f}")
                     n_low_retention += 1
@@ -275,6 +287,20 @@ def _load_boilerplate(path, cls):  # type: ignore[no-untyped-def]
     return tuple(
         cls(id=e["id"], label=e["label"], key=e["key"]) for e in (data.get("boilerplate") or [])
     )
+
+
+_BOILERPLATE_REF_RE = re.compile(r"\]\(_shared/boilerplate/([^)]+)\.md\)")
+
+
+def _referenced_boilerplate_keys(body, registry):  # type: ignore[no-untyped-def]
+    """The registry ``key`` of every curated boilerplate block this body now REFERENCEs (P3.1).
+
+    ``subtract_boilerplate`` replaces a matched block with a link to the shared canonical copy, so
+    the block's words left the body but are still reachable from it — a relocation, not a loss. The
+    registry ``key`` *is* the whitespace-collapsed block it replaced, so its length is the block's.
+    """
+    by_id = {b.id: b.key for b in registry}
+    return [key for bid in _BOILERPLATE_REF_RE.findall(body) if (key := by_id.get(bid))]
 
 
 def _load_templates(path, cls):  # type: ignore[no-untyped-def]

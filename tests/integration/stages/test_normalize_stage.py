@@ -622,3 +622,49 @@ def test_normalize_capture_flags_silent_detector_miss(ctx):
     )
     assert manifest["captures"]["revisions"]["outcome"] == "absent-unexpected"
     assert manifest["residue"]["revision_heading_present"] is True
+
+
+def test_legacy_toc_relocation_is_credited_not_penalised(ctx):
+    """P3.1: a doc that is mostly a page-numbered legacy TOC must not read as over-stripped.
+
+    The TOC leaves the body but is captured verbatim into ``toc.yaml`` — a relocation, not a
+    loss, and one that happens *inside* the retention window (unlike tables/revisions, which are
+    lifted before the baseline is taken and so were never in the denominator)."""
+    import yaml
+
+    entries = "\n".join(f"Chapter {i} About Something .......... {i}" for i in range(1, 60))
+    enriched = frontmatter.emit(
+        {"title": "Title Page Doc", "app_code": "ADT", "tool_ver": "0.1.0"},
+        f"# Title Page Doc\n\n## Table of Contents\n\n{entries}\n\n"
+        "## Preface\n\nA short preface.\n",
+    )
+    cas.atomic_write(ctx.cfg.silver_enriched / "ADT" / "tp_doc" / "body.md", enriched.encode())
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(
+        json.dumps(
+            raw_index(
+                {"ADT:tp_doc": {"sha256": _SHA, "app_code": "ADT", "doc_slug": "tp_doc",
+                                "ext": "docx"}}
+            )
+        )
+    )  # fmt: skip
+    for stage, art in (("enrich", TEXT_ENRICHED), ("fetch", RAW_INDEX)):
+        ctx.state.record(
+            StageRun(
+                stage=stage, scope="", status="ok", started_at="t", finished_at="t",
+                inputs_fp={}, outputs_fp={art.key: art.fingerprint(ctx.cfg)}, counts={},
+                contract_ver=1, tool_ver=ctx.cfg.tool_ver,
+            )
+        )  # fmt: skip
+
+    (result,) = Orchestrator([NormalizeStage()]).run(ctx)
+    assert result.status == "ok"
+
+    bundle = ctx.cfg.silver_normalized / "ADT" / "tp_doc"
+    captured = yaml.safe_load((bundle / "toc.yaml").read_text())
+    assert len(captured["entries"]) >= 50  # the legacy TOC really was captured, not just deleted
+    assert result.counts["low_retention"] == 0  # …so the doc is not a false over-strip
+    flags = bundle / "flags.yaml"
+    if flags.is_file():
+        recorded = yaml.safe_load(flags.read_text())["flags"]
+        assert not [f for f in recorded if str(f).startswith("low-retention")]

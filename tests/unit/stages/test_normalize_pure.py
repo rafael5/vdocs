@@ -602,3 +602,52 @@ def test_curated_boilerplate_registry_is_well_formed():
         assert e["status"] == "approved"
         assert e["key"] == nz.block_key(e["text"])  # the match key matches its canonical text
         assert e["id"].startswith("bp-")
+
+
+# --- P3.1: capture-before-strip for ANCHORLESS legacy-TOC entries ---------------------------------
+# MEASURED on the live lake 2026-08-01: the drop set was broader than the capture set. Inside a
+# confirmed TOC region every line is dropped, but only lines carrying an `](#anchor)` link were
+# parsed into toc.yaml — so the old paper-style `Title .......... 12` entries (what Pandoc emits
+# for pre-anchor VistA manuals) were DELETED WITH NO RECORD. That is a capture-before-strip
+# violation (§6.4/§6.7) that no other net can see: the typed-capture residue scan only asks
+# whether a legacy-TOC *heading* survived, and the strip removed that too. It was the root cause
+# of both live QUARANTINE documents (PRCA/icd_10_um_tp_4_5_281, PSD/psd_3_p69_um_supv_cp).
+
+
+def test_legacy_toc_entries_capture_plain_dotted_entries():
+    body = (
+        "# Table of Contents\n\n"
+        "Introduction .......... 1\n\n"
+        "Menu Summary .......... 3\n\n"
+        "Glossary 113\n\n"
+        "# Preface\n\nreal prose\n"
+    )
+    entries = nz.legacy_toc_entries(body, _TOC_TITLES)
+    assert [(e.title, e.page, e.anchor) for e in entries] == [
+        ("Introduction", "1", ""),
+        ("Menu Summary", "3", ""),
+        ("Glossary", "113", ""),
+    ]
+
+
+def test_legacy_toc_capture_covers_every_dropped_entry_line():
+    """The invariant: a page-numbered line the strip drops must appear in the capture."""
+    body = (
+        "# Contents\n\n"
+        "[Linked [2](#linked)](#linked)\n\n"
+        "Unlinked Section .......... 4\n\n"
+        "# Linked\n\nx\n"
+    )
+    stripped = nz.strip_legacy_toc(body, _TOC_TITLES)
+    entries = nz.legacy_toc_entries(body, _TOC_TITLES)
+    assert "Unlinked Section" not in stripped  # it did leave the body …
+    assert "Unlinked Section" in [e.title for e in entries]  # … so it must be on the record
+
+
+def test_anchorless_legacy_entry_is_not_reported_unresolved():
+    # an entry that never carried an anchor cannot be a severed target — reporting it as
+    # `legacy-toc-unresolved` would manufacture a fidelity flag out of paper pagination.
+    body = "# Contents\n\nIntroduction .......... 1\n\n# Introduction\n\nreal\n"
+    _, amap = nz.normalize_body(body, frozenset(), toc_titles=_TOC_TITLES)
+    assert [e["title"] for e in amap.legacy_toc] == ["Introduction"]
+    assert amap.toc_unresolved == []

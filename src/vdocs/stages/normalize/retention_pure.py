@@ -13,6 +13,7 @@ already has.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 PASS = "PASS"
@@ -52,6 +53,36 @@ def score_retention(
     else:
         verdict = QUARANTINE
     return RetentionVerdict(retention, verdict, enriched_words, kept)
+
+
+def relocated_word_count(
+    *,
+    legacy_toc: Sequence[Mapping[str, object]] = (),
+    boilerplate_keys: Sequence[str] = (),
+) -> int:
+    """Words that LEFT the body inside the retention window but were **relocated** to a referent
+    the body still points at — the ``relocated_words`` credit for :func:`score_retention`.
+
+    Only in-window relocations may be counted. ``normalize`` takes its retention baseline *after*
+    lifting the revision apparatus and the qualifying tables (``stage.py``: ``pre_norm_words``),
+    so those words are **already absent from the denominator**; crediting them would raise the
+    numerator against a denominator that never counted them and inflate the score — measured
+    2026-08-01 on the live lake: it turns a document that truly retained 57% into a PASS at 0.87.
+    What ``normalize_body`` itself relocates is:
+
+    * the **legacy in-body TOC** → ``toc.yaml`` (each entry's title + its printed page number,
+      captured verbatim before the strip, §6.7);
+    * curated **boilerplate** → a REFERENCE link to ``gold/_shared/boilerplate/<id>.md`` (§9.6);
+      the registry ``key`` is the whitespace-collapsed block it replaced, so its length is the
+      block's length.
+    """
+    words = 0
+    for entry in legacy_toc:
+        words += len(str(entry.get("title", "")).split())
+        if str(entry.get("page", "")).strip():
+            words += 1  # the printed page number left the body with its entry
+    words += sum(len(key.split()) for key in boilerplate_keys)
+    return words
 
 
 def blocks_publish(verdict: str, *, signed_off: bool = False) -> bool:
