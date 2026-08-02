@@ -18,7 +18,10 @@ already records but nothing read — the per-bundle ``capture.yaml`` typed captu
      is expected, not a defect — the dead-anchor hard floor is for TOC entries + the heading tree.
   4. **bundle integrity** (Step 4, §5.3/§6.6) — each gold anchor bundle must carry a ``bundle.yaml``
      signed manifest whose recorded part hashes + ``bundle_digest`` match the parts on disk; a
-     tamper, a missing/extra part, or a bundle with no manifest blocks (a *verifiable* unit).
+     tamper, a missing/extra part, or a bundle with no manifest blocks (a *verifiable* unit). Plus
+     (P5.2) the one thing that manifest structurally cannot see: its ``history.yaml`` must not
+     *misdescribe* those parts — the ``is_latest`` member's ``body_sha256`` is checked against the
+     bundle's own ``body.md`` (``stale-lineage``), so the designated replay source stays true.
 
 It always (re)writes ``reports/validation/verification.json`` (the findings + the count baseline)
 and sets its own ``ok`` via the deep gate. ``ALWAYS_RERUN`` — a gate re-checks every time. Pure
@@ -48,6 +51,7 @@ from vdocs.kernel import registry as kregistry
 from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
 from vdocs.stages.validate import chain_pure as ch
+from vdocs.stages.validate import lineage_pure as lin
 from vdocs.stages.validate import reconcile_pure as rc
 from vdocs.stages.validate import refs_pure as rp
 from vdocs.stages.validate import retention_pure as rtn
@@ -307,7 +311,9 @@ def _verify_bundles(consolidated_root) -> list[dict]:  # type: ignore[no-untyped
 
     For each bundle: read the manifest, read its on-disk parts (excluding the manifest itself), and
     recompute hashes + digest. A bundle with no ``bundle.yaml`` is ``unmanifested`` — it cannot be
-    verified, so it is itself a finding. Returns flat finding dicts (empty ⇒ all verified)."""
+    verified, so it is itself a finding. Each bundle's lineage is checked here too (P5.2,
+    ``lineage_pure``) — independently of the manifest, since a stale ``history.yaml`` is a part that
+    hashes correctly while lying. Returns flat finding dicts (empty ⇒ all verified)."""
     findings: list[dict] = []
     if not consolidated_root.is_dir():
         return findings
@@ -321,6 +327,20 @@ def _verify_bundles(consolidated_root) -> list[dict]:  # type: ignore[no-untyped
             rel_part = p.relative_to(bdir).as_posix()
             if p.is_file() and rel_part != kbundle.MANIFEST_NAME:
                 on_disk[rel_part] = p.read_bytes()
+        # LINEAGE (Step 4 extension, P5.2): the manifest can only prove the parts hash to what it
+        # says — including a `history.yaml` that misdescribes them. Checked independently, from the
+        # two parts themselves, so a lying lineage cannot ride a green manifest (§6.6, [S9]a).
+        findings.extend(
+            {
+                "kind": f.kind,
+                "bundle": rel,
+                "path": "history.yaml",
+                "detail": f"{f.doc_id or rel}: {f.detail}",
+            }
+            for f in lin.check_lineage(
+                _load_yaml(bdir / "history.yaml"), on_disk.get("body.md", b"")
+            )
+        )
         manifest_path = bdir / kbundle.MANIFEST_NAME
         if not manifest_path.is_file():
             findings.append(

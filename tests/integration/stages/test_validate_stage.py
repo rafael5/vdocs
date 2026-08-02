@@ -9,6 +9,7 @@ severed cross-ref (ref resolution), and a cross-run count drop.
 
 from __future__ import annotations
 
+import hashlib
 import json
 
 import pytest
@@ -50,13 +51,42 @@ def _bless(ctx, stage, art, counts=None):
     )
 
 
-def _seed_consolidated_ok(ctx, *, verdict="PASS", retention=0.97, with_capture=True):
-    """One valid gold anchor bundle (body.md + the travelling capture.yaml + a correct
-    bundle.yaml) so validate's CONSOLIDATED requirement, the bundle-integrity gate and the Step-6
-    retention gate all pass by default; the gate tests vary this instead.
+def _history_yaml(body: bytes, *, sha=None):
+    """A truthful one-member `history.yaml` for a gold bundle — the latest member records the sha of
+    the body beside it, which is exactly what the P5.2 lineage check verifies. ``sha`` overrides it
+    to stage the stale-lineage red path."""
+    return yaml.safe_dump(
+        {
+            "anchor_key": "ADT:ADT:DOC",
+            "member_count": 1,
+            "members": [
+                {
+                    "doc_id": "ADT:doc",
+                    "doc_slug": "doc",
+                    "patch_id": "ADT*1.0*1",
+                    "official_date": "2024-01",
+                    "source_sha256": "abc",
+                    "body_sha256": sha or hashlib.sha256(body).hexdigest(),
+                    "is_latest": True,
+                    "revisions": [],
+                }
+            ],
+        }
+    ).encode()
+
+
+def _seed_consolidated_ok(
+    ctx, *, verdict="PASS", retention=0.97, with_capture=True, hist_sha=None, history=None
+):
+    """One valid gold anchor bundle (body.md + history.yaml + the travelling capture.yaml + a
+    correct bundle.yaml) so validate's CONSOLIDATED requirement, the bundle-integrity gate, the
+    P5.2 lineage check and the Step-6 retention gate all pass by default; the gate tests vary this
+    instead.
 
     The retention block is what P3.3 reads: it rides in the gold bundle's capture.yaml and is
-    covered by bundle.yaml's part hashes, so the gate reads a *verified* record."""
+    covered by bundle.yaml's part hashes, so the gate reads a *verified* record. ``hist_sha`` stales
+    the lineage **before** bundle.yaml is built, so the manifest stays green and the lineage check
+    is the only thing that can fire."""
     anchor = ctx.cfg.gold_consolidated / "ADT" / "doc"
     capture = yaml.safe_dump(
         {
@@ -70,8 +100,10 @@ def _seed_consolidated_ok(ctx, *, verdict="PASS", retention=0.97, with_capture=T
             },
         }
     ).encode()
-    parts = {"body.md": b"# Anchor\n"}
+    history = history or _history_yaml(b"# Anchor\n", sha=hist_sha)
+    parts = {"body.md": b"# Anchor\n", "history.yaml": history}
     cas.atomic_write(anchor / "body.md", b"# Anchor\n")
+    cas.atomic_write(anchor / "history.yaml", history)
     if with_capture:  # an unscored bundle is seeded that way, never mutated after blessing
         parts["capture.yaml"] = capture
         cas.atomic_write(anchor / "capture.yaml", capture)
@@ -342,6 +374,71 @@ def test_validate_blocks_on_tampered_bundle(ctx):
     assert any(
         f["kind"] == "hash-mismatch" and f["path"] == "body.md" for f in report["bundle_findings"]
     )
+
+
+def test_validate_blocks_on_stale_lineage(ctx):
+    # Step 4 extension (P5.2): the gold bundle is INTACT — bundle.yaml verifies, every part hashes
+    # correctly — but its history.yaml's latest member records a body_sha256 that is not this
+    # body.md. That is the audit's [S9]a defect (measured at 615/615 before P5.1), and it is exactly
+    # what a recomputed-from-disk manifest cannot see. The lineage check must fire on its own.
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _bless(ctx, "normalize", TEXT_NORMALIZED, {"documents": 1})
+    _seed_chain(ctx, _normalized_slugs(ctx))
+    _seed_consolidated_ok(ctx, hist_sha="dead" * 16)  # staled BEFORE bundle.yaml is built
+
+    with pytest.raises(PostflightError):
+        Orchestrator([ValidateStage()]).run(ctx)
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    stale = [f for f in report["bundle_findings"] if f["kind"] == "stale-lineage"]
+    assert len(stale) == 1
+    assert "ADT:doc" in stale[0]["detail"] and stale[0]["path"] == "history.yaml"
+    # the manifest itself is clean — proving the lineage check is what caught it, not integrity
+    assert not [f for f in report["bundle_findings"] if f["kind"] != "stale-lineage"]
+
+
+def test_validate_blocks_on_a_gold_bundle_with_no_lineage(ctx):
+    # absence is UNKNOWN, never OK: a bundle whose history.yaml is gone cannot be verified against
+    # its body, so it is reported rather than silently passed over
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _bless(ctx, "normalize", TEXT_NORMALIZED, {"documents": 1})
+    _seed_chain(ctx, _normalized_slugs(ctx))
+    anchor = ctx.cfg.gold_consolidated / "ADT" / "doc"
+    cas.atomic_write(anchor / "body.md", b"# Anchor\n")  # no history.yaml, no bundle.yaml
+    _bless(ctx, "consolidate", CONSOLIDATED)
+
+    with pytest.raises(PostflightError):
+        Orchestrator([ValidateStage()]).run(ctx)
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    assert any(f["kind"] == "unverifiable-lineage" for f in report["bundle_findings"])
+
+
+def test_validate_passes_a_bundle_whose_lineage_matches(ctx):
+    # the positive half: a truthful lineage — including a PRIOR member recording a different
+    # (retained) body — is clean. Only the replay head is checked against this bundle.
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _bless(ctx, "normalize", TEXT_NORMALIZED, {"documents": 1})
+    _seed_chain(ctx, _normalized_slugs(ctx))
+    body = b"# Anchor\n"
+    history = yaml.safe_dump(
+        {
+            "anchor_key": "ADT:ADT:DOC",
+            "member_count": 2,
+            "members": [
+                {"doc_id": "ADT:old", "body_sha256": "old" * 21 + "0", "is_latest": False},
+                {
+                    "doc_id": "ADT:doc",
+                    "body_sha256": hashlib.sha256(body).hexdigest(),
+                    "is_latest": True,
+                    # a P5.1 demotion rides along untouched — it is lineage about a retained body
+                    "superseded": [{"doc_id": "ADT:doc", "body_sha256": "prior" * 12}],
+                },
+            ],
+        }
+    ).encode()
+    _seed_consolidated_ok(ctx, history=history)
+
+    (result,) = Orchestrator([ValidateStage()]).run(ctx)
+    assert result.status == "ok" and result.counts["bundle_findings"] == 0
 
 
 def test_validate_blocks_on_unmanifested_bundle(ctx):
