@@ -19,5 +19,5 @@ bakes in the previous phase's measured numbers, so no prior session's context is
 | ~~`P3-retention-gates-kickoff.md`~~ → [`historical/`](../historical/) | P3 — retention verdicts gate via validate (+ the legacy-TOC capture-before-strip fix) | ✅ **complete** `b28fbf5` `f81dcb2` |
 | ~~`P4-sound-sqlite-fingerprints-kickoff.md`~~ → [`historical/`](../historical/) | P4 — content-hash SQLite fingerprints + the `rows:N` migration | ✅ **complete** `1419d1b` |
 | ~~`P5-history-lineage-truth-kickoff.md`~~ → [`historical/`](../historical/) | P5 — `history.yaml` supersedes + the stale-lineage check | ✅ **complete** `75d12e6` `30351e9` |
-| [`P6-container-leadin-chunking-kickoff.md`](P6-container-leadin-chunking-kickoff.md) | P6 — chunk substantive container lead-ins | **ready to run** |
-| `P7-close-out-kickoff.md` | P7 — full rerun, strike audit register, republish constants | written at P6 close |
+| ~~`P6-container-leadin-chunking-kickoff.md`~~ → [`historical/`](../historical/) | P6 — `searchable` split from `kind`; chunk-less 26.7% → 10.5%; warning parity; golden coverage for the newly-indexed class | ✅ **complete** `e374d9a` `d984f8a` `5fa9a65` |
+| [`P7-close-out-kickoff.md`](P7-close-out-kickoff.md) | P7 — full rerun, strike audit register, republish constants, archive | **ready to run** |
