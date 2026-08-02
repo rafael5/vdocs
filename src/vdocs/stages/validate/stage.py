@@ -115,7 +115,7 @@ class ValidateStage(Stage):
         # BUNDLE-INTEGRITY GATE (§5.3/§6.6): each gold anchor bundle must carry a bundle.yaml signed
         # manifest whose recorded part hashes + digest match the parts on disk — so the bundle is a
         # verifiable unit, not asserted. A bundle with no manifest can't be verified (unmanifested).
-        bundle_findings = _verify_bundles(ctx.cfg.gold_consolidated)
+        bundle_findings = _verify_bundles(ctx.cfg.gold_consolidated, ctx.cfg.history_bodies)
 
         # CHAIN GATE (Step 5, P1.2): join the five acquisition seams. Each stage counts only its
         # own work, so a document lost *between* stages was previously invisible everywhere.
@@ -306,7 +306,7 @@ def _gate_retention(ctx: StageContext) -> list[rtn.RetentionFinding]:
     return rtn.gate_retention(scored, signed_off=_load_signoffs(ctx.cfg.registries))
 
 
-def _verify_bundles(consolidated_root) -> list[dict]:  # type: ignore[no-untyped-def]
+def _verify_bundles(consolidated_root, history_bodies=None) -> list[dict]:  # type: ignore[no-untyped-def]
     """Verify every gold anchor bundle against its ``bundle.yaml`` signed manifest (§6.6).
 
     For each bundle: read the manifest, read its on-disk parts (excluding the manifest itself), and
@@ -317,6 +317,12 @@ def _verify_bundles(consolidated_root) -> list[dict]:  # type: ignore[no-untyped
     findings: list[dict] = []
     if not consolidated_root.is_dir():
         return findings
+    # One listing of the retained-body CAS, reused for every bundle: the lineage check asks whether
+    # each cited body_sha256 is still stored, and `consolidate` writes one `<sha>.md` per body.
+    retained = None
+    if history_bodies is not None and history_bodies.is_dir():
+        stored = {p.stem for p in history_bodies.glob("*.md")}
+        retained = stored.__contains__
     for body_path in sorted(consolidated_root.rglob("body.md")):
         bdir = body_path.parent
         rel = bdir.relative_to(consolidated_root).as_posix()
@@ -338,7 +344,9 @@ def _verify_bundles(consolidated_root) -> list[dict]:  # type: ignore[no-untyped
                 "detail": f"{f.doc_id or rel}: {f.detail}",
             }
             for f in lin.check_lineage(
-                _load_yaml(bdir / "history.yaml"), on_disk.get("body.md", b"")
+                _load_yaml(bdir / "history.yaml"),
+                on_disk.get("body.md", b""),
+                retained=retained,
             )
         )
         manifest_path = bdir / kbundle.MANIFEST_NAME

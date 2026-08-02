@@ -685,3 +685,33 @@ def test_stale_signoff_is_reported_without_blocking(ctx, repo_registries):
     assert report["blocking"] is False
     (stale,) = report["retention_findings"]
     assert stale["kind"] == "retention-signoff-stale" and stale["blocking"] is False
+
+
+def test_validate_blocks_when_a_retained_body_is_missing_from_the_cas(ctx):
+    # The lineage's PRIOR members are what a replay replays. `consolidate` promises the CAS is
+    # write-once so "they remain by construction"; this is the gate that makes it a fact. Seeded
+    # broken BEFORE blessing, so the bundle manifest stays clean and only the lineage check fires.
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _bless(ctx, "normalize", TEXT_NORMALIZED, {"documents": 1})
+    _seed_chain(ctx, _normalized_slugs(ctx))
+    body = b"# Anchor\n"
+    history = yaml.safe_dump(
+        {
+            "anchor_key": "ADT:ADT:DOC",
+            "member_count": 2,
+            "members": [
+                {"doc_id": "ADT:v1", "body_sha256": "a" * 64, "is_latest": False},
+                {"doc_id": "ADT:doc", "body_sha256": hashlib.sha256(body).hexdigest(),
+                 "is_latest": True},
+            ],
+        }
+    ).encode()  # fmt: skip
+    # the LATEST body is retained; the prior one never made it into the store
+    cas.atomic_write(ctx.cfg.history_bodies / f"{hashlib.sha256(body).hexdigest()}.md", body)
+    _seed_consolidated_ok(ctx, history=history)
+
+    with pytest.raises(PostflightError):
+        Orchestrator([ValidateStage()]).run(ctx)
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    missing = [f for f in report["bundle_findings"] if f["kind"] == "missing-retained-body"]
+    assert len(missing) == 1 and "ADT:v1" in missing[0]["detail"]

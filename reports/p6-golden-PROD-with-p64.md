@@ -2,7 +2,7 @@
 
 - **Lake:** `/home/rafael/data/vdocs`  ·  **mode:** lexical (FTS5+BM25)  ·  **k:** 10
 - **Labeled queries:** 24 of 25
-- **mean nDCG@10:** 0.3997
+- **mean nDCG@10:** 0.3979
 - **mean MRR:** 0.4236
 - **mean recall@10:** 0.441
 - **mean redundancy@10:** 0.072 (all queries)
@@ -35,4 +35,4 @@
 | fileman-input-transform-definition | api-leadin | 1.0 | 1.0 | 1.0 | 0.0 | 10 |
 | fileman-blddialog-icr-number | api-leadin | 0.3951 | 0.25 | 0.5 | 0.0 | 10 |
 | quasar-package-wide-variables | short-reference | 1.0 | 1.0 | 1.0 | 0.1 | 10 |
-| hl7-table-0136-values | short-reference | 0.9905 | 1.0 | 1.0 | 0.0 | 10 |
+| hl7-table-0136-values | short-reference | 0.9469 | 1.0 | 1.0 | 0.0 | 10 |

@@ -306,9 +306,12 @@ queries:
     relevant:
       - { section_id: ACR/acr_p_pimstm/table-0136---yesno-indicator, grade: 3 }
       - { section_id: ADT/adt_pims_tm/table-0136yesno-indicator, grade: 3 }
-      - { section_id: MPIF/mpif_1_0is/yesno-indicator-table, grade: 1 }
+      - { section_id: MPIF/mpif_1_0is/yesno-indicator-table, grade: 3 }
     notes: >
-      Two ideal answers on purpose. The ACR one is a 6-token `hollow` section that was dark before
-      P6.1b; the ADT one carries the same table as a markdown grid and was already `ok`. Grading
-      both 3 keeps the judgement honest (they answer equally well) and makes the query a
-      before/after contrast rather than a pure coverage win.
+      THREE ideal answers. The ACR one is a 6-token `hollow` section that was dark before P6.1b;
+      the ADT one carries the same table as a markdown grid and was already `ok`. Grading them
+      equally keeps the judgement honest and makes the query a before/after contrast rather than a
+      pure coverage win. ⚠️ The MPIF entry was first graded **1 from its title alone** — the one
+      label in this set I did not read before assigning — and an adversarial re-read (2026-08-02)
+      found it names HL7 Table 0136 explicitly and gives the Y/N values, i.e. it answers as fully
+      as the other two. Corrected to 3. Grade by reading, always; a title is a hypothesis.

@@ -193,8 +193,10 @@ def test_orientation_carries_pin_contract_and_peer_pointer(tmp_path):
 
 # -- the "index miss ≠ corpus absence" contract ------------------------------
 # Four researchers once concluded documented FileMan APIs were "missing from the corpus"
-# when the text was present the whole time: 26.7% of live sections (container/hollow) carry
-# NO indexed text, so search/lookup return empty for prose that exists in the gold body.
+# when the text was present the whole time. The share that carries no indexed text is now 10.5%
+# (was 26.7% before P6.1b split `searchable` from `kind`), and what remains is bare headings —
+# but the rule survives the number: an empty result is a retrieval artefact, and prose can still
+# live in the gold body.md and its tables/*.csv sidecars.
 # These tests are the regression gate — every client-facing surface must name the fallbacks.
 
 _FALLBACK_TOKENS = ("body.md", "tables")

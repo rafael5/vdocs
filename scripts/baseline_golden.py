@@ -118,8 +118,10 @@ def _section_texts(index_db: Path, section_ids: list[str]) -> dict[str, str]:
 def _corpus_provenance(index_db: Path) -> dict[str, Any]:
     """What corpus produced this number — the fields that make a report self-identifying.
 
-    `corpus_content_hash` is the index's own fingerprint (`meta`), so two reports are comparable
-    iff their hashes match; `documents`/`chunks` make a wrong lake obvious at a glance."""
+    `corpus_content_hash` fingerprints the **document set**, not the index build — two indexes over
+    the same documents with different chunking carry the same hash (measured: 48,769 vs 57,895
+    chunks, one hash). So it answers "same corpus?" and `chunks` answers "same index?"; both are
+    recorded because a retrieval number needs both to be comparable."""
     conn = sqlite3.connect(f"file:{index_db}?mode=ro", uri=True)
     try:
         meta = dict(conn.execute("SELECT key, value FROM meta").fetchall())

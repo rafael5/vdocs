@@ -72,3 +72,36 @@ def test_absent_history_is_unverifiable_never_a_silent_pass():
 def test_a_member_without_a_recorded_sha_is_unverifiable():
     (finding,) = lp.check_lineage(_history({"doc_id": "ADT:doc", "is_latest": True}), BODY)
     assert finding.kind == lp.UNVERIFIABLE_LINEAGE
+
+
+# --- retained bodies: the prior members are the whole point of a replay source (adversarial
+# --- review 2026-08-02 — P5.2 verified only the `is_latest` member, so the bodies the lineage
+# --- exists to replay were checked by nothing at all).
+
+
+def test_a_missing_retained_body_is_a_blocking_finding():
+    hist = _history(_member("older", is_latest=False, doc_id="ADT:v1"), _member(SHA))
+    findings = lp.check_lineage(hist, BODY, retained={SHA}.__contains__)
+    assert [f.kind for f in findings] == [lp.MISSING_RETAINED_BODY]
+    assert findings[0].doc_id == "ADT:v1" and "older" in findings[0].detail
+
+
+def test_a_superseded_entry_body_must_be_retained_too():
+    # P5.1 demotes prior facts rather than deleting them — the promise is that the body is still
+    # in the CAS "by construction". This is the check that makes it a fact rather than a promise.
+    entry = {**_member(SHA), "superseded": [{"doc_id": "ADT:doc", "body_sha256": "demoted"}]}
+    findings = lp.check_lineage(_history(entry), BODY, retained={SHA}.__contains__)
+    assert [f.kind for f in findings] == [lp.MISSING_RETAINED_BODY]
+    assert "demoted" in findings[0].detail
+
+
+def test_all_bodies_retained_is_clean():
+    entry = {**_member(SHA), "superseded": [{"doc_id": "ADT:doc", "body_sha256": "old"}]}
+    hist = _history(_member("older", is_latest=False, doc_id="ADT:v1"), entry)
+    assert lp.check_lineage(hist, BODY, retained={SHA, "older", "old"}.__contains__) == []
+
+
+def test_retention_is_not_checked_when_the_store_is_not_supplied():
+    # the pure function stays pure: no `retained` predicate ⇒ no claim about the CAS
+    hist = _history(_member("older", is_latest=False, doc_id="ADT:v1"), _member(SHA))
+    assert lp.check_lineage(hist, BODY) == []
