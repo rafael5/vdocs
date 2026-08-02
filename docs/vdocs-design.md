@@ -1907,10 +1907,13 @@ findable, de-weighted rather than lost.
 > eight words was searchable. `kernel.markdown.is_searchable` now decides it independently
 > (`tokens > 0 or has_referent`); `kind` and the nav map are untouched. Chunk-less share of live
 > sections: **26.70% → 10.49%**, and what remains (4,648 bare containers + 821 empty `hollow`) is
-> genuinely contentless. Golden nDCG@10 unchanged at 0.5134 — see the caveat in the P6 tracker
-> row: the golden set does not exercise this class, so that is *no regression*, not *proof of gain*.
-> The gain is direct: `ACKQ/ackq3_0tm/package-wide-variables` went from 0 FTS rows to the **#1 hit**
-> for "QUASAR package-wide variables".
+> genuinely contentless. Measured on the golden set *after* it gained queries for this class
+> (P6.4): the five new queries average **nDCG@10 0.751**, three of them a perfect 1.000 — and two
+> of those have a single judged section that carried **zero chunks** before P6.1b, so they scored
+> exactly 0.000 by construction. (The first measurement of this change reported "unchanged at
+> 0.5134"; that number came from a stale 451-document dev lake the harness defaulted to — see
+> `_corpus_provenance` in `scripts/baseline_golden.py`, added so a report always names the corpus
+> it read.)
 
 **Net design (the claim, measured not asserted).** Sharper vectors + de-duplicated neighbors +
 latest-only correctness + structure-aligned chunks + a structured pre-filter, fused by RRF (§14.2):

@@ -35,7 +35,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -116,10 +115,32 @@ def _section_texts(index_db: Path, section_ids: list[str]) -> dict[str, str]:
     return out
 
 
+def _corpus_provenance(index_db: Path) -> dict[str, Any]:
+    """What corpus produced this number — the fields that make a report self-identifying.
+
+    `corpus_content_hash` is the index's own fingerprint (`meta`), so two reports are comparable
+    iff their hashes match; `documents`/`chunks` make a wrong lake obvious at a glance."""
+    conn = sqlite3.connect(f"file:{index_db}?mode=ro", uri=True)
+    try:
+        meta = dict(conn.execute("SELECT key, value FROM meta").fetchall())
+        return {
+            "index_db": str(index_db),
+            "documents": conn.execute("SELECT count(*) FROM documents").fetchone()[0],
+            "chunks": conn.execute("SELECT count(*) FROM chunks").fetchone()[0],
+            "corpus_content_hash": meta.get("corpus_content_hash", ""),
+        }
+    finally:
+        conn.close()
+
+
 def evaluate(
     data_dir: Path, queries_path: Path, k_override: int | None, *, expand: bool = True
 ) -> dict[str, Any]:
     index_db = data_dir / "index.db"
+    if not index_db.is_file():
+        # Refuse rather than crash mid-query or silently measure nothing: a missing index is an
+        # operator error (wrong --data-dir), and the answer to it is a sentence, not a traceback.
+        raise SystemExit(f"no index.db at {index_db} — pass --data-dir <lake> (run `vdocs index`?)")
     spec = yaml.safe_load(queries_path.read_text(encoding="utf-8"))
     k = k_override or int(spec.get("k", 10))
     # expand=True (default) → SKL-grounded query expansion (S3.4, the merge `entity_skl` table);
@@ -174,6 +195,12 @@ def evaluate(
     n = len(ndcgs)
     rollup = {
         "k": k,
+        # PROVENANCE — a retrieval number without its corpus is not a measurement (2026-08-02).
+        # The markdown named the lake; the JSON rollup did not, and the rollup is what gets pasted
+        # into trackers and compared across runs. Three P6 measurements were quoted as evidence for
+        # a change on the PRODUCTION lake while the harness was silently reading a stale 451-doc
+        # `~/data/vdocs-dev` (the old default). Every report now carries what it read.
+        **_corpus_provenance(index_db),
         "labeled_queries": n,
         "total_queries": len(spec["queries"]),
         "mean_ndcg@k": round(sum(ndcgs) / n, 4) if n else None,
@@ -214,7 +241,13 @@ def _render_md(result: dict[str, Any], data_dir: Path) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    default_dir = os.environ.get("DATA_DIR", str(Path.home() / "data/vdocs-dev"))
+    # Default to the SAME lake every other vdocs command uses (Settings honours $DATA_DIR). It used
+    # to default to `~/data/vdocs-dev`, so an operator who had just rebuilt the real lake measured a
+    # stale dev copy instead — silently, because the printed rollup named no corpus. That produced
+    # three wrong P6 measurements before the provenance fields above caught it.
+    from vdocs.config import Settings
+
+    default_dir = str(Settings().data_dir)
     ap.add_argument("--data-dir", default=default_dir)
     ap.add_argument("--queries", default="registries/golden-queries.yaml")
     ap.add_argument("--k", type=int, default=None)

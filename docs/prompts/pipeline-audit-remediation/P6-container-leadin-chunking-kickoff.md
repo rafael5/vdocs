@@ -7,15 +7,21 @@
 > numbers only exist after the rebuild, and a stale coverage rule actively misleads). Live now:
 > chunk-less **26.70% → 10.49%**, `vdocs run` GREEN 16/16, `make check` green at 1,204 tests.
 >
-> **What is left of P6:**
-> 1. **P6.3** — warning parity: the `ask` CLI's empty result and `--json` output must emit the same
->    not-indexed object as the MCP `search` tool. The constant is `mcp.NOT_INDEXED_RULE`; moving it
->    to a shared module is part of the step (audit R‑11).
-> 2. **The golden-set gap — the more important one.** P6.1b changed 9,126 chunks and the golden set
->    did not move *at all*: 0 of 20 queries changed even one ranked hit, because it has no query for
->    short reference entries (HL7 value tables, one-line routine descriptions). The set cannot see
->    the class we just fixed, so it cannot regress on it either. Add labelled queries for it before
->    P7 re-measures anything, or every future chunking change is unmeasurable in the same way.
+> **P6.3** (`d984f8a`) and **P6.4** also landed. So does anything remain? Only the P6 ✓ demo — a
+> container-lead-in query answered from `search` where it previously needed the body.md fallback —
+> and then P7.
+>
+> **Read this before trusting any retrieval number below or in the tracker.** The first golden
+> measurement of P6.1b reported "unchanged at 0.5134, 0 of 20 queries moved", and I wrote that up as
+> the golden set being *blind to the class*. It was not: `scripts/baseline_golden.py` defaulted to
+> **`~/data/vdocs-dev`**, a stale 451-document lake that P6.1b never touched, and its printed rollup
+> named no corpus — so three measurements in a row answered a question about the wrong lake and
+> looked consistent doing it. Corrected on production: the five new P6.4 queries average **nDCG@10
+> 0.751**, two of them scoring a perfect 1.000 against a single judged section that had **zero
+> chunks** before P6.1b (so they were exactly 0.000 before, by construction). The harness now
+> defaults to `Settings().data_dir`, refuses a missing index.db, and stamps
+> `index_db`/`documents`/`chunks`/`corpus_content_hash` into every rollup. **Every pre-2026-08-02
+> golden number in this repo — the audit's 0.469 included — is a dev-lake number.**
 >
 > Everything below is preserved as the **measured record** that drove the change — the
 > decomposition, the residual analysis, and the `< 8%` argument. Read it as evidence, not as a
@@ -74,16 +80,21 @@ under a container's own section id) — the fact `mcp._has_chunks` exists to res
 predictor, not a fact. Both numbers are within 0.1 pp of the audit's (13,899 / 52,048 / 26.7%): **P3
 did not move this**, so don't expect the re-measure to be interesting *before* P6.1.
 
-**Golden retrieval baseline: nDCG@10 = 0.5134** (MRR 0.6067, recall@10 0.6140, redundancy@10 0.04,
-19 labeled of 20 queries). That is **up from the audit's 0.469** — SKL work landed in between, so
-re-measure rather than comparing to the audit's number. Reproduce it exactly with:
+**Golden retrieval baseline — ⚠️ CORRECTED 2026-08-02.** The `nDCG@10 = 0.5134` originally
+recorded here (and the audit's `0.469`) came from **`~/data/vdocs-dev`**, a stale 451-document lake
+the harness defaulted to. Both are dev-lake numbers and are **not** comparable to a production run.
+On the production lake (1,040 docs) with the P6.4 queries added, the set reads **mean nDCG@10
+0.3997** overall — 0.307 over the original 19, **0.751** over the five new ones. The harness now
+defaults to `Settings().data_dir`, refuses a missing index.db, and stamps the corpus it read into
+every rollup, so this class of error announces itself. Reproduce with:
 
 ```bash
 .venv/bin/python scripts/baseline_golden.py --k 10 --out reports/<name>.md
 ```
 
-Run it **before** you change anything (confirm you reproduce 0.5134 on today's lake) and again
-after P6.1. "Must not regress" is against *your* pre-run, not against a number in a document.
+Run it **before** you change anything and again after — and check the `corpus_content_hash`
+in the rollup matches between the two, because "must not regress" is only meaningful against the
+same corpus. Compare against *your own* pre-run, never against a number in a document.
 
 ## What P6.1 will actually buy — measure before you commit to the target
 
@@ -247,7 +258,7 @@ register row is a judgement call worth making in the tracker.
 ## Acceptance — the P6 ✓ row
 
 - `make check` green.
-- Golden nDCG@10 **≥ your pre-run** (reproduce 0.5134 first, then re-run after P6.1). A regression
+- Golden nDCG@10 **≥ your pre-run** on the SAME `corpus_content_hash`. A regression
   here outweighs the coverage win — the merge-small-leaves experiment is the precedent.
 - Live lake: full `vdocs run` GREEN through `doctor`; chunk-less share re-measured and **stated as
   the actual number**, with the `< 8%` row either struck or met.

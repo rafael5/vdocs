@@ -239,3 +239,76 @@ queries:
       - { section_id: DI/fm22_2um2/new-person-file-for-standalone-va-fileman, grade: 3 }
       - { section_id: XU/krn_8_0_tm/new-person-fileaudit-fields, grade: 2 }
     notes: A vocabulary-mismatch query (number ↔ name); the precursor the SKL was built for (§8).
+
+  # ── P6.4 (2026-08-02): the SHORT-REFERENCE / API-LEAD-IN class ─────────────────────────────────
+  # Why these exist: P6.1b made 8,447 previously chunk-less sections searchable, and this set did
+  # not move by a single ranked hit — it had no query for the class. A metric that cannot see a
+  # change can neither credit nor regress on it, so the "no regression" it reported was a statement
+  # about its own coverage, not about the change. Every `grade: 3` below is a section that carried
+  # ZERO chunks before P6.1b (`kind` container or hollow) — i.e. these queries scored 0 and were
+  # unanswerable at the time they were written. Graded by READING the sections, not by running the
+  # engine; the lexical near-misses are deliberately left unlabelled as discriminators.
+  - id: fileman-import-host-file
+    query: How do I import data from a host file into a VA FileMan file?
+    intent: The FILE^DDMP API — the supported way to load ASCII host-file data into FileMan.
+    axis: api-leadin
+    relevant:
+      - { section_id: DI/fm22_2dg/fileddmp-data-import, grade: 3 }
+      - { section_id: DI/fm22_2dg/exportddxp-data-export, grade: 1 }
+      - { section_id: DI/fm22_2um2/sending-export-data-to-a-host-file, grade: 1 }
+    notes: >
+      The audit's cited class ([S10]): the API contract — Reference Type, Supported, Category,
+      ICR# 2648, Description — lives in the container's own lead-in, above its first child
+      heading, so it was never chunked. The two grade-1s are the opposite direction (export),
+      genuinely related but not the answer. A CPRS "quick order auditing" section is a lexical
+      near-miss on "host file … import" and is deliberately unlabelled.
+
+  - id: fileman-input-transform-definition
+    query: What is an INPUT transform in VA FileMan?
+    intent: The definition of an INPUT transform (M code validating a field's data).
+    axis: api-leadin
+    relevant:
+      - { section_id: DI/fm22_2dg/input-transform, grade: 3 }
+    notes: >
+      One judged section on purpose — the definition sits in a container lead-in and nothing else
+      in the corpus defines the term as directly. Data-dictionary listings that merely *contain*
+      input transforms are not answers and stay unlabelled.
+
+  - id: fileman-blddialog-icr-number
+    query: What is the ICR number for the BLD^DIALOG API?
+    intent: The Integration Control Registration number recorded for BLD^DIALOG (2050).
+    axis: api-leadin
+    relevant:
+      - { section_id: DI/fm22_2dg/blddialog-dialog-extractor, grade: 3 }
+      - { section_id: DI/fm22_2dg/database-server-calls-cross-referenced-by-category, grade: 1 }
+    notes: >
+      An ICR number is a one-line fact that only ever appears in the API section's lead-in — the
+      exact shape of fact that was unreachable before P6.1b. The cross-reference table names the
+      API but not its ICR.
+
+  - id: quasar-package-wide-variables
+    query: Does the QUASAR package define any package-wide variables?
+    intent: Whether ACKQ (QUASAR) declares package-wide/special variables — a negative answer.
+    axis: short-reference
+    relevant:
+      - { section_id: ACKQ/ackq3_0tm/package-wide-variables, grade: 3 }
+    notes: >
+      Six substantive tokens — "There are no QUASAR package-wide variables." — which failed the
+      8-token QA floor and reached neither `chunks` nor `chunks_fts`, so the section AND its
+      heading were unfindable. A DISCRIMINATION test as much as a coverage one: the identically
+      titled sections in ANRV, CPRS, DVBA and DI answer the same question for *other* packages
+      and are correctly unlabelled. A negative fact is still a documented fact.
+
+  - id: hl7-table-0136-values
+    query: What are the allowed values for HL7 table 0136, the yes/no indicator?
+    intent: The value/description pairs for HL7 table 0136 (Y = YES, N = NO).
+    axis: short-reference
+    relevant:
+      - { section_id: ACR/acr_p_pimstm/table-0136---yesno-indicator, grade: 3 }
+      - { section_id: ADT/adt_pims_tm/table-0136yesno-indicator, grade: 3 }
+      - { section_id: MPIF/mpif_1_0is/yesno-indicator-table, grade: 1 }
+    notes: >
+      Two ideal answers on purpose. The ACR one is a 6-token `hollow` section that was dark before
+      P6.1b; the ADT one carries the same table as a markdown grid and was already `ok`. Grading
+      both 3 keeps the judgement honest (they answer equally well) and makes the query a
+      before/after contrast rather than a pure coverage win.
