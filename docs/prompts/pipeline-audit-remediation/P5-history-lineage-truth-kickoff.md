@@ -1,5 +1,19 @@
 # Kickoff — P5: history lineage truth (the replay source stops misdescribing the bundle)
 
+> **To start the session**, `cd ~/projects/vdocs` and say:
+>
+> > Read `docs/prompts/pipeline-audit-remediation/P5-history-lineage-truth-kickoff.md` and execute it.
+>
+> Nothing else is needed — this file is self-contained. It names every document to read
+> (`CLAUDE.md`, plan §P5, the tracker, audit [S9]/R‑9) and carries the measured post-P4 baseline,
+> so no prior conversation's context is required.
+>
+> **One caveat to carry in:** the 615/615 figure below was measured by comparing each latest
+> member's `body_sha256` against the **gold anchor's** `body.md`, which is the comparison P5.2
+> specifies. On the document inspected, that gold body was byte-identical to its silver normalized
+> source, so the comparison holds — but confirm which of the two `consolidate` intends to be
+> authoritative before hard-wiring the check.
+
 **Repo: `vdocs`.** Fresh session, `cd ~/projects/vdocs`. Read `CLAUDE.md`, then
 `docs/proposals/pipeline-audit-remediation-implementation-plan.md` **§P5**, and audit footnote
 [S9] + register row R‑9 in `docs/reference/pipeline-adversarial-audit.md`. Tick

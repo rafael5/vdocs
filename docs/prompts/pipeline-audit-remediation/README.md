@@ -7,6 +7,11 @@ writes the *next* phase's prompt (baking in the measured results of the phase ju
 and retires the executed one. Do not write P3's prompt while P1 is open — the numbers it
 needs don't exist yet.
 
+**To run the next phase:** `cd ~/projects/vdocs`, then in a fresh session say *"Read
+`docs/prompts/pipeline-audit-remediation/<the prompt marked ready to run>` and execute it."* Each
+prompt opens with the same instruction and is self-contained — it names every document to read and
+bakes in the previous phase's measured numbers, so no prior session's context is needed.
+
 | Prompt | Phase | Status |
 |---|---|---|
 | ~~`P1-acquisition-chain-integrity-kickoff.md`~~ → [`historical/`](../historical/) | P1 — re-key `raw/index.json`, chain-reconciliation gate, DOCX magic check (+ P1.4 WAL fix) | ✅ **complete** `6ba05eb` `38190e9` `fa66309` `6668a26` |
