@@ -30,6 +30,10 @@ Documentation here is classified by **lifecycle state, not topic**:
 
 - **Active workstream:** SKL — [`proposals/skl-implementation-plan.md`](proposals/skl-implementation-plan.md)
   (S0–S3 landed; S4 semantic-fidelity gates and S5 generalize-to-Kernel open).
+- **Active workstream:** search quality & scope integrity — [`proposals/search-quality-and-scope-integrity-implementation-plan.md`](proposals/search-quality-and-scope-integrity-implementation-plan.md)
+  (+ [tracker](proposals/search-quality-and-scope-integrity-tracker.md)). Q1–Q4: re-judge the
+  golden set, harvest the near band (23.5% of correct answers are retrieved but rank below the
+  fold), gate corpus scope (R‑4/R‑19), rule on the dormant SKL and `discover` investments.
 - **✅ Complete (2026-08-02):** pipeline audit remediation, P1–P7 — [`historical/pipeline-audit-remediation-implementation-plan.md`](historical/pipeline-audit-remediation-implementation-plan.md)
   (+ [tracker](historical/pipeline-audit-remediation-tracker.md)). Fixed 13 of the audit's register
   rows and added one; the living record is the struck register in
