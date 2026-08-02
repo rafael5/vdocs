@@ -83,6 +83,63 @@ without writing any code:
 (52,100 vs the index's 52,128: my re-shred skipped the generated `## Contents`/bookmark-heading
 handling and the heading-less-body fallback. A ~0.05% discrepancy, irrelevant to the ratio.)
 
+### What the unsearchable 14,170 actually hold — measured 2026-08-02
+
+Before accepting any residual, I decomposed the whole unsearchable population by **what is in the
+section**, and cross-checked each class against `chunks`/`chunks_fts` in the live `index.db`:
+
+| what the section holds | container | hollow | total | verdict |
+|---|---|---|---|---|
+| ≥8 tokens of its own lead-in prose | 6,779 | — | **6,779** | P6.1 fixes this |
+| **1–7 tokens of real prose** (below the floor) | 90 | 1,806 | **1,896** | ⚠️ **dark — see below** |
+| a `tables/*.csv` sidecar referent | 24 | 0 | 24 | **already covered** — 24 of 24 carry a table chunk |
+| a `_shared/` boilerplate referent | 2 | 0 | 2 | by design (indexed once, canonically) |
+| 0 tokens, no referent | 4,648 | 821 | **5,469** | correctly dark — nothing to index |
+| | 11,543 | 2,627 | 14,170 | |
+
+**The table-sidecar worry is closed.** A section whose content was lifted to a CSV *does* look
+empty to `substantive_tokens` (a referent line contributes zero tokens by design) — but the B3b
+table-chunk path in `index/stage.py:294` is `for s in secs:`, **ungated by `searchable`**, so every
+extracted table is re-introduced as an FTS chunk citing its section whatever its kind. Measured:
+24 of 24 such containers carry a table chunk. This is the mechanism behind the 254 containers that
+already have chunks. Don't "fix" it.
+
+**The floor is the real second defect, and it is the same conflation as `container`.** 1,896
+sections carry genuine prose that falls under `MIN_SUBSTANTIVE_TOKENS = 8`, so they get **no chunk
+— and therefore no `chunks_fts` row at all**, which means neither their text *nor their heading* is
+on the search surface. Verified end-to-end on `ACKQ/ackq3_0tm/package-wide-variables` (kind
+`hollow`): `chunks`=0, `chunks_fts`=0, and the phrase *"There are no QUASAR package-wide
+variables"* returns **0 FTS hits** while sitting in the shipped `body.md`. The same heading in
+`LR/lr5_2tm`, `XWB/xwb_1_1_tm_r`, `AMT/am_oramtm` classifies `ok` and is searchable — so the corpus
+answers the identical reference question for some packages and silently not for others, decided by
+whether the sentence ran to eight words. Real examples now dark: *"There are no QUASAR
+package-wide variables."* · *"The Audiogram Module requires no global variables."* ·
+`TABLE 0136 - YES/NO INDICATOR` → *"VALUE DESCRIPTION / Y YES / N NO"* (an HL7 table definition) ·
+`GETDATA^ACKQAG02` → *"Provides the data for START^ACKQAG02."*
+
+The 8-token floor is an **over-strip detector** — it answers "did `normalize` gut this section?",
+where a thin section is legitimately not evidence of damage. Reusing it as a **retrieval** gate says
+"under eight words is not worth finding", which is false for exactly the short reference entries a
+technical manual is full of. `searchable = kind in ("ok","stub")` is one line making both mistakes
+at once.
+
+**Decision to settle at session start (it is a scope change, so put it in §P6 before building):**
+add **P6.1b** — separate the retrieval predicate from the QA floor. `kind` keeps the 8-token floor
+untouched (over-strip scoring and the nav map are unaffected); `searchable` becomes "has anything
+to index at all": `tokens > 0 or has_referent`, for leaves *and* containers. Then:
+
+| | chunk-less share |
+|---|---|
+| today | 26.70% |
+| after P6.1 alone | ~14.2% |
+| after P6.1 + P6.1b | **5,495 / 52,128 ≈ 10.5%** — and every section left is genuinely contentless |
+
+Still not `< 8%`, but now the residual is *provably* empty rather than merely assumed to be. Prove
+P6.1b on the golden set like P6.1: it adds standalone chunks under their own anchors (not merges,
+so the merge-small-leaves precision collapse shouldn't apply) — but the tiny-chunk BM25 dilution
+risk is real and is exactly what the nDCG re-run is for. If it regresses, ship P6.1 and record
+P6.1b as measured-and-rejected with the number.
+
 **Is the residual real, or an upstream artifact?** Fair question, since `normalize` rewrites heading
 levels (`infer_heading_levels`) and a mis-levelled sibling would *manufacture* a container that
 never was one. Measured 2026-08-02, and the answer is **real**:

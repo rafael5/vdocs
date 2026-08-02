@@ -227,6 +227,20 @@ only) → not; golden-set nDCG@10 re-run **must not regress** (the merge-small-l
 showed structural chunking changes can tank precision — this change only *adds* chunks under
 their own anchors, but prove it, don't assume it).
 
+**P6.1b — the retrieval floor is not the QA floor (added 2026-08-02, measured; settle before
+building).** The same conflation `container` suffers from bites a second time: `MIN_SUBSTANTIVE_
+TOKENS = 8` is an *over-strip detector* ("did normalize gut this section?") reused as a *retrieval*
+gate. **1,896 live sections carry 1–7 tokens of genuine prose and get no chunk — hence no
+`chunks_fts` row, so neither their text nor their heading is searchable** (verified: `ACKQ/
+ackq3_0tm/package-wide-variables`, 0 FTS hits for a phrase in its shipped `body.md`; the identical
+heading in `LR`/`XWB`/`AMT` is `ok` and searchable). Proposed: `kind` keeps the 8-token floor
+(over-strip scoring + nav map untouched); `searchable` becomes `tokens > 0 or has_referent` for
+leaves and containers alike. Chunk-less share: 26.70% → ~14.2% (P6.1) → **~10.5%** (both), with
+every remaining section provably contentless. Prove on the golden set; if nDCG regresses, record it
+as measured-and-rejected. *(Closed by the same measurement: a section whose content was lifted to a
+`tables/*.csv` sidecar is **not** dark — the B3b table-chunk path is ungated by `searchable`, and
+24 of 24 such containers already carry a table chunk.)* Full decomposition in the P6 kickoff prompt.
+
 **P6.2 — re-measure and republish the numbers.** The 26.7% / 13,899 / 52,048 / "~73%" figures
 are hardcoded in five places that must move together: `server/mcp.py`
 (`NOT_INDEXED_RULE`, `TOOL_RULE`, orientation, initialize instructions), the `_has_chunks`
