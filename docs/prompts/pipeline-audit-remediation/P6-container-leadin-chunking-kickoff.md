@@ -1,5 +1,26 @@
 # Kickoff — P6: container lead-in chunking (the 27% stops being unsearchable)
 
+> ## ⚠️ STATUS 2026-08-02 — most of P6 already landed, out of phase order
+>
+> The operator read the measurements below and asked for **P6.1b immediately**. It landed as
+> `e374d9a`, and because it is a single predicate it **subsumed P6.1**; **P6.2 rode with it** (the
+> numbers only exist after the rebuild, and a stale coverage rule actively misleads). Live now:
+> chunk-less **26.70% → 10.49%**, `vdocs run` GREEN 16/16, `make check` green at 1,204 tests.
+>
+> **What is left of P6:**
+> 1. **P6.3** — warning parity: the `ask` CLI's empty result and `--json` output must emit the same
+>    not-indexed object as the MCP `search` tool. The constant is `mcp.NOT_INDEXED_RULE`; moving it
+>    to a shared module is part of the step (audit R‑11).
+> 2. **The golden-set gap — the more important one.** P6.1b changed 9,126 chunks and the golden set
+>    did not move *at all*: 0 of 20 queries changed even one ranked hit, because it has no query for
+>    short reference entries (HL7 value tables, one-line routine descriptions). The set cannot see
+>    the class we just fixed, so it cannot regress on it either. Add labelled queries for it before
+>    P7 re-measures anything, or every future chunking change is unmeasurable in the same way.
+>
+> Everything below is preserved as the **measured record** that drove the change — the
+> decomposition, the residual analysis, and the `< 8%` argument. Read it as evidence, not as a
+> to-do list; the tracker rows carry what actually landed.
+
 > **To start the session**, `cd ~/projects/vdocs` and say:
 >
 > > Read `docs/prompts/pipeline-audit-remediation/P6-container-leadin-chunking-kickoff.md` and execute it.
