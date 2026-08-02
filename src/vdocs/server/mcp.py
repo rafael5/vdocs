@@ -34,19 +34,21 @@ MENTION_SAMPLE = 25
 _SELECT_ONLY = re.compile(r"^\s*(select|with)\b", re.IGNORECASE)
 
 # --- "an index miss is not corpus absence" -------------------------------------------------------
-# MEASURED on index.db (latest-version documents): of 52,048 live sections, 13,899 (26.7%) return
-# NO text — every `hollow` section (2,627) and nearly every `container` (11,272 of 11,526). A
-# container's own lead-in prose is not chunked, and in a reference manual that lead-in *is* the API
-# contract (Format, Input Parameters, flag tables). It exists only in the gold `body.md` and the
-# extracted `table-NN.csv` sidecars. Telling an agent to answer "not in the gold corpus" off an
-# empty index result therefore manufactures false negatives — four researchers once retracted a
-# report of "missing" FileMan APIs whose text had been present the whole time. Every client-facing
-# surface below (instructions · orientation · tool descriptions · search · lookup) states the rule.
+# MEASURED on index.db (latest-version documents), re-measured 2026-08-02 after P6.1b: of 52,128
+# live sections, 5,469 (10.5%) return NO text — down from 13,899 (26.7%), because `searchable` is
+# now the retrieval predicate (any substantive token, or content relocated to a referent) instead of
+# an alias for `kind`. What stays unindexed is a bare heading with nothing under it: 4,648
+# containers whose whole substance is their subsections, plus 821 empty `hollow` sections.
+# **The rule below still holds** — it is now a smaller, sharper claim, not a weaker one: prose can
+# still live in the gold `body.md` and the extracted `table-NN.csv` sidecars, and a wrong "not in
+# the corpus" answer costs exactly what it always did (four researchers once retracted a report of
+# "missing" FileMan APIs whose text had been present the whole time). Every client-facing surface
+# below (instructions · orientation · tool descriptions · search · lookup) states it.
 NOT_INDEXED_RULE = (
-    "An empty result is a RETRIEVAL artefact, not a documentation gap: only ~73% of live sections "
-    "carry indexed text — `container`/`hollow` sections (26.7%) return nothing. Their prose lives "
-    "in the gold body.md and its rich-tables `tables/*.csv` sidecars. Read BOTH before you ever "
-    'answer "not in the vdocs gold corpus".'
+    "An empty result is a RETRIEVAL artefact, not a documentation gap: ~89% of live sections carry "
+    "indexed text, and most of the 10.5% that do not are bare headings whose substance sits in "
+    "their subsections. Prose can also live in the gold body.md and its rich-tables `tables/*.csv` "
+    'sidecars. Read BOTH before you ever answer "not in the vdocs gold corpus".'
 )
 # One-liner for the tool-description slot (some clients surface only that).
 TOOL_RULE = (
@@ -179,10 +181,11 @@ class Handler:
 
     def _has_chunks(self, section_id: str) -> bool:
         """Does this section actually have retrievable text? Answered by **probing `chunks`**, not
-        by trusting `doc_sections.kind`: `kind` is a good predictor, not a fact — 254 of the 11,526
-        live `container` sections DO carry chunks, and a kind-based guess would tell an agent to go
-        read a body file for text the index could have handed it. On a `chunks`-less index.db the
-        probe answers False, so the client gets the read-the-body guidance rather than a crash."""
+        by trusting `doc_sections.kind`: `kind` answers a QA question, never this one — since P6.1b
+        **6,895 of the 11,543** live `container` sections carry chunks (it was 254 when `searchable`
+        was a `kind` alias), and a kind-based guess would send an agent to a body file for text the
+        index could have handed it. On a `chunks`-less index.db the probe answers False, so the
+        client gets the read-the-body guidance rather than a crash."""
         try:
             row = self.con.execute(
                 "SELECT 1 FROM chunks WHERE section_id = ? LIMIT 1", (section_id,)
@@ -306,11 +309,11 @@ class Handler:
             "(`search` and `lookup` return these ready-made).\n\n"
             "THREE SOURCES — the index is only the first. Nothing matching the index is NOT "
             "nothing in the corpus:\n"
-            "  1. `search`/`lookup` — indexed text; covers ~73% of the 52,048 live sections.\n"
+            "  1. `search`/`lookup` — indexed text; covers ~89% of the 52,128 live sections.\n"
             "  2. documents/gold/consolidated/<app>/<slug>/body.md — the full document. The other "
-            "13,899 sections (26.7%, kind `container`/`hollow`) are NEVER chunked, and in a "
-            "reference manual that unindexed lead-in IS the API contract (Format, Input "
-            "Parameters, flag tables).\n"
+            "5,469 sections (10.5%) are bare headings whose substance sits in their subsections, "
+            "but the body.md is still the authority on layout, ordering and anything the chunker "
+            "split across sections.\n"
             "  3. rich-tables/<app>/<slug>/tables/*.csv — the extracted tables (4,246 corpus-wide)."
             "\n\nAn empty result is a RETRIEVAL artefact, never proof of absence. You MUST read "
             'sources 2 and 3 before answering "not in the vdocs gold corpus" — reporting a '
@@ -352,12 +355,12 @@ class Handler:
                     "instructions": (
                         "Documented VistA facts only — call `orientation` first; cite every "
                         "claim by section anchor.\n"
-                        "THREE SOURCES, in order: (1) `search`/`lookup` — indexed text, ~73% of "
-                        "live sections; (2) the gold body.md at the cited `body_path` — "
-                        "`container`/`hollow` "
-                        "sections (26.7%) are NEVER chunked, and in a reference manual that "
-                        "unindexed lead-in IS the API contract (Format, Input Parameters, flag "
-                        "tables); (3) the `tables/*.csv` sidecars beside it.\n"
+                        "THREE SOURCES, in order: (1) `search`/`lookup` — indexed text, ~89% of "
+                        "live sections; (2) the gold body.md at the cited `body_path` — the "
+                        "remaining 10.5% are bare headings whose substance sits in their "
+                        "subsections, and the body.md is still the authority on layout, ordering "
+                        "and anything split across sections; (3) the `tables/*.csv` sidecars "
+                        "beside it.\n"
                         "An empty search or a lookup miss is a RETRIEVAL artefact, not a "
                         "documentation gap. Read sources 2 and 3 before ever answering "
                         '"not in the vdocs gold corpus".'

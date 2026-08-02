@@ -562,10 +562,12 @@ the one the published anchors, FTS rows, graph nodes, and (later) vector keys sh
 holds **one row per heading** — the addressable, structure-complete map (every heading, `is_latest`,
 `toc_level`, the `<doc_key>/<slug>` stable id the published anchors, the graph, and MCP
 `vdocs://section/{id}` URIs all cite). The **search corpus** (`index.db:chunks` → FTS5, and `embed`'s
-`vectors.db`) is derived *from* sections but deliberately differs: **container** sections (substance
-lives in subsections) and **hollow** ones (a bare heading stripped past the substantive-token floor,
-§6.5/§14.6) are **excluded** — indexing them pollutes the search space — and an **oversized** leaf is
-**split** into windowed chunks. `chunks` carries `chunk_id` (= the section's `<doc_key>/<slug>`, or
+`vectors.db`) is derived *from* sections but deliberately differs: a section is on the search surface
+when it has **anything to index** — any substantive token, or content relocated to a referent —
+which is the `kernel.markdown.is_searchable` predicate, **not** a `kind` alias (P6.1b; see §14.6).
+What is **excluded** is a bare heading with nothing under it: a container whose whole substance is
+its subsections, or an empty `hollow` section. An **oversized** leaf is **split** into windowed
+chunks. `chunks` carries `chunk_id` (= the section's `<doc_key>/<slug>`, or
 `…#pN` for a split part), a `section_id` foreign key back to the anchor, the chunk `text`, `searchable`,
 `section_path` (ancestor-title context as metadata), and `is_latest`. A retrieval hit returns a
 `chunk_id`; its `section_id` is the citation/anchor it resolves to. Keeping the two apart is the point:
@@ -1141,7 +1143,7 @@ plane), **DOC** = the document medallion (data plane) (§4). The inventory track
 | 🥈 DOC | **enrich** | `text@converted`, `catalog.enriched` | `text@enriched` (identity FM baked), `index.db:doc_meta_staged` | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **normalize** | `text@enriched`, `raw/index.json` (for source_sha256 — metadata only, not the binary tree), `registries` (curated patterns) | `text@normalized` — `revisions.yaml` + `tables/*.csv` + `refs.yaml` + `toc.yaml` + `flags.yaml` sidecars; **title-page publication date captured into the `published` identity FM before any strip** (§6.4 capture-before-strip), then the per-document **title-area logo image removed** (noise — a different VA seal/banner per doc; one small standard logo to be added at publish) and the legacy cover replaced by a standardized block; revision apparatus lifted to `revisions.yaml` (capture-gated; unparseable → retained + flagged); dead phrases deleted; boilerplate referenced (REFERENCE to `gold/_shared`); heading levels inferred; per-`(doc_type, era)` template scaffold stripped + `template_id` stamped (§9.8); the legacy in-body TOC's **original entries (title + printed page number + anchor) captured verbatim into `toc.yaml`** before it is stripped via `registries/structures` (CANONICALIZE `toc`) + correlated to the derived tree (role-1; misses → `flags.yaml`) then **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** (§6.7). Capture-before-strip fidelity signals (uncaptured date · unparseable revision apparatus · unresolved legacy-TOC anchors) are recorded in the `flags.yaml` sidecar. A **`capture.yaml` is written for *every* bundle** (not conditional) recording each capture attempt's typed outcome (`captured`/`failed`/`absent-expected`/`absent-unexpected`) plus an independent residue re-scan, so absence is never ambiguous (§6.4), **plus (P3.2) a typed `retention` block** (`{retention, verdict, enriched_words, kept_words}`) — the content-retention verdict as a dense record on every bundle rather than a sparse `flags.yaml` string, which is what the `validate` Step-6 gate reads. The retention score credits **in-window relocations only** — the legacy TOC captured to `toc.yaml` and boilerplate REFERENCEd to `gold/_shared` — because the baseline is taken *after* revisions and tables are lifted, so crediting those would inflate the score against a denominator that never counted them (P3.1, measured). (Glossary **PROMOTE** to the single `gold/glossary.md` is a gold-phase output — §9.7 lists `normalize` as a consumer of `registries/glossary`, but the shared artifact is materialised downstream, not in this silver body transform.) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **consolidate** | `text@normalized` (incl. each version's `revisions.yaml` + `published` FM + `flags.yaml`), `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage [folds each member's `revisions.yaml`, §6.4; `official_date` = revision-newest **else the title-page `published` date**] + retained prior bodies captured as travel-with sidecars; the latest member's `flags.yaml` + `toc.yaml` (original paper TOC, §6.7) + `capture.yaml` (typed capture-attempt records, §6.4) travel with the anchor; a **`bundle.yaml` signed manifest** (every part + `sha256` + folded capture outcomes + `bundle_digest`, §6.6) is written last so the bundle is a verifiable unit; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
-| 🥇 DOC | **index** | `text@normalized`, `consolidated` (grouping → `is_latest`), `index.db:doc_meta_staged` (the staged identity `enrich` writes — an explicit input, not a hidden read; the build **carries it forward** so a fresh rebuild stays self-contained) | `index.db` (documents [keyed by URL-safe `doc_key`, with the inventory `doc_id` alongside — §5.5], doc_sections [**all headings = the anchor map**, with `is_latest`/`toc_level`, section id = `refs.yaml`'s `<doc_key>/<slug>`], **chunks [the retrieval units derived from sections (§5.5): containers + hollow excluded, oversized split into `#pN`; `chunk_id`→`section_id` FK, `searchable`, `section_path`] + FTS5 over `searchable AND is_latest` chunks — the search surface**, entities + entity_mentions [registry-driven extraction, anchor-only], quality view; **stable IDs**) | SKIP_IF_UNCHANGED |
+| 🥇 DOC | **index** | `text@normalized`, `consolidated` (grouping → `is_latest`), `index.db:doc_meta_staged` (the staged identity `enrich` writes — an explicit input, not a hidden read; the build **carries it forward** so a fresh rebuild stays self-contained) | `index.db` (documents [keyed by URL-safe `doc_key`, with the inventory `doc_id` alongside — §5.5], doc_sections [**all headings = the anchor map**, with `is_latest`/`toc_level`, section id = `refs.yaml`'s `<doc_key>/<slug>`], **chunks [the retrieval units derived from sections (§5.5): a section with anything to index — any substantive token or a relocated referent (`kernel.markdown.is_searchable`, P6.1b) — oversized split into `#pN`; `chunk_id`→`section_id` FK, `searchable`, `section_path`] + FTS5 over `searchable AND is_latest` chunks — the search surface**, entities + entity_mentions [registry-driven extraction, anchor-only], quality view; **stable IDs**) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **relate** | `index.db` (documents, entities, sections) | `index.db:relations` (doc↔entity, doc↔doc xref, entity↔entity — the knowledge graph) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **embed** | `index.db:chunks` (**`searchable AND is_latest` only** — §5.5) | `vectors.db` (per-chunk embeddings + ANN index over the searchable current chunks, keyed by `chunk_id`; containers/hollow + prior-version chunks excluded — §14.6) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **fidelity** | `text@normalized`, `raw` (bronze `S`), `index.db` (structure/sections/template schema), `registries` (to dereference single-sourced content) | `reports/fidelity` (per-document migration-fidelity records — content/provenance/history axes, template compliance, TOC integrity — + corpus report; `fidelity-framework.md`) | SKIP_IF_UNCHANGED |
@@ -1889,6 +1891,26 @@ retrieves badly.
 **Keep the canonical boilerplate indexed once.** Occasionally the boilerplate *is* the answer (a
 compliance/legal query). The single-sourced copy in `gold/_shared/` is indexed **once** — so it is
 findable, de-weighted rather than lost.
+
+> **The retrieval predicate is not the QA floor (P6.1b, 2026-08-02 — measured, then fixed).** The
+> chunking contract above is about *what makes a good chunk*; `searchable` answers a different
+> question — *is there anything here at all?* — and for two years it was written as
+> `kind in ("ok","stub")`, i.e. derived from `classify_section`. That taxonomy exists to score
+> **over-strip** ("did `normalize` gut this section?"), where both its rules are right: a thin
+> section is not evidence of damage, and a container's children carry its substance. As a
+> **retrieval** gate the same rules asserted two false things, and the live lake measured both:
+> **6,779 of 11,543** containers carried a substantive lead-in of their own (in a reference manual
+> that lead-in *is* the Format / Input Parameters contract), and **1,896** sections carried 1–7
+> tokens of real prose — HL7 value tables, one-line routine descriptions, *"There are no QUASAR
+> package-wide variables."* — which reached neither `chunks` nor `chunks_fts`, so **their text and
+> their own heading were unfindable**, while the identical heading in a doc whose sentence ran to
+> eight words was searchable. `kernel.markdown.is_searchable` now decides it independently
+> (`tokens > 0 or has_referent`); `kind` and the nav map are untouched. Chunk-less share of live
+> sections: **26.70% → 10.49%**, and what remains (4,648 bare containers + 821 empty `hollow`) is
+> genuinely contentless. Golden nDCG@10 unchanged at 0.5134 — see the caveat in the P6 tracker
+> row: the golden set does not exercise this class, so that is *no regression*, not *proof of gain*.
+> The gain is direct: `ACKQ/ackq3_0tm/package-wide-variables` went from 0 FTS rows to the **#1 hit**
+> for "QUASAR package-wide variables".
 
 **Net design (the claim, measured not asserted).** Sharper vectors + de-duplicated neighbors +
 latest-only correctness + structure-aligned chunks + a structured pre-filter, fused by RRF (§14.2):

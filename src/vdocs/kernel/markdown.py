@@ -191,12 +191,35 @@ def classify_section(
     * ``stub`` — thin, but content was relocated to a referent (boilerplate/CSV/asset) — reported,
       never a defect (the search index holds the canonical copy once);
     * ``hollow`` — a bare heading with no substance and no referent — the over-strip defect: it
-      embeds as essentially just its title and pollutes the search space."""
+      embeds as essentially just its title and pollutes the search space.
+
+    This answers a **QA** question ("did ``normalize`` gut this section?"). Whether a section is on
+    the *search surface* is :func:`is_searchable` — a separate predicate on purpose (P6.1b)."""
     if is_container:
         return "container"
     if tokens >= min_tokens:
         return "ok"
     return "stub" if has_referent else "hollow"
+
+
+def is_searchable(*, has_referent: bool, tokens: int) -> bool:
+    """Is there anything to index in this section at all? — the **retrieval** predicate (P6.1b).
+
+    Deliberately *not* derived from :func:`classify_section`. ``kind`` answers a QA question, and
+    for that question both its ``MIN_SUBSTANTIVE_TOKENS`` floor and its "``container`` ⇒ judge the
+    children, not this" rule are right. Reusing them as a retrieval gate asserted two false things:
+    that a section with children has no text of its own (measured 2026-08-02: **6,779 of 11,543**
+    live containers carry a substantive lead-in — in a reference manual that lead-in *is* the
+    Format / Input Parameters contract), and that under eight words is not worth finding (measured:
+    **1,896** sections held 1–7 tokens of real prose — HL7 value tables, one-line routine
+    descriptions, *"There are no QUASAR package-wide variables."* — and reached neither ``chunks``
+    nor ``chunks_fts``, so their text *and their own heading* were unfindable).
+
+    So: **thin is not empty, and having children does not mean having nothing.** A section is on the
+    search surface when it carries any substantive token, or content relocated to a referent (the
+    ``tables/*.csv`` sidecar that ``index`` re-introduces as its own chunk, §8.4/B3b). What stays
+    off it is a bare heading with nothing under it — where "not searchable" is simply true."""
+    return tokens > 0 or has_referent
 
 
 def is_markdown_artifact(line: str) -> bool:

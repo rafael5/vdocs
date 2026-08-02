@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from vdocs.kernel.markdown import (
     FENCE_RE,
     classify_section,
+    is_searchable,
     iter_headings,
     strip_tags,
     substantive_tokens,
@@ -86,7 +87,7 @@ class Section:
     text: str  # the heading line through the line before the next heading
     toc_level: bool  # whether the heading is in-TOC at the chosen depth
     kind: str  # "container" | "ok" | "stub" | "hollow" (kernel.markdown.classify_section, §14.6)
-    searchable: bool  # belongs on the search surface (FTS/embed) — containers + hollow chunks don't
+    searchable: bool  # on the search surface (FTS) — kernel.markdown.is_searchable, NOT kind
     section_path: str  # " > "-joined ancestor heading titles — context as metadata (§14.6)
 
 
@@ -408,7 +409,7 @@ def shred_sections(
                 text=text,
                 toc_level=lo <= level <= hi,
                 kind=kind,
-                searchable=kind in ("ok", "stub"),
+                searchable=is_searchable(has_referent=has_referent, tokens=tokens),
                 section_path=section_path,
             )
         )
@@ -426,7 +427,7 @@ def shred_sections(
                 text=body.strip(),
                 toc_level=True,
                 kind=kind,
-                searchable=kind in ("ok", "stub"),
+                searchable=is_searchable(has_referent=has_referent, tokens=tokens),
                 section_path="",
             )
         )

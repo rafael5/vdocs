@@ -171,7 +171,8 @@ class IndexStage(Stage):
     # v12 (SKL entity-keying, S3.3): index.db gained three EMPTY shells (entity_skl,
     # entity_synonyms, chunk_entities) + their v_* views — the schema owner stamps them so the read
     # version is consistent before `merge` populates them; read contract → v1.5 (additive MINOR).
-    contract_ver = 14  # v14: vocab-validated option recognizer (un-quarantined)
+    contract_ver = 15  # v15: `searchable` is the retrieval predicate, not a `kind` alias (P6.1b)
+    # ^ v14: vocab-validated option recognizer (un-quarantined)
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg

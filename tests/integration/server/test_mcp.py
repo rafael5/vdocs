@@ -207,7 +207,11 @@ def test_initialize_instructions_teach_the_three_source_protocol(tmp_path):
     )  # fmt: skip
     text = init["result"]["instructions"]
     assert all(tok in text for tok in _FALLBACK_TOKENS), text
-    assert "container" in text and "hollow" in text
+    # It must EXPLAIN the unindexed residual, not merely assert one. This used to check for the
+    # words "container"/"hollow"; since P6.1b `kind` is explicitly *not* the retrieval predicate
+    # (`is_searchable` is), so naming kinds here would teach a client something false — the residual
+    # is bare headings whose substance sits in their subsections, whatever their kind.
+    assert "subsections" in text
     # the empty result must be framed as a retrieval artefact, never as corpus absence
     assert "retrieval" in text.lower()
     # the exact clause that caused the incident must not be reinstated
@@ -217,10 +221,32 @@ def test_initialize_instructions_teach_the_three_source_protocol(tmp_path):
 def test_orientation_replaces_say_so_and_stop_with_the_fallback_rule(tmp_path):
     text = _text(_call(_handler(tmp_path), "orientation", {}))
     assert all(tok in text for tok in _FALLBACK_TOKENS), text
-    assert "container" in text and "hollow" in text
+    assert "subsections" in text  # explains the residual (see the initialize test — not by `kind`)
     # regression gate: the "stop" directive is what told agents not to check the fallbacks
     assert "say so and stop" not in text
     assert "and stop" not in text
+
+
+def test_no_client_surface_quotes_a_retired_coverage_constant(tmp_path):
+    """The chunk-less rule is quoted on five surfaces that must move together (P6.2). A stale one
+    is worse than none: it tells an agent to go read a body file for text `search` would now hand
+    it. This pins the retired numbers so a re-measure cannot land on four of the five."""
+    from vdocs.stages.manifest import manifest_pure
+
+    handler = _handler(tmp_path)
+    surfaces = [
+        mcp.NOT_INDEXED_RULE,
+        manifest_pure.USAGE,
+        _text(_call(handler, "orientation", {})),
+        handler.handle(
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+             "params": {"protocolVersion": "2024-11-05"}}
+        )["result"]["instructions"],
+    ]  # fmt: skip
+    retired = ("26.7%", "~73%", "13,899", "52,048", "11,526")
+    for text in surfaces:
+        for stale in retired:
+            assert stale not in text, f"retired constant {stale!r} still quoted: {text[:120]}"
 
 
 def test_lookup_container_section_reports_no_indexed_text_with_guidance(tmp_path):
@@ -268,7 +294,7 @@ def test_zero_hit_search_carries_the_warning_not_a_bare_empty_list(tmp_path):
     assert out["hits"] == [] and out["hit_count"] == 0
     warning = out["warning"]
     assert all(tok in warning for tok in _FALLBACK_TOKENS), warning
-    assert "container" in warning and "hollow" in warning
+    assert "subsections" in warning  # explains the residual without naming `kind` (see P6.1b)
     # a hit-bearing search must NOT carry the warning (it would train clients to ignore it)
     hit = json.loads(_text(_call(h, "search", {"query": "KAAJEE"})))
     assert hit["hits"] and "warning" not in hit

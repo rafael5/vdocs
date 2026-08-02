@@ -258,8 +258,10 @@ def test_ai_manifest_assembles_card_with_recipe_and_fingerprint():
 
 def test_usage_rule_teaches_the_unindexed_section_fallback():
     """The AI card is loaded as orientation context — it must not license a "not documented"
-    answer off a zero-hit search. 26.7% of live sections (container/hollow) carry NO indexed
-    text; their prose is only in body.md + the rich-tables CSV sidecars."""
+    answer off a zero-hit search. Since P6.1b that residual is 10.5% of live sections (was 26.7%)
+    and they are bare headings whose substance sits in their subsections — so the card explains it
+    **without** naming `kind`, which is no longer the retrieval predicate and would now mislead.
+    Prose can still live in body.md + the rich-tables CSV sidecars."""
     cat = mp.build_catalog(_DOCS)
     ents = mp.build_entity_index(_ENTS, top_n=25)
     m = mp.ai_manifest(
@@ -267,8 +269,9 @@ def test_usage_rule_teaches_the_unindexed_section_fallback():
     )
     for text in (m["usage"], mp.corpus_card(m)):
         assert "body.md" in text and "tables" in text
-        assert "container" in text and "hollow" in text
+        assert "subsections" in text
         assert "retrieval" in text.lower()
+        assert "26.7%" not in text and "~73%" not in text  # retired constants stay retired
 
 
 def test_corpus_card_renders_usage_catalog_and_recipe():

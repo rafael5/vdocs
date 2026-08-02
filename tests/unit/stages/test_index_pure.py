@@ -96,6 +96,67 @@ def test_shred_marks_hollow_leaf_not_searchable():
     assert "empty-section" in {s.slug for s in ip.shred_sections(body, "SD/x")}  # row still present
 
 
+# --- P6.1b: the RETRIEVAL predicate is not the QA floor. `kind` keeps MIN_SUBSTANTIVE_TOKENS (it
+# --- answers "did normalize gut this section?"); `searchable` answers "is there anything to index
+# --- here at all?" — measured: 1,896 live sections carried 1-7 tokens of real prose and reached
+# --- neither `chunks` nor `chunks_fts`, so their text AND their heading were unfindable.
+
+
+def test_shred_marks_container_with_own_lead_in_searchable():
+    # the audit's [S10] case: a container's own lead-in IS the API contract in a reference manual
+    body = (
+        "## $$GET^DIQ\n\n"
+        "Returns a single field value from a FileMan file, formatted for external display.\n\n"
+        "### Input Parameters\n\nFILE is the file number.\n\n"
+        "## Other\n\nSomething else entirely that stands on its own as a section body.\n"
+    )
+    secs = {s.slug: s for s in ip.shred_sections(body, "DI/di_pm")}
+    s = secs["getdiq"]
+    assert s.kind == "container"  # nav-map semantics untouched — only the retrieval flag moves
+    assert s.searchable is True
+
+
+def test_shred_marks_sub_floor_leaf_searchable_but_still_hollow():
+    # "There are no QUASAR package-wide variables." — 6 substantive tokens, a REAL answer to a real
+    # question, and dark before P6.1b. It stays `hollow` for over-strip scoring; it is now findable.
+    body = (
+        "## Package-wide Variables\n\n[↑ Back to Contents](#contents)\n\n"
+        "There are no QUASAR package-wide variables.\n\n"
+        "## Real Section\n\nThis section has plenty of real prose to stand alone when retrieved.\n"
+    )
+    secs = {s.slug: s for s in ip.shred_sections(body, "ACKQ/ackq3_0tm")}
+    s = secs["package-wide-variables"]
+    assert s.kind == "hollow"  # the QA floor is unchanged — this IS a thin section
+    assert s.searchable is True  # …but thin is not empty, and it must be retrievable
+
+
+def test_shred_keeps_genuinely_empty_sections_off_the_search_surface():
+    # the floor that remains: nothing but a heading (and round-trip nav) — nothing to index
+    body = (
+        "## Bare Container\n\n[↑ Back to Contents](#contents)\n\n"
+        "### Child\n\nThe child carries all of the substance for this part of the document.\n\n"
+        "## Bare Leaf\n\n[↑ Back to Contents](#contents)\n\n"
+        "## Real\n\nThis section has plenty of real prose to stand alone when retrieved.\n"
+    )
+    secs = {s.slug: s for s in ip.shred_sections(body, "SD/x")}
+    assert secs["bare-container"].kind == "container"
+    assert secs["bare-container"].searchable is False
+    assert secs["bare-leaf"].kind == "hollow" and secs["bare-leaf"].searchable is False
+
+
+def test_shred_marks_referent_only_section_searchable_whatever_its_kind():
+    # content lifted to a tables/*.csv sidecar contributes no tokens by design; the section is still
+    # on the search surface (index re-introduces the table as a chunk citing it — B3b, §8.4)
+    body = (
+        "## Table Section\n\n_[Table 1 (extracted to CSV)](tables/table-01.csv)_\n\n"
+        "### Child\n\nThe child carries all of the substance for this part of the document.\n\n"
+        "## Leaf Table\n\n_[Table 2 (extracted to CSV)](tables/table-02.csv)_\n"
+    )
+    secs = {s.slug: s for s in ip.shred_sections(body, "ACR/acr_tm")}
+    assert secs["table-section"].kind == "container" and secs["table-section"].searchable is True
+    assert secs["leaf-table"].kind == "stub" and secs["leaf-table"].searchable is True
+
+
 def test_shred_sections_fallback_when_no_headings():
     # Heading-less sources (menu listings, quick-reference cards, change-pages) still carry real
     # body text; without a fallback, shred returns [] → the doc gets zero chunks, no preview/search.

@@ -56,7 +56,10 @@ class ManifestStage(Stage):
     # after resolve). Bump re-runs so the glossary regenerates from the SKL.
     # v3 (Track D1): + gold/contract-manifest.json — the producer-contract manifest carrying both
     # version axes (read_schema_version, corpus_content_hash) read live off index.db meta.
-    contract_ver = 3  # bump when the published manifest JSON / glossary shape changes
+    # v4 (P6.1b): the USAGE coverage rule re-measured (26.7% → 10.5% chunk-less). Bump on a change
+    # to the baked-in TEXT as well as the shape: USAGE/CORPUS.md live in code, not in the lake, so
+    # an edit moves no input fingerprint — without this the stage skips and ships the stale card.
+    contract_ver = 4  # bump when the published manifest JSON / glossary shape *or its text* changes
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
