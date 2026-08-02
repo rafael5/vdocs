@@ -12,7 +12,7 @@ needs don't exist yet.
 | ~~`P1-acquisition-chain-integrity-kickoff.md`~~ → [`historical/`](../historical/) | P1 — re-key `raw/index.json`, chain-reconciliation gate, DOCX magic check (+ P1.4 WAL fix) | ✅ **complete** `6ba05eb` `38190e9` `fa66309` `6668a26` |
 | ~~`P2-doctor-into-the-dag-kickoff.md`~~ → [`historical/`](../historical/) | P2 — doctor as terminal DAG stage (+ riders R‑13, R‑14) | ✅ **complete** `74b136b` |
 | ~~`P3-retention-gates-kickoff.md`~~ → [`historical/`](../historical/) | P3 — retention verdicts gate via validate (+ the legacy-TOC capture-before-strip fix) | ✅ **complete** `b28fbf5` `f81dcb2` |
-| [`P4-sound-sqlite-fingerprints-kickoff.md`](P4-sound-sqlite-fingerprints-kickoff.md) | P4 — content-hash SQLite fingerprints | **ready to run** |
-| `P5-history-lineage-truth-kickoff.md` | P5 — history.yaml supersedes + stale-lineage check | written at P4 close |
+| ~~`P4-sound-sqlite-fingerprints-kickoff.md`~~ → [`historical/`](../historical/) | P4 — content-hash SQLite fingerprints + the `rows:N` migration | ✅ **complete** `1419d1b` |
+| [`P5-history-lineage-truth-kickoff.md`](P5-history-lineage-truth-kickoff.md) | P5 — history.yaml supersedes + stale-lineage check | **ready to run** |
 | `P6-container-leadin-chunking-kickoff.md` | P6 — chunk substantive container lead-ins | written at P5 close |
 | `P7-close-out-kickoff.md` | P7 — full rerun, strike audit register, republish constants | written at P6 close |
