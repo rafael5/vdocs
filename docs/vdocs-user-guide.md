@@ -395,6 +395,11 @@ Each hit is **pre-cited**: a stable `section_id` / `doc_key`, the document + sec
 snippet, a relevance score, and the resolved gold `body.md` path — so an answer can cite the corpus
 without guessing. Lexical FTS5 over the latest searchable chunks; restrict with `--app` / `--doc-type`.
 
+`--json` emits the **same envelope as the MCP `search` tool** (P6.3, 2026-08-02 — it was a bare
+array before): `{"hits": [...], "hit_count": N}`, plus a `"warning"` key **only** when `hit_count`
+is 0. Zero hits are a *retrieval* artefact, never proof the corpus lacks the fact, and both the
+plain and `--json` outputs now say so in the same words the MCP surface uses.
+
 For agents, the gold `CORPUS.md` / `ai-manifest.json` describe the corpus and the "answer from THIS
 corpus" query recipe.
 

@@ -39,17 +39,16 @@ _SELECT_ONLY = re.compile(r"^\s*(select|with)\b", re.IGNORECASE)
 # now the retrieval predicate (any substantive token, or content relocated to a referent) instead of
 # an alias for `kind`. What stays unindexed is a bare heading with nothing under it: 4,648
 # containers whose whole substance is their subsections, plus 821 empty `hollow` sections.
-# **The rule below still holds** — it is now a smaller, sharper claim, not a weaker one: prose can
-# still live in the gold `body.md` and the extracted `table-NN.csv` sidecars, and a wrong "not in
-# the corpus" answer costs exactly what it always did (four researchers once retracted a report of
+# **The rule still holds** — it is now a smaller, sharper claim, not a weaker one: prose can still
+# live in the gold `body.md` and the extracted `table-NN.csv` sidecars, and a wrong "not in the
+# corpus" answer costs exactly what it always did (four researchers once retracted a report of
 # "missing" FileMan APIs whose text had been present the whole time). Every client-facing surface
 # below (instructions · orientation · tool descriptions · search · lookup) states it.
-NOT_INDEXED_RULE = (
-    "An empty result is a RETRIEVAL artefact, not a documentation gap: ~89% of live sections carry "
-    "indexed text, and most of the 10.5% that do not are bare headings whose substance sits in "
-    "their subsections. Prose can also live in the gold body.md and its rich-tables `tables/*.csv` "
-    'sidecars. Read BOTH before you ever answer "not in the vdocs gold corpus".'
-)
+#
+# The rule itself now lives in `server.search` (P6.3) — the module the MCP tool, `vdocs ask`, and
+# `ask --json` all already import — so one re-measure moves all three surfaces or none. Re-exported
+# here because the instruction/orientation strings below embed it.
+NOT_INDEXED_RULE = search.NOT_INDEXED_RULE
 # One-liner for the tool-description slot (some clients surface only that).
 TOOL_RULE = (
     "An empty result means NOT INDEXED, not absent — ~27% of sections (container/hollow) carry no "
@@ -159,14 +158,9 @@ class Handler:
             app=args.get("app") or None,
             doc_type=args.get("doc_type") or None,
         )
-        out: dict[str, Any] = {"hits": hits, "hit_count": len(hits)}
-        if not hits:
-            # A bare `[]` reads as "nothing exists" — say what zero hits actually mean. Only on
-            # the empty case: a warning attached to every response trains clients to skip it.
-            out["warning"] = (
-                f"NO INDEXED MATCH — this is not evidence of absence. {NOT_INDEXED_RULE}"
-            )
-        return _dumps(out)
+        # A bare `[]` reads as "nothing exists" — the shared envelope says what zero hits actually
+        # mean, in the same words `vdocs ask` uses (P6.3).
+        return _dumps(search.search_envelope(hits))
 
     def _lookup_doc(self, key: str) -> dict[str, Any] | None:
         cur = self.con.execute("SELECT * FROM documents WHERE doc_key = ?", (key,))

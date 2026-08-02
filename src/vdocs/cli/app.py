@@ -410,10 +410,14 @@ def ask(
         cfg.index_db, query, k=k, app=list(apps) or None, doc_type=list(doc_types) or None
     )
     if json_out:
-        typer.echo(json.dumps(hits, indent=2, ensure_ascii=False))
+        # the SAME envelope the MCP `search` tool returns (P6.3) — one shape, one rule, whichever
+        # front door the agent came through
+        typer.echo(json.dumps(search.search_envelope(hits), indent=2, ensure_ascii=False))
         return
     if not hits:
-        typer.echo("no matches in the gold corpus.")
+        # never "no matches in the gold corpus" — that is the sentence that licenses a false
+        # "not documented", and it is exactly what the MCP surface is forbidden to say (R-11)
+        typer.echo(search.NO_MATCH_WARNING)
         return
     for i, h in enumerate(hits, 1):
         typer.echo(f"{i}. [{h['score']}] {h['doc_title']} — §{h['section_title']}")

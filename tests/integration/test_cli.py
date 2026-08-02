@@ -714,21 +714,41 @@ def test_ask_returns_cited_hits(tmp_path):
 
 
 def test_ask_json_output_is_machine_readable(tmp_path):
+    # P6.3: the SAME envelope the MCP `search` tool returns — {hits, hit_count} — so an agent
+    # reading either surface parses one shape and gets the same not-indexed rule (audit R-11).
     _seed_index_for_ask(tmp_path)
     result = runner.invoke(
         app, ["ask", "KAAJEE authentication", "--json"], env={"DATA_DIR": str(tmp_path)}
     )
     assert result.exit_code == 0
-    hits = json.loads(result.stdout)
-    assert hits[0]["section_id"] == "KAAJEE/dibr/intro"
-    assert hits[0]["body_path"] == "documents/gold/consolidated/KAAJEE/dibr/body.md"
+    out = json.loads(result.stdout)
+    assert out["hit_count"] == len(out["hits"]) and out["hit_count"] > 0
+    assert "warning" not in out  # a warning on every response trains clients to skip it
+    assert out["hits"][0]["section_id"] == "KAAJEE/dibr/intro"
+    assert out["hits"][0]["body_path"] == "documents/gold/consolidated/KAAJEE/dibr/body.md"
 
 
 def test_ask_no_match_reports_clearly(tmp_path):
+    # "no matches in the gold corpus." was the CLI saying exactly what the MCP surface is forbidden
+    # to say. A zero-hit search is a RETRIEVAL artefact, and the CLI must say so too (R-11).
     _seed_index_for_ask(tmp_path)
     result = runner.invoke(app, ["ask", "zz"], env={"DATA_DIR": str(tmp_path)})
     assert result.exit_code == 0
-    assert "no match" in result.stdout.lower()
+    out = result.stdout.lower()
+    assert "no indexed match" in out
+    assert "retrieval" in out and "body.md" in out and "tables" in out
+
+
+def test_ask_json_no_match_carries_the_same_warning_as_mcp(tmp_path):
+    from vdocs.server import search as search_mod
+
+    _seed_index_for_ask(tmp_path)
+    result = runner.invoke(app, ["ask", "zz", "--json"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 0
+    out = json.loads(result.stdout)
+    assert out["hits"] == [] and out["hit_count"] == 0
+    # byte-identical to what the MCP tool emits — one constant, three surfaces
+    assert out["warning"] == search_mod.NO_MATCH_WARNING
 
 
 def test_publish_rich_assets_builds_bundle(tmp_path):

@@ -61,6 +61,37 @@ LIMIT ?
 """.format(body=_BODY_COL, bm25=_BM25, filters="{filters}")
 
 
+# --- "an index miss is not corpus absence" — ONE rule, THREE surfaces (P6.3, audit R-11) ---------
+# The MCP `search` tool, `vdocs ask`, and `ask --json` must say the same thing about a zero-hit
+# search, because an agent may be reading any of them. Before P6.3 the CLI said "no matches in the
+# gold corpus." — the precise phrasing the MCP surface is forbidden to emit, and the one that let
+# four researchers report documented FileMan APIs as missing. It lives here, in the module all three
+# already import, so a re-measure cannot update two surfaces and leave the third lying.
+#
+# Coverage re-measured 2026-08-02 after P6.1b: ~89% of live sections carry indexed text; the
+# residual 10.5% are bare headings whose substance sits in their subsections
+# (`kernel.markdown.is_searchable`).
+NOT_INDEXED_RULE = (
+    "An empty result is a RETRIEVAL artefact, not a documentation gap: ~89% of live sections carry "
+    "indexed text, and most of the 10.5% that do not are bare headings whose substance sits in "
+    "their subsections. Prose can also live in the gold body.md and its rich-tables `tables/*.csv` "
+    'sidecars. Read BOTH before you ever answer "not in the vdocs gold corpus".'
+)
+NO_MATCH_WARNING = f"NO INDEXED MATCH — this is not evidence of absence. {NOT_INDEXED_RULE}"
+
+
+def search_envelope(hits: list[dict[str, Any]]) -> dict[str, Any]:
+    """The shared result envelope: ``{hits, hit_count}`` — plus ``warning`` **only** when empty.
+
+    A warning attached to every response trains clients to skip it, so it rides exactly the case it
+    is about. Shared as a *builder*, not just a string, so the three surfaces cannot drift in shape
+    either: an agent parses one thing whichever front door it came through."""
+    out: dict[str, Any] = {"hits": hits, "hit_count": len(hits)}
+    if not hits:
+        out["warning"] = NO_MATCH_WARNING
+    return out
+
+
 def lexical_search(
     index_db: Path,
     query: str,
