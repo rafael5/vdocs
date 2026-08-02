@@ -1,7 +1,7 @@
 # Kickoff prompts — pipeline audit remediation (P1–P7)
 
 One kickoff prompt per phase of
-[`../../proposals/pipeline-audit-remediation-implementation-plan.md`](../../proposals/pipeline-audit-remediation-implementation-plan.md)
+[`../../historical/pipeline-audit-remediation-implementation-plan.md`](../../historical/pipeline-audit-remediation-implementation-plan.md)
 (tracker beside it). Prompts exist for **un-executed** work only: each phase's closing step
 writes the *next* phase's prompt (baking in the measured results of the phase just landed)
 and retires the executed one. Do not write P3's prompt while P1 is open — the numbers it
@@ -20,4 +20,4 @@ bakes in the previous phase's measured numbers, so no prior session's context is
 | ~~`P4-sound-sqlite-fingerprints-kickoff.md`~~ → [`historical/`](../historical/) | P4 — content-hash SQLite fingerprints + the `rows:N` migration | ✅ **complete** `1419d1b` |
 | ~~`P5-history-lineage-truth-kickoff.md`~~ → [`historical/`](../historical/) | P5 — `history.yaml` supersedes + the stale-lineage check | ✅ **complete** `75d12e6` `30351e9` |
 | ~~`P6-container-leadin-chunking-kickoff.md`~~ → [`historical/`](../historical/) | P6 — `searchable` split from `kind`; chunk-less 26.7% → 10.5%; warning parity; golden coverage for the newly-indexed class | ✅ **complete** `e374d9a` `d984f8a` `5fa9a65` |
-| [`P7-close-out-kickoff.md`](P7-close-out-kickoff.md) | P7 — full rerun, strike audit register, republish constants, archive | **ready to run** |
+| ~~`P7-close-out-kickoff.md`~~ → [`historical/`](../historical/) | P7 — forced rerun, register struck, constants republished, effort archived | ✅ **complete** `ade28bb` + close-out |

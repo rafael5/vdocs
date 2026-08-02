@@ -1,6 +1,9 @@
 # Pipeline audit remediation — implementation plan (findings 1–5)
 
-**Status: ACCEPTED · in progress** · Tracker:
+**Status: ✅ COMPLETE (P1–P7 landed 2026-08-01/02) · ARCHIVED** — a finished plan is history; the
+living record of what it changed is the struck register in
+[`../reference/pipeline-adversarial-audit.md`](../reference/pipeline-adversarial-audit.md) and the
+durable lessons in `docs/memory/pipeline-audit-remediation.md`. · Tracker:
 [`pipeline-audit-remediation-tracker.md`](pipeline-audit-remediation-tracker.md) · Kickoff
 prompts: [`../prompts/pipeline-audit-remediation/`](../prompts/pipeline-audit-remediation/)
 (one per phase) · Source:

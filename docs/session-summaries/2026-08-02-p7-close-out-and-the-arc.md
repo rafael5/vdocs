@@ -88,7 +88,7 @@ my inputs sit still?*
 
 Struck thirteen register rows with their landing commits, refreshed the master-table Credibility
 cells, and annotated four footnotes with dated corrections — the audit is a point-in-time record, so
-nothing was rewritten. Added R‑18. Ran the forced acceptance from `convert` (the operator's call:
+nothing was rewritten. Added R‑18. Ran the forced acceptance from `convert` — **GREEN 12/12, 0 errors**, every published number reproducing exactly (615 groups, 57,895 chunks, `validate` all-zero, doctor 20/20), and two follow-on runs in full steady state (the operator's call:
 the literal `vdocs run --force` would have re-crawled va.gov and let the upstream corpus shift
 during close-out, which is an uncontrolled variable at exactly the wrong moment). Wrote the operator
 an exact diff for the two out-of-repo surfaces rather than editing them — the `vdocs-corpus` skill's

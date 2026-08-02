@@ -30,11 +30,15 @@ Documentation here is classified by **lifecycle state, not topic**:
 
 - **Active workstream:** SKL — [`proposals/skl-implementation-plan.md`](proposals/skl-implementation-plan.md)
   (S0–S3 landed; S4 semantic-fidelity gates and S5 generalize-to-Kernel open).
-- **Active workstream:** pipeline audit remediation — [`proposals/pipeline-audit-remediation-implementation-plan.md`](proposals/pipeline-audit-remediation-implementation-plan.md)
-  (+ [tracker](proposals/pipeline-audit-remediation-tracker.md) + [kickoff prompts](prompts/pipeline-audit-remediation/); fixes audit findings 1–5; P1 ready to run).
+- **✅ Complete (2026-08-02):** pipeline audit remediation, P1–P7 — [`historical/pipeline-audit-remediation-implementation-plan.md`](historical/pipeline-audit-remediation-implementation-plan.md)
+  (+ [tracker](historical/pipeline-audit-remediation-tracker.md)). Fixed 13 of the audit's register
+  rows and added one; the living record is the struck register in
+  [`reference/pipeline-adversarial-audit.md`](reference/pipeline-adversarial-audit.md). Chunk-less
+  sections 26.7% → 10.5%, stale lineage 615/615 → 0/615, retrieval +44%. **Open hand-off:**
+  [`guides/updating-out-of-repo-surfaces.md`](guides/updating-out-of-repo-surfaces.md).
 - **Paused:** FileMan docs-as-code pilot at L1.4
   ([`prompts/L1.4-export-fileman-driver-kickoff.md`](prompts/L1.4-export-fileman-driver-kickoff.md));
   manifest query-recipe staleness fix
-  ([`prompts/manifest-query-recipe-staleness-fix-kickoff.md`](prompts/manifest-query-recipe-staleness-fix-kickoff.md)).
+  ([`prompts/historical/manifest-query-recipe-staleness-fix-kickoff.md`](prompts/historical/manifest-query-recipe-staleness-fix-kickoff.md)).
 - **Direction:** lexical-first, offline, human-consumer (vectors/MCP parked) — rationale in
   [`proposals/offline-lexical-search-plan.md`](proposals/offline-lexical-search-plan.md).
