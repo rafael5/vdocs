@@ -1,6 +1,6 @@
 """The `doctor` stage — the corpus-soundness gate, wired into the DAG as its terminal node.
 
-The 19 checks (coverage floors, anchor integrity + coverage, the entity-quarantine cascade, the
+The 20 checks (coverage floors, anchor integrity + coverage, the entity-quarantine cascade, the
 SKL-projection wipe detector, gate fidelity, latest-only FTS, vocab closure, and read-contract
 verbatim verification) already existed and already passed — but they ran only under ``build`` or
 by hand, so a pipeline driven with ``vdocs run`` could finish green over a RED-able ``index.db``
@@ -45,7 +45,7 @@ log = structlog.get_logger(__name__)
 
 class DoctorStage(Stage):
     name = "doctor"
-    description = "corpus-soundness gate: 19 checks over index.db → GOLD LIBRARY GREEN|RED"
+    description = "corpus-soundness gate: 20 checks over index.db → GOLD LIBRARY GREEN|RED"
     # CONTRACT_MANIFEST (produced by `manifest`) is the edge that makes this terminal; the two
     # index.db tables are the substrate the checks actually read. REGISTRIES carries the policy
     # the verdict is measured against (doctor-policy / the gate keep-set / entity-quality), so it

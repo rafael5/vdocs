@@ -213,6 +213,7 @@ def diagnose(
     read_spec: dict[str, Any] | None = None,
     excluded_entity_types: frozenset[str] = frozenset(),
     skl_entities: int | None = None,
+    published_usage: str | None = None,
 ) -> DoctorReport:
     """Run every soundness check against ``index.db`` and assemble the report. ``kept_doctypes`` is
     the gate's Tier-A keep set (gold must contain only those). When ``read_spec`` (a read-contract)
@@ -470,6 +471,25 @@ def diagnose(
         row = conn.execute("SELECT value FROM meta WHERE key='read_schema_version'").fetchone()
         checks.append(contract_check(emitted, row[0] if row else "", read_spec))
 
+    # The published corpus card carries text that lives in CODE (`manifest_pure.USAGE`) — the third
+    # way this pipeline ships a stale output with every *input* unchanged: editing the constant
+    # moves no fingerprint, so `manifest` skips and the card keeps quoting the disproved number.
+    # (Measured 2026-08-02: CORPUS.md still said 26.7% after P6.1b had made it 10.5%.) A
+    # `contract_ver` bump fixes it when remembered; this check is what notices when it is not.
+    if published_usage is not None:
+        from vdocs.stages.manifest.manifest_pure import USAGE
+
+        checks.append(
+            Check("corpus card", Health.PASS, "published usage rule matches this build")
+            if published_usage.strip() == USAGE.strip()
+            else Check(
+                "corpus card",
+                Health.FAIL,
+                "the published corpus card's usage rule no longer matches this build — "
+                "run: vdocs manifest",
+            )
+        )
+
     return DoctorReport(gold_count=gold, checks=checks)
 
 
@@ -500,6 +520,13 @@ def diagnose_lake(cfg: Settings) -> DoctorReport:
             skl_entities = int(kconn.execute("SELECT count(*) FROM entities").fetchone()[0])
         finally:
             kconn.close()
+    # The shipped card's own usage rule, so the drift check can compare it to the code that renders
+    # it. Absent before the first `manifest` run — that is a missing input, not a defect.
+    published_usage: str | None = None
+    if cfg.ai_manifest.exists():
+        import json as _json
+
+        published_usage = _json.loads(cfg.ai_manifest.read_text(encoding="utf-8")).get("usage")
     conn = db.connect(cfg.index_db, read_only=True)
     try:
         return diagnose(
@@ -509,6 +536,7 @@ def diagnose_lake(cfg: Settings) -> DoctorReport:
             read_spec=spec,
             excluded_entity_types=excluded,
             skl_entities=skl_entities,
+            published_usage=published_usage,
         )
     finally:
         conn.close()

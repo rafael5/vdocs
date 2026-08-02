@@ -337,7 +337,7 @@ VALIDATION_REPORT = ArtifactContract(
 
 
 # `doctor`: the corpus-soundness verdict as a **computable artifact** (P2.1, audit R‑6/[S18]).
-# The 19 checks were only ever stdout a human read, so a `vdocs run` could finish green over a
+# The checks were only ever stdout a human read, so a `vdocs run` could finish green over a
 # RED-able index.db. Emitting the verdict + every check as a file makes the gate a DAG node with
 # a diffable output — the same discipline as validate's verification.json.
 DOCTOR_REPORT = ArtifactContract(

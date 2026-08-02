@@ -40,8 +40,11 @@ class PreflightResult(BaseModel):
     remediation: str = ""
 
     @classmethod
-    def proceed(cls) -> PreflightResult:
-        return cls(decision=Decision.PROCEED)
+    def proceed(cls, reason: str = "") -> PreflightResult:
+        """``reason`` is optional and explanatory only — a PROCEED never needs justifying, but when
+        a stage runs *despite* unchanged inputs (e.g. its output was clobbered) saying why turns a
+        surprising re-run into a legible one."""
+        return cls(decision=Decision.PROCEED, reason=reason)
 
     @classmethod
     def skip(cls, reason: str) -> PreflightResult:

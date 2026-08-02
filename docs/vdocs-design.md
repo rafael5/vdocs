@@ -1053,8 +1053,21 @@ CREATE TABLE stage_runs (
 **Preflight(S, force):**
 1. For each `C in S.requires`: `C.validate()` must pass, else `FAIL(remediation="Run: vdocs " + C.produced_by)`. (If `C.optional` and absent → loud WARN, proceed.)
 2. For each internal upstream `U=C.produced_by`: require `stage_runs[U].status=='ok'`, compatible `contract_ver`, and `C.fingerprint() == stage_runs[U].outputs_fp[C.key]`. Mismatch → `FAIL("{C.key} changed since {U} produced it; re-run {U}")`. *(This is what makes "the next stage knows it's ok to run" real, and fixes v1's stale-DB class of bug.)*
-3. Skip decision: if `not force` and `idempotency==SKIP_IF_UNCHANGED` and `stage_runs[S].inputs_fp == current input fps` and `produces[].validate()` all pass → `SKIP`.
+3. Skip decision: if `not force` and `idempotency==SKIP_IF_UNCHANGED` and `stage_runs[S].inputs_fp == current input fps` and `produces[].validate()` all pass **and every produced artifact still fingerprints to `stage_runs[S].outputs_fp[key]`** → `SKIP`.
 4. else `PROCEED`.
+
+> **Why step 3 checks the stage's own outputs (audit R‑1, output half — added 2026-08-02).**
+> "My inputs are unchanged" is not "my work is still there". Another stage can destroy this stage's
+> output without touching its inputs: `index` rebuilds `index.db` from scratch, which recreates
+> `entity_skl` as an empty shell — and `merge`, which fills that table, sees its own inputs
+> (`index.db:chunks`/`entities`) rebuilt *content-identically*, correctly concludes "inputs
+> unchanged", and skips over the hole. `doctor` then goes RED on the SKL-projections check. This
+> happened twice on the live lake, the second time **after** P4 had made the fingerprints content
+> hashes — because P4 fixed the *input* half of the same finding. `produces[].validate()` could not
+> see it either: an emptied table still validates. A clobbered output now yields `PROCEED` with a
+> reason naming the artifact, so the pipeline repairs itself on the next ordinary run instead of
+> needing `--from merge --force`. An artifact with no recorded fingerprint (an optional output that
+> was legitimately absent) is never treated as clobbered.
 
 **Postflight(S):**
 1. `produces[].validate()` all must pass; run any stage-specific deep gate (e.g. the

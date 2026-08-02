@@ -213,6 +213,19 @@ class Stage(ABC):
                 if legacy_record:
                     log.info("sqlite-fingerprint-format-rerun", stage=self.name)
                 else:
+                    # R‑1, output half: "my inputs are unchanged" is not "my work is still there".
+                    # Another stage can destroy this stage's output without touching its inputs —
+                    # `index` rebuilding `index.db` empties `entity_skl`, which `merge` fills — and
+                    # then skipping ships the hole. Ask the question the skip decision never asked.
+                    clobbered = self._clobbered_outputs(ctx, prior.outputs_fp)
+                    if clobbered:
+                        log.warning(
+                            "stage-output-clobbered", stage=self.name, artifacts=sorted(clobbered)
+                        )
+                        return PreflightResult.proceed(
+                            f"output {', '.join(sorted(clobbered))} changed since this stage "
+                            "produced it — re-running to restore it"
+                        )
                     return PreflightResult.skip("inputs unchanged")
         return PreflightResult.proceed()
 
@@ -237,6 +250,31 @@ class Stage(ABC):
         return self._write(ctx, "ok", started_at, finished_at, inputs_fp, outputs_fp, run.counts)
 
     # --- helpers ---
+    def _clobbered_outputs(self, ctx: StageContext, recorded: dict[str, str]) -> list[str]:
+        """Which of this stage's produced artifacts no longer match what it recorded producing.
+
+        The skip decision's blind spot (audit R‑1, output half): ``produces_ok`` asks only whether
+        each output *validates* — a table that still exists, even an emptied one — so a stage whose
+        work was destroyed by another writer skipped happily and shipped the hole. Measured twice on
+        the live lake, both times as `index` rebuilding `index.db` and emptying the `entity_skl`
+        table that `merge` fills; `doctor` caught the consequence, nothing caught the cause.
+
+        An artifact with no recorded fingerprint is **not** treated as clobbered: optional outputs
+        that were legitimately absent at postflight never got one, and inventing drift for them
+        would re-run those stages forever. Cost is one fingerprint per produced artifact per
+        preflight — the same content hash postflight already computes (~0.3 s for the largest
+        contracted table, P4.1)."""
+        out: list[str] = []
+        for p in self.produces:
+            was = recorded.get(p.key)
+            if not was or fp.is_legacy_sqlite_fingerprint(was):
+                continue  # never recorded, or a retired format the legacy path already re-runs
+            if not p.validate(ctx.cfg).ok:
+                out.append(p.key)  # gone entirely (optional outputs are filtered by the caller)
+            elif p.fingerprint(ctx.cfg, verify=ctx.verify) != was:
+                out.append(p.key)
+        return out
+
     def _input_fps(self, ctx: StageContext) -> dict[str, str]:
         fps: dict[str, str] = {}
         for c in self.requires:

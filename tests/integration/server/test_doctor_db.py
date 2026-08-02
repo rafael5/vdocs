@@ -336,3 +336,44 @@ def test_diagnose_flags_unknown_coverage_field_instead_of_crashing(tmp_path):
     pol = [c for c in rep.checks if c.name == "doctor policy"]
     assert pol and pol[0].health is Health.FAIL and "nonexistent_col" in pol[0].detail
     assert rep.verdict() == "RED"
+
+
+# --- the published corpus card vs the code that renders it (the third way an output goes stale) ---
+
+
+def test_diagnose_reds_when_the_published_card_rule_drifts_from_the_code(tmp_path):
+    """`manifest_pure.USAGE` lives in CODE, so editing it moves no input fingerprint and `manifest`
+    skips — shipping a CORPUS.md that quotes a number the same commit disproved (measured: the card
+    still said 26.7% after P6.1b took it to 10.5%). A `contract_ver` bump fixes it *if remembered*;
+    this check is what notices when it isn't."""
+    conn = _open(tmp_path)
+    _healthy(conn)
+    report = doc.diagnose(
+        conn, kept_doctypes=_KEPT, policy=_POLICY, published_usage="an OLD rule quoting 26.7%"
+    )
+    conn.close()
+    assert report.verdict() == "RED"
+    fail = next(c for c in report.failures() if c.name == "corpus card")
+    assert "vdocs manifest" in fail.detail  # the remediation is the command, not a diagnosis
+
+
+def test_diagnose_passes_when_the_published_card_matches(tmp_path):
+    from vdocs.stages.manifest import manifest_pure
+
+    conn = _open(tmp_path)
+    _healthy(conn)
+    report = doc.diagnose(
+        conn, kept_doctypes=_KEPT, policy=_POLICY, published_usage=manifest_pure.USAGE
+    )
+    conn.close()
+    assert report.verdict() == "GREEN"
+
+
+def test_diagnose_skips_the_card_check_when_no_card_is_published(tmp_path):
+    # a lake before its first `manifest` run has no card — absent input, not a defect
+    conn = _open(tmp_path)
+    _healthy(conn)
+    report = doc.diagnose(conn, kept_doctypes=_KEPT, policy=_POLICY, published_usage=None)
+    conn.close()
+    assert report.verdict() == "GREEN"
+    assert not any(c.name == "corpus card" for c in report.checks)
