@@ -4,10 +4,11 @@
 >
 > > Read `docs/proposals/vdocs-quality-response-ranking/prompts/RR-kickoff.md` and execute it.
 
-⛔ **First check that `vdocs-quality-report-card` has landed** (its tracker's RC ✓ row). If it has
-not, stop — this effort is measured with the answer key, and until that key is repaired it fails
-search for returning *better* answers than it names. Tuning against it optimises toward worse
-results.
+> ## ⛔ Check this first
+>
+> **`vdocs-quality-report-card` must be ticked `RC ✓` before this effort starts** — the family-wide rule (operator direction, 2026-08-03). If it is not, stop and run that effort instead.
+>
+> **Measure before you act.** The first step below is a measurement. No code, configuration, curation or gate lands until it is complete and written down.
 
 **Repo: `vdocs`** (`~/projects/vdocs`) — offline analytical workload. Read `CLAUDE.md`, the proposal
 and plan in [`..`](..), then tick the tracker per landed step. **Shared-lake rule:**

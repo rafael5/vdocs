@@ -4,9 +4,17 @@ Proposal: [`vdocs-quality-crawl-integrity.md`](vdocs-quality-crawl-integrity.md)
 Tracker: [`vdocs-quality-crawl-integrity-tracker.md`](vdocs-quality-crawl-integrity-tracker.md) ·
 Prompts: [`prompts/`](prompts/)
 
-Two steps, commit subjects `CI.1:` / `CI.2:`. House rules: TDD, `make check` green before commit,
-tick the tracker in the same commit. Neither step changes search behaviour, so this effort can run
-independently of the retrieval work.
+⛔ **Do not start before `vdocs-quality-report-card` is ticked `RC ✓`** (operator direction, 2026-08-03). Neither step here changes search behaviour, so this effort *could* technically run alongside the retrieval work — it deliberately does not, because the report card is the underlying issue and gets fixed first.
+
+Three steps, commit subjects `CI.0:` / `CI.1:` / `CI.2:`. House rules: TDD, `make check` green before commit, tick the tracker in the same commit.
+
+## CI.0 — Measure first
+
+Record what the current crawl actually yields (sections and documents discovered) and the
+current admitted-set composition. These two numbers *are* the baselines the gates in CI.1 and
+CI.2 compare against — building a floor before knowing the floor level is guesswork.
+
+**No gate lands before this exists.**
 
 ## CI.1 — A completeness floor on the crawl
 
@@ -49,9 +57,7 @@ acknowledgement passes; an unchanged set passes silently; a swap of equal size r
 
 ## Sequencing
 
-CI.1 → CI.2. The floor is the cruder, cheaper net and catches the source-side failure; the
-composition baseline catches the rules-side failure and is the one that would have caught the
-measured 102-document departure.
+CI.0 → CI.1 → CI.2. The floor is the cruder, cheaper net and catches the source-side failure; the composition baseline catches the rules-side failure and is the one that would have caught the measured 102-document departure.
 
 ## Verification on the live collection
 

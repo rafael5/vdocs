@@ -5,6 +5,20 @@ Plan: [`vdocs-quality-report-card-implementation-plan.md`](vdocs-quality-report-
 Tracker: [`vdocs-quality-report-card-tracker.md`](vdocs-quality-report-card-tracker.md) ·
 Prompts: [`prompts/`](prompts/) · Register row: **R‑19**
 
+> ## ⛔ Two standing rules for the `vdocs-quality-*` family
+>
+> **1. This effort comes first.** Every other effort in the family
+> (`response-ranking`, `crawl-integrity`, `synonym-layer`, `pattern-miner`) is measured — directly or
+> indirectly — with the answer key this effort repairs. Until **RC ✓** is ticked, no other effort
+> starts. That is a deliberate sequencing decision, not a technical constraint: `crawl-integrity`
+> touches no search behaviour and *could* run alongside, but running it first would leave the
+> underlying instrument broken while we spent effort elsewhere.
+>
+> **2. Measure before you act — including here.** RC.1 begins by *confirming* that the six
+> unanswerable questions really are out of scope rather than lost. "Missing" and "deliberately
+> excluded" look identical from the answer key's side and mean opposite things, and acting on the
+> wrong one would either hide a real defect or delete a legitimate question.
+
 ## Contents
 
 - [1. Background — in plain terms](#1-background--in-plain-terms)

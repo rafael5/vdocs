@@ -2,6 +2,7 @@
 
 | Step | What lands | Status | Commit / notes |
 |------|-----------|--------|----------------|
+| RR.0 | **Measure first** — re-baseline on the production collection after the report card lands; record the report and confirm its provenance stamp | ☐ | |
 | RR.1 | Default result count raised for the assistant path (8 → 15–20); human CLI display kept tight | ☐ | |
 | RR.2 | Relevance field weights re-swept on the **production** collection; only a measured win adopted | ☐ | |
 | RR.3 | Parent headings stop displacing the children that hold the content | ☐ | |
@@ -11,9 +12,10 @@ Proposal: [`vdocs-quality-response-ranking.md`](vdocs-quality-response-ranking.m
 Plan: [`vdocs-quality-response-ranking-implementation-plan.md`](vdocs-quality-response-ranking-implementation-plan.md) ·
 Prompts: [`prompts/`](prompts/)
 
-⛔ **Blocked on [`vdocs-quality-report-card`](../vdocs-quality-report-card/).** The measures below are
-taken with the answer key, and the key currently fails search for returning *better* answers than it
-names. Tuning against it would optimise toward worse results.
+⛔ **Prerequisite: [`vdocs-quality-report-card`](../vdocs-quality-report-card/) must be ticked `RC ✓` before this effort starts.** Every measurement in this family is taken with that answer key, and it currently fails search for returning better answers than it names.
+📏 **Measure before you act:** the first step below is a measurement, and no code, configuration, curation or gate lands until it is complete and written down.
+
+Tuning against an unrepaired key would optimise search toward measurably worse answers — that is the specific risk this ordering exists to prevent.
 
 ## Baseline (2026-08-02, `corpus_content_hash 6dbec1f5…`, 1,040 documents / 57,895 passages)
 

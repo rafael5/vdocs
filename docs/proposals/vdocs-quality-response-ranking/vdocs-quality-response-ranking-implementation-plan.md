@@ -4,7 +4,7 @@ Proposal: [`vdocs-quality-response-ranking.md`](vdocs-quality-response-ranking.m
 Tracker: [`vdocs-quality-response-ranking-tracker.md`](vdocs-quality-response-ranking-tracker.md) ·
 Prompts: [`prompts/`](prompts/)
 
-⛔ **Do not start before `vdocs-quality-report-card` lands.** Three steps, commit subjects `RR.1:` /
+⛔ **Do not start before `vdocs-quality-report-card` is ticked `RC ✓`.** Four steps, commit subjects `RR.1:` /
 `RR.2:` / `RR.3:`, cheapest first, each adopted **only** on a measured win. House rules: TDD,
 `make check` green before commit, tick the tracker in the same commit.
 
@@ -17,6 +17,15 @@ Every step is judged the same way, and the discipline is stricter than the mean:
    alone is not sufficient — it fingerprints the document set, not the index build.
 3. Compare **per question**. A rising mean with one question falling to zero is a loss, not a win.
 4. Keep both reports; they are the evidence the tracker row cites.
+
+## RR.0 — Measure first
+
+Re-baseline on the production collection *after* the report card lands, and record the report.
+This is the number every step below is compared against, and it cannot be the pre-report-card
+figure — the key changed underneath it. Confirm the rollup's `corpus_content_hash` **and**
+passage count before treating it as a baseline.
+
+**No configuration, weight or code change lands before this exists.**
 
 ## RR.1 — Show more results
 
@@ -68,7 +77,7 @@ measured; this is about ordering between two results, not about excluding one.
 
 ## Sequencing
 
-RR.1 → RR.2 → RR.3. RR.1 is free and moves the biggest number, so it establishes the new baseline the
+RR.0 → RR.1 → RR.2 → RR.3. RR.0 is the baseline everything else is compared against; RR.1 is free and moves the biggest number, so it establishes the new baseline the
 other two are measured against. Stop early if the key stops improving — the remaining headroom is in
 the 25.5% that is not retrieved at all, and that is a different effort.
 

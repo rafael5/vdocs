@@ -68,9 +68,7 @@ system does.
 
 ## Sequencing and dependency
 
-Independent of the retrieval efforts in mechanism, but **measure after `vdocs-quality-report-card`
-lands** if SL.1(b) uses the answer key at all — an unrepaired key would misattribute vocabulary
-failures.
+⛔ **Do not start before `vdocs-quality-report-card` is ticked `RC ✓`.** SL.1(b) leans on the answer key, and an unrepaired key misattributes vocabulary failures — it would tell you this feature is needed (or not) for the wrong reasons. Independent of the retrieval efforts in mechanism, but not in sequence.
 
 ## Out of scope
 

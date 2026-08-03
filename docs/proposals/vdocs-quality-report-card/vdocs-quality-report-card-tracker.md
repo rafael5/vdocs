@@ -11,8 +11,10 @@ Proposal: [`vdocs-quality-report-card.md`](vdocs-quality-report-card.md) ·
 Plan: [`vdocs-quality-report-card-implementation-plan.md`](vdocs-quality-report-card-implementation-plan.md) ·
 Prompts: [`prompts/`](prompts/)
 
-Update **per landed step** (judge → `make check` → commit → tick). A step is DONE only when its
-measure is demonstrated on the production collection with a provenance-stamped report.
+🥇 **This effort is the prerequisite for the whole `vdocs-quality-*` family.** No other effort starts until `RC ✓` is ticked.
+📏 **Measure before you act:** RC.1 begins by *confirming* the six questions are out of scope rather than lost — those look identical from the key's side and mean opposite things.
+
+Update **per landed step** (judge → `make check` → commit → tick). A step is DONE only when its measure is demonstrated on the production collection with a provenance-stamped report.
 
 ## Baseline (2026-08-02, `corpus_content_hash 6dbec1f5…`, 1,040 documents)
 

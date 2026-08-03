@@ -9,8 +9,13 @@ and plan in [`..`](..), then register rows **R‑4** and **R‑19** in
 `docs/reference/pipeline-adversarial-audit.md`. Tick the tracker per landed step.
 **Shared-lake rule:** `pgrep -af "vdocs run"` before any command touching `~/data/vdocs`.
 
-Independent of the retrieval efforts — this touches no search behaviour, so it can run in parallel
-with someone else's measurement work.
+> ## ⛔ Check this first
+>
+> **`vdocs-quality-report-card` must be ticked `RC ✓` before this effort starts** — the family-wide rule (operator direction, 2026-08-03). If it is not, stop and run that effort instead.
+>
+> **Measure before you act.** The first step below is a measurement. No code, configuration, curation or gate lands until it is complete and written down.
+
+This effort touches no search behaviour, so it *could* technically run alongside the retrieval work. It deliberately does not — the report card is the underlying issue and is fixed first.
 
 ## Why this exists
 

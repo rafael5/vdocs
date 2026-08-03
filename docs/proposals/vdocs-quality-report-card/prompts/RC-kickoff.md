@@ -6,6 +6,12 @@
 >
 > Self-contained: it names every document to read and carries the measured baseline.
 
+> ## 🥇 This effort runs first
+>
+> Every other `vdocs-quality-*` effort is blocked on this tracker's `RC ✓` row (operator direction, 2026-08-03). Nothing else in the family starts until it is ticked.
+>
+> **Measure before you act:** RC.1 opens by *confirming* the six questions are out of scope rather than lost — those look identical from the key's side and mean opposite things.
+
 **Repo: `vdocs`** (`~/projects/vdocs`) — an offline analytical workload. Read `CLAUDE.md`, then the
 proposal and plan in [`..`](..), then register row **R‑19** in
 `docs/reference/pipeline-adversarial-audit.md`. Tick the tracker per landed step.

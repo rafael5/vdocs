@@ -9,6 +9,12 @@ and plan in [`..`](..), register row **R‑12** in `docs/reference/pipeline-adve
 the feature's original design in [`../../skl-proposal.md`](../../skl-proposal.md). Tick the tracker
 per landed step. **Shared-lake rule:** `pgrep -af "vdocs run"` before touching `~/data/vdocs`.
 
+> ## ⛔ Check this first
+>
+> **`vdocs-quality-report-card` must be ticked `RC ✓` before this effort starts** — the family-wide rule (operator direction, 2026-08-03). If it is not, stop and run that effort instead.
+>
+> **Measure before you act.** The first step below is a measurement. No code, configuration, curation or gate lands until it is complete and written down.
+
 ## This is a decision, not a build — and "stop" is a legitimate outcome
 
 VistA documentation names the same thing two ways: *file 200* in one manual, *NEW PERSON* in

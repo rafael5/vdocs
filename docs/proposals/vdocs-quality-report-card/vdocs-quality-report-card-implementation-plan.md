@@ -4,9 +4,10 @@ Proposal: [`vdocs-quality-report-card.md`](vdocs-quality-report-card.md) ·
 Tracker: [`vdocs-quality-report-card-tracker.md`](vdocs-quality-report-card-tracker.md) ·
 Prompts: [`prompts/`](prompts/)
 
-Three steps, commit subjects `RC.1:` / `RC.2:` / `RC.3:`. House rules apply: `make check` green
-before commit, tick the tracker in the same commit, and every claim of improvement measured on the
-production collection with a provenance-stamped report.
+🥇 **This effort runs before every other `vdocs-quality-*` effort.** All four others are blocked on its `RC ✓` row (operator direction, 2026-08-03).
+📏 **Measure before you act:** RC.1 opens by *confirming* the exclusions are real rather than assuming them.
+
+Three steps, commit subjects `RC.1:` / `RC.2:` / `RC.3:`. House rules apply: `make check` green before commit, tick the tracker in the same commit, and every claim of improvement measured on the production collection with a provenance-stamped report.
 
 ## RC.1 — Resolve the six unanswerable questions
 

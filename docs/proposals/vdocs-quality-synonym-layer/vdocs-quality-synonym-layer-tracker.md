@@ -12,8 +12,10 @@ Proposal: [`vdocs-quality-synonym-layer.md`](vdocs-quality-synonym-layer.md) ·
 Plan: [`vdocs-quality-synonym-layer-implementation-plan.md`](vdocs-quality-synonym-layer-implementation-plan.md) ·
 Prompts: [`prompts/`](prompts/)
 
-**This effort is a decision, not a build.** SL.1 and SL.2 are mandatory; exactly one of SL.3a/SL.3b
-follows from the ruling.
+⛔ **Prerequisite: [`vdocs-quality-report-card`](../vdocs-quality-report-card/) must be ticked `RC ✓` before this effort starts.** Every measurement in this family is taken with that answer key, and it currently fails search for returning better answers than it names.
+📏 **Measure before you act:** the first step below is a measurement, and no code, configuration, curation or gate lands until it is complete and written down.
+
+**This effort is a decision, not a build.** SL.1 (measurement) and SL.2 (the ruling) are mandatory; exactly one of SL.3a/SL.3b follows.
 
 ## Baseline (2026-08-02, production collection)
 

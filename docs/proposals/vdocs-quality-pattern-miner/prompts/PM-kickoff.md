@@ -9,6 +9,12 @@ and plan in [`..`](..), and tenet #13 ("discovery is data, not code") in `docs/v
 Tick the tracker per landed step. **Shared-lake rule:** `pgrep -af "vdocs run"` before touching
 `~/data/vdocs`.
 
+> ## ⛔ Check this first
+>
+> **`vdocs-quality-report-card` must be ticked `RC ✓` before this effort starts** — the family-wide rule (operator direction, 2026-08-03). If it is not, stop and run that effort instead.
+>
+> **Measure before you act.** The first step below is a measurement. No code, configuration, curation or gate lands until it is complete and written down.
+
 ## This is a decision, not a build
 
 Every full rebuild, the miner proposes about **81,500** cleanup patterns — 34,822 phrases, 23,885

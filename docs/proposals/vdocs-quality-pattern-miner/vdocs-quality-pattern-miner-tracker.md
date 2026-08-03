@@ -12,8 +12,10 @@ Proposal: [`vdocs-quality-pattern-miner.md`](vdocs-quality-pattern-miner.md) ·
 Plan: [`vdocs-quality-pattern-miner-implementation-plan.md`](vdocs-quality-pattern-miner-implementation-plan.md) ·
 Prompts: [`prompts/`](prompts/)
 
-**A decision, not a build.** PM.1 and PM.2 are mandatory; exactly one of PM.3a/PM.3b follows.
-Sequenced last of the five — nobody is blocked by it, and both rulings are cheap.
+⛔ **Prerequisite: [`vdocs-quality-report-card`](../vdocs-quality-report-card/) must be ticked `RC ✓` before this effort starts.** Every measurement in this family is taken with that answer key, and it currently fails search for returning better answers than it names.
+📏 **Measure before you act:** the first step below is a measurement, and no code, configuration, curation or gate lands until it is complete and written down.
+
+**A decision, not a build.** PM.1 (measurement) and PM.2 (the ruling) are mandatory; exactly one of PM.3a/PM.3b follows. Sequenced last of the five.
 
 ## Baseline (full forced rebuild, 2026-08-02, 1,040 documents)
 

@@ -2,6 +2,7 @@
 
 | Step | What lands | Status | Commit / notes |
 |------|-----------|--------|----------------|
+| CI.0 | **Measure first** — current crawl yield and admitted-set composition recorded as the baseline the gates will compare against | ☐ | |
 | CI.1 | Completeness floor on `crawl` — a materially smaller crawl fails and leaves the last good one in place | ☐ | |
 | CI.2 | Admitted-set composition baseline — departures reported by document identifier; a deliberate change is acknowledged in a curated file | ☐ | |
 | CI ✓ | Shrunken crawl reds · removed application reds naming documents · acknowledged change passes · live collection green | ☐ | |
@@ -10,8 +11,10 @@ Proposal: [`vdocs-quality-crawl-integrity.md`](vdocs-quality-crawl-integrity.md)
 Plan: [`vdocs-quality-crawl-integrity-implementation-plan.md`](vdocs-quality-crawl-integrity-implementation-plan.md) ·
 Prompts: [`prompts/`](prompts/)
 
-Independent of the other quality efforts — it touches no search behaviour and can run in parallel if
-someone else is measuring retrieval.
+⛔ **Prerequisite: [`vdocs-quality-report-card`](../vdocs-quality-report-card/) must be ticked `RC ✓` before this effort starts.** Every measurement in this family is taken with that answer key, and it currently fails search for returning better answers than it names.
+📏 **Measure before you act:** the first step below is a measurement, and no code, configuration, curation or gate lands until it is complete and written down.
+
+This effort touches no search behaviour, so it *could* technically run alongside the retrieval work. It deliberately does not: the report card is the underlying issue and is fixed first (operator direction, 2026-08-03).
 
 ## Baseline (verified 2026-08-02/03)
 
