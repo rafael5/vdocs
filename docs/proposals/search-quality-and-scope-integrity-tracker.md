@@ -3,13 +3,18 @@
 **SUPERSEDED as a step tracker (2026-08-03).** Work is tracked in five per-effort trackers; this
 page is the rollup. Step rows below are retained as the record of how the programme was scoped.
 
-| effort | tracker | status |
-|---|---|---|
-| 1. Report card | [`vdocs-quality-report-card-tracker.md`](vdocs-quality-report-card/vdocs-quality-report-card-tracker.md) | ☐ **not started — blocks ALL of 2–5** |
-| 2. Response ranking | [`vdocs-quality-response-ranking-tracker.md`](vdocs-quality-response-ranking/vdocs-quality-response-ranking-tracker.md) | ☐ blocked on 1 |
-| 3. Crawl integrity | [`vdocs-quality-crawl-integrity-tracker.md`](vdocs-quality-crawl-integrity/vdocs-quality-crawl-integrity-tracker.md) | ☐ blocked on 1 (could run in parallel; deliberately does not) |
-| 4. Synonym layer | [`vdocs-quality-synonym-layer-tracker.md`](vdocs-quality-synonym-layer/vdocs-quality-synonym-layer-tracker.md) | ☐ blocked on 1 · decision, not a build |
-| 5. Pattern miner | [`vdocs-quality-pattern-miner-tracker.md`](vdocs-quality-pattern-miner/vdocs-quality-pattern-miner-tracker.md) | ☐ blocked on 1 · decision, not a build |
+| # | effort | tracker | status |
+|---|---|---|---|
+| **1** | **Crawl integrity** (scope + master set) | [`crawl-integrity`](vdocs-quality-crawl-integrity/vdocs-quality-crawl-integrity-tracker.md) | ☐ **not started — blocks ALL others** |
+| 2 | Report card | [`report-card`](vdocs-quality-report-card/vdocs-quality-report-card-tracker.md) | ☐ blocked on 1 · blocks 3–5 |
+| 3 | Response ranking | [`response-ranking`](vdocs-quality-response-ranking/vdocs-quality-response-ranking-tracker.md) | ☐ blocked on 1, 2 |
+| 4 | Synonym layer | [`synonym-layer`](vdocs-quality-synonym-layer/vdocs-quality-synonym-layer-tracker.md) | ☐ blocked on 1, 2 · decision, not a build |
+| 5 | Pattern miner | [`pattern-miner`](vdocs-quality-pattern-miner/vdocs-quality-pattern-miner-tracker.md) | ☐ blocked on 1, 2 · decision, not a build |
+| 6 | VDL observatory | [`vdl-observatory`](vdocs-quality-vdl-observatory/vdocs-quality-vdl-observatory-tracker.md) | ☐ after 1 · **VO.2 is time-sensitive** |
+
+**Reordered 2026-08-03.** Crawl integrity moved ahead of the report card: scope decides what the
+collection contains, and the report card's central action (retiring or re-pointing six questions)
+depends on the scope ruling — questions retired first could need resurrecting.
 
 ---
 
@@ -43,7 +48,7 @@ Reports: `reports/p7-golden-final.*` (after), `reports/p6-golden-PROD-before-p61
 | Q2 ✓ | recall@10 > 0.588 and nDCG@10 > 0.5305, **no query regresses** | ☐ | Per-query comparison mandatory — the mean hid two queries falling to 0.000 in P6. |
 | **Q3 — scope integrity at the front door (R‑4 + R‑19)** | | | |
 | Q3.1 | `crawl` completeness floor — a materially smaller crawl fails instead of overwriting bronze | ☐ | Verified 2026-08-02: `crawl` and `catalog` have **no `deep_gate`, no floor**. Everything downstream of them is gated; they are not. |
-| Q3.2 | Admitted-set composition baseline in `validate`, findings by `doc_id` | ☐ | 102 documents left the admitted set with **zero** findings — discovered only because a golden query broke. `validate` already runs this exact drop-check for sidecar counts; apply it to scope. A deliberate scope change becomes a registry acknowledgement. |
+| Q3.2 | Admitted-set composition baseline in `validate`, findings by `doc_id` | ☐ | ⚠️ corrected 2026-08-03: no documents left — the key was curated on the dev lake. The residual finding is that nothing would *notice* if they did. `validate` already runs this exact drop-check for sidecar counts; apply it to scope. A deliberate scope change becomes a registry acknowledgement. |
 | Q3 ✓ | Hand-shrunk crawl reds; hand-removed app reds naming doc_ids; live lake green | ☐ | |
 | **Q4 — decide the dormant investments** | | | |
 | Q4.1 | SKL headroom measured → curate or stop claiming it (R‑12) | ☐ | Production reach today: expansion map = **1 entry** (`200`→`NEW PERSON`), `entity_skl` = **6** rows, knowledge.db 21 entities / 483 terms / 111 relationships, **4,415 proposals uncurated**. The one entry is worth real points (`fileman-file-200-new-person` 0.131 → 0.417), which is the argument for measuring the rest. |

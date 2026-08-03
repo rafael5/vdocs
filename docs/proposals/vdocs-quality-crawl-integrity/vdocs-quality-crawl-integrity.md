@@ -1,168 +1,220 @@
-# vdocs-quality-crawl-integrity — watch the front door
+# vdocs-quality-crawl-integrity — watch the front door, and never lose a document
 
-**Status: DRAFT · proposed 2026-08-03** ·
+**Status: DRAFT · proposed 2026-08-03 · reordered to FIRST 2026-08-03** ·
 Plan: [`vdocs-quality-crawl-integrity-implementation-plan.md`](vdocs-quality-crawl-integrity-implementation-plan.md) ·
 Tracker: [`vdocs-quality-crawl-integrity-tracker.md`](vdocs-quality-crawl-integrity-tracker.md) ·
-Prompts: [`prompts/`](prompts/) · Register rows: **R‑4**, **R‑19**
+Prompts: [`prompts/`](prompts/) · Register rows: **R‑4**, **R‑19** ·
+Sibling: [`../vdocs-quality-vdl-observatory/`](../vdocs-quality-vdl-observatory/)
 
-> ## ⛔ Two standing rules before any work starts
+> ## 🥇 This effort runs first — ahead of the report card
 >
-> **1. `vdocs-quality-report-card` comes first — for every effort in this family.**
-> The answer key we grade search with is currently wrong in two directions: six questions cite
-> applications the collection deliberately excludes and can never pass, and at least two fail search
-> for returning a *better* answer than the key names. Until it is repaired, every measurement taken
-> anywhere in this family can mislead — including the ones that would justify this effort's own
-> decisions. Do not start this effort until that tracker's **RC ✓** row is ticked.
+> **Scope decides what the collection contains, and everything else is measured against that.** The
+> report card's six unanswerable questions are a *scope* artefact, and repairing the key before the
+> scope policy is settled risks retiring questions that a corrected policy would make answerable
+> again. Fix the boundary, then fix the instrument that measures inside it.
 >
-> **2. Measure before you act — in this effort too.**
-> No code, configuration, curation or gate lands here until this effort's own measurement step is
-> complete and written down. Every proposal in this family names that step explicitly, and it is
-> always the first one. A plan step is a hypothesis; this project has had four of them turn out
-> wrong in ways only measuring caught.
+> **Measure before you act.** CI.0 records what the crawl currently yields and what the admission
+> gate currently keeps. No floor, gate or retention rule lands before those numbers exist — a floor
+> built without knowing the floor level is a guess with a threshold on it.
 
 ## Contents
 
 - [1. Background — in plain terms](#1-background--in-plain-terms)
 - [2. What this costs the end user](#2-what-this-costs-the-end-user)
 - [3. What we measured](#3-what-we-measured)
-- [4. Proposal](#4-proposal)
-- [5. What we are deliberately not doing](#5-what-we-are-deliberately-not-doing)
-- [6. Cost and benefit](#6-cost-and-benefit)
-- [7. Acceptance](#7-acceptance)
-- [8. Risks](#8-risks)
-- [9. References](#9-references)
+- [4. A correction to this proposal's own first draft](#4-a-correction-to-this-proposals-own-first-draft)
+- [5. Proposal](#5-proposal)
+- [6. What we are deliberately not doing](#6-what-we-are-deliberately-not-doing)
+- [7. Cost and benefit](#7-cost-and-benefit)
+- [8. Acceptance](#8-acceptance)
+- [9. Risks](#9-risks)
+- [10. References](#10-references)
 
 ## 1. Background — in plain terms
 
-The collection is built by crawling a public VA website, deciding which manuals are in scope,
-downloading them, and processing them. Seven phases of recent work went into making sure that
-**once a document is in, nothing loses it**: every hand-off between processing steps is now
-reconciled, every record is checked against the file it describes, and the whole run ends on a
-soundness verdict that fails loudly.
+The collection is built by crawling a public VA website (the VistA Document Library), deciding which
+manuals are in scope, downloading them, and processing them. Seven phases of recent work made sure
+that **once a document is in, nothing loses it** — every hand-off is reconciled and the run ends on
+a soundness verdict that fails loudly.
 
-**None of that watches the crawl itself.**
+**None of that watches the front door.** If the VA site has a bad day, the crawl simply finds less
+and the smaller result becomes the new truth. If a scoping rule changes, whole product areas move in
+or out. Nothing compares today's crawl to yesterday's, and nothing records what the source looked
+like at any point in time.
 
-If the VA website has a bad day — a page times out, a section fails to render, a listing changes
-shape — the crawl simply finds less. If a scoping rule changes, whole product areas can drop out.
-Either way the collection quietly shrinks, and **every downstream check still reports "all good"**,
-because those checks confirm that the processing steps agree *with each other*. They have no opinion
-about whether something went missing before the first of them ran.
+There is a second, sharper problem, and it is about **what VA's own labels do to us**. The VDL marks
+applications `active`, `archive` or `decommissioned`. Today the admission gate keeps archived
+applications but excludes **every** decommissioned one. That is a policy decision nobody made
+explicitly, and it is the wrong default for this corpus:
 
-This is not a theoretical gap. **102 documents left the collection at some point and nothing
-reported it.** We found out weeks later, by accident, because a test question suddenly had no
-answer.
+**VA deprecating a package does not remove the code from VistA.** The routines are still installed,
+still running, and still need documentation explaining what they do and why they exist. A site
+running that code has *more* need of the manual, not less, precisely because nobody is maintaining
+it any more. And deprecation is itself a signal worth keeping: when VA retires a package it is
+usually because a commercial product replaced it, which is exactly the kind of fact someone
+researching VistA's direction needs to know.
+
+So the rule this effort establishes is: **once we have fetched a document, we keep it.** The
+collection is a master set that only grows. VA's lifecycle labels become *metadata we record*, never
+a reason to discard something we already hold.
 
 ## 2. What this costs the end user
 
-**Today: nothing.** This is a smoke alarm, not a renovation. Shipping it changes no search result.
+**Today, in search results: nothing.** No result changes when this ships.
 
-**The failure it prevents is the worst kind in this system**, because it is silent and it looks like
-success. A user searches for a manual that used to be there and gets nothing back. Everything reports
-healthy. There is no error, no warning, and no record of when the manual left or why — so the user
-cannot tell "this was never covered" from "this was covered last month". Their only rational
-conclusion is that the collection is unreliable, which is a far more expensive belief than any single
-missing document.
+**What it prevents is the failure that looks like success.** A user searches for a manual that the
+collection used to hold. Nothing is returned, everything reports healthy, and there is no record of
+when or why it left. The user cannot distinguish "never covered" from "covered last month", and
+their only rational conclusion is that the collection is unreliable — a far more expensive belief
+than any single missing document.
 
-The same silence protects a *legitimate* scope change from scrutiny. Excluding three product areas
-was a defensible decision; the problem is that it happened without a record, so nobody could
-distinguish it from a fault, and it took a broken test question to surface it.
-
-Given how much effort went into guaranteeing nothing is lost *inside* the pipeline, leaving the
-entrance unwatched is the obvious remaining hole.
+**What it prevents specifically, and this is the live risk:** a document we already downloaded being
+dropped because VA relabelled its application. The pipeline removes documents that fall out of scope
+— that behaviour is deliberate and tested (a withdrawn document should not leave a ghost bundle) —
+but it makes no distinction between *"this was never ours"* and *"we have had this for a year and VA
+just marked the package deprecated"*. For a corpus documenting code that is still running in
+production hospitals, the second case is exactly the one worth keeping.
 
 ## 3. What we measured
 
-Verified on the code and the production collection, 2026-08-02/03:
+Verified on the code, the inventory and the production collection, 2026-08-02/03.
+
+**Gating — there is none at the front:**
 
 | | |
 |---|---|
-| completeness check on `crawl` | **none** — no gate, no floor |
-| completeness check on `catalog` | **none** |
-| behaviour on a degraded crawl | a smaller result overwrites the previous good one |
-| documents that left the admitted set unreported | **102** (XOBW 23, KAAJEE 64, LEX 15) |
-| how it was found | a golden question broke, ~4 weeks later |
-| what the existing chain gate proves | the five processing seams agree **with each other** |
-| what nothing proves | that the admitted set is the same shape it was yesterday |
-| crawl politeness delay (for cost estimates) | 1.5 s per page against `https://www.va.gov/vdl/` |
+| completeness check on `crawl` / `catalog` | **none** — no gate, no floor, either stage |
+| behaviour on a degraded crawl | the smaller result overwrites the previous good one |
+| historical snapshots of the source | **none** — inventory files are single-copy, overwritten each crawl |
 
-For contrast, the checks that *do* exist downstream: the acquisition chain is reconciled across five
-independent sources; sidecar counts are compared against the previous run and a drop is a blocking
-finding; every gold bundle is verified against a signed manifest; the run ends on a 20-check
-soundness gate. The machinery for exactly this kind of check is already built and proven — it simply
-has never been pointed at the front door.
+**What VA's labels do to admission today:**
 
-## 4. Proposal
+| `app_status` | inventory records | admitted | share admitted |
+|---|---:|---:|---:|
+| `active` | 5,379 (60.4%) | 1,604 | 29.8% |
+| `archive` | **3,404 (38.2%)** | 589 | 17.3% |
+| `decommissioned` | 124 (1.4%) | **0** | **0.0%** |
+| **total** | **8,907** | | |
 
-**4.1 A completeness floor on the crawl.** A crawl that finds materially less than the last good one
-fails instead of overwriting it. The previous good crawl stays in place until a human looks. This is
-the same "a drop is a finding" rule the pipeline already applies to sidecar counts, applied one step
-earlier.
+So archived applications *are* partly admitted — the corpus already contains 589 of them — while
+decommissioned ones are excluded outright. That asymmetry is undocumented and, on the reasoning
+above, backwards.
 
-**4.2 A baseline for what is in scope.** Record the admitted set's composition each run and compare
-it to the previous one, reporting departures by document identifier. A deliberate scope change then
-becomes a one-line acknowledgement in a curated file; an accidental one becomes a blocking finding
-that names exactly which documents left.
+**Signals VA gives us that we capture and then ignore:**
 
-Together these close the two halves of the same hole: 4.1 catches "the source gave us less", 4.2
-catches "our own rules admitted less".
+| field | records carrying it | used anywhere? |
+|---|---:|---|
+| `cots_dependent` (replaced by a commercial product) | **404** | no |
+| `decommission_date` (spanning 2005–2022) | **115** | no |
+| `out_of_scope_reason` | present in the model | not surfaced |
 
-## 5. What we are deliberately not doing
+**Retention today:** 1,040 documents fetched, 1,034 distinct payloads in the raw store (six pairs are
+byte-identical siblings — the P1 finding). The raw store is write-once, so the *bytes* of anything
+ever fetched survive; what does not survive a scope change is the processed document, its bundle and
+its presence in search.
 
-- **Not re-crawling on a schedule, and not touching politeness.** The crawl stays operator-triggered
-  and polite; this effort adds a check, not traffic.
-- **Not preventing scope changes.** Excluding an application is a legitimate decision. The goal is
-  that it is *recorded and visible*, not that it is blocked.
-- **Not attempting to recover the 102 documents.** Whether XOBW, KAAJEE and LEX should be back in
-  scope is a separate product question this effort deliberately does not answer — it only ensures the
-  next such change is announced.
+## 4. A correction to this proposal's own first draft
 
-## 6. Cost and benefit
+The first version of this proposal claimed that **102 documents (XOBW 23, KAAJEE 64, LEX 15) had left
+the collection with nothing reporting it.** That is false, and the correction matters because it was
+this proposal's headline evidence.
 
-**Cost:** low-to-moderate. Both pieces are variations on gates that already exist and are proven
-elsewhere in the pipeline; neither requires new concepts.
+Those applications were **never acquired in production** — `acquisitions = 0` for all three. They
+appear in the golden answer key because the key was curated against the **dev lake** (451 documents),
+which admits applications production does not. It is the same dev-lake contamination that made three
+consecutive retrieval measurements read the wrong corpus; having found one instance, I inferred a
+second, more dramatic one instead of checking.
 
-**Benefit:** no direct improvement to search results — this is insurance. Its value is that the
-failure it prevents is invisible, arbitrarily large, and currently has no upper bound: there is no
-number of documents that could vanish and trigger an alert.
+**What survives the correction:** nothing tracks the admitted set's composition over time, so a real
+departure *would* be equally silent. The gap is genuine; the dramatic proof of it was not. That is
+also the strongest possible argument for this effort's own measure-first rule.
 
-**Why third of five:** ranked below the two efforts that improve what a user actually gets today, and
-above the two that are decisions about dormant features. Insurance is worth buying, after the roof.
+## 5. Proposal
 
-## 7. Acceptance
+**5.1 A completeness floor on the crawl.** A crawl finding materially less than the last good one
+fails instead of overwriting it, and the previous good result stays until a human looks.
+
+**5.2 A master-set retention rule.** Once a document has been fetched, it stays in the collection.
+Removal from the VDL, an `archive` relabel or a `decommissioned` relabel are recorded as facts about
+the document, never as reasons to drop it. Search may *rank* or *badge* such documents differently;
+it does not lose them.
+
+**5.3 Capture VA's lifecycle labels as first-class metadata.** Persist `app_status`,
+`decommission_date`, `cots_dependent` and `out_of_scope_reason` through to the collection, so a user
+or an assistant can see *"this documents a deprecated package — the code is still installed; VA
+replaced the package with a commercial product in 2022"*. That sentence is more useful than the
+document's absence.
+
+**5.4 An admitted-set composition baseline.** Record what is admitted each run and report departures
+by document identifier, with a deliberate change acknowledged in a curated file rather than passing
+silently.
+
+## 6. What we are deliberately not doing
+
+- **Not deciding the scope policy by ourselves.** Whether decommissioned applications should now be
+  admitted is a product decision. This effort surfaces the choice with its numbers and implements
+  whatever is ruled — it does not quietly widen the corpus.
+- **Not re-crawling on a schedule or changing politeness.** The crawl stays operator-triggered.
+- **Not building the longitudinal analysis here.** The timeline of the source — rate of change per
+  segment, tag trends, the "why is 38% archived?" question — is a distinct capability, proposed
+  separately as [`vdocs-quality-vdl-observatory`](../vdocs-quality-vdl-observatory/).
+
+## 7. Cost and benefit
+
+**Cost:** low-to-moderate. The floor and the composition baseline are variations on gates already
+proven elsewhere in the pipeline. The retention rule is mostly a policy change plus a guard against
+the existing prune path.
+
+**Benefit:** no direct improvement to search results, but it is the precondition for trusting any
+other measurement — and the retention rule protects documentation for code that is still running,
+which is the corpus's whole reason to exist.
+
+**Why first:** scope defines the collection. The report card's unanswerable questions are a scope
+artefact, and retiring them before the scope policy is settled could delete questions a corrected
+policy would make answerable.
+
+## 8. Acceptance
 
 - A deliberately shrunken crawl **fails** and leaves the previous good result untouched.
-- A deliberately removed application **fails**, naming the departed documents by identifier.
-- A genuine, acknowledged scope change passes cleanly with its acknowledgement recorded.
-- The live collection stays green throughout — this adds a check, not a change in behaviour.
+- A document that has been fetched **cannot** be removed by a scope or lifecycle relabel — proven by
+  a test that reds if it is.
+- VA's lifecycle labels are visible on a document in the collection, including its decommission date
+  and commercial-replacement flag where VA supplies them.
+- An unacknowledged change in the admitted set **fails**, naming the documents; an acknowledged one
+  passes.
+- The live collection stays green throughout.
 
-## 8. Risks
+## 9. Risks
 
-- **False alarms on legitimate change.** The VDL genuinely changes; a floor set too tight will cry
-  wolf and get disabled, which is worse than not having it. Mitigation: compare against the last
-  *good* crawl with a tolerance, and make acknowledging a change cheap.
-- **A floor that only measures totals can miss a swap.** Losing 20 documents and gaining 20 others
-  nets to zero. Mitigation: 4.2 compares composition by identifier, not just the count — the same
-  lesson the acquisition-chain work already paid for.
-- **Insurance is easy to defer forever.** It never wins a comparison against a feature. Mitigation:
-  it is sequenced explicitly here rather than left to compete for attention.
+- **Widening scope silently.** The retention rule only protects what we already fetched; it must not
+  become an accidental argument for fetching everything. Scope stays a deliberate, recorded decision.
+- **A floor set too tight cries wolf** and gets disabled, which is worse than no floor. Tolerance
+  against the last *good* crawl, and acknowledging a legitimate change must stay cheap.
+- **Totals hide swaps.** Losing 20 documents and gaining 20 nets to zero; composition is compared by
+  identifier, not by count — the lesson the acquisition-chain work already paid for.
+- **Keeping deprecated documents can mislead** if they are presented as current. Mitigation is 5.3:
+  the lifecycle label travels *with* the document so a reader sees the status rather than inferring
+  currency from presence.
 
-## 9. References
+## 10. References
 
 **Findings and evidence**
 - Register rows **R‑4** (no crawl completeness floor; empty crawl overwrites) and **R‑19** (scope
-  changes unmeasured; the answer key rotted against them) —
+  changes unmeasured; corrected 2026-08-03) —
   [`../../reference/pipeline-adversarial-audit.md`](../../reference/pipeline-adversarial-audit.md)
-- Programme rationale and ordering —
+- Programme rationale —
   [`../search-quality-and-scope-integrity-implementation-plan.md`](../search-quality-and-scope-integrity-implementation-plan.md)
 
-**The machinery to reuse**
-- The acquisition-chain gate (five seams reconciled by document identifier) and the cross-run
-  count-drop check — `src/vdocs/stages/validate/` (`chain_pure.py`, `reconcile_pure.py`)
-- The admission gate whose decisions need recording — `src/vdocs/stages/fetch/policy.py`
-- `src/vdocs/stages/crawl/stage.py`, `src/vdocs/stages/catalog/stage.py` — the two ungated stages
+**The machinery to reuse or guard**
+- Admission gate: `src/vdocs/stages/fetch/policy.py`, `src/vdocs/stages/fetch/fetch_pure.py`
+  (`select_fetch_targets`)
+- Chain reconciliation and cross-run drop checks: `src/vdocs/stages/validate/chain_pure.py`,
+  `reconcile_pure.py`
+- The prune path a retention rule must guard: `kernel/cas.py:prune_bundles`
+- Inventory model carrying the lifecycle fields: `src/vdocs/models/catalog.py`
 
-**Precedent for the failure class**
+**Related**
+- [`../vdocs-quality-vdl-observatory/`](../vdocs-quality-vdl-observatory/) — the longitudinal record
+  of the source, including the archived-share question
 - [`../../historical/pipeline-audit-remediation-tracker.md`](../../historical/pipeline-audit-remediation-tracker.md)
-  — P1, where six documents were found to have collapsed silently out of the collection, and the
-  chain gate that was built in response
-- [`../../session-summaries/2026-08-01-pipeline-audit-and-p1.md`](../../session-summaries/2026-08-01-pipeline-audit-and-p1.md)
+  — P1, where six documents did genuinely collapse out of the collection

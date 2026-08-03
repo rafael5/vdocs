@@ -5,20 +5,19 @@ Plan: [`vdocs-quality-report-card-implementation-plan.md`](vdocs-quality-report-
 Tracker: [`vdocs-quality-report-card-tracker.md`](vdocs-quality-report-card-tracker.md) ·
 Prompts: [`prompts/`](prompts/) · Register row: **R‑19**
 
-> ## ⛔ Two standing rules for the `vdocs-quality-*` family
+> ## ⛔ Two standing rules
 >
-> **1. This effort comes first.** Every other effort in the family
-> (`response-ranking`, `crawl-integrity`, `synonym-layer`, `pattern-miner`) is measured — directly or
-> indirectly — with the answer key this effort repairs. Until **RC ✓** is ticked, no other effort
-> starts. That is a deliberate sequencing decision, not a technical constraint: `crawl-integrity`
-> touches no search behaviour and *could* run alongside, but running it first would leave the
-> underlying instrument broken while we spent effort elsewhere.
+> **1. [`vdocs-quality-crawl-integrity`](../vdocs-quality-crawl-integrity/) runs before this effort**
+> (reordered 2026-08-03). Scope decides what the collection contains, and this effort's central
+> action — retiring or re-pointing six questions — **depends on that ruling**: if the scope policy
+> changes what is admitted, questions retired here would have to be resurrected. Fix the boundary,
+> then fix the instrument that measures inside it. This effort still blocks all three retrieval and
+> decision efforts that follow it.
 >
 > **2. Measure before you act — including here.** RC.1 begins by *confirming* that the six
-> unanswerable questions really are out of scope rather than lost. "Missing" and "deliberately
-> excluded" look identical from the answer key's side and mean opposite things, and acting on the
-> wrong one would either hide a real defect or delete a legitimate question.
-
+> unanswerable questions really are out of scope rather than lost. Those look identical from the
+> key's side and mean opposite things — and the first draft of this family got exactly that
+> distinction wrong (see the correction in the crawl-integrity proposal).
 ## Contents
 
 - [1. Background — in plain terms](#1-background--in-plain-terms)

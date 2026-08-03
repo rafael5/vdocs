@@ -7,11 +7,17 @@ ordering; the efforts are where the work is tracked:**
 
 | # | effort | what it fixes |
 |---|---|---|
-| 1 | [`vdocs-quality-report-card/`](vdocs-quality-report-card/) | the answer key we grade search with is stale |
-| 2 | [`vdocs-quality-response-ranking/`](vdocs-quality-response-ranking/) | the right answer is found, then shown below the fold |
-| 3 | [`vdocs-quality-crawl-integrity/`](vdocs-quality-crawl-integrity/) | nothing watches the front door (R‑4, R‑19) |
+| **1** | [`vdocs-quality-crawl-integrity/`](vdocs-quality-crawl-integrity/) | nothing watches the front door; a fetched document can be lost to a relabel (R‑4, R‑19) |
+| 2 | [`vdocs-quality-report-card/`](vdocs-quality-report-card/) | the answer key we grade search with is stale |
+| 3 | [`vdocs-quality-response-ranking/`](vdocs-quality-response-ranking/) | the right answer is found, then shown below the fold |
 | 4 | [`vdocs-quality-synonym-layer/`](vdocs-quality-synonym-layer/) | the synonym feature knows one synonym (R‑12) |
 | 5 | [`vdocs-quality-pattern-miner/`](vdocs-quality-pattern-miner/) | ~81,500 suggestions per rebuild, 29 accepted |
+| 6 | [`vdocs-quality-vdl-observatory/`](vdocs-quality-vdl-observatory/) | the source is copied, never recorded — no timeline, no lifecycle signal |
+
+**Ordering revised 2026-08-03** (operator challenge, accepted): crawl integrity moved from third to
+first. Scope decides what the collection contains, and the report card's central action — retiring or
+re-pointing six questions — *depends on the scope ruling*, so repairing the key first risks deleting
+questions a corrected policy would make answerable.
 
 · Original tracker:
 [`search-quality-and-scope-integrity-tracker.md`](search-quality-and-scope-integrity-tracker.md) ·
@@ -85,8 +91,7 @@ changes, the collection can shrink and every downstream check still reports "all
 those checks only confirm the pieces agree *with each other*, not that anything went missing before
 they ran.
 
-This is not hypothetical: **102 documents disappeared from the collection at some point and nothing
-reported it.** We only discovered it because a test question broke.
+⚠️ **Corrected 2026-08-03:** an earlier draft claimed 102 documents had disappeared. They were never acquired — the golden key that appeared to prove it was curated on the dev lake. The gap is still real (nothing would notice a genuine departure); the dramatic evidence was not.
 
 **What a user notices:** today, nothing. This is a smoke alarm, not a renovation. Left unfixed, one
 day a user searches for a manual that used to be there and it is simply gone, with no explanation
@@ -213,9 +218,11 @@ that lesson is already paid for).
 **Why after Q2 despite being a bigger *risk*:** it is **insurance, not improvement**. It prevents a
 future loss; it does not answer a single question better today. But it is cheap and the exposure is
 real and measured: `crawl` and `catalog` have **no `deep_gate` and no completeness floor** (grep:
-zero gate machinery), while everything downstream of them is now gated. 102 documents (XOBW 23 +
-KAAJEE 64 + LEX 15) left the admitted set at some point and **nothing reported it** — we found out
-because a golden query broke.
+zero gate machinery), while everything downstream of them is now gated. ⚠️ **corrected 2026-08-03:** an earlier draft said 102
+documents (XOBW/KAAJEE/LEX) had left the admitted set unreported. They were never acquired in
+production; the golden key that appeared to prove it was curated on the dev lake. Nothing tracks the
+admitted set's composition over time, so a genuine departure would still be silent — but no such
+departure has happened.
 
 **Q3.1 — crawl completeness floor.** A crawl returning materially fewer sections/documents than the
 last good crawl fails instead of overwriting bronze (R‑4's "empty crawl overwrites bronze").
@@ -258,12 +265,13 @@ behind it.
 
 ## Ordering, and why it is not the register's order
 
-| | phase | user impact | cost | why here |
+| | effort | user impact | cost | why here |
 |---|---|---|---|---|
-| 1 | **Q1** re-judge | none directly | low-mod | everything downstream is measured with it, and it is currently wrong in two directions |
-| 2 | **Q2** near band | **highest** | **low** | 23.5% of correct answers are already retrieved and unseen |
-| 3 | **Q3** scope gates | none directly | low-mod | insurance against a measured, recurring loss class |
-| 4 | **Q4** SKL / discover | unknown | measure first | stop paying for dormant capability, or finish it |
+| 1 | **crawl integrity** | none directly | low-mod | scope defines the collection; everything else is measured inside that boundary, and the report card's repairs depend on the ruling |
+| 2 | **report card** | none directly | low-mod | the instrument every later measurement uses, currently wrong in two directions |
+| 3 | **response ranking** | **highest** | **low** | 23.5% of correct answers are already retrieved and unseen |
+| 4–5 | **synonym layer**, **pattern miner** | unknown | measure first | stop paying for dormant capability, or finish it |
+| 6 | **VDL observatory** | none directly (analytical) | low | the record of the source cannot be backdated — every overwritten crawl is lost data |
 
 R‑15 (error-budget consumption) and R‑16 (classification golden sets) stay out of scope — real, but
 neither changes what a user gets from a search today.

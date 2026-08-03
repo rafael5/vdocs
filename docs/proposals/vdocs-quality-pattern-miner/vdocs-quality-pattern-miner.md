@@ -7,19 +7,15 @@ Prompts: [`prompts/`](prompts/)
 
 > ## ⛔ Two standing rules before any work starts
 >
-> **1. `vdocs-quality-report-card` comes first — for every effort in this family.**
-> The answer key we grade search with is currently wrong in two directions: six questions cite
-> applications the collection deliberately excludes and can never pass, and at least two fail search
-> for returning a *better* answer than the key names. Until it is repaired, every measurement taken
-> anywhere in this family can mislead — including the ones that would justify this effort's own
-> decisions. Do not start this effort until that tracker's **RC ✓** row is ticked.
+> **1. Order: [`crawl-integrity`](../vdocs-quality-crawl-integrity/) → [`report-card`](../vdocs-quality-report-card/) → this effort.**
+> Scope decides what the collection contains; the report card measures inside that boundary. Both must
+> be settled before anything here is trusted — and the report card's own repairs depend on the scope
+> ruling, so it cannot go first either. Do not start until `CI ✓` **and** `RC ✓` are ticked.
 >
 > **2. Measure before you act — in this effort too.**
 > No code, configuration, curation or gate lands here until this effort's own measurement step is
-> complete and written down. Every proposal in this family names that step explicitly, and it is
-> always the first one. A plan step is a hypothesis; this project has had four of them turn out
-> wrong in ways only measuring caught.
-
+> complete and written down. It is always the first step in the plan. A plan step is a hypothesis;
+> this project has had five of them turn out wrong in ways only measuring caught.
 ## Contents
 
 - [1. Background — in plain terms](#1-background--in-plain-terms)

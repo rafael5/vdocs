@@ -33,16 +33,18 @@ Documentation here is classified by **lifecycle state, not topic**:
 - **Active workstream — the `vdocs-quality-*` family** (five efforts, each with its own proposal,
   plan, tracker and prompts; [programme rationale + ordering](proposals/search-quality-and-scope-integrity-implementation-plan.md),
   [rollup](proposals/search-quality-and-scope-integrity-tracker.md)):
-  1. [`vdocs-quality-report-card/`](proposals/vdocs-quality-report-card/) — the answer key we grade
-     search with is stale (**blocks 2**)
-  2. [`vdocs-quality-response-ranking/`](proposals/vdocs-quality-response-ranking/) — the right
+  1. [`vdocs-quality-crawl-integrity/`](proposals/vdocs-quality-crawl-integrity/) — nothing watches
+     the front door, and a fetched document can be lost to a VA relabel (**blocks all others**)
+  2. [`vdocs-quality-report-card/`](proposals/vdocs-quality-report-card/) — the answer key we grade
+     search with is stale (**blocks 3–5**)
+  3. [`vdocs-quality-response-ranking/`](proposals/vdocs-quality-response-ranking/) — the right
      answer is found, then shown below the fold (**the user-visible win**)
-  3. [`vdocs-quality-crawl-integrity/`](proposals/vdocs-quality-crawl-integrity/) — nothing watches
-     the front door (R‑4, R‑19)
   4. [`vdocs-quality-synonym-layer/`](proposals/vdocs-quality-synonym-layer/) — the synonym feature
      knows one synonym (R‑12)
   5. [`vdocs-quality-pattern-miner/`](proposals/vdocs-quality-pattern-miner/) — ~81,500 suggestions
      per rebuild, 29 accepted
+  6. [`vdocs-quality-vdl-observatory/`](proposals/vdocs-quality-vdl-observatory/) — the source is
+     copied but never recorded: no timeline, no lifecycle signal (**snapshots can't be backdated**)
 - **✅ Complete (2026-08-02):** pipeline audit remediation, P1–P7 — [`historical/pipeline-audit-remediation-implementation-plan.md`](historical/pipeline-audit-remediation-implementation-plan.md)
   (+ [tracker](historical/pipeline-audit-remediation-tracker.md)). Fixed 13 of the audit's register
   rows and added one; the living record is the struck register in

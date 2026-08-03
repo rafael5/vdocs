@@ -23,16 +23,24 @@ Seven phases made sure nothing is lost *inside* the pipeline. **Nothing watches 
 2026-08-02: `crawl` and `catalog` have no gate and no floor of any kind, and a degraded crawl
 overwrites the last good one.
 
-Measured consequence: **102 documents left the collection with zero findings** — XOBW (23), KAAJEE
-(64), LEX (15), excluded by the admission gate on `system_type`. That exclusion was legitimate; the
-silence was not. It surfaced roughly four weeks later, by accident, when a golden question broke.
+⚠️ **Correction to this prompt's first draft:** it claimed 102 documents had *left* the collection
+unreported. They were never acquired in production — the golden answer key that "proved" it was
+curated on the **dev lake**. The gap is still real (nothing would notice a genuine departure), but
+the dramatic evidence was not. Treat that as this effort's own measure-first lesson.
 
 ## What you are building, and what already exists to copy
 
-- **CI.1 — a completeness floor:** a crawl that finds materially less than the last good one fails,
-  and the previous good artifact stays in place.
-- **CI.2 — an admitted-set composition baseline:** departures reported **by document identifier**,
-  with a curated acknowledgement making a deliberate scope change cheap to declare.
+- **CI.0 — measure** the current crawl yield, admitted-set composition, and what VA's labels do.
+- **CI.1 — a completeness floor:** a crawl finding materially less than the last good one fails, and
+  the previous good artifact stays in place.
+- **CI.2 — master-set retention:** a document we have fetched is **never** dropped by a scope or
+  lifecycle relabel. VA deprecating a package does not remove its code from VistA — the routines are
+  still installed and still need documentation.
+- **CI.3 — capture the lifecycle labels** (`app_status`, `decommission_date`, `cots_dependent`,
+  `out_of_scope_reason`) so a reader sees *"deprecated; code still installed; commercially replaced
+  in 2022"* instead of an absence.
+- **CI.4 — admitted-set composition baseline:** departures by document identifier, with a curated
+  acknowledgement making a deliberate change cheap to declare.
 
 **Reuse, do not invent.** `validate` already runs a cross-run count-drop check
 (`reconcile_pure.py`) and a five-seam reconciliation by identifier (`chain_pure.py`). This is that

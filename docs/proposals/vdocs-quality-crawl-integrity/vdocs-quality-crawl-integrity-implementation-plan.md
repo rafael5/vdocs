@@ -48,8 +48,7 @@ that a net-zero count can hide a swap.
 - Reuse the existing machinery rather than inventing: `validate` already performs a cross-run
   count-drop check and a five-seam reconciliation by identifier. This is the same pattern applied to
   the admission decision.
-- The finding must name the *application* as well as the documents — 102 documents left as three
-  coherent groups, and "XOBW, KAAJEE and LEX are no longer admitted" is the sentence an operator can
+- The finding must name the *application* as well as the documents — departures arrive as coherent groups, and "XOBW, KAAJEE and LEX are no longer admitted" is the sentence an operator can
   act on.
 
 *Tests first:* a removed application reds with its documents named; the same removal with an
