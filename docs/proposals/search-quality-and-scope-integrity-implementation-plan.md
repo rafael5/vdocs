@@ -12,6 +12,99 @@ about that, and it is ordered by *measured end-user impact per unit of cost*, no
 
 ---
 
+## In plain terms — what is wrong, and what a user would notice
+
+*Written for someone who does not work on the pipeline. The rest of this document is the
+engineering version of the same four things.*
+
+**The system in one sentence:** it collects VA VistA manuals off a public website, cleans them up,
+and lets a person (or an AI assistant) ask a question and get back the exact passage that answers
+it, with a citation.
+
+### Q1 — Our report card is out of date, so we cannot trust our own grades
+
+To know whether search is any good, we keep a list of about 25 realistic questions with the correct
+answers marked — an answer key. That key was written a month ago and the collection has changed
+underneath it.
+
+Two things are wrong with it. **Six questions point at manuals we deliberately stopped carrying**
+(three product areas were ruled out of scope), so those questions are permanently marked wrong no
+matter how well search works. And **some questions mark only one passage as "correct" when search is
+actually finding an equally good or better one** — in one case a user asks how to install a software
+build, search returns the guide literally titled *KIDS User Guide*, and we score that as a failure
+because the answer key names a different manual.
+
+**What a user notices:** nothing directly. This one changes no search result.
+
+**Why it is first anyway:** every other improvement is judged by this answer key. If we "improved"
+search by making it match the current key, we would be training it to return *worse* answers. Right
+now our own scorecard claims we fail four questions; on inspection we probably answer at least two of
+them well. We are flying on a broken instrument, and the first job is to fix the instrument.
+
+### Q2 — The right answer is often found, but shown on page two
+
+When someone searches, we show the top 8 results. We measured where the correct answers actually
+turn up: **about half appear in the top 10, and roughly another quarter are found but ranked
+somewhere between 11th and 100th.**
+
+So for a sizeable share of real questions, the system *did* find the right passage — and then showed
+the user eight other things instead. Two of our four "failing" questions have their correct answer
+sitting at position 13 and position 14.
+
+**What a user notices:** they search, don't see the answer, and reasonably conclude "this collection
+doesn't cover that." Then they go read a 400-page PDF by hand, or worse, report that the
+documentation is missing. That exact false conclusion is the failure this whole project has been
+fighting — four researchers once retracted a report of "missing" documentation that had been there
+the whole time.
+
+**The fix is unusually cheap:** show more results, and improve the ordering so good answers rise.
+Simply widening from 10 results to 25 lifts the share of correct answers a user actually sees from
+about **half to about two-thirds**. That is the best return in this plan for the least work.
+
+### Q3 — Nothing checks that the front door is still open
+
+The collection is built by crawling a VA website. Everything *after* that crawl is now carefully
+checked — we spent seven phases making sure nothing gets lost, mangled, or misreported in the
+middle of the pipeline.
+
+But **nothing checks the crawl itself.** If the website has a bad day, or a filtering rule quietly
+changes, the collection can shrink and every downstream check still reports "all good" — because
+those checks only confirm the pieces agree *with each other*, not that anything went missing before
+they ran.
+
+This is not hypothetical: **102 documents disappeared from the collection at some point and nothing
+reported it.** We only discovered it because a test question broke.
+
+**What a user notices:** today, nothing. This is a smoke alarm, not a renovation. Left unfixed, one
+day a user searches for a manual that used to be there and it is simply gone, with no explanation
+and no record of when or why. Given how much effort went into guaranteeing nothing is lost *inside*
+the pipeline, leaving the entrance unwatched is the obvious remaining hole.
+
+### Q4 — Two features were half-built and are quietly costing us
+
+**The synonym knowledge layer.** VistA documentation refers to the same thing two ways — a file
+number like "200" in one manual, the name "NEW PERSON" in another. We built a feature to teach
+search that these are the same, so a question phrased either way finds both. **In practice it
+currently knows exactly one such synonym.** There are 4,415 candidates sitting in a queue waiting for
+someone to approve them. The single synonym it does know measurably *tripled* the score of the one
+question that needed it — which is the argument for finding out whether the other 4,414 are worth
+approving.
+
+**The pattern miner.** On every full rebuild, the pipeline scans the whole collection and proposes
+roughly **77,000** cleanup patterns — repeated legal boilerplate to strip out, glossary terms,
+recurring junk. Humans have approved **29** of them. The proposing runs every single time; the
+approving has essentially never run.
+
+**What a user notices:** for the synonyms, questions phrased in the "wrong" vocabulary quietly fail.
+For the pattern miner, pages carry more boilerplate clutter than they need to.
+
+**Why this is a decision, not a task:** both are half-finished. Either they get finished and users
+get the benefit, or we admit they are not paying for themselves and stop running them. What we
+should not do is keep paying the cost of a feature that delivers one synonym. The first step is
+measuring what the remaining candidates are actually worth — then committing or stopping.
+
+---
+
 ## The measured starting point (production lake, 2026-08-02)
 
 Corpus: 1,040 documents / 615 gold anchors, `corpus_content_hash 6dbec1f5…`, 57,895 chunks.
