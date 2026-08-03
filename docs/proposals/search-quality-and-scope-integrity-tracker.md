@@ -1,4 +1,19 @@
-# Search quality & scope integrity — tracker
+# Search quality & scope integrity — programme rollup
+
+**SUPERSEDED as a step tracker (2026-08-03).** Work is tracked in five per-effort trackers; this
+page is the rollup. Step rows below are retained as the record of how the programme was scoped.
+
+| effort | tracker | status |
+|---|---|---|
+| 1. Report card | [`vdocs-quality-report-card-tracker.md`](vdocs-quality-report-card/vdocs-quality-report-card-tracker.md) | ☐ not started — **blocks 2** |
+| 2. Response ranking | [`vdocs-quality-response-ranking-tracker.md`](vdocs-quality-response-ranking/vdocs-quality-response-ranking-tracker.md) | ☐ blocked on 1 |
+| 3. Crawl integrity | [`vdocs-quality-crawl-integrity-tracker.md`](vdocs-quality-crawl-integrity/vdocs-quality-crawl-integrity-tracker.md) | ☐ independent — may run in parallel |
+| 4. Synonym layer | [`vdocs-quality-synonym-layer-tracker.md`](vdocs-quality-synonym-layer/vdocs-quality-synonym-layer-tracker.md) | ☐ decision, not a build |
+| 5. Pattern miner | [`vdocs-quality-pattern-miner-tracker.md`](vdocs-quality-pattern-miner/vdocs-quality-pattern-miner-tracker.md) | ☐ decision, not a build |
+
+---
+
+## Original scoping (retained)
 
 Plan:
 [`search-quality-and-scope-integrity-implementation-plan.md`](search-quality-and-scope-integrity-implementation-plan.md)

@@ -1,6 +1,19 @@
 # Search quality & scope integrity — implementation plan (Q1–Q4)
 
-**Status: DRAFT · proposed 2026-08-02** · Tracker:
+**Status: SUPERSEDED as a work plan (2026-08-03) — kept as the programme rationale.** The four
+items below were split into five self-contained efforts, each with its own proposal, plan, tracker
+and prompts. **This document remains the source for the measured cost/benefit argument and the
+ordering; the efforts are where the work is tracked:**
+
+| # | effort | what it fixes |
+|---|---|---|
+| 1 | [`vdocs-quality-report-card/`](vdocs-quality-report-card/) | the answer key we grade search with is stale |
+| 2 | [`vdocs-quality-response-ranking/`](vdocs-quality-response-ranking/) | the right answer is found, then shown below the fold |
+| 3 | [`vdocs-quality-crawl-integrity/`](vdocs-quality-crawl-integrity/) | nothing watches the front door (R‑4, R‑19) |
+| 4 | [`vdocs-quality-synonym-layer/`](vdocs-quality-synonym-layer/) | the synonym feature knows one synonym (R‑12) |
+| 5 | [`vdocs-quality-pattern-miner/`](vdocs-quality-pattern-miner/) | ~81,500 suggestions per rebuild, 29 accepted |
+
+· Original tracker:
 [`search-quality-and-scope-integrity-tracker.md`](search-quality-and-scope-integrity-tracker.md) ·
 Source: register rows **R‑4, R‑12, R‑19** in
 [`../reference/pipeline-adversarial-audit.md`](../reference/pipeline-adversarial-audit.md) + the
