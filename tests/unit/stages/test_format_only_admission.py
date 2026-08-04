@@ -94,3 +94,15 @@ def test_pandoc_cannot_read_pdf_so_routing_must_be_format_aware() -> None:
     assert (
         needs_docling("docx", key="CPRS/cprsguium", routing=frozenset({"CPRS/cprsguium"})) is True
     )
+
+
+def test_docling_post_processing_is_docx_only() -> None:
+    """VO.8 defect caught by the conversion assessment: `_docling_convert` recovered images by
+    reading the source as a DOCX zip. Routing a PDF there raises `BadZipFile` — the document
+    would fail to convert entirely. The image-recovery step is a DOCX affordance (Docling parses
+    no alt-text from DOCX XML); PDFs keep Docling's own output."""
+    from vdocs.stages.convert.convert_pure import recovers_docx_images
+
+    assert recovers_docx_images("docx") is True
+    assert recovers_docx_images("pdf") is False
+    assert recovers_docx_images("PDF") is False

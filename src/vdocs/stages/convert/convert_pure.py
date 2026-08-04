@@ -37,6 +37,16 @@ def needs_docling(ext: str, *, key: str, routing: frozenset[str]) -> bool:
     return ext.lower() in PANDOC_UNREADABLE or key in routing
 
 
+def recovers_docx_images(ext: str) -> bool:
+    """Whether Docling's output needs the DOCX image-recovery pass.
+
+    Docling parses no alt-text from DOCX and emits bare ``<!-- image -->`` placeholders, so for
+    DOCX we re-read the source zip and inject ``![alt](media)`` refs (:mod:`docx_images`). That
+    pass is **DOCX-only** — it opens the bytes as a zip archive, so handing it a PDF raises
+    ``BadZipFile`` and loses the whole document. PDFs keep Docling's own markdown."""
+    return ext.lower() == "docx"
+
+
 def missing_converters(
     need_pandoc: bool, need_docling: bool, available: Callable[[str], bool]
 ) -> list[tuple[str, str]]:

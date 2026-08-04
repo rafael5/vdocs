@@ -194,7 +194,7 @@ def _docling_convert(data: bytes, ext: str) -> ConvertedDoc:  # pragma: no cover
     import tempfile
     from pathlib import Path
 
-    from vdocs.stages.convert.convert_pure import ConvertedDoc
+    from vdocs.stages.convert.convert_pure import ConvertedDoc, recovers_docx_images
     from vdocs.stages.convert.docx_images import extract_pictures, inject_placeholders
 
     exe = shutil.which("docling") or str(Path.home() / ".local" / "bin" / "docling")
@@ -212,6 +212,10 @@ def _docling_convert(data: bytes, ext: str) -> ConvertedDoc:  # pragma: no cover
         subprocess.run([*cmd, str(src)], capture_output=True, text=True, check=True)
         md_files = list(out.glob("*.md"))
         raw_markdown = md_files[0].read_text(encoding="utf-8") if md_files else ""
+    if not recovers_docx_images(ext):
+        # a PDF (VO.8): Docling's markdown stands on its own — the recovery pass below reads the
+        # source as a DOCX zip and would raise BadZipFile, losing the document entirely
+        return ConvertedDoc(markdown=raw_markdown, images=())
     markdown, images = inject_placeholders(raw_markdown, extract_pictures(data))
     return ConvertedDoc(markdown=markdown, images=tuple(images))
 
