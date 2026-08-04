@@ -1,0 +1,243 @@
+{
+  "shipped": {
+    "weights": {
+      "doc_title": 2.5,
+      "title": 2.0,
+      "section_path": 1.5,
+      "body": 1.0
+    },
+    "per_query": {
+      "kids-install-build": 0.8109101076822229,
+      "fileman-add-field": 0.0,
+      "rpc-broker-client-call": 0.4319206975727849,
+      "mailman-decnet-transmission": 0.5861441770259356,
+      "radiology-cancel-exam": 0.9239941662222116,
+      "pharmacy-release-signed-order": 0.7265116092206939,
+      "tiu-unsigned-notes": 0.7391347775232319,
+      "vpr-allergy-data": 0.6689922002440366,
+      "lab-file60-audit": 0.7068072581922399,
+      "cprs-enter-immunization": 0.58420288746293,
+      "vbecs-accept-order": 0.05089853308632991,
+      "hl7-security-keys": 0.9173194127129571,
+      "fileman-file-200-new-person": 0.4327214432040817,
+      "fileman-import-host-file": 0.7200489263567822,
+      "fileman-input-transform-definition": 0.9795021391503893,
+      "fileman-blddialog-icr-number": 0.3950679673211227,
+      "quasar-package-wide-variables": 1.0,
+      "hl7-table-0136-values": 0.9469024295259745,
+      "kids-backup-transport-global": 0.5,
+      "hl7-start-tcpip-link": 0.9246614852389882,
+      "fileman-file-access-security": 0.7575425688208223,
+      "vista-signon-credentials": 0.17487829613956002,
+      "fileman-finder-api": 0.7138920040889587,
+      "taskman-monitor": 0.6343760924536679
+    },
+    "mean": 0.6386012158019134
+  },
+  "top": [
+    {
+      "weights": {
+        "doc_title": 3.0,
+        "title": 3.0,
+        "section_path": 0.5,
+        "body": 1.0
+      },
+      "mean": 0.6693,
+      "delta_mean": 0.0307,
+      "improved": 9,
+      "regressed": 5,
+      "worst_regression": -0.1131,
+      "regressed_queries": [
+        "fileman-file-access-security",
+        "kids-backup-transport-global",
+        "mailman-decnet-transmission",
+        "rpc-broker-client-call",
+        "taskman-monitor"
+      ]
+    },
+    {
+      "weights": {
+        "doc_title": 4.0,
+        "title": 3.0,
+        "section_path": 0.5,
+        "body": 1.0
+      },
+      "mean": 0.6691,
+      "delta_mean": 0.0305,
+      "improved": 9,
+      "regressed": 6,
+      "worst_regression": -0.1131,
+      "regressed_queries": [
+        "fileman-file-200-new-person",
+        "fileman-file-access-security",
+        "kids-backup-transport-global",
+        "mailman-decnet-transmission",
+        "rpc-broker-client-call",
+        "taskman-monitor"
+      ]
+    },
+    {
+      "weights": {
+        "doc_title": 2.0,
+        "title": 3.0,
+        "section_path": 0.5,
+        "body": 1.0
+      },
+      "mean": 0.6682,
+      "delta_mean": 0.0296,
+      "improved": 7,
+      "regressed": 5,
+      "worst_regression": -0.1131,
+      "regressed_queries": [
+        "fileman-file-access-security",
+        "fileman-input-transform-definition",
+        "kids-backup-transport-global",
+        "mailman-decnet-transmission",
+        "taskman-monitor"
+      ]
+    },
+    {
+      "weights": {
+        "doc_title": 1.5,
+        "title": 3.0,
+        "section_path": 0.5,
+        "body": 1.0
+      },
+      "mean": 0.6629,
+      "delta_mean": 0.0243,
+      "improved": 6,
+      "regressed": 8,
+      "worst_regression": -0.1131,
+      "regressed_queries": [
+        "fileman-file-access-security",
+        "fileman-input-transform-definition",
+        "hl7-start-tcpip-link",
+        "kids-backup-transport-global",
+        "kids-install-build",
+        "mailman-decnet-transmission",
+        "taskman-monitor",
+        "vpr-allergy-data"
+      ]
+    },
+    {
+      "weights": {
+        "doc_title": 2.5,
+        "title": 3.0,
+        "section_path": 0.5,
+        "body": 1.0
+      },
+      "mean": 0.662,
+      "delta_mean": 0.0234,
+      "improved": 8,
+      "regressed": 5,
+      "worst_regression": -0.1438,
+      "regressed_queries": [
+        "fileman-file-access-security",
+        "fileman-input-transform-definition",
+        "kids-backup-transport-global",
+        "mailman-decnet-transmission",
+        "taskman-monitor"
+      ]
+    },
+    {
+      "weights": {
+        "doc_title": 3.0,
+        "title": 3.0,
+        "section_path": 1.0,
+        "body": 1.0
+      },
+      "mean": 0.6571,
+      "delta_mean": 0.0185,
+      "improved": 8,
+      "regressed": 3,
+      "worst_regression": -0.0334,
+      "regressed_queries": [
+        "mailman-decnet-transmission",
+        "rpc-broker-client-call",
+        "taskman-monitor"
+      ]
+    },
+    {
+      "weights": {
+        "doc_title": 2.5,
+        "title": 3.0,
+        "section_path": 1.0,
+        "body": 1.0
+      },
+      "mean": 0.6563,
+      "delta_mean": 0.0177,
+      "improved": 9,
+      "regressed": 2,
+      "worst_regression": -0.0045,
+      "regressed_queries": [
+        "mailman-decnet-transmission",
+        "taskman-monitor"
+      ]
+    },
+    {
+      "weights": {
+        "doc_title": 1.5,
+        "title": 2.5,
+        "section_path": 0.5,
+        "body": 1.0
+      },
+      "mean": 0.6561,
+      "delta_mean": 0.0175,
+      "improved": 6,
+      "regressed": 7,
+      "worst_regression": -0.1131,
+      "regressed_queries": [
+        "fileman-file-access-security",
+        "fileman-input-transform-definition",
+        "hl7-start-tcpip-link",
+        "kids-backup-transport-global",
+        "kids-install-build",
+        "mailman-decnet-transmission",
+        "taskman-monitor"
+      ]
+    },
+    {
+      "weights": {
+        "doc_title": 4.0,
+        "title": 3.0,
+        "section_path": 1.0,
+        "body": 1.0
+      },
+      "mean": 0.6556,
+      "delta_mean": 0.017,
+      "improved": 10,
+      "regressed": 5,
+      "worst_regression": -0.0558,
+      "regressed_queries": [
+        "fileman-file-200-new-person",
+        "fileman-file-access-security",
+        "mailman-decnet-transmission",
+        "rpc-broker-client-call",
+        "taskman-monitor"
+      ]
+    },
+    {
+      "weights": {
+        "doc_title": 1.5,
+        "title": 3.0,
+        "section_path": 2.0,
+        "body": 1.0
+      },
+      "mean": 0.655,
+      "delta_mean": 0.0164,
+      "improved": 6,
+      "regressed": 7,
+      "worst_regression": -0.0923,
+      "regressed_queries": [
+        "cprs-enter-immunization",
+        "fileman-finder-api",
+        "fileman-import-host-file",
+        "fileman-input-transform-definition",
+        "lab-file60-audit",
+        "vista-signon-credentials",
+        "vpr-allergy-data"
+      ]
+    }
+  ],
+  "clean": []
+}

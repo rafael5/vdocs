@@ -48,7 +48,7 @@ _BODY_COL = sp.FTS_COLUMNS.index("body")
 # buried in `body`. Built once from the single-source column order/weights in `search_pure`.
 _BM25 = sp.bm25_expr("chunks_fts")
 
-_SELECT = """
+_SELECT_TEMPLATE = """
 SELECT f.chunk_id, f.section_id, f.doc_key, f.title AS section_title,
        snippet(chunks_fts, {body}, '[', ']', ' … ', 16) AS snippet,
        {bm25} AS bm25,
@@ -58,7 +58,9 @@ JOIN documents d ON d.doc_key = f.doc_key
 WHERE chunks_fts MATCH ?{filters}
 ORDER BY {bm25}
 LIMIT ?
-""".format(body=_BODY_COL, bm25=_BM25, filters="{filters}")
+"""
+
+_SELECT = _SELECT_TEMPLATE.format(body=_BODY_COL, bm25=_BM25, filters="{filters}")
 
 
 # --- "an index miss is not corpus absence" — ONE rule, THREE surfaces (P6.3, audit R-11) ---------
@@ -115,6 +117,7 @@ def lexical_search(
     app: list[str] | None = None,
     doc_type: list[str] | None = None,
     expansions: dict[str, str] | None = None,
+    weights: dict[str, float] | None = None,
 ) -> list[dict[str, Any]]:
     """Rank `is_latest` chunks against `query` by BM25 and return up to `k` pre-cited hits.
 
@@ -127,12 +130,24 @@ def lexical_search(
     SKL-grounded `skl_expansions(index_db)`** (S3.4): a number/identifier query expands to the
     entity's spelled-out name (`file #200` → `NEW PERSON`), the principled vocabulary-mismatch fix.
     Pass `{}` to disable expansion (the old hand-seeded glossary path that *regressed* — L1.3 — is
-    retired; the SKL data is entity-resolved, not common-word acronym noise)."""
+    retired; the SKL data is entity-resolved, not common-word acronym noise).
+
+    `weights` overrides the per-column bm25 weights for one call (default: the shipped
+    `search_pure.FTS_WEIGHTS`). It exists so a weight sweep measures **this** function rather than a
+    re-implementation of its query — the same discipline the golden harness follows by importing the
+    engine instead of reproducing it. Production callers leave it None."""
     if expansions is None:
         expansions = skl_expansions(str(index_db))
     match = sp.fts_match_query(query, expansions)
     if not match:
         return []
+    select = (
+        _SELECT
+        if weights is None
+        else _SELECT_TEMPLATE.format(
+            body=_BODY_COL, bm25=sp.bm25_expr("chunks_fts", weights=weights), filters="{filters}"
+        )
+    )
     filters: str = ""
     params: list[Any] = [match]
     for col, values in (("app_code", app), ("doc_type", doc_type)):
@@ -142,7 +157,7 @@ def lexical_search(
     params.append(k)
     conn = db.connect(index_db, read_only=True)
     try:
-        rows = conn.execute(_SELECT.format(filters=filters), params).fetchall()
+        rows = conn.execute(select.format(filters=filters), params).fetchall()
     finally:
         conn.close()
     return [_hit(dict(r)) for r in rows]
