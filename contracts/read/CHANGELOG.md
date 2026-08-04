@@ -6,6 +6,25 @@ Semver for the **read** contract (`read_schema_version`), the consumer-facing in
 replacement additively, keep the old as an alias for one release, then remove + MAJOR bump. See
 [ADR-0001](../../docs/adr/0001-read-contract-and-drift-prevention.md).
 
+## v1.6 — 2026-08-03
+
+Additive (backward-compatible) — VA lifecycle labels on the document (vdocs-quality-crawl-integrity
+CI.3, the visibility half of the CI.2 master-set retention rule: a relabel is a badge, never a
+removal):
+
+- **`v_documents.app_status`** — VA's lifecycle label for the owning application
+  (`active` | `archive` | `decommissioned`) as of the last inventory.
+- **`v_documents.decommission_date`** — VA-supplied decommission date (empty when none).
+- **`v_documents.cots_dependent`** — 1 when VA flags the application as replaced by / dependent on
+  a commercial product.
+- **`v_documents.out_of_scope_reason`** — provenance-only: the disqualifying source-format label,
+  empty for the admitted DOCX representation.
+- **capability `lifecycle_labels`** — advertises the four columns are populated.
+
+The same labels are baked into the gold body frontmatter by `enrich` (`app_status` always;
+`decommission_date` / `cots_dependent` / `out_of_scope_reason` only when VA supplies them), so the
+human reading surface carries the fact too. (`enrich` `contract_ver` 1→2, `index` 15→16.)
+
 ## v1.5 — 2026-06-17
 
 Additive (backward-compatible) — SKL entity-keying (skl-implementation-plan S3.3). `merge` folds the

@@ -85,6 +85,11 @@ def _seed_staged(ctx, docs):
             "group_key": "CPRS:OR:3.0",
             "word_count": 10,
             "bundle_path": f"{d.split(':')[0]}/{d.split(':')[1]}",
+            # CI.3: VA lifecycle labels ride doc_meta_staged into `documents`
+            "app_status": "archive",
+            "cots_dependent": 1,
+            "decommission_date": "2022-05",
+            "out_of_scope_reason": "",
         }  # fmt: skip
         for d in docs
     ]
@@ -144,6 +149,15 @@ def test_index_builds_documents_sections_entities(ctx):
             (new,),
         ).fetchone()
         assert tuple(prof) == ("clinical", "sysadmin", "I", "Health Informatics")
+
+        # CI.3 (v1.6): VA lifecycle labels are visible on the consumer surface — a reader sees
+        # "archive; commercially replaced 2022-05" instead of inferring currency from presence
+        life = conn.execute(
+            "SELECT app_status, decommission_date, cots_dependent, out_of_scope_reason "
+            "FROM v_documents WHERE doc_id = ?",
+            (new,),
+        ).fetchone()
+        assert tuple(life) == ("archive", "2022-05", 1, "")
 
         # ALL sections present (both docs), each carrying is_latest
         n_sections = conn.execute("SELECT count(*) FROM doc_sections").fetchone()[0]
@@ -318,7 +332,7 @@ def test_index_stamps_read_contract_meta(ctx):
         meta = dict(conn.execute("SELECT key, value FROM meta").fetchall())
     finally:
         conn.close()
-    assert meta["read_schema_version"] == "1.5"
+    assert meta["read_schema_version"] == "1.6"
     assert meta["corpus_doc_count"] == "2"  # both version-group members are documents
     assert len(meta["corpus_content_hash"]) == 64  # sha256 hexdigest
 
@@ -370,7 +384,7 @@ def test_index_emits_read_contract_views_matching_the_spec(ctx):
         assert latest == 1
         # the read_schema_version stamped in meta is the spec's version (single source)
         ver = conn.execute("SELECT value FROM meta WHERE key = 'read_schema_version'").fetchone()[0]
-        assert ver == rc.version(spec) == "1.5"
+        assert ver == rc.version(spec) == "1.6"
     finally:
         conn.close()
 

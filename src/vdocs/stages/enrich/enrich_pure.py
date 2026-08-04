@@ -27,7 +27,11 @@ __all__ = [
 _WORD_RE = re.compile(r"\S+")
 
 # identity frontmatter keys sourced from the inventory record (source_sha256 is added later by
-# `normalize`, which has the bronze bytes; computed fields go to index.db, never the body — §6.3)
+# `normalize`, which has the bronze bytes; computed fields go to index.db, never the body — §6.3).
+# The CI.3 lifecycle keys (app_status, decommission_date, out_of_scope_reason + the cots flag
+# below) are VA-supplied facts about the document's application: they travel WITH the document so
+# a reader sees "deprecated; commercially replaced in 2022" instead of inferring currency from
+# presence. Absent labels stay absent (the empty-value filter), never defaulted.
 _FM_FIELDS: tuple[tuple[str, str], ...] = (
     ("title", "doc_title"),
     ("doc_type", "doc_code"),
@@ -37,6 +41,9 @@ _FM_FIELDS: tuple[tuple[str, str], ...] = (
     ("version", "patch_ver"),
     ("patch_id", "patch_id"),
     ("source_url", "doc_url"),
+    ("app_status", "app_status"),
+    ("decommission_date", "decommission_date"),
+    ("out_of_scope_reason", "out_of_scope_reason"),
 )
 
 
@@ -49,6 +56,8 @@ def identity_frontmatter(record: EnrichedRecord, *, tool_ver: str) -> dict[str, 
     """The identity frontmatter mapping for a record — only the non-empty identity keys (§6.3)."""
     fm = {key: getattr(record, attr) for key, attr in _FM_FIELDS}
     fm = {k: v for k, v in fm.items() if v}
+    if record.cots_dependent:  # VA's commercial-replacement flag — only ever baked when set
+        fm["cots_dependent"] = "true"
     fm["tool_ver"] = tool_ver
     return fm
 
@@ -80,6 +89,12 @@ def staged_row(record: EnrichedRecord, *, body: str, bundle_path: str) -> dict[s
         "noise_type": record.noise_type,
         "source_url": record.doc_url,
         "doc_format": record.doc_format,
+        # CI.3: VA lifecycle labels — staged for `documents` so the consumer surface can badge
+        # a deprecated package's manual instead of losing it (the CI.2 master-set companion)
+        "app_status": record.app_status,
+        "cots_dependent": int(record.cots_dependent),
+        "decommission_date": record.decommission_date,
+        "out_of_scope_reason": record.out_of_scope_reason,
         "word_count": word_count(body),
         "bundle_path": bundle_path,
     }

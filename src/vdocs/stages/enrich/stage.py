@@ -31,7 +31,9 @@ class EnrichStage(Stage):
     requires = [TEXT_CONVERTED, CATALOG_ENRICHED]
     produces = [TEXT_ENRICHED, DOC_META_STAGED]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
-    contract_ver = 1  # bump when DOC_META_STAGED's columns change (re-runs index)
+    # v2 (CI.3): doc_meta_staged gained the VA lifecycle columns (app_status, cots_dependent,
+    # decommission_date, out_of_scope_reason) and the body FM carries them; re-runs index.
+    contract_ver = 2  # bump when DOC_META_STAGED's columns change (re-runs index)
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.stages.enrich import enrich_pure as ep
@@ -91,8 +93,9 @@ def _write_staged(index_db, staged: list[dict[str, object]]) -> None:  # type: i
     from vdocs.stages.enrich import enrich_pure as ep
 
     index_db.parent.mkdir(parents=True, exist_ok=True)
+    integer_cols = {"word_count", "cots_dependent"}
     cols = ", ".join(
-        f"{c} TEXT" if c != "word_count" else f"{c} INTEGER" for c in ep.STAGED_COLUMNS
+        f"{c} INTEGER" if c in integer_cols else f"{c} TEXT" for c in ep.STAGED_COLUMNS
     )
     placeholders = ", ".join("?" for _ in ep.STAGED_COLUMNS)
     rows = [[row[c] for c in ep.STAGED_COLUMNS] for row in staged]

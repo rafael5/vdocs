@@ -70,7 +70,9 @@ CREATE TABLE documents (
   template_id   TEXT, source_sha256 TEXT, source_url TEXT,
   published     TEXT, pub_year TEXT,
   image_count   INTEGER, image_bytes INTEGER,
-  bundle_path   TEXT
+  bundle_path   TEXT,
+  app_status    TEXT, decommission_date TEXT, cots_dependent INTEGER,
+  out_of_scope_reason TEXT
 );
 CREATE TABLE doc_sections (
   section_id TEXT PRIMARY KEY,
@@ -139,6 +141,7 @@ _DOC_COLUMNS = (
     "app_user", "doc_user", "software_class", "function_category",
     "word_count", "section_count", "is_latest", "template_id", "source_sha256", "source_url",
     "published", "pub_year", "image_count", "image_bytes", "bundle_path",
+    "app_status", "decommission_date", "cots_dependent", "out_of_scope_reason",
 )  # fmt: skip
 
 
@@ -171,7 +174,12 @@ class IndexStage(Stage):
     # v12 (SKL entity-keying, S3.3): index.db gained three EMPTY shells (entity_skl,
     # entity_synonyms, chunk_entities) + their v_* views — the schema owner stamps them so the read
     # version is consistent before `merge` populates them; read contract → v1.5 (additive MINOR).
-    contract_ver = 15  # v15: `searchable` is the retrieval predicate, not a `kind` alias (P6.1b)
+    # v16 (CI.3 lifecycle labels): documents gained app_status / decommission_date /
+    # cots_dependent / out_of_scope_reason from doc_meta_staged (FM fallback), so a consumer can
+    # badge a deprecated package's manual instead of losing it; read contract → v1.6 (additive
+    # MINOR) — the CI.2 master-set retention's visibility half.
+    contract_ver = 16
+    # ^ v15: `searchable` is the retrieval predicate, not a `kind` alias (P6.1b)
     # ^ v14: vocab-validated option recognizer (un-quarantined)
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
@@ -429,6 +437,13 @@ def _doc_row(  # type: ignore[no-untyped-def]
         image_count,
         image_bytes,
         bundle_path,
+        # CI.3: VA lifecycle labels — staged by `enrich` (FM fallback for a doc whose staging
+        # predates the columns); absent labels stay absent, never defaulted
+        s("app_status") or str(meta.get("app_status", "")),
+        s("decommission_date") or str(meta.get("decommission_date", "")),
+        int(staged.get("cots_dependent") or 0)
+        or int(str(meta.get("cots_dependent", "")) == "true"),
+        s("out_of_scope_reason") or str(meta.get("out_of_scope_reason", "")),
     )
 
 

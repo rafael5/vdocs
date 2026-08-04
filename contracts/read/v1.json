@@ -1,6 +1,6 @@
 {
-  "read_schema_version": "1.5",
-  "description": "Published read contract for vdocs index.db (ADR-0001). Consumers (vdocs-tui, vdocs-web, MCP) bind ONLY to the v_* views + the named chunks_fts surface — never to physical tables. The pipeline may refactor physical tables freely behind these. Views are GENERATED from this spec (kernel.read_contract.view_ddl), so they cannot drift from it; `vdocs doctor` asserts the emitted DB matches.",
+  "read_schema_version": "1.6",
+  "description": "Published read contract for vdocs index.db (ADR-0001). Consumers (vdocs-tui, vdocs-web, MCP) bind ONLY to the v_* views + the named chunks_fts surface \u2014 never to physical tables. The pipeline may refactor physical tables freely behind these. Views are GENERATED from this spec (kernel.read_contract.view_ddl), so they cannot drift from it; `vdocs doctor` asserts the emitted DB matches.",
   "views": {
     "v_documents": {
       "source": "documents",
@@ -160,12 +160,32 @@
           "type": "TEXT",
           "nullable": true,
           "desc": "the de-versioned gold anchor bundle relpath (<app>/<slug>) this doc resolves to; locates the doc's gold sidecars (e.g. tables/*.csv) without parsing the versioned doc_key; empty for a non-latest doc"
+        },
+        "app_status": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "VA lifecycle label of the owning application (active | archive | decommissioned) as of the last inventory; badge, never a removal (master-set retention)"
+        },
+        "decommission_date": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "VA-supplied decommission date of the owning application (empty when VA supplies none)"
+        },
+        "cots_dependent": {
+          "type": "INTEGER",
+          "nullable": true,
+          "desc": "1 when VA flags the application as replaced by / dependent on a commercial product"
+        },
+        "out_of_scope_reason": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "the disqualifying source-format label the inventory carries for this representation (empty for the admitted DOCX; provenance only)"
         }
       }
     },
     "v_sections": {
       "source": "doc_sections",
-      "description": "One row per heading — the anchor/structure (TOC) map.",
+      "description": "One row per heading \u2014 the anchor/structure (TOC) map.",
       "columns": {
         "section_id": {
           "type": "TEXT",
@@ -330,12 +350,12 @@
     },
     "v_entity_skl": {
       "source": "entity_skl",
-      "description": "SKL reconciliation map (S3.3): index entity_id (type:canonical) ↔ the Semantic Knowledge Layer node_id (type/canonical), with the SKL canonical identity. Present only for entities resolved in knowledge.db; empty where the SKL has no coverage.",
+      "description": "SKL reconciliation map (S3.3): index entity_id (type:canonical) \u2194 the Semantic Knowledge Layer node_id (type/canonical), with the SKL canonical identity. Present only for entities resolved in knowledge.db; empty where the SKL has no coverage.",
       "columns": {
         "entity_id": {
           "type": "TEXT",
           "nullable": false,
-          "desc": "index entity id (type:canonical) — joins v_entities (PRIMARY)"
+          "desc": "index entity id (type:canonical) \u2014 joins v_entities (PRIMARY)"
         },
         "node_id": {
           "type": "TEXT",
@@ -361,7 +381,7 @@
     },
     "v_entity_synonyms": {
       "source": "entity_synonyms",
-      "description": "SKL synonym catalog (S3.3): every surface (canonical name + synonyms) of each resolved entity — the vocabulary a reader/query may use for it.",
+      "description": "SKL synonym catalog (S3.3): every surface (canonical name + synonyms) of each resolved entity \u2014 the vocabulary a reader/query may use for it.",
       "columns": {
         "node_id": {
           "type": "TEXT",
@@ -382,12 +402,12 @@
     },
     "v_chunk_entities": {
       "source": "chunk_entities",
-      "description": "SKL chunk tags (S3.3): a chunk is linked to an entity when one of the entity's distinctive surfaces occurs in it — entity-keyed retrieval (a chunk about file #200 is reachable via the entity regardless of which surface it spells).",
+      "description": "SKL chunk tags (S3.3): a chunk is linked to an entity when one of the entity's distinctive surfaces occurs in it \u2014 entity-keyed retrieval (a chunk about file #200 is reachable via the entity regardless of which surface it spells).",
       "columns": {
         "chunk_id": {
           "type": "TEXT",
           "nullable": false,
-          "desc": "chunk the entity is mentioned in — joins v_chunks"
+          "desc": "chunk the entity is mentioned in \u2014 joins v_chunks"
         },
         "node_id": {
           "type": "TEXT",
@@ -440,6 +460,7 @@
     "persona_facets",
     "product_facets",
     "vocab_table",
-    "skl_entity_keying"
+    "skl_entity_keying",
+    "lifecycle_labels"
   ]
 }

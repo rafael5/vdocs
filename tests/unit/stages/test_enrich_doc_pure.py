@@ -42,6 +42,7 @@ def test_identity_frontmatter_maps_and_orders_keys():
         "version": "5.3",
         "patch_id": "DG*5.3*1057",
         "source_url": "https://va.gov/d/dg_5_3_1057_dibr.docx",
+        "app_status": "active",
         "tool_ver": "0.1.0",
     }
 
@@ -71,6 +72,39 @@ def test_profile_frontmatter_resolves_the_four_tags():
     assert ep.profile_frontmatter(_rec(app_name_abbrev="ZZZ", doc_code="UM"), maps) == {}
     # but a role-fixed doc_type still resolves doc_user even when the app has no profile
     assert ep.profile_frontmatter(_rec(app_name_abbrev="ZZZ"), maps) == {"doc_user": "sysadmin"}
+
+
+# --- CI.3: VA lifecycle labels travel with the document --------------------------------------
+
+
+def test_frontmatter_carries_lifecycle_labels_when_va_supplies_them():
+    fm = ep.identity_frontmatter(
+        _rec(app_status="decommissioned", decommission_date="2022-05", cots_dependent=True),
+        tool_ver="0.1.0",
+    )
+    assert fm["app_status"] == "decommissioned"
+    assert fm["decommission_date"] == "2022-05"
+    assert fm["cots_dependent"] == "true"
+
+
+def test_frontmatter_absent_lifecycle_labels_stay_absent():
+    fm = ep.identity_frontmatter(_rec(), tool_ver="0.1.0")
+    assert fm["app_status"] == "active"  # VA always labels the app
+    assert "decommission_date" not in fm  # no date supplied → no key, no default
+    assert "cots_dependent" not in fm  # not commercially replaced → no key
+    assert "out_of_scope_reason" not in fm
+
+
+def test_staged_row_carries_lifecycle_labels():
+    row = ep.staged_row(
+        _rec(app_status="archive", decommission_date="2010-01", cots_dependent=True),
+        body="",
+        bundle_path="x",
+    )
+    assert row["app_status"] == "archive"
+    assert row["decommission_date"] == "2010-01"
+    assert row["cots_dependent"] == 1  # INTEGER in doc_meta_staged / documents
+    assert row["out_of_scope_reason"] == ""
 
 
 def test_staged_row_carries_identity_plus_computed():
