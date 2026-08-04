@@ -333,6 +333,78 @@ def test_build_raw_index_drops_an_acquisition_that_is_no_longer_an_admitted_targ
     ]
 
 
+# --- CI.2: master-set retention — once indexed, never dropped by a relabel -------------------
+# The prior index entry is itself the proof of fetch (entries are only ever created from
+# `fetched` acquisitions), so retention keys off the prior index, not the acquisitions table:
+# it survives a failed --refetch (status flips to `failed`) and a wiped state.db, and a document
+# that was never indexed ("never ours") has nothing to retain.
+
+
+def _entry(slug: str, sha: str, title: str = "T") -> dict[str, str]:
+    return {
+        "sha256": sha,
+        "app_code": "ADT",
+        "doc_slug": slug,
+        "title": title,
+        "source_url": f"https://va.gov/d/{slug}.docx",
+        "ext": "docx",
+    }
+
+
+def test_build_raw_index_retains_a_prior_entry_no_longer_admitted():
+    targets = [_rec("live_um", doc_code="UM")]
+    acqs = {"ADT:live_um": _Fetched("sha_live")}
+    prior = {"ADT:gone_um": _entry("gone_um", "sha_gone")}
+    index = fp.build_raw_index(targets, acqs, prior=prior)
+    assert index["docs"]["ADT:gone_um"] == prior["ADT:gone_um"]  # carried verbatim
+    assert "ADT:live_um" in index["docs"]
+    assert index["retained"] == ["ADT:gone_um"]
+
+
+def test_a_readmitted_doc_is_rederived_not_carried():
+    targets = [_rec("back_um", doc_code="UM")]
+    acqs = {"ADT:back_um": _Fetched("sha_new")}
+    prior = {"ADT:back_um": _entry("back_um", "sha_old", title="stale")}
+    index = fp.build_raw_index(targets, acqs, prior=prior)
+    assert index["docs"]["ADT:back_um"]["sha256"] == "sha_new"
+    assert index["docs"]["ADT:back_um"]["title"] == "T"
+    assert index["retained"] == []
+
+
+def test_retention_survives_a_lost_or_degraded_acquisition_row():
+    # a failed refetch (or a wiped state.db) must not cost a document we already hold
+    targets = [_rec("live_um", doc_code="UM")]
+    prior = {
+        "ADT:live_um": _entry("live_um", "sha_live"),
+        "ADT:gone_um": _entry("gone_um", "sha_gone"),
+    }
+    index = fp.build_raw_index(targets, {}, prior=prior)  # no acquisitions at all
+    assert sorted(index["docs"]) == ["ADT:gone_um", "ADT:live_um"]
+    assert sorted(index["retained"]) == ["ADT:gone_um", "ADT:live_um"]
+
+
+def test_retention_is_transitive_across_runs():
+    targets = [_rec("live_um", doc_code="UM")]
+    acqs = {"ADT:live_um": _Fetched("sha_live")}
+    prior = {"ADT:gone_um": _entry("gone_um", "sha_gone")}
+    once = fp.build_raw_index(targets, acqs, prior=prior)
+    twice = fp.build_raw_index(targets, acqs, prior=once["docs"])
+    assert twice["docs"] == once["docs"]
+
+
+def test_no_prior_index_means_no_retention():
+    index = fp.build_raw_index([_rec("a_um", doc_code="UM")], {"ADT:a_um": _Fetched("s")})
+    assert index["retained"] == []
+
+
+def test_retained_entries_keep_the_docs_mapping_sorted():
+    targets = [_rec("m_um", doc_code="UM")]
+    acqs = {"ADT:m_um": _Fetched("s")}
+    prior = {"ADT:z_um": _entry("z_um", "sz"), "ADT:a_um": _entry("a_um", "sa")}
+    index = fp.build_raw_index(targets, acqs, prior=prior)
+    assert list(index["docs"]) == ["ADT:a_um", "ADT:m_um", "ADT:z_um"]
+
+
 def test_build_raw_index_is_deterministic_and_sorted():
     targets = [_rec("z_um", doc_code="UM"), _rec("a_um", doc_code="UM")]
     acqs = {"ADT:z_um": _Fetched("s1"), "ADT:a_um": _Fetched("s2")}

@@ -98,6 +98,7 @@ def test_bronze_dag_runs_end_to_end(bronze_ctx):
     assert fetch_run.counts == {
         "targets": 1,
         "indexed": 1,
+        "retained": 0,
         "fetched": 1,
         "skipped": 0,
         "failed": 0,
@@ -295,6 +296,68 @@ def test_raw_index_drops_a_doc_the_gate_no_longer_admits(bronze_ctx):
     index = fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text()))
     assert "LR:lr_um" not in index  # never an admitted target → not in the corpus
     assert list(index) == ["ADT:dg_5_3_1057_um"]
+
+
+def test_a_fetched_doc_survives_a_lifecycle_relabel(bronze_ctx):
+    # CI.2 master-set retention: VA relabelling the application DECOMMISSIONED removes it from
+    # the admitted set (denied_app_status) — but a document we already fetched must stay in the
+    # index. Deprecation does not remove the code from VistA; the relabel is metadata, never a
+    # reason to drop the manual. Driven end-to-end through a real re-crawl of a relabelled VDL.
+    ctx = bronze_ctx
+    Orchestrator(_stages()).run(ctx, force=True)
+    assert list(fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text()))) == [
+        "ADT:dg_5_3_1057_um"
+    ]
+
+    relabelled = dict(
+        PAGES,
+        **{
+            "https://vdl.test/section.asp?secid=1": (
+                '<a href="application.asp?appid=55">'
+                "Admission Discharge Transfer (ADT) - DECOMMISSIONED</a>"
+            )
+        },
+    )
+
+    def relabelled_page(url: str) -> Page:
+        return Page(text=relabelled.get(url, "<html></html>"), url=url, status_code=200)
+
+    (sr,) = (
+        r
+        for r in Orchestrator(
+            [
+                CrawlStage(page_fetcher=relabelled_page),
+                CatalogStage(),
+                ServeInventoryStage(),
+                FetchStage(fetch_bytes=fake_bytes, selection=Selection(all_=True)),
+            ]
+        ).run(ctx, force=True)
+        if r is not None and r.stage == "fetch"
+    )
+
+    # the gate now admits nothing — and the document is still there, marked retained
+    assert sr.counts["targets"] == 0
+    assert sr.counts["retained"] == 1
+    index = fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text()))
+    assert list(index) == ["ADT:dg_5_3_1057_um"]
+    assert index["ADT:dg_5_3_1057_um"]["sha256"]  # the CAS pointer survives with it
+
+
+def test_a_v1_prior_index_is_rederived_without_retention(bronze_ctx):
+    # The P1.1 migration path must still work: a legacy sha-keyed index cannot be read, so it
+    # contributes no retained entries — the fetch re-derives a fresh format-2 index instead of
+    # dying on its own remediation advice.
+    ctx = bronze_ctx
+    _inventory_only(ctx)
+    ctx.cfg.raw_index.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.raw_index.write_text(json.dumps({"deadbeef": {"app_code": "ADT"}}))
+    (sr,) = Orchestrator([FetchStage(fetch_bytes=fake_bytes, selection=Selection(all_=True))]).run(
+        ctx, force=True
+    )
+    assert sr.status == "ok" and sr.counts["fetched"] == 1 and sr.counts["retained"] == 0
+    assert list(fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text()))) == [
+        "ADT:dg_5_3_1057_um"
+    ]
 
 
 def test_fetch_does_not_fall_back_to_pdf(bronze_ctx):

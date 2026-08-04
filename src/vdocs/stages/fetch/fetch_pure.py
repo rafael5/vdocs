@@ -282,9 +282,12 @@ def index_entry(
 
 
 def build_raw_index(
-    targets: Sequence[EnrichedRecord], acquisitions: Mapping[str, Any]
+    targets: Sequence[EnrichedRecord],
+    acquisitions: Mapping[str, Any],
+    prior: Mapping[str, dict[str, str]] | None = None,
 ) -> dict[str, Any]:
-    """**Derive** ``raw/index.json`` (format 2) from the admitted targets ⋈ the acquisitions.
+    """**Derive** ``raw/index.json`` (format 2) from the admitted targets ⋈ the acquisitions,
+    then **retain** every prior entry the derivation no longer produces (CI.2).
 
     One entry per **``doc_id``** — never per content sha (P1.1). Deriving instead of merging the
     prior file is what fixes three coupled defects at once:
@@ -292,11 +295,22 @@ def build_raw_index(
     * **duplicate content no longer collapses.** Two logical documents published as byte-identical
       DOCX (e.g. ``PSJ:psj_5_tm`` / ``PSJ:psj_5_0_tm``) each keep an entry pointing at the one
       shared CAS blob, instead of the second silently overwriting the first and losing a bundle.
-    * **withdrawn documents leave.** Membership is recomputed from the *current* admitted target
-      set, so a doc the gate no longer admits drops out and ``convert``'s stale-bundle pruning can
-      finally fire outside ``build --fresh`` (audit R-10).
     * **a lost entry self-heals.** The index no longer depends on what this run downloaded, so a
       ``SKIP_PRESENT`` document (already in the CAS) is re-emitted every run.
+    * **a stale entry refreshes.** A doc still admitted gets its entry re-derived from the current
+      inventory record, so provenance follows the source.
+
+    **Master-set retention (CI.2, audit R‑19):** a ``prior`` entry whose ``doc_id`` the fresh
+    derivation does not produce is carried forward **verbatim**, and its id is listed under the
+    top-level ``retained`` key. Once a document has been fetched it is never dropped by a scope
+    or lifecycle relabel — VA deprecating a package does not remove its code from VistA, so the
+    manual stays; the relabel is metadata, not a removal. The prior *entry* is the proof of fetch
+    (entries are only ever created from ``fetched`` acquisitions), which is why retention keys off
+    the prior index and not the acquisitions table: it survives a failed ``--refetch`` (status
+    flips to ``failed`` while the CAS still holds the bytes) and a wiped ``state.db``. A document
+    that was never indexed ("never ours") has nothing to retain — R‑10's withdrawn-ghost rule is
+    unchanged for it. Deliberate removal from the master set is an operator act (edit the file),
+    never a side effect.
 
     ``targets`` is the gate-admitted target set (``select_fetch_targets(records, Selection(all_=
     True), policy)``) — the operator's narrower per-run selection must NOT narrow the index, or a
@@ -320,7 +334,10 @@ def build_raw_index(
                 ext=url_ext(rec.doc_url) or rec.doc_format,
             ),
         }
-    return {"format": RAW_INDEX_FORMAT, "docs": docs}
+    retained = sorted(set(prior or {}) - set(docs))
+    for did in retained:
+        docs[did] = dict((prior or {})[did])
+    return {"format": RAW_INDEX_FORMAT, "docs": dict(sorted(docs.items())), "retained": retained}
 
 
 def parse_raw_index(data: Mapping[str, Any]) -> dict[str, dict[str, str]]:

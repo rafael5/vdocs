@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 
+import structlog
+
 from vdocs.contracts.registry import GOLD_INVENTORY, RAW_INDEX, RAW_TREE
 from vdocs.kernel import http
 from vdocs.kernel.cas import Cas, atomic_write
@@ -20,6 +22,8 @@ from vdocs.orchestrator.stage import Stage, StageContext
 from vdocs.stages.fetch.fetch_pure import MAX_FETCH_ATTEMPTS, Selection
 
 ByteFetcher = Callable[[str], bytes | None]
+
+log = structlog.get_logger(__name__)
 
 
 def _url_list(urls: list[str], sample: int = 8) -> str:
@@ -200,17 +204,23 @@ class FetchStage(Stage):
             fetched += 1
 
         # DERIVE the index from the acquisitions this run just updated ⋈ the admitted targets
-        # (P1.1) — not a merge of the prior file. So a SKIP_PRESENT document is re-emitted every
-        # run (a lost entry self-heals), duplicate-content documents each keep an entry, and a
-        # doc the gate no longer admits leaves.
-        index = fp.build_raw_index(admitted, ctx.state.all_acquisitions())
+        # (P1.1) — not a merge of the prior file — then RETAIN every prior entry the derivation
+        # no longer produces (CI.2 master set: once fetched, a scope or lifecycle relabel is
+        # metadata, never a removal). A SKIP_PRESENT document is re-emitted every run (a lost
+        # entry self-heals) and duplicate-content documents each keep an entry.
+        index = fp.build_raw_index(
+            admitted, ctx.state.all_acquisitions(), prior=self._prior_index(ctx)
+        )
         atomic_write(
             ctx.cfg.raw_index, (json.dumps(index, indent=2, sort_keys=True) + "\n").encode("utf-8")
         )
+        if index["retained"]:
+            log.info("fetch-retained", count=len(index["retained"]), doc_ids=index["retained"][:8])
         return RunResult(
             counts={
                 "targets": len(targets),
                 "indexed": len(index["docs"]),
+                "retained": len(index["retained"]),
                 "fetched": fetched,
                 "skipped": skipped,
                 "failed": failed,
@@ -221,3 +231,19 @@ class FetchStage(Stage):
                 failed, failed_urls, permanent, permanent_urls, bad_content, bad_content_urls
             ),
         )
+
+    def _prior_index(self, ctx: StageContext) -> dict[str, dict[str, str]]:
+        """The prior ``raw/index.json`` entries — the master set retention carries forward.
+
+        A missing file (first fetch) or an unreadable/legacy (format-1) one contributes nothing:
+        the P1.1 migration path re-derives a fresh format-2 index rather than dying on its own
+        remediation advice."""
+        from vdocs.stages.fetch import fetch_pure as fp
+
+        if not ctx.cfg.raw_index.exists():
+            return {}
+        try:
+            return fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text(encoding="utf-8")))
+        except ValueError:
+            log.warning("fetch-prior-index-unreadable", path=str(ctx.cfg.raw_index))
+            return {}
