@@ -30,6 +30,17 @@ def html_rows(table_html: str) -> list[list[str]]:
     return [[flatten_html(c) for c in CELL_RE.findall(r)] for r in ROW_RE.findall(table_html)]
 
 
+# --- legacy table-of-contents entries inside a table (Docling's PDF dialect) ---
+# Shared by `normalize_pure` (which captures and strips the TOC) and `tables_pure` (which must not
+# mistake a TOC for a data table and lift it to CSV). One definition, §9.2.
+PAGE_NUMBER = r"[0-9ivxlcdm][0-9ivxlcdm.\-]*"  # int / roman / chapter-dash page number
+# A whole entry: title, dot leader, page. Matched as a unit — splitting on a page-number pattern
+# tears `2.1.1 Example.....2` apart, because a section number is itself a valid page match.
+TOC_ENTRY_IN_TABLE_RE = re.compile(
+    r"\S[^|]*?\.{2,}[ \t]*" + PAGE_NUMBER + r"(?![\w.])", re.IGNORECASE
+)
+
+
 # --- GFM pipe-table dialect (Docling) ---
 PIPE_LINE_RE = re.compile(r"^[ \t]*\|.*\|[ \t]*$")
 PIPE_SEP_RE = re.compile(r"^[ \t]*\|[ \t:|-]+\|[ \t]*$")

@@ -239,3 +239,46 @@ class TestNothingLeavesUnrecorded:
     def test_a_parsable_entry_still_wins_over_the_fallback(self) -> None:
         (e,) = nz.capture_toc_entries("| Introduction......... | 7 |")
         assert e.title == "Introduction" and e.page == "7"
+
+
+class TestTocIsNotADataTable:
+    """Ordering defect found by the Pandoc-vs-Docling comparison on the FileMan Developer's Guide.
+
+    `extract_tables` runs before the legacy-TOC capture, and a Docling TOC *is* a markdown table —
+    a tall one, so it qualified for extraction and was filed as `tables/table-01.csv`. The capture
+    then found nothing: **619 TOC entries became 0**, silently, on exactly the large documents whose
+    outline matters most. The stage already orders revision extraction first for the same reason;
+    a TOC table must likewise never be mistaken for data.
+    """
+
+    # the separator row matters: without it this is not a GFM table at all, and the test would
+    # pass for the wrong reason. The real Docling TOC has one.
+    TOC_TABLE = "\n".join(
+        ["## Table of Contents", "", "| Section | Page |", "|---|---|"]
+        + [f"| Section {i} .................................... | {i} |" for i in range(1, 15)]
+        + ["", "## Introduction", "", "prose"]
+    )
+
+    def test_a_toc_table_is_not_lifted_to_csv(self) -> None:
+        from vdocs.stages.normalize.tables_pure import extract_tables
+
+        body, tables = extract_tables(self.TOC_TABLE)
+        assert tables == []
+        assert "extracted to CSV" not in body
+
+    def test_the_toc_entries_survive_to_be_captured(self) -> None:
+        from vdocs.stages.normalize.tables_pure import extract_tables
+
+        body, _t = extract_tables(self.TOC_TABLE)
+        entries = nz.legacy_toc_entries(body, frozenset({"table of contents"}))
+        paged = [e for e in entries if e.page]
+        assert len(paged) == 14, [e.title for e in entries]
+        assert paged[0].title == "Section 1" and paged[0].page == "1"
+
+    def test_a_genuine_data_table_is_still_lifted(self) -> None:
+        from vdocs.stages.normalize.tables_pure import extract_tables
+
+        rows = "\n".join(f"| Field {i} | Description {i} | Type {i} |" for i in range(1, 16))
+        body, tables = extract_tables(f"## Fields\n\n| A | B | C |\n|---|---|---|\n{rows}\n")
+        assert len(tables) == 1
+        assert "extracted to CSV" in body

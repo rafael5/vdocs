@@ -24,6 +24,7 @@ from vdocs.kernel.table import (
     PIPE_LINE_RE,
     PIPE_SEP_RE,
     TABLE_RE,
+    TOC_ENTRY_IN_TABLE_RE,
     flatten_html,
     html_rows,
     pipe_cells,
@@ -55,9 +56,27 @@ def _pipe_cells(line: str) -> list[str]:
     return [strip_md_links(c) for c in pipe_cells(line)]
 
 
+# A legacy table of contents rendered as a table is NOT data. Docling emits one for every PDF, and
+# a big document's TOC is tall enough to qualify for extraction — so it was being filed as
+# `tables/table-01.csv` before the legacy-TOC capture ever ran, taking 619 entries to 0 on the
+# FileMan Developer's Guide. The stage already orders revision extraction first for exactly this
+# reason; the TOC needs the same protection, expressed here rather than as another ordering rule.
+_TOC_ROW_SHARE = 0.5  # over half the rows carrying dot-leader page entries ⇒ it is a TOC
+
+
+def _is_toc_table(rows: list[list[str]]) -> bool:
+    """Whether these rows are a legacy table of contents rather than tabular data."""
+    if not rows:
+        return False
+    hits = sum(1 for r in rows if TOC_ENTRY_IN_TABLE_RE.search(" ".join(r)))
+    return hits >= max(2, _TOC_ROW_SHARE * len(rows))
+
+
 def _qualifies(rows: list[list[str]]) -> bool:
-    """Extraction-worthy when tall or very wide (§6.5 guardrail); else it stays inline."""
-    if len(rows) < 2:
+    """Extraction-worthy when tall or very wide (§6.5 guardrail); else it stays inline.
+
+    A legacy TOC never qualifies however tall it is — it belongs to `toc.yaml`, not to a CSV."""
+    if len(rows) < 2 or _is_toc_table(rows):
         return False
     n_cols = max((len(r) for r in rows), default=0)
     return len(rows) >= _MIN_ROWS or n_cols >= _MIN_COLS
