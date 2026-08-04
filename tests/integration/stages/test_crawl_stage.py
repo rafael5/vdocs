@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from vdocs.kernel.http import Page
 from vdocs.models.catalog import Catalog
 from vdocs.orchestrator.engine import Orchestrator
+from vdocs.orchestrator.stage import PostflightError
 from vdocs.stages.crawl.stage import CrawlStage
 
 INDEX = '<a href="section.asp?secid=1">Clinical</a><a href="section.asp?secid=2">Infra</a>'
@@ -81,6 +84,57 @@ def test_crawl_index_non_200_yields_empty_catalog(ctx):
     assert result.status == "ok"
     assert result.counts == {"sections": 0, "applications": 0, "documents": 0, "skipped": 0}
     assert Catalog.model_validate_json(ctx.cfg.catalog_raw.read_text()).sections == []
+
+
+def _dead_index(url: str) -> Page:
+    return Page(text="", url=url, status_code=503)
+
+
+def test_shrunken_crawl_reds_and_leaves_the_prior_catalog_in_place(ctx):
+    """CI.1: a crawl materially below the last good yield fails the stage and must NOT
+    overwrite bronze — fail closed on the artifact, not just the run."""
+    ctx.cfg = ctx.cfg.model_copy(update={"vdl_base_url": "https://www.va.gov/vdl/"})
+    Orchestrator([CrawlStage(page_fetcher=_page_for)]).run(ctx, force=True)
+    good_json = ctx.cfg.catalog_raw.read_text()
+    good_csv = ctx.cfg.catalog_raw.with_suffix(".csv").read_text()
+
+    with pytest.raises(PostflightError, match="completeness floor"):
+        Orchestrator([CrawlStage(page_fetcher=_dead_index)]).run(ctx, force=True)
+
+    assert ctx.cfg.catalog_raw.read_text() == good_json
+    assert ctx.cfg.catalog_raw.with_suffix(".csv").read_text() == good_csv
+
+
+def test_shrunken_crawl_is_accepted_with_the_explicit_flag(ctx):
+    """Acknowledging a genuinely smaller VDL stays cheap: --accept-shrink lets the smaller
+    crawl through (loudly) and it becomes the new baseline."""
+    ctx.cfg = ctx.cfg.model_copy(update={"vdl_base_url": "https://www.va.gov/vdl/"})
+    Orchestrator([CrawlStage(page_fetcher=_page_for)]).run(ctx, force=True)
+
+    (result,) = Orchestrator([CrawlStage(page_fetcher=_dead_index, accept_shrink=True)]).run(
+        ctx, force=True
+    )
+    assert result.status == "ok"
+    assert Catalog.model_validate_json(ctx.cfg.catalog_raw.read_text()).sections == []
+
+
+def test_same_yield_recrawl_passes_and_overwrites(ctx):
+    ctx.cfg = ctx.cfg.model_copy(update={"vdl_base_url": "https://www.va.gov/vdl/"})
+    Orchestrator([CrawlStage(page_fetcher=_page_for)]).run(ctx, force=True)
+    (result,) = Orchestrator([CrawlStage(page_fetcher=_page_for)]).run(ctx, force=True)
+    assert result.status == "ok"
+    assert result.counts["documents"] == 1
+
+
+def test_unreadable_prior_catalog_is_treated_as_no_baseline(ctx):
+    """A corrupt bronze file must not brick the crawl forever — it is loud-warned and the
+    new crawl records the fresh baseline."""
+    ctx.cfg = ctx.cfg.model_copy(update={"vdl_base_url": "https://www.va.gov/vdl/"})
+    ctx.cfg.catalog_raw.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.catalog_raw.write_text("{not json")
+    (result,) = Orchestrator([CrawlStage(page_fetcher=_page_for)]).run(ctx, force=True)
+    assert result.status == "ok"
+    assert result.counts["documents"] == 1
 
 
 def test_crawl_writes_inventory_bronze_path_and_csv(ctx):

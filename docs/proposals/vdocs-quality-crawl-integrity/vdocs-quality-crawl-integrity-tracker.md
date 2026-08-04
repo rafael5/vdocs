@@ -3,7 +3,7 @@
 | Step | What lands | Status | Commit / notes |
 |------|-----------|--------|----------------|
 | CI.0 | **Measure first** — current crawl yield, admitted-set composition, and what VA's lifecycle labels do to admission today | ✅ 2026-08-03 | Measured on the live lake with the pipeline's own gate code; baseline below. Corrected the draft's admitted column (1,604/589 reproduced under no definition — real: 789/255 targets) |
-| CI.1 | Completeness floor on `crawl` — a materially smaller crawl fails and leaves the last good one in place | ☐ | |
+| CI.1 | Completeness floor on `crawl` — a materially smaller crawl fails and leaves the last good one in place | ✅ 2026-08-03 | `floor_pure.py` (total ≥90% of last good + per-section non-zero — the ratio alone cannot see Monograph/Infra) · checked in `run()` **before** the write, so bronze survives · `vdocs crawl --accept-shrink` = the cheap acknowledgement · 11 unit + 4 integration tests |
 | CI.2 | **Master-set retention** — a document that has been fetched is never dropped by a scope or lifecycle relabel | ☐ | |
 | CI.3 | VA's lifecycle labels captured as first-class metadata on the document (`app_status`, `decommission_date`, `cots_dependent`, `out_of_scope_reason`) | ☐ | |
 | CI.4 | Admitted-set composition baseline — departures reported by document identifier; a deliberate change acknowledged in a curated file | ☐ | |

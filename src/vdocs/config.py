@@ -37,6 +37,18 @@ class Settings(BaseSettings):
         default=1.5,
         validation_alias=AliasChoices("CRAWL_DELAY", "VDOCS_CRAWL_DELAY", "crawl_delay"),
     )
+    # CI.1 completeness floor: a crawl yielding fewer documents than this fraction of the last
+    # good one fails and leaves the prior catalog in place. 0.9 is deliberate slack: the live
+    # yield has been byte-stable at 8,907 documents across months (CI.0), so real VDL churn is
+    # single documents — while a degraded site loses whole applications or sections at once.
+    # Whole-section loss below 10% of the total (Infrastructure is 8.7%; Monograph 2 docs) is
+    # caught separately by the per-section non-zero rule in floor_pure, not this ratio.
+    crawl_floor_ratio: float = Field(
+        default=0.9,
+        validation_alias=AliasChoices(
+            "CRAWL_FLOOR_RATIO", "VDOCS_CRAWL_FLOOR_RATIO", "crawl_floor_ratio"
+        ),
+    )
 
     @property
     def tool_ver(self) -> str:

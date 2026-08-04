@@ -116,9 +116,23 @@ def _drive(
 
 
 @app.command()
-def crawl() -> None:
-    """Crawl the VDL site into catalog.raw (network; FORCE_ONLY → always runs when invoked)."""
-    _drive(only="crawl", force=True)
+def crawl(
+    accept_shrink: bool = typer.Option(
+        False,
+        "--accept-shrink",
+        help="accept a crawl below the completeness floor (a genuinely smaller VDL) — "
+        "it becomes the new baseline",
+    ),
+) -> None:
+    """Crawl the VDL site into catalog.raw (network; FORCE_ONLY → always runs when invoked).
+
+    A yield materially below the last good crawl fails and leaves the prior catalog in place
+    (completeness floor, CRAWL_FLOOR_RATIO); --accept-shrink acknowledges a real shrink."""
+    stages = build_stages()
+    for stage in stages:
+        if stage.name == "crawl":
+            stage.accept_shrink = accept_shrink  # type: ignore[attr-defined]
+    _drive(only="crawl", stages=stages, force=True)
 
 
 @app.command()
