@@ -39,3 +39,13 @@ def test_every_published_recipe_executes_on_a_contract_db(tmp_path):
         rows = conn.execute(sql, params).fetchall()  # must not raise
         assert isinstance(rows, list), name
     conn.close()
+
+
+def test_the_synonym_recipe_states_its_real_scope(tmp_path):
+    """SL.2: the card told assistants this recipe was *the* "query-vocabulary mismatch fix".
+    Measured (SL.1), it covers the 21 FileMan files the DI pilot seeded, and search itself expands
+    exactly one of them. A published capability the system does not have is the same defect as a
+    stale coverage constant, so the purpose has to name the scope it actually has."""
+    purpose = SQL_RECIPES["skl_synonyms"]["purpose"]
+    assert "query-vocabulary mismatch fix" not in purpose
+    assert "FileMan" in purpose and "pilot" in purpose

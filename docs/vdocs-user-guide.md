@@ -70,7 +70,7 @@ version-controlled `registries/` in the repo.
 | **A clean markdown corpus** | One gold anchor document per logical manual, version-collapsed, with title-page/revision/TOC artifacts stripped and a regenerated `## Contents`. |
 | **Offline lexical search** | `index.db` (SQLite + FTS5) over the latest searchable chunks — `vdocs ask "<question>"` returns ranked, **pre-cited** hits with stable IDs. |
 | **Faceted / structured search** | Documents carry persona + identity facets (`app_user`, `doc_user`, `software_class`, `function_category`, `doc_type`, …) for narrow-by-facet queries. |
-| **A knowledge graph** | Extracted VistA entities (routines, globals, RPCs, options, FileMan files, builds, …) + doc↔entity / entity↔entity / doc↔doc relations; the **SKL** (`knowledge.db`) adds resolved canonical entities/terms/synonyms, merged additively into `index.db`. |
+| **A knowledge graph** | Extracted VistA entities (routines, globals, RPCs, options, FileMan files, builds, …) + doc↔entity / entity↔entity / doc↔doc relations; the **SKL** (`knowledge.db`) adds resolved canonical entities/terms/synonyms for the 21 FileMan files of the DI pilot seed, merged additively into `index.db`. |
 | **An AI corpus card** | `CORPUS.md` + `ai-manifest.json` — a self-describing front door for agents (the "answer from THIS corpus" recipe). |
 | **A shipped soundness gate** | `vdocs doctor` → `GOLD LIBRARY: GREEN|RED`, separating by-design gaps from real defects. |
 | **A legible, self-narrating pipeline** | Per-stage banners, live `GREEN/WARN/ERROR` status, progress heartbeats, an end-of-run summary table, and a documented exit-code contract. |
@@ -109,6 +109,11 @@ generic in-house orchestrator (the wired list lives in `cli/app.py:build_stages`
 - **`resolve` + `merge`** are the **Semantic Knowledge Layer** (SKL): `resolve` builds
   `gold/knowledge.db` (canonical entities/terms/relationships, DD-seeded) after `consolidate`;
   `merge` folds it **additively** into `index.db` after both `index` and `resolve`.
+  **Scope, measured 2026-08-04:** the SKL's live value is the **termbase** (483 terms) and the
+  **glossary Entities section**. Its search contribution is **one** query expansion
+  (`200 → NEW PERSON`) against 233 files that are genuinely split across a number and a name
+  vocabulary — it is *not* a collection-wide vocabulary fix, and the effort to make it one was
+  ruled against ([`proposals/vdocs-quality-synonym-layer/`](proposals/vdocs-quality-synonym-layer/)).
 
 ---
 

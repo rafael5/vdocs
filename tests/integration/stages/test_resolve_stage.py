@@ -9,6 +9,8 @@ re-run is idempotent.
 
 from __future__ import annotations
 
+import json
+
 from vdocs.contracts.registry import CONSOLIDATED
 from vdocs.kernel import knowledge_db
 from vdocs.models.stage import Decision, StageRun
@@ -94,6 +96,24 @@ def test_resolve_writes_a_propose_only_curator_queue(ctx):
     Orchestrator([ResolveStage()]).run(ctx)
     # unresolved recognized mentions (e.g. the bare ^VA global) go to the queue, never knowledge.db
     assert ctx.cfg.knowledge_proposals.is_file()
+
+
+def test_resolve_counts_distinguish_mentions_from_reviewable_candidates(ctx):
+    """SL.1(c): `proposals` used to report `len(unresolved)` — every *mention* — while the artifact
+    it writes aggregates to one row per `(type, surface)`. On the production lake that read as
+    "4,415 candidates awaiting approval" when a curator would face 307 rows, and the wrong figure
+    was carried into five documents. The run must report the reviewable count, not the mention
+    count, and both must be named for what they are."""
+    _seed_gold(ctx)
+    (result,) = Orchestrator([ResolveStage()]).run(ctx)
+
+    queue = json.loads(ctx.cfg.knowledge_proposals.read_text(encoding="utf-8"))["proposals"]
+    assert result.counts["proposal_candidates"] == len(queue)
+    assert result.counts["proposal_mentions"] == sum(p["occurrences"] for p in queue)
+    # The body names ^VA(200,0) once and nothing else unresolvable, so the two genuinely differ
+    # only when a surface repeats; what matters is that each count means what it says.
+    assert result.counts["proposal_mentions"] >= result.counts["proposal_candidates"]
+    assert "proposals" not in result.counts  # the ambiguous name is gone
 
 
 def test_resolve_is_idempotent(ctx):

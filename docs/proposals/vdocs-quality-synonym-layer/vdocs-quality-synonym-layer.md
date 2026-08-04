@@ -1,6 +1,7 @@
 # vdocs-quality-synonym-layer — finish it or stop paying for it
 
-**Status: DRAFT · proposed 2026-08-03** ·
+**Status: RULED — *stop*, 2026-08-04** (§10; measurements in [`sl1-findings.md`](sl1-findings.md))
+· proposed 2026-08-03 ·
 Plan: [`vdocs-quality-synonym-layer-implementation-plan.md`](vdocs-quality-synonym-layer-implementation-plan.md) ·
 Tracker: [`vdocs-quality-synonym-layer-tracker.md`](vdocs-quality-synonym-layer-tracker.md) ·
 Prompts: [`prompts/`](prompts/) · Register row: **R‑12**
@@ -27,6 +28,7 @@ Prompts: [`prompts/`](prompts/) · Register row: **R‑12**
 - [7. Acceptance](#7-acceptance)
 - [8. Risks](#8-risks)
 - [9. References](#9-references)
+- [10. Ruling (SL.2)](#10-ruling-sl2)
 
 ## 1. Background — in plain terms
 
@@ -44,6 +46,10 @@ variables refer to the same underlying thing, and teaches search to treat them a
 **In production it currently knows exactly one such equivalence** — `200` → `NEW PERSON`. There are
 **4,415 candidate equivalences** sitting in a queue that nobody has approved. The machinery runs on
 every rebuild; the approving step has essentially never run.
+
+> ⚠️ **The second sentence is wrong twice over, and §10 says so with numbers.** 4,415 is a count of
+> *mentions*; the queue is **307** rows. And they are not candidate *equivalences* — 94% of them are
+> unresolved mentions of routines, globals and namespaces, which the seed cannot represent at all.
 
 The one equivalence it does know is not a rounding error. On the question that needed it, it moved
 the score from **0.131 to 0.417** — roughly tripling it. That single data point is the entire
@@ -79,7 +85,7 @@ Production collection, 2026-08-02:
 | entity records in the knowledge store | 21 |
 | terms in the knowledge store | 483 |
 | relationships in the knowledge store | 111 |
-| candidate equivalences awaiting approval | **4,415** |
+| ~~candidate equivalences awaiting approval~~ | ~~**4,415**~~ — ⚠️ **wrong, corrected 2026-08-04 (§10):** that is `resolve`'s *mention* count. The reviewable queue is **307** rows, and they are unresolved mentions, not equivalences |
 | measured effect of the one live equivalence | `fileman-file-200-new-person`: **0.131 → 0.417** |
 
 So the pipeline that produces this knowledge runs and produces something; almost none of it reaches
@@ -171,3 +177,60 @@ efforts that improve results today.
 **Measured effect of the single live equivalence**
 - Question `fileman-file-200-new-person` in `registries/golden-queries.yaml`; reports
   `reports/p6-golden-PROD-before-p61.*` (0.131) and `reports/p7-golden-final.*` (0.417)
+
+**The SL.1 measurements this proposal was written to obtain**
+- [`sl1-findings.md`](sl1-findings.md); artifacts `reports/sl1a-ambiguity.*`,
+  `reports/sl1b-vocab-cost.*`, `reports/sl1c-candidate-quality.*`; scripts `scripts/sl1_*.py`
+
+## 10. Ruling (SL.2)
+
+**Stop. Do not build the approval path.** Measured 2026-08-04 on the production lake (1,040
+documents, 57,895 chunks), against `vista-meta`'s measured model rather than the feature's own seed:
+
+| §4.1 question | measured |
+|---|---|
+| (a) How often does the vocabulary mismatch occur? | **233 FileMan files** are split across vocabularies; **1,932 file×document pairs** are reachable by the file-referring name and never by the number; 8,564 chunks sit behind them |
+| (b) How many realistic questions does it affect? | **28 of 80** identifier-shaped questions fail for vocabulary reasons alone. The layer as built repairs **3** of them. The ceiling for *any* expansion is **23** |
+| (c) What is the quality of the waiting candidates? | The queue is **307** candidates, not 4,415 (that figure is a mention count). **289 (94%)** are structurally inert. Approving the entire queue adds **one** equivalence — `405 → PATIENT MOVEMENT`, a file mentioned once, in one document |
+
+The plan's rule is that *finish* requires all three: widespread, costly, and sound candidates. The
+first two hold decisively. The third fails as decisively as it could — the deliverable SL.3a would
+build, a bulk review path over the queue, is worth one equivalence for a file mentioned once. So the
+ruling is SL.3b.
+
+**The premise was right and the diagnosis was wrong.** §4 says "the gap is not the extraction — it is
+the approval step between extraction and use." Measured, the gap is the **projection**. 24 of the 28
+repairable failures are dropped by `search_pure.skl_expansion_map`'s own guards: two-digit file
+numbers by `len(key) >= 3`, decimal file numbers by `.isalnum()` and, beneath that, by FTS5
+tokenising `50.7` into `50` and `7` so a single-token key can never match. And 94% of the queue names
+entity types the DD seed cannot represent at all. No amount of curation moves any of that.
+
+### Scope amendment to SL.3b, with the number that forces it
+
+SL.3b says to take the machinery off the default rebuild path. **Measured, that costs more than it
+saves, so it is not done.** `resolve` runs in **2.0 s** and `merge` in **31.2 s** — 33 seconds of an
+~18-minute rebuild, about 3%. Against that:
+
+- `resolve` feeds two **working** consumers unrelated to equivalences: the 483-term termbase
+  `build-termbase` projects, and the Entities section of `gold/glossary.md`.
+- `merge`'s three tables are published in **read contract v1** (`v_entity_skl`, `v_entity_synonyms`,
+  `v_chunk_entities`). Removing them is a breaking contract change, which ADR-0001's `contract-lint`
+  refuses to ship as a MINOR.
+
+Retiring the machinery would mean a breaking contract change to recover 3% of a rebuild. The plan
+wrote that instruction before the cost was measured; the measurement supersedes it. **What is retired
+is the claim, not the code.** The one working equivalence is retained, as SL.3b requires.
+
+### Recorded, not started: the headroom a different build would reach
+
+The ceiling measured in (b) is real — **23 of 80 questions**, against the 3 reachable today — and it
+belongs to a differently-shaped effort than this one: widening the seed past the 21-file DI pilot,
+and making the expansion key on two-digit and decimal file numbers (which needs multi-token key
+matching in `fts_match_query`, not a loosened guard). Both are **out of this effort's scope** by its
+own plan, and neither is started here. It is recorded so the number is not lost, and left for the
+operator to schedule against the rest of the programme.
+
+Two things it explicitly does **not** cover: prose synonymy — the `vista-signon-credentials` case
+moves 0.1749 → 0.2772 when given the manual's vocabulary, but the SKL has no representation for a
+prose synonym pair and never will without a different data model — and vector retrieval, which stays
+rejected for this collection.

@@ -28,8 +28,11 @@ Documentation here is classified by **lifecycle state, not topic**:
 
 ## Current state (2026-07-04)
 
-- **Active workstream:** SKL — [`proposals/skl-implementation-plan.md`](proposals/skl-implementation-plan.md)
-  (S0–S3 landed; S4 semantic-fidelity gates and S5 generalize-to-Kernel open).
+- ~~**Active workstream:** SKL~~ — **the search-facing half is RULED AGAINST (2026-08-04)**, see
+  [`proposals/vdocs-quality-synonym-layer/`](proposals/vdocs-quality-synonym-layer/) §10. S0–S3
+  landed and the termbase + glossary projections are live and keep working; S4/S5 are **not** to be
+  started as written. [`proposals/skl-implementation-plan.md`](proposals/skl-implementation-plan.md)
+  is now read-for-history on the equivalence question.
 - **Active workstream — the `vdocs-quality-*` family** (five efforts, each with its own proposal,
   plan, tracker and prompts; [programme rationale + ordering](proposals/search-quality-and-scope-integrity-implementation-plan.md),
   [rollup](proposals/search-quality-and-scope-integrity-tracker.md)):
@@ -40,7 +43,8 @@ Documentation here is classified by **lifecycle state, not topic**:
   3. [`vdocs-quality-response-ranking/`](proposals/vdocs-quality-response-ranking/) — the right
      answer is found, then shown below the fold (**the user-visible win**)
   4. [`vdocs-quality-synonym-layer/`](proposals/vdocs-quality-synonym-layer/) — the synonym feature
-     knows one synonym (R‑12)
+     knows one synonym (R‑12). **RULED 2026-08-04: stop** — the queue was 307 candidates, not 4,415,
+     and approving all of it buys one equivalence; the bottleneck is the projection, not curation
   5. [`vdocs-quality-pattern-miner/`](proposals/vdocs-quality-pattern-miner/) — ~81,500 suggestions
      per rebuild, 29 accepted
   6. [`vdocs-quality-vdl-observatory/`](proposals/vdocs-quality-vdl-observatory/) — the source is

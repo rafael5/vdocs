@@ -6,6 +6,22 @@
 > changelog/discoveries/risks log. **Update it as work lands** (TDD → `make check` → update tracker →
 > commit, per step — the house cadence).
 
+> ## ⛔ S4 and S5 are ruled against (2026-08-04) — do not execute them as written
+>
+> The SKL's **search payoff is measured and it is one equivalence**. See
+> [`vdocs-quality-synonym-layer/`](vdocs-quality-synonym-layer/) §10 and its
+> [measurements](vdocs-quality-synonym-layer/sl1-findings.md): 233 FileMan files are split across a
+> number and a name vocabulary, that split costs 28 of 80 identifier-shaped questions, and the layer
+> repairs 3 of them. The limit is the **projection** — `skl_expansion_map`'s guards and FTS
+> tokenisation — not the 307-row proposal queue, of which 94% names entity types the seed cannot
+> represent.
+>
+> **What stays live and is unaffected:** S3.1's termbase (483 Term nodes → `build-termbase`) and
+> S3.2's glossary Entities section. Those are working projections with real consumers. **What is
+> retired is the claim** that this is a collection-wide vocabulary fix — the code stays on the
+> rebuild path, because removing it would be a breaking read-contract change to recover 33 s of an
+> ~18-minute run.
+
 > **Status: S0 signed off + S1 fully landed + S2 landed (2026-06-17).** S0 ratified the model
 > and resolved proposal §13 (K1–K7 + Q1–Q6 — see Decisions under S0). S1 (the self-contained casing
 > quick win) is **done end-to-end** — facet schema blessed, casing bug fixed at the source, and S1.4

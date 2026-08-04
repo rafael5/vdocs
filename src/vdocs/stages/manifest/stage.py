@@ -59,7 +59,10 @@ class ManifestStage(Stage):
     # v4 (P6.1b): the USAGE coverage rule re-measured (26.7% → 10.5% chunk-less). Bump on a change
     # to the baked-in TEXT as well as the shape: USAGE/CORPUS.md live in code, not in the lake, so
     # an edit moves no input fingerprint — without this the stage skips and ships the stale card.
-    contract_ver = 4  # bump when the published manifest JSON / glossary shape *or its text* changes
+    # v5 (SL.2): the `skl_synonyms` recipe's purpose corrected — it claimed to be the
+    # "query-vocabulary mismatch fix" and is scoped to the 21-file DI pilot seed. Same reason as v4:
+    # the text lives in code, so the bump is what makes the card republish.
+    contract_ver = 5  # bump when the published manifest JSON / glossary shape *or its text* changes
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg

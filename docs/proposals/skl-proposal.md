@@ -1,5 +1,19 @@
 # Proposal — Meaning-first: the VistA Semantic Knowledge Layer as the spine of corpus quality
 
+> ## ⛔ Partly ruled against, 2026-08-04 — read this before acting on anything below
+>
+> The **search half of this thesis did not pay off, and that is measured**, not asserted:
+> [`vdocs-quality-synonym-layer/`](vdocs-quality-synonym-layer/) §10 +
+> [`sl1-findings.md`](vdocs-quality-synonym-layer/sl1-findings.md). The vocabulary mismatch this
+> proposal calls the lexical plan's "#1 quality failure" is real — 233 FileMan files, 28 of 80
+> identifier-shaped questions — but the layer as built repairs **3** of those questions, and the
+> ceiling for any expansion is 23. The blocker is the projection into search, not the knowledge
+> model.
+>
+> **Still true and still delivering:** the termbase (483 Term nodes, single-sourced — §1's
+> `Brand.yml` workaround really is dead) and the glossary Entities section. **No longer to be
+> believed:** that the SKL is, or is on a path to being, a collection-wide vocabulary fix for search.
+
 **Status:** proposal / for sign-off. **Date:** 2026-06-16. **Author:** Claude (Opus 4.8) with Rafael.
 **Scope:** a program-wide pivot in *what `vdocs` produces and gates* — from a clean string corpus to a
 **governed model of meaning** from which the corpus, its quality gates, and its search index are all

@@ -26,7 +26,16 @@ def skl_expansions(index_db: str) -> dict[str, str]:
     `registries/glossary/expansions.yaml` (L1.3) with **entity-resolved** data — one source the CLI
     and the measurement harness expand identically. `{}` when the SKL table is absent (a pre-`merge`
     index.db) or empty, so expansion is then a no-op. Cached per index.db path (call `cache_clear()`
-    after a rebuild). `index_db` is a `str` so the result is hashable/cacheable."""
+    after a rebuild). `index_db` is a `str` so the result is hashable/cacheable.
+
+    **Scope, measured 2026-08-04 (SL.1).** On the production collection this map holds exactly
+    **one** entry (`200 → NEW PERSON`), against 233 FileMan files that are genuinely split across a
+    number and a name vocabulary. The limit is here, not in the curation queue: `skl_expansion_map`
+    drops a two-digit number (`len(key) >= 3`, enforced again in `acronym_phrase_clauses`) and any
+    decimal number (`.isalnum()` — and beneath that, FTS5 tokenises `50.7` into `50` and `7`, so a
+    single-token key could never match one). Of 28 identifier-shaped questions that fail for
+    vocabulary reasons alone, this repairs 3; the ceiling for any expansion is 23. Do not describe
+    this as a collection-wide vocabulary fix — see `docs/proposals/vdocs-quality-synonym-layer/`."""
     path = Path(index_db)
     if not path.exists():
         return {}

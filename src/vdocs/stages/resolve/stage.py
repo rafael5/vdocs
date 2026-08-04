@@ -113,7 +113,8 @@ class ResolveStage(Stage):
         knowledge_db.write_atomic(
             cfg.knowledge_db, entities=entities, terms=terms, relationships=edges
         )
-        _write_proposals(cfg, rp.build_proposals(unresolved))
+        proposals = rp.build_proposals(unresolved)
+        _write_proposals(cfg, proposals)
 
         warnings: list[str] = []
         if rejected:
@@ -127,7 +128,12 @@ class ResolveStage(Stage):
                 "terms": len(terms),
                 "relationships": len(edges),
                 "rejected_edges": len(rejected),
-                "proposals": len(unresolved),
+                # Two counts, named for what they are. `proposals` used to report len(unresolved) —
+                # every *mention* — while the queue it writes is one row per (type, surface). The
+                # production lake read "4,415 proposals" for a queue of 307 rows, and that figure
+                # was carried into five documents as "4,415 candidates awaiting approval" (SL.1c).
+                "proposal_candidates": len(proposals),
+                "proposal_mentions": len(unresolved),
             },
             warnings=warnings,
         )

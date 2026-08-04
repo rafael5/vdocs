@@ -248,8 +248,14 @@ SQL_RECIPES: dict[str, dict[str, str]] = {
         "JOIN v_documents d ON d.doc_key = m.doc_key WHERE m.entity_id = :entity_id",
     },
     "skl_synonyms": {
-        "purpose": "SKL synonym expansion: every known surface form of a resolved entity "
-        "(query-vocabulary mismatch fix)",
+        # SL.2 (2026-08-04): this used to claim it was the "query-vocabulary mismatch fix". It is
+        # not one. Measured on this collection, 233 FileMan files are split across a number and a
+        # name vocabulary; the SKL seed covers the 21 files of the DI pilot, and `search` expands
+        # exactly one of them (200 -> NEW PERSON). Telling an assistant otherwise is a documented
+        # capability the system does not have.
+        "purpose": "every known surface form of a resolved entity, for the 21 FileMan files of "
+        "the DI pilot seed — NOT collection-wide vocabulary coverage; search itself expands one "
+        "of them (see docs/proposals/vdocs-quality-synonym-layer/)",
         "sql": "SELECT s.surface, s.kind FROM v_entity_skl e "
         "JOIN v_entity_synonyms s ON s.node_id = e.node_id WHERE e.canonical_name = :name",
     },
