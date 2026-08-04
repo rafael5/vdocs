@@ -118,6 +118,12 @@ def bm25_expr(
 # **68 returned the parent AHEAD of the child** — the child as far down as rank 15 while the parent
 # held rank 1. VBECS contributes 71 of the structural pairs (use-case-numbered headings).
 #
+# To REPRODUCE those counts: a top-level parent has an EMPTY `section_path`, so the parent key must
+# be built with `(path + ' > ' + title).strip(' >')` — stripping whitespace alone yields "> Title",
+# which no child's path ever matches. A first pass here did exactly that and reported 486/109
+# instead of 784/120; the gap was precisely the 11 top-level parents (LA, MAG, …). The rule below
+# handles them because `strip(' >')` is applied on both sides.
+#
 # Why it happens: bm25 normalises by field length, so a 118-character container whose entire text
 # restates its child's heading looks like a perfect, dense match, while the child's 1,769 characters
 # of actual procedure dilute the same terms.
