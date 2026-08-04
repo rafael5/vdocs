@@ -13,6 +13,7 @@ more weight than `body`. The column order here is the single source of truth and
 from __future__ import annotations
 
 import re
+from typing import Any
 
 _TOKEN = re.compile(r"[A-Za-z0-9_]+")
 
@@ -107,3 +108,70 @@ def bm25_expr(
     no user input — so they are safe to inline as literals)."""
     args = ", ".join(repr(x) for x in bm25_weights(columns, weights))
     return f"bm25({table}, {args})"
+
+
+# --- RR.3: a parent heading must not occupy the slot its child's content earned -------------------
+# MEASURED on the production collection (2026-08-03) before this existed: 784 parent/child pairs
+# whose titles are prefix-twins ("Accept Orders: Cancel a Pending Order UC_61" above "Accept Orders:
+# Cancel a Pending Order"); 120 where the parent is searchable, its whole indexed text is under 300
+# characters, and the child carries at least 3× more; and probing each with the child's own heading,
+# **68 returned the parent AHEAD of the child** — the child as far down as rank 15 while the parent
+# held rank 1. VBECS contributes 71 of the structural pairs (use-case-numbered headings).
+#
+# Why it happens: bm25 normalises by field length, so a 118-character container whose entire text
+# restates its child's heading looks like a perfect, dense match, while the child's 1,769 characters
+# of actual procedure dilute the same terms.
+#
+# This REORDERS; it never excludes. Making parent lead-ins unsearchable is what made 6,779 sections
+# findable (P6.1b), and a parent that matches with no child present is still the answer.
+RESTATEMENT_MAX_CHARS = 300
+
+
+def _twin_titles(a: str, b: str) -> bool:
+    """True when one title is the other plus a suffix — the shape a numbered heading takes."""
+    na, nb = _norm_title(a), _norm_title(b)
+    return bool(na) and bool(nb) and (na.startswith(nb) or nb.startswith(na))
+
+
+def _norm_title(t: str) -> str:
+    return " ".join(_TOKEN.findall((t or "").lower()))
+
+
+def demote_restating_parents(hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Reorder ranked hits so a restating parent follows its own child instead of preceding it.
+
+    A hit is demoted only when all three hold: another hit is its **direct child** (that hit's
+    `section_path` is this one's path plus its own title), the two titles are prefix-twins, and this
+    hit's matched text is under :data:`RESTATEMENT_MAX_CHARS` — i.e. it says nothing its child does
+    not. The child moves into the parent's position and the parent sits immediately behind it, so
+    the pair keeps its rank while the substance leads. Order is otherwise preserved exactly."""
+    by_parent_path: dict[str, list[int]] = {}
+    for i, h in enumerate(hits):
+        path = str(h.get("section_path") or "").strip(" >")
+        by_parent_path.setdefault(path, []).append(i)
+
+    demoted: dict[int, int] = {}  # parent index → its child's index
+    for i, h in enumerate(hits):
+        if int(h.get("body_len") or 0) >= RESTATEMENT_MAX_CHARS:
+            continue
+        own_path = str(h.get("section_path") or "").strip(" >")
+        title = str(h.get("section_title") or "")
+        child_path = f"{own_path} > {title}".strip(" >")
+        for j in by_parent_path.get(child_path, []):
+            if j != i and _twin_titles(title, str(hits[j].get("section_title") or "")):
+                demoted[i] = j
+                break
+
+    if not demoted:
+        return list(hits)
+    children = set(demoted.values())
+    out: list[dict[str, Any]] = []
+    for i, h in enumerate(hits):
+        if i in children and i not in demoted:
+            continue  # already emitted beside its parent (or waiting to be)
+        if i in demoted:
+            out.append(hits[demoted[i]])  # the child takes the slot…
+            out.append(h)  # …and its parent follows it
+        elif i not in children:
+            out.append(h)
+    return out

@@ -50,6 +50,7 @@ _BM25 = sp.bm25_expr("chunks_fts")
 
 _SELECT_TEMPLATE = """
 SELECT f.chunk_id, f.section_id, f.doc_key, f.title AS section_title,
+       f.section_path, LENGTH(f.body) AS body_len,
        snippet(chunks_fts, {body}, '[', ']', ' … ', 16) AS snippet,
        {bm25} AS bm25,
        d.doc_id, d.title AS doc_title, d.app_code, d.doc_type, d.pkg_ns
@@ -92,6 +93,10 @@ NO_MATCH_WARNING = f"NO INDEXED MATCH — this is not evidence of absence. {NOT_
 # buys under a point. The old default of 8 was hiding roughly one correct answer in six from every
 # assistant, which is why this was the cheapest step in the ranking effort.
 ASSISTANT_DEFAULT_K = 15
+# How much wider than `k` the ranking window is fetched, so RR.3's parent/child swap has the child
+# available to promote. Three is enough for every measured case (the worst observed child rank was
+# 15 against a parent at 1) and costs one FTS5 scan depth, not a second query.
+_OVERFETCH = 3
 # A person reading a terminal is the opposite case: a longer list is reading work, not free recall.
 # The human `vdocs ask` display stays where it was; `--k` overrides both.
 HUMAN_DISPLAY_K = 8
@@ -154,13 +159,18 @@ def lexical_search(
         if values:
             filters += f" AND d.{col} IN ({', '.join('?' for _ in values)})"
             params.extend(values)
-    params.append(k)
+    # Over-fetch, reorder, truncate (RR.3). A restating parent can hold rank 1 while the child that
+    # carries the content sits at 15 — measured — so the window has to be wide enough for the child
+    # to be *in* it before the pair can be swapped. With no twins in the window this is a no-op:
+    # the reorder is stable, so the first `k` rows are exactly the rows `k` alone would have given.
+    params.append(k * _OVERFETCH)
     conn = db.connect(index_db, read_only=True)
     try:
         rows = conn.execute(select.format(filters=filters), params).fetchall()
     finally:
         conn.close()
-    return [_hit(dict(r)) for r in rows]
+    ranked = sp.demote_restating_parents([dict(r) for r in rows])[:k]
+    return [_hit(r) for r in ranked]
 
 
 def _hit(r: dict[str, Any]) -> dict[str, Any]:
