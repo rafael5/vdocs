@@ -129,3 +129,53 @@ class TestCaptionsAreNotSections:
         body = "## A\n\nTable Maintenance\n"
         out = recover_headings_from_toc(body, ["Table Maintenance"])
         assert "## Table Maintenance" in out
+
+
+class TestTocEntryLinesAreNotHeadings:
+    """A line that is itself a TOC entry must never be promoted.
+
+    In an unstripped TOC region the entry line *is* the title, so recovery matched it and produced
+    headings like `27.1 Introduction ..........................` — dot leader and all. Those reach
+    the heading tree, the regenerated Contents, the anchors and `section_path`."""
+
+    def test_a_dot_leader_entry_is_never_promoted(self) -> None:
+        body = "## A\n\nIntroduction ................................ 27\n"
+        assert recover_headings_from_toc(body, ["Introduction"]) == body
+
+    def test_a_trailing_page_number_entry_is_never_promoted(self) -> None:
+        body = "## A\n\nGlossary 113\n"
+        assert recover_headings_from_toc(body, ["Glossary"]) == body
+
+    def test_a_real_section_line_is_still_promoted(self) -> None:
+        body = "## A\n\nGlossary\n"
+        assert "## Glossary" in recover_headings_from_toc(body, ["Glossary"])
+
+
+class TestHeadingsNeverKeepADotLeader:
+    """Docling sometimes detects a TOC line as a heading, so the heading text arrives as
+    `27.1 Introduction ....................... 27`. That reaches the heading tree, the regenerated
+    Contents, the anchor slug and `section_path` — a section whose name contains its own page
+    number. Trim the leader; the heading keeps its title."""
+
+    def test_a_trailing_dot_leader_and_page_are_trimmed(self) -> None:
+        from vdocs.stages.normalize.normalize_pure import trim_heading_leaders
+
+        out = trim_heading_leaders("## 27.1 Introduction ....................... 27\n")
+        assert out.strip() == "## 27.1 Introduction"
+
+    def test_a_leader_with_no_page_number_is_trimmed(self) -> None:
+        from vdocs.stages.normalize.normalize_pure import trim_heading_leaders
+
+        assert trim_heading_leaders("# Glossary .........\n").strip() == "# Glossary"
+
+    def test_an_ordinary_heading_is_untouched(self) -> None:
+        from vdocs.stages.normalize.normalize_pure import trim_heading_leaders
+
+        body = "## Introduction\n\nprose ...... with dots\n"
+        assert trim_heading_leaders(body) == body
+
+    def test_an_ellipsis_in_a_heading_is_not_a_leader(self) -> None:
+        from vdocs.stages.normalize.normalize_pure import trim_heading_leaders
+
+        body = "## Select an option ...\n"
+        assert trim_heading_leaders(body) == body

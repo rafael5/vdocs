@@ -28,6 +28,7 @@ for the F-toc helpers and existing callers.
 from __future__ import annotations
 
 import collections
+import html as _html
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -39,6 +40,7 @@ from vdocs.kernel.markdown import (
     iter_headings,
     strip_tags,
 )
+from vdocs.kernel.table import PAGE_NUMBER, TOC_ENTRY_IN_TABLE_RE
 from vdocs.kernel.text import block_key, github_slug_base
 from vdocs.stages.normalize.anchors_pure import (
     DEFAULT_TOC_DEPTH,
@@ -59,6 +61,8 @@ __all__ = [
     "infer_heading_levels",
     "level_headings_from_numbering",
     "recover_headings_from_toc",
+    "decode_entities",
+    "trim_heading_leaders",
     "strip_artifacts",
     "subtract_phrases",
     "Boilerplate",
@@ -205,6 +209,8 @@ def recover_headings_from_toc(body: str, toc_titles: Sequence[str]) -> str:
         s = raw.strip()
         if not s or i in fenced or _NON_PROSE_RE.match(s):
             continue
+        if _is_toc_nav_line(s):
+            continue  # the line IS a TOC entry — promoting it yields a heading with a dot leader
         if (k := _heading_key(s)) in wanted:
             counts.setdefault(k, []).append(i)
     # Promote to the document's SECTION level (the most common heading level), not its shallowest.
@@ -292,6 +298,49 @@ def _below_document_title(
     if len(levels) > 1 and sum(1 for _, level, _ in found if level == levels[0]) <= 2:
         return [h for h in found if h[1] != levels[0]]
     return found
+
+
+_ENTITY_RE = re.compile(r"&(?:amp|lt|gt|quot|apos|nbsp|#\d{2,5}|#x[0-9a-fA-F]{2,4});")
+
+
+def decode_entities(body: str) -> str:
+    """F-entities (§6.5): turn HTML entities back into the characters they stand for.
+
+    Docling escapes ``<`` and ``>`` in text, and VistA manuals are full of M code that uses them —
+    ``K:$L(X)>40!($L(X)<3) X`` arrives as ``K:$L(X)&gt;40!($L(X)&lt;3) X``. That costs a search
+    every time: FTS5 tokenises ``&gt;`` into the noise token ``gt``, so a query for the code cannot
+    match the text containing it (1,659 escapes in the FileMan Developer's Guide alone). It is also
+    a convergence fix — the Pandoc path already yields raw ``<``/``>`` in code, so leaving only
+    Docling's escaped would keep two converters producing different text for identical source.
+
+    **One level only.** ``&amp;lt;`` is the literal text ``&lt;`` — documentation *about* escaping —
+    and decoding twice would silently turn it into the thing it describes.
+
+    Ordered late in :func:`normalize_body`, after every step that reads HTML structure, so a decoded
+    ``<`` can never be mistaken for markup by this pipeline."""
+    return _ENTITY_RE.sub(lambda m: _html.unescape(m.group(0)), body)
+
+
+# A heading that ends in a dot leader (optionally followed by a page number) is a TOC line the
+# converter mistook for a heading — 4+ dots, so a genuine "Select an option ..." ellipsis survives.
+_HEADING_LEADER_RE = re.compile(
+    r"[ \t]*\.{4,}[ \t]*(?:" + PAGE_NUMBER + r")?[ \t]*$", re.IGNORECASE
+)
+
+
+def trim_heading_leaders(body: str) -> str:
+    """Drop a trailing dot leader (and its page number) from a heading's text (§6.7).
+
+    Docling detects headings visually, so a line in an unstripped table of contents can arrive as
+    ``## 27.1 Introduction ....................... 27``. Left alone it becomes a section whose name
+    contains its own page number — in the heading tree, the regenerated ``## Contents``, the anchor
+    slug and ``section_path``. Fence-aware; a genuine ellipsis (``...``) is not a leader."""
+    lines = body.split("\n")
+    for i, level, text in iter_headings(body):
+        trimmed = _HEADING_LEADER_RE.sub("", text).rstrip()
+        if trimmed and trimmed != text:
+            lines[i] = "#" * level + " " + trimmed
+    return "\n".join(lines)
 
 
 def strip_artifacts(body: str) -> str:
@@ -467,8 +516,9 @@ def parse_legacy_toc_entry(line: str) -> LegacyTocEntry | None:
 _TABLE_SEPARATOR_RE = re.compile(r"^[ \t]*\|[\s:|-]*\|[ \t]*$")
 # One entry *found* (not split out): a title, its dot leader, and the page number. Matching the
 # whole shape is what keeps `2.1.1 Example.....2` intact — splitting on a page-number pattern tears
-# it apart, because a section number like `2.1.1` is itself a valid page-number match.
-_TOC_TABLE_ENTRY_RE = re.compile(r"\S[^|]*?\.{2,}[ \t]*" + _PAGE + r"(?![\w.])", re.IGNORECASE)
+# it apart, because a section number like `2.1.1` is itself a valid page-number match. Defined once
+# in `kernel.table` because `tables_pure` needs the same test to avoid lifting a TOC to CSV (§9.2).
+_TOC_TABLE_ENTRY_RE = TOC_ENTRY_IN_TABLE_RE
 
 
 def split_toc_table_row(line: str) -> list[str]:
@@ -928,7 +978,12 @@ def normalize_body(
 
     ``toc_depth`` is the H2–H3 fallback today; the template F-step will resolve it per
     ``(doc_type, era)`` and pass it in (the template seam lives in ``anchors_pure``)."""
-    body = subtract_phrases(strip_artifacts(recover_headings(body)), phrases)
+    # Decode entities FIRST among the body steps: the stage's HTML-structure readers (table
+    # extraction, HTML→GFM, text-box fencing) have already run, so a decoded `<` cannot be taken
+    # for markup — and doing it before any heading is parsed keeps slugs, TOC links and anchors
+    # computed from one spelling. Decoding *after* the TOC was generated desynchronised them and
+    # cost 28 of 1,567 links on the FileMan Developer's Guide.
+    body = subtract_phrases(strip_artifacts(recover_headings(decode_entities(body))), phrases)
     body = subtract_boilerplate(body, boilerplate)
     # CORRELATE-BEFORE-DROPPING (§6.7 role-1): capture the legacy TOC's original entries (title +
     # page + anchor) *before* it leaves the body, then strip it (ATX-heading + plain-text forms).
@@ -937,6 +992,7 @@ def normalize_body(
     # VO.8e, before the depth steps: the captured TOC is the author's index of every section, so
     # the paragraphs it names are the headings the converter failed to detect. Recovering them
     # first means a recovered *numbered* heading still gets its depth below.
+    body = trim_heading_leaders(body)  # a heading is never a TOC line (§6.7)
     body = recover_headings_from_toc(body, [e.title for e in toc_entries])
     # VO.8c, before the gap-filler: a flat document (every Docling-converted PDF) gets its outline
     # from its own section numbering; `infer_heading_levels` then normalises whatever gaps remain.
