@@ -312,6 +312,104 @@ def parse_legacy_toc_entry(line: str) -> LegacyTocEntry | None:
     return LegacyTocEntry(title.strip("*_ ").strip(), page, anchor)
 
 
+# --- the table dialect (VO.8b): Docling renders a legacy PDF TOC as a markdown table ---------
+# A `|`-delimited row never ends in a page number, so `_TRAILING_PAGE_RE` cannot see it and the
+# region strip used to bound at the first row — leaving the whole TOC in the body (11.9% of the
+# Kernel Developer's Guide) with one entry captured. Rows are also duplicated across every cell,
+# and one cell can carry several entries run together.
+_TABLE_SEPARATOR_RE = re.compile(r"^[ \t]*\|[\s:|-]*\|[ \t]*$")
+# One entry *found* (not split out): a title, its dot leader, and the page number. Matching the
+# whole shape is what keeps `2.1.1 Example.....2` intact — splitting on a page-number pattern tears
+# it apart, because a section number like `2.1.1` is itself a valid page-number match.
+_TOC_TABLE_ENTRY_RE = re.compile(r"\S[^|]*?\.{2,}[ \t]*" + _PAGE + r"(?![\w.])", re.IGNORECASE)
+
+
+def split_toc_table_row(line: str) -> list[str]:
+    """The TOC entries carried by one markdown table row, or ``[]`` when it is not one (VO.8b).
+
+    Three shapes are handled: a **separator** row (no entries), **duplicated cells** (Docling
+    repeats the same entry across all four columns — captured once, or `toc.yaml` would gain three
+    phantoms), and **several entries in one cell**, split at each dot-leader-plus-page boundary.
+
+    A row with no dot-leader page entry in any cell returns ``[]`` so a genuine content table is
+    never mistaken for a TOC — the same "trusted only inside a confirmed TOC region" rule the loose
+    and plain dialects already follow."""
+    s = line.strip()
+    if not s.startswith("|") or _TABLE_SEPARATOR_RE.match(line):
+        return []
+    cells: dict[str, None] = {}  # ordered set — Docling repeats a cell verbatim across columns
+    for cell in (c.strip() for c in s.strip("|").split("|")):
+        if cell:
+            cells.setdefault(cell, None)
+    # Scan the row as one string rather than cell by cell: Docling splits a single entry across
+    # cells, putting the section number and/or the page number in their own column
+    # (`| 1.4.1 | Intended Audience ......... | 7 |`). Joining after de-duplication reunites them —
+    # and keeps the section number attached to its title, which is what carries the outline depth.
+    joined = " ".join(cells)
+    entries: dict[str, None] = {}
+    for m in _TOC_TABLE_ENTRY_RE.finditer(joined):
+        if entry := m.group(0).strip():
+            entries.setdefault(entry, None)
+    return list(entries)
+
+
+def _toc_table_lines(lines: list[str], start: int, end: int) -> set[int]:
+    """Indices in ``[start, end)`` belonging to a contiguous markdown-table run that carries at
+    least one parsable TOC entry (VO.8b).
+
+    Docling emits the whole legacy TOC as **one table**, and plenty of its rows carry no page
+    number of their own — a bare section number (``| 2.5 |``), a title wrapped onto its own row, an
+    empty spacer. Judged individually those read as prose and bound the strip one row into the
+    block; judged as part of a run that demonstrably contains TOC entries, they are what they are.
+
+    The run must *prove itself* with a real entry, so an ordinary content table is never claimed —
+    and everything outside such a run still faces the unchanged ``has_prose`` guard."""
+    out: set[int] = set()
+    i = start
+    while i < end:
+        if not lines[i].lstrip().startswith("|"):
+            i += 1
+            continue
+        j = i
+        while j < end and lines[j].lstrip().startswith("|"):
+            j += 1
+        if any(split_toc_table_row(lines[k]) for k in range(i, j)):
+            out.update(range(i, j))
+        i = j
+    return out
+
+
+def capture_toc_entries(line: str) -> list[LegacyTocEntry]:
+    """Every :class:`LegacyTocEntry` on one TOC-region line — a list, because a table row can carry
+    many (the other dialects carry at most one). The strip and the capture read the *same*
+    function, which is what keeps "anything dropped is recorded" true by construction."""
+    if rows := split_toc_table_row(line):
+        return [e for r in rows if (e := parse_plain_toc_entry(r)) is not None]
+    if (e := _capture_toc_entry(line)) is not None:
+        return [e]
+    return _table_row_titles(line)
+
+
+def _table_row_titles(line: str) -> list[LegacyTocEntry]:
+    """Title-only entries for a TOC-table row the entry parsers could not read (VO.8b).
+
+    Inside a confirmed TOC block, rows still get dropped when their page number carries no dot
+    leader (``Appendix E: Exported Values.379``, ``Exported Routines``). Recording them page-less
+    beats losing them: ``toc.yaml`` is a record, so over-capturing costs a junk row while
+    under-capturing is the silent content loss this corpus has already suffered once.
+
+    Separator, empty and pure-leader rows carry nothing and record nothing."""
+    s = line.strip()
+    if not s.startswith("|") or _TABLE_SEPARATOR_RE.match(line):
+        return []
+    seen: dict[str, None] = {}
+    for cell in (c.strip() for c in s.strip("|").split("|")):
+        title = strip_tags(cell).strip(". ").strip("*_ ").strip()
+        if title and re.search(r"[A-Za-z]", title):
+            seen.setdefault(title, None)
+    return [LegacyTocEntry(t, "", "") for t in seen]
+
+
 def _is_loose_toc_entry(line: str) -> bool:
     return _LOOSE_TOC_ENTRY_RE.match(line) is not None
 
@@ -332,13 +430,20 @@ def _capture_toc_entry(line: str) -> LegacyTocEntry | None:
 
 
 def _is_toc_nav_line(line: str) -> bool:
-    """A line that belongs to a legacy-TOC block — a blank, an anchor-linked entry, or a
-    dotted/plain entry ending in a page number — as opposed to body prose. Bounds the ATX-heading
-    TOC strip so it stops at the first real prose line instead of running into a flattened doc's
-    body (which has no terminating heading to stop it)."""
+    """A line that belongs to a legacy-TOC block — a blank, an anchor-linked entry, a dotted/plain
+    entry ending in a page number, or a **table row** carrying such entries (VO.8b, Docling's PDF
+    dialect) — as opposed to body prose. Bounds the ATX-heading TOC strip so it stops at the first
+    real prose line instead of running into a flattened doc's body (which has no terminating
+    heading to stop it).
+
+    A table *separator* row counts too: it sits inside the block and carries nothing, so treating it
+    as prose would bound the strip one line into the TOC."""
     s = line.strip()
     if not s:
         return True
+    if s.startswith("|"):
+        # a content table (no dot-leader page entries) is prose and correctly ends the region
+        return bool(_TABLE_SEPARATOR_RE.match(line)) or bool(split_toc_table_row(line))
     return _is_loose_toc_entry(line) or _TRAILING_PAGE_RE.search(s) is not None
 
 
@@ -404,15 +509,17 @@ def _scan_legacy_toc(
             h = i + 1
             while h < n and not HEADING_RE.match(lines[h]):
                 h += 1
-            has_prose = any(not _is_toc_nav_line(lines[k]) for k in range(i + 1, h))
+            tbl = _toc_table_lines(lines, i + 1, h)  # VO.8b — the TOC-as-table block, whole
+            has_prose = any(
+                not _is_toc_nav_line(lines[k]) and k not in tbl for k in range(i + 1, h)
+            )
             drop.add(i)
             j = i + 1
             while j < (n if has_prose else h):
-                if has_prose and not _is_toc_nav_line(lines[j]):
+                if has_prose and not _is_toc_nav_line(lines[j]) and j not in tbl:
                     break  # first body-prose line ends the bounded TOC region
                 drop.add(j)
-                if (e := _capture_toc_entry(lines[j])) is not None:
-                    entries.append(e)
+                entries.extend(capture_toc_entries(lines[j]))
                 j += 1
             i = j
             continue
@@ -438,8 +545,7 @@ def _scan_legacy_toc(
                     break
                 if _is_loose_toc_entry(lines[j]):
                     drop.add(j)
-                    if (e := _capture_toc_entry(lines[j])) is not None:
-                        entries.append(e)
+                    entries.extend(capture_toc_entries(lines[j]))
                     j += 1
                     continue
                 break
