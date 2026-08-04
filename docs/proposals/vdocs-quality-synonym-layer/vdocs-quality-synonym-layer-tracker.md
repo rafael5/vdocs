@@ -2,7 +2,7 @@
 
 | Step | What lands | Status | Commit / notes |
 |------|-----------|--------|----------------|
-| SL.1 | Headroom measured: how often the number/name mismatch occurs, how many realistic questions it costs, and what fraction of the 4,415 candidates are sound | ☐ | |
+| SL.1 | Headroom measured: how often the number/name mismatch occurs, how many realistic questions it costs, and what fraction of the 4,415 candidates are sound | ✅ | [`sl1-findings.md`](sl1-findings.md) · `reports/sl1{a,b,c}-*.{md,json}` · **(a)** 233 files / 1,932 docs split · **(b)** 28 of 80 questions fail on vocabulary, the layer repairs **3**, ceiling 23 · **(c)** the queue is **307** rows not 4,415 (that is a mention count), 94% structurally inert, approving all of it adds **1** equivalence |
 | SL.2 | **Ruling** — finish it or stop claiming it, with the SL.1 numbers stated in the ruling | ☐ | |
 | SL.3a | *(if finish)* Bulk approval path; expected gain stated before building, measured after | ☐ | |
 | SL.3b | *(if stop)* Machinery off the default rebuild path; the one working equivalence retained; every surface claiming the capability corrected | ☐ | |

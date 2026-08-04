@@ -1,0 +1,1017 @@
+{
+  "corpus": {
+    "index_db": "/home/rafael/data/vdocs/index.db",
+    "k": 10
+  },
+  "sample": {
+    "source": "reports/sl1a-ambiguity.json",
+    "head": 40,
+    "tail_drawn": 40,
+    "seed": 20260804,
+    "questions_scored": 80
+  },
+  "rollup": {
+    "questions_scored": 80,
+    "reached_by_the_number_query": 42,
+    "vocabulary_failures": 28,
+    "unreached_either_way": 10,
+    "failures_repaired_by_expansion": 3,
+    "failures_the_layer_cannot_express": 24,
+    "questions_damaged_by_expansion": 0,
+    "failures_repairable_at_the_ceiling": 23
+  },
+  "questions": [
+    {
+      "number": "200",
+      "name": "NEW PERSON",
+      "stratum": "head",
+      "answering_sections": 699,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {
+        "200": "NEW PERSON"
+      },
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "8989.5",
+      "name": "PARAMETERS",
+      "stratum": "head",
+      "answering_sections": 508,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "44",
+      "name": "HOSPITAL LOCATION",
+      "stratum": "head",
+      "answering_sections": 220,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "3.5",
+      "name": "DEVICE",
+      "stratum": "head",
+      "answering_sections": 214,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "63",
+      "name": "LAB DATA",
+      "stratum": "head",
+      "answering_sections": 142,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "45",
+      "name": "PTF",
+      "stratum": "head",
+      "answering_sections": 66,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "60",
+      "name": "LABORATORY TEST",
+      "stratum": "head",
+      "answering_sections": 53,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": false,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "55",
+      "name": "PHARMACY PATIENT",
+      "stratum": "head",
+      "answering_sections": 109,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "80",
+      "name": "ICD DIAGNOSIS",
+      "stratum": "head",
+      "answering_sections": 51,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "50.68",
+      "name": "VA PRODUCT",
+      "stratum": "head",
+      "answering_sections": 201,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "59",
+      "name": "OUTPATIENT SITE",
+      "stratum": "head",
+      "answering_sections": 93,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "81",
+      "name": "CPT",
+      "stratum": "head",
+      "answering_sections": 42,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "42",
+      "name": "WARD LOCATION",
+      "stratum": "head",
+      "answering_sections": 44,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "771",
+      "name": "HL7 APPLICATION PARAMETER",
+      "stratum": "head",
+      "answering_sections": 71,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {
+        "771": "HL7 APPLICATION PARAMETER"
+      },
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "870",
+      "name": "HL LOGICAL LINK",
+      "stratum": "head",
+      "answering_sections": 49,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {
+        "870": "HL LOGICAL LINK"
+      },
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "8989.3",
+      "name": "KERNEL SYSTEM PARAMETERS",
+      "stratum": "head",
+      "answering_sections": 75,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "50.7",
+      "name": "PHARMACY ORDERABLE ITEM",
+      "stratum": "head",
+      "answering_sections": 110,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "441",
+      "name": "ITEM MASTER",
+      "stratum": "head",
+      "answering_sections": 104,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {
+        "441": "ITEM MASTER"
+      },
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "49",
+      "name": "SERVICE/SECTION",
+      "stratum": "head",
+      "answering_sections": 34,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "50.605",
+      "name": "VA DRUG CLASS",
+      "stratum": "head",
+      "answering_sections": 92,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "51.2",
+      "name": "MEDICATION ROUTES",
+      "stratum": "head",
+      "answering_sections": 76,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "8989.51",
+      "name": "PARAMETER DEFINITION",
+      "stratum": "head",
+      "answering_sections": 45,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "52.6",
+      "name": "IV ADDITIVES",
+      "stratum": "head",
+      "answering_sections": 103,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "3.8",
+      "name": "MAIL GROUP",
+      "stratum": "head",
+      "answering_sections": 32,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "52.7",
+      "name": "IV SOLUTIONS",
+      "stratum": "head",
+      "answering_sections": 88,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "19.2",
+      "name": "OPTION SCHEDULING",
+      "stratum": "head",
+      "answering_sections": 41,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "50.6",
+      "name": "VA GENERIC",
+      "stratum": "head",
+      "answering_sections": 83,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "61",
+      "name": "TOPOGRAPHY FIELD",
+      "stratum": "head",
+      "answering_sections": 30,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "64",
+      "name": "WKLD CODE",
+      "stratum": "head",
+      "answering_sections": 39,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "50.416",
+      "name": "DRUG INGREDIENTS",
+      "stratum": "head",
+      "answering_sections": 69,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "62.06",
+      "name": "ANTIMICROBIAL SUSCEPTIBILITY",
+      "stratum": "head",
+      "answering_sections": 39,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "36",
+      "name": "INSURANCE COMPANY",
+      "stratum": "head",
+      "answering_sections": 39,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "40.7",
+      "name": "CLINIC STOP",
+      "stratum": "head",
+      "answering_sections": 21,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "69.9",
+      "name": "LABORATORY SITE",
+      "stratum": "head",
+      "answering_sections": 31,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "8925",
+      "name": "TIU DOCUMENT",
+      "stratum": "head",
+      "answering_sections": 37,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {
+        "8925": "TIU DOCUMENT"
+      },
+      "expansion_reaches": true,
+      "oracle_reaches": false,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "2005.2",
+      "name": "NETWORK LOCATION",
+      "stratum": "head",
+      "answering_sections": 46,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "772",
+      "name": "HL7 MESSAGE TEXT",
+      "stratum": "head",
+      "answering_sections": 17,
+      "number_query_reaches": true,
+      "name_query_reaches": false,
+      "expansion_emitted": {
+        "772": "HL7 MESSAGE TEXT"
+      },
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "101.43",
+      "name": "ORDERABLE ITEMS",
+      "stratum": "head",
+      "answering_sections": 22,
+      "number_query_reaches": true,
+      "name_query_reaches": false,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "120.8",
+      "name": "PATIENT ALLERGIES",
+      "stratum": "head",
+      "answering_sections": 24,
+      "number_query_reaches": false,
+      "name_query_reaches": false,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": false,
+      "verdict": "unreached_either_way"
+    },
+    {
+      "number": "405",
+      "name": "PATIENT MOVEMENT",
+      "stratum": "head",
+      "answering_sections": 17,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {
+        "405": "PATIENT MOVEMENT"
+      },
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "59.4",
+      "name": "INPATIENT SITE",
+      "stratum": "tail",
+      "answering_sections": 6,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "779.2",
+      "name": "HLO APPLICATION REGISTRY",
+      "stratum": "tail",
+      "answering_sections": 22,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "66.2",
+      "name": "BLOOD BANK VALIDATION",
+      "stratum": "tail",
+      "answering_sections": 4,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "6912",
+      "name": "MANUFACTURER LIST FILE",
+      "stratum": "tail",
+      "answering_sections": 1,
+      "number_query_reaches": false,
+      "name_query_reaches": false,
+      "expansion_emitted": {
+        "6912": "MANUFACTURER LIST FILE"
+      },
+      "expansion_reaches": false,
+      "oracle_reaches": false,
+      "verdict": "unreached_either_way"
+    },
+    {
+      "number": "195.4",
+      "name": "RECORD TRACKING SYSTEM PARAMETERS",
+      "stratum": "tail",
+      "answering_sections": 1,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "8925.7",
+      "name": "TIU MULTIPLE SIGNATURE",
+      "stratum": "tail",
+      "answering_sections": 12,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "56",
+      "name": "DRUG INTERACTION",
+      "stratum": "tail",
+      "answering_sections": 30,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "340",
+      "name": "AR DEBTOR",
+      "stratum": "tail",
+      "answering_sections": 23,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {
+        "340": "AR DEBTOR"
+      },
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "740",
+      "name": "QUALITY ASSURANCE SITE PARAMETERS",
+      "stratum": "tail",
+      "answering_sections": 1,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {
+        "740": "QUALITY ASSURANCE SITE PARAMETERS"
+      },
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "58.1",
+      "name": "PHARMACY AOU STOCK",
+      "stratum": "tail",
+      "answering_sections": 3,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "78.3",
+      "name": "DIAGNOSTIC CODES",
+      "stratum": "tail",
+      "answering_sections": 15,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "59.5",
+      "name": "IV ROOM",
+      "stratum": "tail",
+      "answering_sections": 21,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "15",
+      "name": "DUPLICATE RECORD",
+      "stratum": "tail",
+      "answering_sections": 30,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "839.7",
+      "name": "PCE DATA SOURCE",
+      "stratum": "tail",
+      "answering_sections": 13,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "62.1",
+      "name": "DELTA CHECKS",
+      "stratum": "tail",
+      "answering_sections": 3,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "62.485",
+      "name": "LA7 MESSAGE LOG BULLETINS",
+      "stratum": "tail",
+      "answering_sections": 11,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "142.5",
+      "name": "HEALTH SUMMARY OBJECTS",
+      "stratum": "tail",
+      "answering_sections": 3,
+      "number_query_reaches": false,
+      "name_query_reaches": false,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": false,
+      "verdict": "unreached_either_way"
+    },
+    {
+      "number": "195.1",
+      "name": "RECORD TRACKING APPLICATION",
+      "stratum": "tail",
+      "answering_sections": 1,
+      "number_query_reaches": true,
+      "name_query_reaches": false,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "100.98",
+      "name": "DISPLAY GROUP",
+      "stratum": "tail",
+      "answering_sections": 3,
+      "number_query_reaches": false,
+      "name_query_reaches": false,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "unreached_either_way"
+    },
+    {
+      "number": "8973.1",
+      "name": "CM HL7 DATA",
+      "stratum": "tail",
+      "answering_sections": 6,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "120.51",
+      "name": "GMRV VITAL TYPE",
+      "stratum": "tail",
+      "answering_sections": 9,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "54",
+      "name": "RX CONSULT",
+      "stratum": "tail",
+      "answering_sections": 39,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "6925",
+      "name": "CONSTRUCTION PROJECT",
+      "stratum": "tail",
+      "answering_sections": 4,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {
+        "6925": "CONSTRUCTION PROJECT"
+      },
+      "expansion_reaches": false,
+      "oracle_reaches": false,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "120.83",
+      "name": "SIGN/SYMPTOMS",
+      "stratum": "tail",
+      "answering_sections": 2,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "660",
+      "name": "RECORD OF PROS APPLIANCE/REPAIR",
+      "stratum": "tail",
+      "answering_sections": 2,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {
+        "660": "RECORD OF PROS APPLIANCE/REPAIR"
+      },
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "8925.1",
+      "name": "TIU DOCUMENT DEFINITION",
+      "stratum": "tail",
+      "answering_sections": 25,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "123.5",
+      "name": "REQUEST SERVICES",
+      "stratum": "tail",
+      "answering_sections": 3,
+      "number_query_reaches": false,
+      "name_query_reaches": false,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": false,
+      "verdict": "unreached_either_way"
+    },
+    {
+      "number": "14.6",
+      "name": "UCI ASSOCIATION",
+      "stratum": "tail",
+      "answering_sections": 3,
+      "number_query_reaches": false,
+      "name_query_reaches": false,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "unreached_either_way"
+    },
+    {
+      "number": "27.11",
+      "name": "PATIENT ENROLLMENT",
+      "stratum": "tail",
+      "answering_sections": 12,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "632",
+      "name": "HBHC VISIT",
+      "stratum": "tail",
+      "answering_sections": 4,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {
+        "632": "HBHC VISIT"
+      },
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "509850.9",
+      "name": "AUDIOMETRIC EXAM DATA",
+      "stratum": "tail",
+      "answering_sections": 2,
+      "number_query_reaches": false,
+      "name_query_reaches": false,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": false,
+      "verdict": "unreached_either_way"
+    },
+    {
+      "number": "409.1",
+      "name": "APPOINTMENT TYPE",
+      "stratum": "tail",
+      "answering_sections": 7,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": false,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "341.1",
+      "name": "AR EVENT TYPE",
+      "stratum": "tail",
+      "answering_sections": 2,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "230",
+      "name": "ED LOG",
+      "stratum": "tail",
+      "answering_sections": 13,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {
+        "230": "ED LOG"
+      },
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "2101.2",
+      "name": "GENERIC CODE SHEET TRANSACTION TYPE/SEGMENT",
+      "stratum": "tail",
+      "answering_sections": 1,
+      "number_query_reaches": false,
+      "name_query_reaches": false,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "unreached_either_way"
+    },
+    {
+      "number": "213.9",
+      "name": "NURS PARAMETERS",
+      "stratum": "tail",
+      "answering_sections": 13,
+      "number_query_reaches": false,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": false,
+      "verdict": "vocabulary_failure"
+    },
+    {
+      "number": "452",
+      "name": "PRSE STUDENT EDUCATION TRACKING",
+      "stratum": "tail",
+      "answering_sections": 10,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {
+        "452": "PRSE STUDENT EDUCATION TRACKING"
+      },
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "120.86",
+      "name": "ADVERSE REACTION ASSESSMENT",
+      "stratum": "tail",
+      "answering_sections": 8,
+      "number_query_reaches": true,
+      "name_query_reaches": true,
+      "expansion_emitted": {},
+      "expansion_reaches": true,
+      "oracle_reaches": true,
+      "verdict": "reached"
+    },
+    {
+      "number": "433",
+      "name": "AR TRANSACTION",
+      "stratum": "tail",
+      "answering_sections": 7,
+      "number_query_reaches": false,
+      "name_query_reaches": false,
+      "expansion_emitted": {
+        "433": "AR TRANSACTION"
+      },
+      "expansion_reaches": false,
+      "oracle_reaches": false,
+      "verdict": "unreached_either_way"
+    },
+    {
+      "number": "409.2",
+      "name": "CANCELLATION REASONS",
+      "stratum": "tail",
+      "answering_sections": 3,
+      "number_query_reaches": false,
+      "name_query_reaches": false,
+      "expansion_emitted": {},
+      "expansion_reaches": false,
+      "oracle_reaches": true,
+      "verdict": "unreached_either_way"
+    }
+  ]
+}

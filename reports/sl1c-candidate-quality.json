@@ -1,0 +1,649 @@
+{
+  "source": {
+    "proposals": "/home/rafael/data/vdocs/reports/knowledge/proposals.json",
+    "vista_meta": "/home/rafael/projects/vista-meta/vista/export"
+  },
+  "queue_shape": {
+    "mentions_reported_by_resolve": 4415,
+    "distinct_candidates_a_curator_would_review": 307,
+    "by_type": {
+      "global": 174,
+      "routine": 105,
+      "fileman_file": 18,
+      "package_namespace": 5,
+      "build": 4,
+      "hl7_segment": 1
+    }
+  },
+  "rollup": {
+    "projectable_candidates": 18,
+    "structurally_inert_candidates": 289,
+    "would_reach_search_if_approved": 1,
+    "recognised": {
+      "unknown-to-the-measured-model": 180,
+      "valid": 111,
+      "unchecked": 10,
+      "not-a-file": 6
+    },
+    "reach": {
+      "inert-no-landing-place": 289,
+      "inert-guards-drop-it": 11,
+      "inert-not-a-real-file": 6,
+      "would-expand": 1
+    }
+  },
+  "strata": {
+    "head_occurrences_gt_1": {
+      "n": 191,
+      "recognised": {
+        "unknown-to-the-measured-model": 102,
+        "valid": 80,
+        "unchecked": 6,
+        "not-a-file": 3
+      },
+      "reach": {
+        "inert-no-landing-place": 188,
+        "inert-not-a-real-file": 3
+      }
+    },
+    "tail_occurrences_eq_1": {
+      "n": 116,
+      "sampled": 40,
+      "recognised_in_sample": {
+        "unknown-to-the-measured-model": 26,
+        "valid": 11,
+        "unchecked": 2,
+        "not-a-file": 1
+      },
+      "reach_in_sample": {
+        "inert-no-landing-place": 34,
+        "inert-guards-drop-it": 5,
+        "inert-not-a-real-file": 1
+      }
+    }
+  },
+  "fileman_file_candidates": [
+    {
+      "type": "fileman_file",
+      "surface": "16200",
+      "status": "proposed",
+      "occurrences": 5,
+      "docs": 1,
+      "recognised": "not-a-file",
+      "reach": "inert-not-a-real-file",
+      "canonical_name": ""
+    },
+    {
+      "type": "fileman_file",
+      "surface": "05",
+      "status": "proposed",
+      "occurrences": 4,
+      "docs": 1,
+      "recognised": "not-a-file",
+      "reach": "inert-not-a-real-file",
+      "canonical_name": ""
+    },
+    {
+      "type": "fileman_file",
+      "surface": "16000",
+      "status": "proposed",
+      "occurrences": 2,
+      "docs": 1,
+      "recognised": "not-a-file",
+      "reach": "inert-not-a-real-file",
+      "canonical_name": ""
+    },
+    {
+      "type": "fileman_file",
+      "surface": "10",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "RACE"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "120.8",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "PATIENT ALLERGIES"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "120.85",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "ADVERSE REACTION REPORTING"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "120.86",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "ADVERSE REACTION ASSESSMENT"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "16201",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "not-a-file",
+      "reach": "inert-not-a-real-file",
+      "canonical_name": ""
+    },
+    {
+      "type": "fileman_file",
+      "surface": "3",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "not-a-file",
+      "reach": "inert-not-a-real-file",
+      "canonical_name": ""
+    },
+    {
+      "type": "fileman_file",
+      "surface": "301.7",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "IVM ADDRESS CHANGE LOG"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "391.71",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "ADT/HL7 PIVOT"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "405",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "would-expand",
+      "canonical_name": "PATIENT MOVEMENT"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "45",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "PTF"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "5",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "STATE"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "59.9",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "PBM PATIENT DEMOGRAPHICS"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "7",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "PROVIDER CLASS"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "798.3",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "ROR PATIENT EVENTS"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "999000",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "not-a-file",
+      "reach": "inert-not-a-real-file",
+      "canonical_name": ""
+    }
+  ],
+  "tail_sample": [
+    {
+      "type": "build",
+      "surface": "DI*22.2*3",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unchecked",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "fileman_file",
+      "surface": "10",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "RACE"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "120.85",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "ADVERSE REACTION REPORTING"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "16201",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "not-a-file",
+      "reach": "inert-not-a-real-file",
+      "canonical_name": ""
+    },
+    {
+      "type": "fileman_file",
+      "surface": "391.71",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "ADT/HL7 PIVOT"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "5",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "STATE"
+    },
+    {
+      "type": "fileman_file",
+      "surface": "59.9",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-guards-drop-it",
+      "canonical_name": "PBM PATIENT DEMOGRAPHICS"
+    },
+    {
+      "type": "global",
+      "surface": "^AD",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^C2",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^CENTRAL",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^DIBT",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^DII",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^DISZ0003",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^FEB",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^GROUP",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^IDPOUT",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^LRZTEST",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^MA",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^P13",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^SX",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^ZZ",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^ZZCT",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^ZZHDR",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "global",
+      "surface": "^ZZITA",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "hl7_segment",
+      "surface": "IN1",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unchecked",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "CST",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "DD",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "DDMO",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "DIACX",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "DIFGB",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "DIFROM",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "JAN",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "LRZTEST",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "P13",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "XLFNAME",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "XUP",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "valid",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "ZZ",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "ZZHDR",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "ZZTEXT",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    },
+    {
+      "type": "routine",
+      "surface": "ZZTKINIT",
+      "status": "proposed",
+      "occurrences": 1,
+      "docs": 1,
+      "recognised": "unknown-to-the-measured-model",
+      "reach": "inert-no-landing-place",
+      "canonical_name": ""
+    }
+  ]
+}
