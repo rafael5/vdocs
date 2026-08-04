@@ -14,11 +14,13 @@ writes the CSV sidecars and counts them. Serialisation reuses ``kernel/csv`` (§
 
 from __future__ import annotations
 
+import html as _html
 import re
 from dataclasses import dataclass
 
 from vdocs.kernel.csv import to_csv
 from vdocs.kernel.table import (
+    CELL_RE,
     PIPE_LINE_RE,
     PIPE_SEP_RE,
     TABLE_RE,
@@ -27,6 +29,7 @@ from vdocs.kernel.table import (
     pipe_cells,
     strip_md_links,
 )
+from vdocs.kernel.text import TAG_RE
 
 # §6.5 guardrail thresholds (calibrated on the real corpus: this leaves ~75% of tables — the short,
 # narrow ones — inline, and extracts the tall/wide data tables that bloat the markdown).
@@ -219,5 +222,56 @@ def html_tables_to_gfm(body: str) -> str:
         if len(rows) == 1 and len(rows[0]) == 1:
             return html  # a text-box, not a table
         return _to_gfm(rows)
+
+    return TABLE_RE.sub(repl, body)
+
+
+# --- 1x1 text-boxes → fenced code blocks (§6.5) --------------------------------------------------
+# A 1x1 `<table>` in a VA manual is not data: it is the house convention for showing **verbatim
+# machine output** in a bordered box — List Manager screens, roll-and-scroll prompts, menu listings,
+# HL7 messages, MailMan traffic, system warnings. 774 survive in gold, and inspecting them found no
+# prose to protect. Fencing also stops captured output being parsed as document structure: a screen
+# line like `# DRUG QTY # REFS DAYS SUPPLY` currently reads as a markdown heading.
+_ONE_ROW_RE = re.compile(r"<tr\b", re.IGNORECASE)
+_LINE_BREAK_RE = re.compile(r"</p>\s*<p\b[^>]*>|<br\s*/?>", re.IGNORECASE)
+# block content a fence would misrepresent by flattening it into plain lines
+_BOX_BLOCK_RE = re.compile(r"<(?:h[1-6]|ul|ol|table)\b", re.IGNORECASE)
+
+
+def _fence_for(text: str) -> str:
+    """A fence longer than the longest backtick run inside the content, so it always closes."""
+    longest = max((len(m) for m in re.findall(r"`+", text)), default=0)
+    return "`" * max(3, longest + 1)
+
+
+def text_boxes_to_code_fences(body: str) -> str:
+    """Rewrite 1x1 Word text-boxes as fenced code blocks, preserving their line structure.
+
+    Line breaks come from the paragraph/``<br>`` boundaries Pandoc emits (530 of the 774 boxes
+    carry one ``<p>`` per screen line); inline markup is stripped and entities decoded, but
+    **whitespace is deliberately not collapsed** — column alignment is what a screen capture is
+    made of, which is why this cannot reuse ``flatten_html``.
+
+    Left alone: anything that is not exactly one row and one cell, and any box holding a list,
+    heading or nested table — a fence would flatten those into text that merely looks like output.
+    Idempotent: the result contains no ``<table>``."""
+
+    def repl(m: re.Match[str]) -> str:
+        html = m.group(0)
+        if len(_ONE_ROW_RE.findall(html)) != 1 or _BOX_BLOCK_RE.search(html[html.find(">") :]):
+            return html
+        cells = CELL_RE.findall(html)
+        if len(cells) != 1:
+            return html
+        text = _LINE_BREAK_RE.sub("\n", cells[0])
+        lines = [_html.unescape(TAG_RE.sub("", ln)).rstrip() for ln in text.split("\n")]
+        while lines and not lines[0].strip():
+            lines.pop(0)
+        while lines and not lines[-1].strip():
+            lines.pop()
+        if not lines:
+            return html
+        fence = _fence_for("\n".join(lines))
+        return fence + "\n" + "\n".join(lines) + "\n" + fence
 
     return TABLE_RE.sub(repl, body)

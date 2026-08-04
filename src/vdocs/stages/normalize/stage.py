@@ -127,6 +127,9 @@ class NormalizeStage(Stage):
                 # can say the same thing — after extraction, so this only touches tables that stay
                 # in the body. Kills the `colgroup`/`tbody`/`tr class` tag soup that was reaching
                 # FTS5 as search tokens; spans, cell-level block content and text-boxes stay HTML.
+                # 1x1 Word text-boxes wrap verbatim machine output (screens, menus, HL7) — fence
+                # them first, preserving line structure, then rewrite the real tables as GFM.
+                body = tbl.text_boxes_to_code_fences(body)
                 body = tbl.html_tables_to_gfm(body)
                 # STRIP the matched (doc_type, era) template scaffold + stamp template_id (§9.8).
                 # era is the title-page-date decade bucket (kernel.decade_bucket); doc_type is the
