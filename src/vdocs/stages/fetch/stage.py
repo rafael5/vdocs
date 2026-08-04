@@ -7,6 +7,7 @@ downloads the bytes via an injected byte fetcher, stores them write-once in the 
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Callable
 
@@ -17,8 +18,9 @@ from vdocs.kernel import http
 from vdocs.kernel.cas import Cas, atomic_write
 from vdocs.kernel.ids import doc_id
 from vdocs.models.catalog import EnrichedInventory
-from vdocs.models.stage import Acquisition, Idempotency, RunResult
+from vdocs.models.stage import Acquisition, Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
+from vdocs.stages.fetch import composition_pure as comp
 from vdocs.stages.fetch.fetch_pure import MAX_FETCH_ATTEMPTS, Selection
 
 ByteFetcher = Callable[[str], bytes | None]
@@ -88,16 +90,31 @@ class FetchStage(Stage):
         # transient failures are re-attempted; `--refetch` forces a re-GET of everything. Public +
         # mutable so the CLI driver can set it alongside the selection.
         self.refetch = refetch
+        # CI.4: run() stashes the composition verdict for deep_gate (the convert-stage pattern).
+        self._composition: comp.CompositionVerdict | None = None
 
     def extra_input_fps(self, ctx: StageContext) -> dict[str, str]:
         # the resolved selection AND the admission gate participate in SKIP_IF_UNCHANGED
-        # (§5.6/§7.3): editing scope-policy/doctype-policy re-runs fetch.
-        from vdocs.stages.fetch.policy import load_gate_policy
+        # (§5.6/§7.3): editing scope-policy/doctype-policy re-runs fetch — and so does editing
+        # the CI.4 acknowledgements (they are an input to the composition verdict).
+        from vdocs.stages.fetch.policy import load_acknowledged_apps, load_gate_policy
 
+        acked = ",".join(sorted(load_acknowledged_apps(ctx.cfg.registries)))
         return {
             "selection": self.selection.fingerprint(),
             "gate_policy": load_gate_policy(ctx.cfg.registries).fingerprint(),
+            "scope_changes": hashlib.sha256(acked.encode("utf-8")).hexdigest(),
         }
+
+    def deep_gate(self, ctx: StageContext) -> PostflightResult:
+        # CI.4: an unacknowledged admitted-set departure is a blocking finding. The index was
+        # already derived (with CI.2 retention, so nothing is lost) but the run reds, downstream
+        # stays blocked, and the baseline file is NOT advanced — the alarm repeats until the
+        # change is acknowledged in registries/inventory/scope-changes.yaml or the cause fixed.
+        verdict = self._composition
+        if verdict is not None and not verdict.ok:
+            return PostflightResult(ok=False, reason=verdict.reason)
+        return PostflightResult(ok=True)
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.stages.fetch import fetch_pure as fp
@@ -114,6 +131,23 @@ class FetchStage(Stage):
         # deriving it from the operator's selection would drop every unselected document from
         # `raw/index.json` and strand its bundle (P1.1).
         admitted = fp.select_fetch_targets(inventory.records, fp.Selection(all_=True), policy)
+
+        # CI.4: compare the admitted set's composition (doc_id → app) against the recorded
+        # baseline. The verdict gates the run in deep_gate; the baseline only advances on green.
+        from vdocs.stages.fetch.policy import load_acknowledged_apps
+
+        current_admitted = {doc_id(rec): rec.app_name_abbrev for rec in admitted}
+        self._composition = comp.check_composition(
+            self._prior_admitted(ctx),
+            current_admitted,
+            acknowledged_apps=load_acknowledged_apps(ctx.cfg.registries),
+        )
+        if self._composition.departures:
+            log.warning(
+                "fetch-admitted-departures",
+                ok=self._composition.ok,
+                departures={a: len(d) for a, d in self._composition.departures.items()},
+            )
 
         store = Cas(ctx.cfg.bronze_raw)
         fetched = skipped = failed = permanent = bad_content = 0
@@ -216,11 +250,24 @@ class FetchStage(Stage):
         )
         if index["retained"]:
             log.info("fetch-retained", count=len(index["retained"]), doc_ids=index["retained"][:8])
+        if self._composition.ok:
+            atomic_write(
+                ctx.cfg.admitted_baseline,
+                (
+                    json.dumps(
+                        {"format": 1, "admitted": dict(sorted(current_admitted.items()))},
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    + "\n"
+                ).encode("utf-8"),
+            )
         return RunResult(
             counts={
                 "targets": len(targets),
                 "indexed": len(index["docs"]),
                 "retained": len(index["retained"]),
+                "departed": sum(len(d) for d in self._composition.departures.values()),
                 "fetched": fetched,
                 "skipped": skipped,
                 "failed": failed,
@@ -231,6 +278,21 @@ class FetchStage(Stage):
                 failed, failed_urls, permanent, permanent_urls, bad_content, bad_content_urls
             ),
         )
+
+    def _prior_admitted(self, ctx: StageContext) -> dict[str, str] | None:
+        """The recorded admitted set (``None`` on the first run). Unreadable/legacy content is
+        loud-warned and treated as no baseline — same rationale as the crawl floor's."""
+        path = ctx.cfg.admitted_baseline
+        if not path.exists():
+            return None
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if data.get("format") != 1:
+                raise ValueError(f"unknown admitted-baseline format {data.get('format')!r}")
+            return {str(k): str(v) for k, v in (data.get("admitted") or {}).items()}
+        except ValueError:
+            log.warning("fetch-admitted-baseline-unreadable", path=str(path))
+            return None
 
     def _prior_index(self, ctx: StageContext) -> dict[str, dict[str, str]]:
         """The prior ``raw/index.json`` entries — the master set retention carries forward.

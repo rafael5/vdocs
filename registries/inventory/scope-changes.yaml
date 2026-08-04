@@ -1,0 +1,22 @@
+# registries/inventory/scope-changes.yaml
+# =========================================================================================
+# CURATED acknowledgements of admitted-set departures (CI.4, audit R‑19).
+#
+# The fetch stage records the admitted set each run (the lake's
+# inventory/gold/admitted-baseline.json) and compares by document identifier, grouped by
+# application. An application leaving the admitted set — a VA relabel, a policy edit, an
+# enrichment regression — FAILS the run unless it is acknowledged here. Acknowledging is
+# deliberately cheap: one entry, and the alarm stands down while the departure stays
+# reported. An alarm nobody can silence quietly becomes an alarm nobody keeps.
+#
+# NOTE the CI.2 master-set rule: a departure never removes documents already fetched — they
+# are retained in the collection with their lifecycle labels (CI.3). This file only records
+# that the SCOPE change was seen and meant.
+#
+# Entry shape:
+#   - app_code: XOBW            # the application whose departure is acknowledged
+#     date: 2026-08-03          # when it was acknowledged
+#     reason: ruled out of scope (integration middleware, not VistA M)
+# =========================================================================================
+
+changes: []

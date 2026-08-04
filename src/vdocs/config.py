@@ -106,6 +106,13 @@ class Settings(BaseSettings):
         return self.inventory_gold / "inventory.json"
 
     @property
+    def admitted_baseline(self) -> Path:
+        """inv-gold: the recorded admitted set (doc_id → app_code) the CI.4 composition gate
+        compares each run against; only written when the gate passes, so it is always the last
+        composition a human either saw green or acknowledged."""
+        return self.inventory_gold / "admitted-baseline.json"
+
+    @property
     def gold_inventory_db(self) -> Path:
         """inv-gold: the GOLD INVENTORY as a queryable SQLite store (table ``inventory``)."""
         return self.inventory_gold / "inventory.db"

@@ -13,6 +13,7 @@ from vdocs.kernel.http import Page
 from vdocs.models.catalog import EnrichedInventory
 from vdocs.models.stage import Acquisition
 from vdocs.orchestrator.engine import Orchestrator
+from vdocs.orchestrator.stage import PostflightError
 from vdocs.stages.catalog.stage import CatalogStage
 from vdocs.stages.crawl.stage import CrawlStage
 from vdocs.stages.fetch import fetch_pure as fp
@@ -99,12 +100,16 @@ def test_bronze_dag_runs_end_to_end(bronze_ctx):
         "targets": 1,
         "indexed": 1,
         "retained": 0,
+        "departed": 0,
         "fetched": 1,
         "skipped": 0,
         "failed": 0,
         "permanent_missing": 0,
         "bad_content": 0,
     }
+    # CI.4: the first run records the admitted-set baseline
+    baseline = json.loads(ctx.cfg.admitted_baseline.read_text())
+    assert baseline == {"format": 1, "admitted": {"ADT:dg_5_3_1057_um": "ADT"}}
     # the index is doc_id-keyed and DERIVED from acquisitions ⋈ admitted targets (P1.1)
     index = fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text()))
     assert list(index) == ["ADT:dg_5_3_1057_um"]
@@ -298,17 +303,8 @@ def test_raw_index_drops_a_doc_the_gate_no_longer_admits(bronze_ctx):
     assert list(index) == ["ADT:dg_5_3_1057_um"]
 
 
-def test_a_fetched_doc_survives_a_lifecycle_relabel(bronze_ctx):
-    # CI.2 master-set retention: VA relabelling the application DECOMMISSIONED removes it from
-    # the admitted set (denied_app_status) — but a document we already fetched must stay in the
-    # index. Deprecation does not remove the code from VistA; the relabel is metadata, never a
-    # reason to drop the manual. Driven end-to-end through a real re-crawl of a relabelled VDL.
-    ctx = bronze_ctx
-    Orchestrator(_stages()).run(ctx, force=True)
-    assert list(fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text()))) == [
-        "ADT:dg_5_3_1057_um"
-    ]
-
+def _recrawl_relabelled(ctx, fetch_stage):
+    """Re-crawl a VDL whose ADT app is now '- DECOMMISSIONED', then run the given fetch."""
     relabelled = dict(
         PAGES,
         **{
@@ -322,25 +318,62 @@ def test_a_fetched_doc_survives_a_lifecycle_relabel(bronze_ctx):
     def relabelled_page(url: str) -> Page:
         return Page(text=relabelled.get(url, "<html></html>"), url=url, status_code=200)
 
-    (sr,) = (
-        r
-        for r in Orchestrator(
-            [
-                CrawlStage(page_fetcher=relabelled_page),
-                CatalogStage(),
-                ServeInventoryStage(),
-                FetchStage(fetch_bytes=fake_bytes, selection=Selection(all_=True)),
-            ]
-        ).run(ctx, force=True)
-        if r is not None and r.stage == "fetch"
-    )
+    return Orchestrator(
+        [
+            CrawlStage(page_fetcher=relabelled_page),
+            CatalogStage(),
+            ServeInventoryStage(),
+            fetch_stage,
+        ]  # fmt: skip
+    ).run(ctx, force=True)
 
-    # the gate now admits nothing — and the document is still there, marked retained
-    assert sr.counts["targets"] == 0
-    assert sr.counts["retained"] == 1
+
+def test_a_relabel_retains_the_doc_and_reds_unacknowledged(bronze_ctx):
+    # CI.2 + CI.4 together: VA relabelling the application DECOMMISSIONED removes it from the
+    # admitted set — the fetched document is RETAINED in the index (deprecation does not remove
+    # the code from VistA), and the run REDS because the scope change is unacknowledged. The
+    # baseline file does not advance, so the alarm repeats until a human answers it.
+    ctx = bronze_ctx
+    Orchestrator(_stages()).run(ctx, force=True)
+    good_baseline = ctx.cfg.admitted_baseline.read_text()
+
+    with pytest.raises(PostflightError, match="ADT"):
+        _recrawl_relabelled(ctx, FetchStage(fetch_bytes=fake_bytes, selection=Selection(all_=True)))
+
+    # retention already happened in run(): nothing was lost while the alarm rings
     index = fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text()))
     assert list(index) == ["ADT:dg_5_3_1057_um"]
     assert index["ADT:dg_5_3_1057_um"]["sha256"]  # the CAS pointer survives with it
+    assert ctx.cfg.admitted_baseline.read_text() == good_baseline  # not advanced
+
+
+def test_an_acknowledged_departure_passes_and_advances_the_baseline(bronze_ctx, tmp_path):
+    # The cheap acknowledgement: one {app_code, date, reason} entry in scope-changes.yaml and
+    # the same relabel passes — departure still reported (counts), document still retained.
+    import shutil
+
+    ctx = bronze_ctx
+    Orchestrator(_stages()).run(ctx, force=True)
+
+    reg = tmp_path / "registries"
+    shutil.copytree(ctx.cfg.registries, reg)
+    (reg / "inventory" / "scope-changes.yaml").write_text(
+        "changes:\n  - app_code: ADT\n    date: 2026-08-03\n    reason: test acknowledgement\n"
+    )
+    ctx.cfg = ctx.cfg.model_copy(update={"registries_dir": reg})
+
+    results = _recrawl_relabelled(
+        ctx, FetchStage(fetch_bytes=fake_bytes, selection=Selection(all_=True))
+    )
+    (sr,) = (r for r in results if r is not None and r.stage == "fetch")
+    assert sr.status == "ok"
+    assert sr.counts["targets"] == 0
+    assert sr.counts["retained"] == 1 and sr.counts["departed"] == 1
+    index = fp.parse_raw_index(json.loads(ctx.cfg.raw_index.read_text()))
+    assert list(index) == ["ADT:dg_5_3_1057_um"]
+    # the baseline advanced: the departed doc is no longer in the admitted record
+    baseline = json.loads(ctx.cfg.admitted_baseline.read_text())
+    assert baseline["admitted"] == {}
 
 
 def test_a_v1_prior_index_is_rederived_without_retention(bronze_ctx):

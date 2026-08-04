@@ -20,6 +20,13 @@ def _read(path: Path) -> dict[str, Any]:
     return load_mapping(path)  # required policies — absent file fails loud (tenet #7)
 
 
+def load_acknowledged_apps(registries_dir: Path) -> frozenset[str]:
+    """The applications whose admitted-set departure is acknowledged (CI.4) —
+    ``registries/inventory/scope-changes.yaml``, curated; a missing file fails loud."""
+    raw = _read(registries_dir / "inventory" / "scope-changes.yaml").get("changes") or []
+    return frozenset(str(e.get("app_code", "")) for e in raw if e.get("app_code"))
+
+
 def load_gate_policy(registries_dir: Path) -> GatePolicy:
     """Build the :class:`GatePolicy` from ``registries/inventory/{scope,doctype}-policy.yaml``."""
     inv = registries_dir / "inventory"
