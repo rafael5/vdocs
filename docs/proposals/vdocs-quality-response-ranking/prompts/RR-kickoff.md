@@ -41,7 +41,7 @@ That band is this effort; the 13.7% at >100/absent is not. The near band is smal
 pre-RC table claimed because RC.2 credited answers search was already surfacing — what remains
 is the honest residue.
 
-Defaults today: `mcp.DEFAULT_K = 8`, `ask --k 8`.
+Defaults (after RR.1): `search.ASSISTANT_DEFAULT_K = 15` for MCP `search` + `ask --json`, `search.HUMAN_DISPLAY_K = 8` for the terminal, explicit `--k` wins on either.
 
 ## The measurement discipline — this project has been burned three times
 

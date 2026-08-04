@@ -5,6 +5,7 @@ non-network `catalog` stage through the real CLI to prove the wiring, plus help/
 """
 
 import json
+import re
 
 from typer.testing import CliRunner
 
@@ -796,3 +797,76 @@ def test_publish_rich_assets_empty_subset_exits_one(tmp_path):
     result = runner.invoke(app, ["publish-rich-assets"], env=env)
     assert result.exit_code == 1
     assert "no curated subset" in result.stdout
+
+
+# --- RR.1: two default result counts, one explicit override -------------------------------------
+# Measured (production, post-RC key, 109 judged answers): an assistant sees 61.5% of correct
+# answers at k=8 and 77.1% at k=15. A person reading a terminal is the opposite trade — a longer
+# list is reading work — so the human display stays at 8 while the agent surfaces widen.
+
+
+def _seed_many_hits(tmp_path, n=20):
+    """A lake whose index answers one query with `n` distinct sections, so a default k is visible
+    in the output rather than masked by there being too few hits to reach it."""
+    from vdocs.kernel import db
+
+    cfg = Settings(data_dir=tmp_path)
+    cfg.lake.mkdir(parents=True, exist_ok=True)
+    conn = db.connect(cfg.index_db)
+    conn.executescript(
+        """
+        CREATE TABLE documents (
+          doc_key TEXT PRIMARY KEY, doc_id TEXT, title TEXT, app_code TEXT, doc_type TEXT,
+          pkg_ns TEXT, is_latest INTEGER
+        );
+        CREATE VIRTUAL TABLE chunks_fts USING fts5(
+          chunk_id UNINDEXED, section_id UNINDEXED, doc_key UNINDEXED, title, doc_title,
+          section_path, body
+        );
+        """
+    )
+    conn.execute("INSERT INTO documents VALUES ('XX/m','XX:m','Manual','XX','UM','XX',1)")
+    conn.executemany(
+        "INSERT INTO chunks_fts "
+        "(chunk_id, section_id, doc_key, title, doc_title, section_path, body) VALUES "
+        "(?, ?, 'XX/m', ?, 'Manual', 'XX', ?)",
+        [
+            (f"XX/m/s{i}", f"XX/m/s{i}", f"Section {i}", f"taskman monitor detail number {i}")
+            for i in range(n)
+        ],
+    )
+    conn.commit()
+    conn.close()
+
+
+def test_ask_human_display_defaults_to_the_tight_list(tmp_path):
+    from vdocs.server import search
+
+    _seed_many_hits(tmp_path)
+    result = runner.invoke(app, ["ask", "taskman monitor"], env={"DATA_DIR": str(tmp_path)})
+    assert result.exit_code == 0, result.stdout
+    numbered = re.findall(r"^(\d+)\. \[", result.stdout, flags=re.MULTILINE)
+    assert len(numbered) == search.HUMAN_DISPLAY_K
+
+
+def test_ask_json_widens_to_the_assistant_default(tmp_path):
+    from vdocs.server import search
+
+    _seed_many_hits(tmp_path)
+    result = runner.invoke(
+        app, ["ask", "taskman monitor", "--json"], env={"DATA_DIR": str(tmp_path)}
+    )
+    assert result.exit_code == 0, result.stdout
+    assert json.loads(result.stdout)["hit_count"] == search.ASSISTANT_DEFAULT_K
+
+
+def test_ask_explicit_k_wins_on_both_surfaces(tmp_path):
+    _seed_many_hits(tmp_path)
+    human = runner.invoke(
+        app, ["ask", "taskman monitor", "-k", "3"], env={"DATA_DIR": str(tmp_path)}
+    )
+    assert len(re.findall(r"^(\d+)\. \[", human.stdout, flags=re.MULTILINE)) == 3
+    agent = runner.invoke(
+        app, ["ask", "taskman monitor", "--json", "-k", "3"], env={"DATA_DIR": str(tmp_path)}
+    )
+    assert json.loads(agent.stdout)["hit_count"] == 3

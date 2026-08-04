@@ -205,6 +205,16 @@ def load_doctor_policy(registries_dir: Path) -> DoctorPolicy:
 # --- the index.db driver ------------------------------------------------------------------------
 
 
+def _card_field_drifted(published: Any, current: Any) -> bool:
+    """True when a published card field no longer matches the code constant that renders it.
+
+    Strings are compared stripped (the card is re-serialised, so surrounding whitespace is noise);
+    anything else — the recipe is a dict — compares by value."""
+    if isinstance(published, str) and isinstance(current, str):
+        return published.strip() != current.strip()
+    return bool(published != current)
+
+
 def diagnose(
     conn: sqlite3.Connection,
     *,
@@ -214,6 +224,7 @@ def diagnose(
     excluded_entity_types: frozenset[str] = frozenset(),
     skl_entities: int | None = None,
     published_usage: str | None = None,
+    published_query_recipe: dict[str, Any] | None = None,
 ) -> DoctorReport:
     """Run every soundness check against ``index.db`` and assemble the report. ``kept_doctypes`` is
     the gate's Tier-A keep set (gold must contain only those). When ``read_spec`` (a read-contract)
@@ -476,16 +487,29 @@ def diagnose(
     # moves no fingerprint, so `manifest` skips and the card keeps quoting the disproved number.
     # (Measured 2026-08-02: CORPUS.md still said 26.7% after P6.1b had made it 10.5%.) A
     # `contract_ver` bump fixes it when remembered; this check is what notices when it is not.
-    if published_usage is not None:
-        from vdocs.stages.manifest.manifest_pure import USAGE
+    # RR.1 widened this from the usage rule to the query recipe beside it: the card was telling
+    # every agent to run `--k 8` for months after that default was measured and replaced, and the
+    # usage-only check could not see it. Same hole, one field over — so the check covers both
+    # code-resident fields rather than trusting the next author to remember.
+    if published_usage is not None or published_query_recipe is not None:
+        from vdocs.stages.manifest.manifest_pure import QUERY_RECIPE, USAGE
 
+        stale = [
+            name
+            for name, published, current in (
+                ("usage rule", published_usage, USAGE),
+                ("query recipe", published_query_recipe, QUERY_RECIPE),
+            )
+            if published is not None and _card_field_drifted(published, current)
+        ]
         checks.append(
             Check("corpus card", Health.PASS, "published usage rule matches this build")
-            if published_usage.strip() == USAGE.strip()
+            if not stale
             else Check(
                 "corpus card",
                 Health.FAIL,
-                "the published corpus card's usage rule no longer matches this build — "
+                f"the published corpus card's {' and '.join(stale)} "
+                f"{'no longer match' if len(stale) > 1 else 'no longer matches'} this build — "
                 "run: vdocs manifest",
             )
         )
@@ -523,10 +547,13 @@ def diagnose_lake(cfg: Settings) -> DoctorReport:
     # The shipped card's own usage rule, so the drift check can compare it to the code that renders
     # it. Absent before the first `manifest` run — that is a missing input, not a defect.
     published_usage: str | None = None
+    published_query_recipe: dict[str, Any] | None = None
     if cfg.ai_manifest.exists():
         import json as _json
 
-        published_usage = _json.loads(cfg.ai_manifest.read_text(encoding="utf-8")).get("usage")
+        card = _json.loads(cfg.ai_manifest.read_text(encoding="utf-8"))
+        published_usage = card.get("usage")
+        published_query_recipe = card.get("query")
     conn = db.connect(cfg.index_db, read_only=True)
     try:
         return diagnose(
@@ -537,6 +564,7 @@ def diagnose_lake(cfg: Settings) -> DoctorReport:
             excluded_entity_types=excluded,
             skl_entities=skl_entities,
             published_usage=published_usage,
+            published_query_recipe=published_query_recipe,
         )
     finally:
         conn.close()

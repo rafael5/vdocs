@@ -363,10 +363,36 @@ def test_diagnose_passes_when_the_published_card_matches(tmp_path):
     conn = _open(tmp_path)
     _healthy(conn)
     report = doc.diagnose(
-        conn, kept_doctypes=_KEPT, policy=_POLICY, published_usage=manifest_pure.USAGE
+        conn,
+        kept_doctypes=_KEPT,
+        policy=_POLICY,
+        published_usage=manifest_pure.USAGE,
+        published_query_recipe=manifest_pure.QUERY_RECIPE,
     )
     conn.close()
     assert report.verdict() == "GREEN"
+
+
+def test_diagnose_reds_when_the_published_query_recipe_drifts_from_the_code(tmp_path):
+    """RR.1 found the same staleness hole one field over: the card's *query recipe* also lives in
+    code, and it was telling every agent to run `--k 8` — the default this step measured and
+    replaced. The usage-rule check would not have noticed, so the recipe is checked too rather
+    than trusted to be remembered."""
+    from vdocs.stages.manifest import manifest_pure
+
+    conn = _open(tmp_path)
+    _healthy(conn)
+    report = doc.diagnose(
+        conn,
+        kept_doctypes=_KEPT,
+        policy=_POLICY,
+        published_usage=manifest_pure.USAGE,
+        published_query_recipe={**manifest_pure.QUERY_RECIPE, "command": 'vdocs search "x" --k 8'},
+    )
+    conn.close()
+    assert report.verdict() == "RED"
+    fail = next(c for c in report.failures() if c.name == "corpus card")
+    assert "vdocs manifest" in fail.detail
 
 
 def test_diagnose_skips_the_card_check_when_no_card_is_published(tmp_path):

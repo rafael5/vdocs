@@ -79,6 +79,21 @@ NOT_INDEXED_RULE = (
 )
 NO_MATCH_WARNING = f"NO INDEXED MATCH — this is not evidence of absence. {NOT_INDEXED_RULE}"
 
+# --- how many results each kind of caller gets by default (RR.1) ---------------------------------
+# Two callers, opposite trade-offs, so two constants — and they live HERE, with the rule above, for
+# the same reason: the MCP `search` tool and `vdocs ask --json` both import this module, so a
+# re-measure moves every assistant surface at once instead of leaving one stale.
+#
+# MEASURED on the production collection with the post-report-card key (109 judged answers): the
+# share of correct answers a caller can see is 61.5% at k=8, **77.1% at k=15**, 78.0% at 20 and
+# 79.8% at 25. Fifteen is the knee — it recovers nearly all of the reachable band, and going wider
+# buys under a point. The old default of 8 was hiding roughly one correct answer in six from every
+# assistant, which is why this was the cheapest step in the ranking effort.
+ASSISTANT_DEFAULT_K = 15
+# A person reading a terminal is the opposite case: a longer list is reading work, not free recall.
+# The human `vdocs ask` display stays where it was; `--k` overrides both.
+HUMAN_DISPLAY_K = 8
+
 
 def search_envelope(hits: list[dict[str, Any]]) -> dict[str, Any]:
     """The shared result envelope: ``{hits, hit_count}`` — plus ``warning`` **only** when empty.

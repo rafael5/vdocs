@@ -28,7 +28,9 @@ SERVER_INFO = {"name": "vdocs", "version": "1.0.0"}
 
 MAX_ROWS_CEILING = 500
 DEFAULT_MAX_ROWS = 50
-DEFAULT_K = 8
+# RR.1: the assistant-path result count is one shared constant in `server.search` (measured knee,
+# 8 → 15), not a number this module owns — so the MCP tool and `ask --json` cannot drift apart.
+DEFAULT_K = search.ASSISTANT_DEFAULT_K
 MENTION_SAMPLE = 25
 
 _SELECT_ONLY = re.compile(r"^\s*(select|with)\b", re.IGNORECASE)

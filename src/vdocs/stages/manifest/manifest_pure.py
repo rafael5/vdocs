@@ -177,7 +177,11 @@ USAGE = (
     "gold body.md AND its rich-tables/<app>/<slug>/tables/*.csv sidecars."
 )
 QUERY_RECIPE = {
-    "command": 'vdocs search "<your question>" --k 8 --json',
+    # RR.1 (2026-08-03): `--k 15`, not 8. Measured on this collection — an agent asking for 8 sees
+    # 61.5% of the correct answers the engine can reach, and 77.1% at 15 (20 buys under a point
+    # more). The card is a third assistant surface, so it advertises the same default the MCP tool
+    # and `ask --json` now use; a doctor check compares this constant to the published card.
+    "command": 'vdocs search "<your question>" --k 15 --json',
     "returns": "ranked hits: {section_id, doc_key, doc_title, section_title, app_code, doc_type, "
     "snippet, score, uri, source_url}",
     "modes": "lexical FTS5 over the is_latest search chunks",

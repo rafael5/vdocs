@@ -2,11 +2,11 @@
 
 | Step | What lands | Status | Commit / notes |
 |------|-----------|--------|----------------|
-| RR.0 | **Measure first** — re-baseline on the production collection after the report card lands; record the report and confirm its provenance stamp | ☐ | |
-| RR.1 | Default result count raised for the assistant path (8 → 15–20); human CLI display kept tight | ☐ | |
+| RR.0 | **Measure first** — re-baseline on the production collection after the report card lands; record the report and confirm its provenance stamp | ✅ | `reports/rr0-baseline.*` — nDCG@10 **0.6386** · MRR 0.7535 · recall@10 **0.7134**, `corpus_content_hash 726d22a4…`, 1,040 docs / 57,895 chunks, 24 labelled / 0 unscoreable. Byte-for-byte identical to the RC close-out run (`rc-final-baseline.*`), rollup **and** every per-query score — so the harness is deterministic and this baseline is reproducible, not a one-off draw. |
+| RR.1 | Default result count raised for the assistant path (8 → 15–20); human CLI display kept tight | ✅ | **15, chosen by measurement not taste** — visible share of the 109 judged answers: 61.5% @8 · 69.7% @10 · **77.1% @15** · 78.0% @20 · 79.8% @25, so 15 is the knee and 20 buys +0.9pt. Two constants in `server/search.py` (`ASSISTANT_DEFAULT_K = 15`, `HUMAN_DISPLAY_K = 8`), both assistant surfaces bound to the first (`mcp.DEFAULT_K` re-exports it; `ask --json` uses it, the terminal keeps 8, explicit `--k` wins on either). Measured effect at the default: **67/109 → 83/109 visible (61.5% → 76.1%)** across 11 queries; `reports/rr1-after-default-k.*` confirms **zero** per-query nDCG@10 change — this step moves what a caller *sees*, never the ranking, so the harness at fixed k=10 correctly reports it as flat. ⚠️ Found a third assistant surface still advertising the old default: the published corpus card's query recipe (`--k 8`). Fixed, and the doctor's card-staleness check **widened from the usage rule to the recipe** so the next drift reds instead of shipping — it caught this one live (RED → `vdocs manifest` → GREEN 20/20). |
 | RR.2 | Relevance field weights re-swept on the **production** collection; only a measured win adopted | ☐ | |
 | RR.3 | Parent headings stop displacing the children that hold the content | ☐ | |
-| RR ✓ | recall@10 > 0.588 and nDCG@10 > 0.5305, **no question regresses** | ☐ | |
+| RR ✓ | recall@10 > **0.7134** and nDCG@10 > **0.6386** (the RR.0 baseline — the old 0.588/0.5305 targets were measured with the pre-RC key and are not comparable), **no question regresses** | ☐ | |
 
 Proposal: [`vdocs-quality-response-ranking.md`](vdocs-quality-response-ranking.md) ·
 Plan: [`vdocs-quality-response-ranking-implementation-plan.md`](vdocs-quality-response-ranking-implementation-plan.md) ·
@@ -17,23 +17,35 @@ Prompts: [`prompts/`](prompts/)
 
 Tuning against an unrepaired key would optimise search toward measurably worse answers — that is the specific risk this ordering exists to prevent.
 
-## Baseline (2026-08-02, `corpus_content_hash 6dbec1f5…`, 1,040 documents / 57,895 passages)
+## Baseline — RR.0, 2026-08-03 (`corpus_content_hash 726d22a4…`, 1,040 documents / 57,895 passages)
+
+Measured on the **post-report-card key** (24 labelled questions, 109 judged answers, 0 unscoreable).
+Report: `reports/rr0-baseline.*`.
 
 | | |
 |---|---|
-| nDCG@10 (18 answerable questions) | **0.5305** |
-| recall@10 | **0.588** |
-| correct answers in positions 1–10 | 26 of 51 (**51.0%**) |
-| …in 11–25 | 9 (17.6%) |
-| …in 26–100 | 3 (5.9%) |
-| …in 101–500 | 6 (11.8%) |
-| …beyond 500 or not returned | 7 (13.7%) |
-| share visible at list length 10 / 25 / 100 | **51.0% / 68.6% / 74.5%** |
+| nDCG@10 | **0.6386** |
+| MRR | **0.7535** |
+| recall@10 | **0.7134** |
+| correct answers in positions 1–10 | 76 of 109 (**69.7%**) |
+| …in 11–25 | 11 (10.1%) |
+| …in 26–100 | 7 (6.4%) |
+| …in 101–500 | 7 (6.4%) |
+| …beyond 500 or not returned | 8 (7.3%) |
+| share visible at list length 10 / 25 / 100 | **69.7% / 79.8% / 86.2%** |
 | current defaults | `mcp.DEFAULT_K = 8`, `ask --k 8`, engine default 10 |
 | current weights | doc title 2.5 · section title 2.0 · path 1.5 · body 1.0 (**fitted on the 451-doc dev collection**) |
 
-Two of the four failing questions have their answer at **rank 13** (`rpc-broker-client-call`) and
-**rank 14** (`vbecs-accept-order`).
+The near band this effort targets (ranks 11–100, retrieved but never shown) is **16.5%** of judged
+answers. Search-owned failures inherited from RC.2, in full: `fileman-add-field` **0.000** (the only
+zero — ScreenMan-tutorial lexical trap, the real answers rank below 10), `vbecs-accept-order`
+**0.051** (parent/child twins — RR.3's case), `vista-signon-credentials` **0.175** (vocabulary gap).
+No question's failure is the key's fault any more.
+
+> ⚠️ **The pre-RC figures are a different ruler, not a worse score.** The superseded table read
+> nDCG@10 0.5305 / recall 0.588 over *18 answerable* questions with 51.0% visible@10 and a 23.5%
+> near band. Do not treat 0.5305 → 0.6386 as a search improvement (nothing in search changed), and
+> do not compare any RR result against it.
 
 ## Notes carried in
 
@@ -45,3 +57,6 @@ Two of the four failing questions have their answer at **rank 13** (`rpc-broker-
   same hash (measured: 48,769 vs 57,895 passages, one hash).
 - **Measured twin case to start from:** `VBECS/…/accept-orders-cancel-a-pending-order-uc_61`
   (parent) outranks `…/accept-orders-cancel-a-pending-order` (child) for the same query.
+- **The key is frozen for this effort.** RC.3 made the harness exit non-zero on an unscoreable
+  question, so if a run reds, the key rotted — that is not licence to edit labels mid-effort, which
+  would contaminate the before/after this whole effort rests on.

@@ -55,7 +55,7 @@ vdocs doctor               # 3. TRUST   — re-check the corpus → GOLD LIBRARY
 Then search:
 
 ```bash
-vdocs ask "how to add a new patient" --k 8
+vdocs ask "how to add a new patient"            # 8 hits in the terminal; --json returns 15
 ```
 
 Configuration lives in `~/.env` / env vars (notably `DATA_DIR`, default `~/data/vdocs`) and the
@@ -386,7 +386,8 @@ it. WARN and BY-DESIGN never fail the run.
 ## 12. Searching the corpus: `vdocs ask`
 
 ```bash
-vdocs ask "kernel sign-on" --k 8                 # ranked, pre-cited hits
+vdocs ask "kernel sign-on"                       # ranked, pre-cited hits (8 in the terminal)
+vdocs ask "kernel sign-on" --k 25                # ask for more when the answer is not shown
 vdocs ask "pharmacy order" --app PSO --doc-type UM
 vdocs ask "how to add a new patient" --json      # machine-readable for tools/agents
 ```

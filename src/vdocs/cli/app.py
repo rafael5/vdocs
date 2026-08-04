@@ -403,7 +403,12 @@ def manifest(force: bool = typer.Option(False, "--force", "-f")) -> None:
 @_guarded
 def ask(
     query: str = typer.Argument(..., help="a natural-language question about VistA / the corpus"),
-    k: int = typer.Option(8, "--k", "-k", help="how many ranked hits to return"),
+    k: int | None = typer.Option(
+        None,
+        "--k",
+        "-k",
+        help="how many ranked hits to return (default: 8 for the terminal, 15 for --json)",
+    ),
     apps: list[str] = typer.Option([], "--app", help="restrict to these app codes (exact)"),
     doc_types: list[str] = typer.Option([], "--doc-type", help="restrict to these doc codes"),
     json_out: bool = typer.Option(False, "--json", help="emit hits as JSON (for tools/agents)"),
@@ -420,6 +425,12 @@ def ask(
     if not cfg.index_db.exists():
         typer.echo("no index.db yet — run: vdocs index (then relate, manifest)")
         raise typer.Exit(code=1)
+    # RR.1: two callers, two defaults. `--json` is the agent front door and gets the measured wide
+    # default (77.1% of correct answers visible vs 61.5% at the old 8); the terminal keeps the
+    # short list, because for a person more results are reading work rather than free recall. An
+    # explicit --k wins on either surface.
+    if k is None:
+        k = search.ASSISTANT_DEFAULT_K if json_out else search.HUMAN_DISPLAY_K
     hits = search.lexical_search(
         cfg.index_db, query, k=k, app=list(apps) or None, doc_type=list(doc_types) or None
     )
