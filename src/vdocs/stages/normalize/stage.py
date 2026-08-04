@@ -32,6 +32,7 @@ from vdocs.contracts.registry import RAW_INDEX, REGISTRIES, TEXT_ENRICHED, TEXT_
 from vdocs.kernel import cas, frontmatter, ids
 from vdocs.kernel import registry as kregistry
 from vdocs.kernel.docloop import DocLoop
+from vdocs.kernel.profile import document_profile
 from vdocs.models.stage import Idempotency, PostflightResult, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
 
@@ -97,6 +98,10 @@ class NormalizeStage(Stage):
                 if sha:
                     meta["source_sha256"] = sha
                 doc_flags: list[str] = []
+                # The document's shape BEFORE any transform — paired with the post-transform
+                # reading below so `capture.yaml` records what normalize did to its dimensions,
+                # not just to its word count (§6.4).
+                profile_in = document_profile(body)
                 # CAPTURE-BEFORE-STRIP (§6.4): lift the title-page publication date into the
                 # identity `published` field *before* any title-page/revision strip — sole copy of
                 # the date for ~97% of the corpus and the capture-gate for title-page removal.
@@ -248,6 +253,8 @@ class NormalizeStage(Stage):
                     toc_count=len(anchor_map.legacy_toc),
                     title_date_captured=bool(published),
                     retention=retention,  # P3.2: the verdict as a typed record on every bundle
+                    profile_in=profile_in,
+                    profile_out=document_profile(body),
                 )
                 cas.atomic_write(
                     normalized_root / rel / "capture.yaml",

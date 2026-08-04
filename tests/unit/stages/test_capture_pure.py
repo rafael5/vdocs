@@ -306,3 +306,27 @@ def test_retention_verdict_reads_the_manifest():
     assert cp.retention_verdict(m) == rp.QUARANTINE
     # a bundle predating the block is not silently treated as PASS — absence is UNKNOWN
     assert cp.retention_verdict({}) == ""
+
+
+def test_manifest_carries_a_profile_before_and_after():
+    """Dimensions on every bundle, so a transform that changes a document's shape moves a recorded
+    number. `retention` already did this for words alone — a stage that halved the tables or
+    dropped the code blocks changed nothing visible."""
+    from vdocs.kernel.profile import document_profile
+    from vdocs.stages.normalize.capture_pure import manifest_dict
+
+    before = document_profile("# A\n\n<table><tr><td>x</td></tr></table>\n")
+    after = document_profile("# A\n\n```\nx\n```\n")
+    m = manifest_dict("D/x", {}, _residue(), profile_in=before, profile_out=after)
+    assert m["profile"]["input"]["tables_html"] == 1
+    assert m["profile"]["output"]["tables_html"] == 0
+    assert m["profile"]["output"]["code_blocks"] == 1
+    assert m["profile"]["delta"]["tables_html"] == -1
+    assert m["profile"]["delta"]["code_blocks"] == 1
+    assert "words" in m["profile"]["delta"]
+
+
+def test_manifest_omits_the_profile_when_not_supplied():
+    from vdocs.stages.normalize.capture_pure import manifest_dict
+
+    assert "profile" not in manifest_dict("D/x", {}, _residue())

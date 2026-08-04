@@ -34,6 +34,7 @@ import re
 from dataclasses import dataclass
 
 from vdocs.kernel.markdown import heading_furniture_text, iter_headings, strip_tags
+from vdocs.kernel.profile import DocumentProfile
 from vdocs.stages.normalize import tables_pure
 from vdocs.stages.normalize.retention_pure import RetentionVerdict
 
@@ -189,6 +190,8 @@ def manifest_dict(
     outcomes: dict[str, CaptureOutcome],
     residue: Residue,
     retention: RetentionVerdict | None = None,
+    profile_in: DocumentProfile | None = None,
+    profile_out: DocumentProfile | None = None,
 ) -> dict:
     """Serialise the classified outcomes + residue into the ``capture.yaml`` mapping (§6.4).
 
@@ -196,7 +199,13 @@ def manifest_dict(
     bundle — the same record on every document, rather than a sparse ``flags.yaml`` string a
     consumer would have to parse. ``capture.yaml`` travels to the gold anchor bundle at
     ``consolidate`` and is covered by ``bundle.yaml``'s signed manifest, so the ``validate``
-    retention gate reads a *verified* record."""
+    retention gate reads a *verified* record.
+
+    The ``profile`` block does for the document's *shape* what ``retention`` does for its word
+    count: dimensions in and out, plus the delta. Without it a transform that halved a document's
+    tables or dropped its code blocks moved no recorded number, so its effect was invisible to
+    every consumer and to us (§6.4). It also gives search something ``documents`` cannot say today
+    — that a document is code-heavy, or table-heavy, or has no figures at all."""
     captures: dict[str, dict] = {}
     for kind, outcome in outcomes.items():
         entry: dict[str, object] = {"outcome": outcome.outcome}
@@ -219,6 +228,13 @@ def manifest_dict(
             "verdict": retention.verdict,
             "enriched_words": retention.enriched_words,
             "kept_words": retention.kept_words,
+        }
+    if profile_in is not None and profile_out is not None:
+        a, b = profile_in.as_dict(), profile_out.as_dict()
+        manifest["profile"] = {
+            "input": a,
+            "output": b,
+            "delta": {k: b[k] - a[k] for k in a},
         }
     return manifest
 
@@ -244,6 +260,8 @@ def build_manifest(
     toc_count: int,
     title_date_captured: bool,
     retention: RetentionVerdict | None = None,
+    profile_in: DocumentProfile | None = None,
+    profile_out: DocumentProfile | None = None,
 ) -> dict:
     """Scan the residue, classify each attempt, and return the serialisable ``capture.yaml`` dict —
     the one call the ``stage.py`` driver makes (§6.4)."""
@@ -257,7 +275,7 @@ def build_manifest(
         title_date_captured=title_date_captured,
         residue=residue,
     )
-    return manifest_dict(doc_id, outcomes, residue, retention)
+    return manifest_dict(doc_id, outcomes, residue, retention, profile_in, profile_out)
 
 
 def has_unexpected_absence(manifest: dict) -> bool:
