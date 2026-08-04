@@ -7,7 +7,7 @@
 | CI.2 | **Master-set retention** — a document that has been fetched is never dropped by a scope or lifecycle relabel | ✅ 2026-08-03 | `build_raw_index` carries every prior entry the fresh derivation no longer produces (`retained` key + count); the prior entry is the proof-of-fetch, so it also survives a failed `--refetch` and a wiped `state.db`; never-indexed docs still leave (R‑10 intact); end-to-end relabel test (real DECOMMISSIONED re-crawl) + 6 unit tests |
 | CI.3 | VA's lifecycle labels captured as first-class metadata on the document (`app_status`, `decommission_date`, `cots_dependent`, `out_of_scope_reason`) | ✅ 2026-08-03 | Baked into gold FM by `enrich` (`app_status` always; the rest only when VA supplies them) + staged → `documents` → `v_documents` (read contract **v1.6**, capability `lifecycle_labels`; `enrich` cv 1→2, `index` cv 15→16). Known gap: a CI.2-retained doc whose inventory record vanished keeps its last-enriched labels |
 | CI.4 | Admitted-set composition baseline — departures reported by document identifier; a deliberate change acknowledged in a curated file | ✅ 2026-08-03 | `composition_pure.py` + fetch `deep_gate`: departures by doc_id **grouped by application**; unacknowledged → red, baseline (`inventory/gold/admitted-baseline.json`) not advanced, downstream blocked; acknowledged via `registries/inventory/scope-changes.yaml` (in `inputs_fp`) → pass, still reported (`departed` count). 8 unit + 3 integration tests incl. equal-size swap |
-| CI ✓ | Shrunken crawl reds · a fetched document cannot be lost to a relabel · lifecycle visible on a document · unacknowledged scope change reds · live collection green | ☐ | |
+| CI ✓ | Shrunken crawl reds · a fetched document cannot be lost to a relabel · lifecycle visible on a document · unacknowledged scope change reds · live collection green | ✅ 2026-08-03 | **Scratch-lake red paths** (real-lake copy, live collection never touched — the P2 precedent): dead-VDL crawl red named all 5 sections, bronze byte-identical; denying `archive` red named the departed apps by doc_id, index kept all 1,040 (255 retained), baseline frozen; acknowledged → green, baseline 1,044→789. **Live run GREEN**: 16 stages 0 warn 0 error, doctor 20/20, 615 gold docs, validate 0 blocking, 57,895 chunks (unchanged); `v_documents` now shows 785 active / 255 archive (30 `cots_dependent`), contract v1.6, baseline 1,044 recorded, retained 0 |
 
 Proposal: [`vdocs-quality-crawl-integrity.md`](vdocs-quality-crawl-integrity.md) ·
 Plan: [`vdocs-quality-crawl-integrity-implementation-plan.md`](vdocs-quality-crawl-integrity-implementation-plan.md) ·
@@ -72,6 +72,18 @@ dramatic one was inferred instead of checked.
 
 **What survives:** nothing tracks the admitted set's composition over time, so a real departure
 *would* be equally silent. The gap is genuine; the dramatic proof of it was not.
+
+## Open scope questions — flagged for the operator, deliberately NOT decided here
+
+1. **Should the 102 never-acquired documents (XOBW 23 · KAAJEE 64 · LEX 15) be admitted?** They are
+   excluded by `system_type` (*Integration middleware* / *Data patch*), were never fetched, and six
+   golden questions cite them. This ruling is the input `vdocs-quality-report-card` RC.1 needs
+   before retiring or re-pointing those questions — rule on it at RC kickoff.
+2. **Should `decommissioned` applications now be admitted?** All 124 records are excluded while
+   1,079 genuine `archive` rows are partly admitted — the asymmetry nobody chose, now measured
+   (CI.0) and visible (CI.3). Retention protects what is already fetched either way; widening
+   admission is a product decision. If ruled in: flip `denied_app_status` in
+   `registries/inventory/scope-policy.yaml` and re-run from `serve-inventory`.
 
 ## Notes carried in
 

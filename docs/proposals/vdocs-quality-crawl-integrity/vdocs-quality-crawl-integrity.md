@@ -1,6 +1,6 @@
 # vdocs-quality-crawl-integrity — watch the front door, and never lose a document
 
-**Status: DRAFT · proposed 2026-08-03 · reordered to FIRST 2026-08-03** ·
+**Status: ✅ COMPLETE 2026-08-03 (CI.0–CI.4 + CI ✓; see the tracker) · proposed 2026-08-03 · reordered to FIRST 2026-08-03** ·
 Plan: [`vdocs-quality-crawl-integrity-implementation-plan.md`](vdocs-quality-crawl-integrity-implementation-plan.md) ·
 Tracker: [`vdocs-quality-crawl-integrity-tracker.md`](vdocs-quality-crawl-integrity-tracker.md) ·
 Prompts: [`prompts/`](prompts/) · Register rows: **R‑4**, **R‑19** ·
