@@ -106,3 +106,25 @@ def test_docling_post_processing_is_docx_only() -> None:
     assert recovers_docx_images("docx") is True
     assert recovers_docx_images("pdf") is False
     assert recovers_docx_images("PDF") is False
+
+
+class TestDoclingImageMode:
+    """VO.8d — figures from a PDF must reach the shared asset CAS, as DOCX figures do.
+
+    The two formats need opposite Docling settings. For DOCX we ask for `placeholder` and recover
+    the images from the source zip ourselves, because Docling parses no alt-text from DOCX XML and
+    the alt-text is worth more than the pixels. A PDF has no zip and no alt-text to recover, so
+    Docling has to export the images itself or they are lost — which is why the Kernel Developer's
+    Guide carried 539 `<!-- image -->` placeholders and no figures.
+    """
+
+    def test_docx_keeps_placeholders_so_alt_text_can_be_recovered(self) -> None:
+        from vdocs.stages.convert.convert_pure import docling_image_mode
+
+        assert docling_image_mode("docx") == "placeholder"
+
+    def test_pdf_asks_docling_to_export_the_images(self) -> None:
+        from vdocs.stages.convert.convert_pure import docling_image_mode
+
+        assert docling_image_mode("pdf") == "referenced"
+        assert docling_image_mode("PDF") == "referenced"

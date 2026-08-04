@@ -37,6 +37,22 @@ def needs_docling(ext: str, *, key: str, routing: frozenset[str]) -> bool:
     return ext.lower() in PANDOC_UNREADABLE or key in routing
 
 
+def docling_image_mode(ext: str) -> str:
+    """Docling's ``--image-export-mode`` for this source format (VO.8d).
+
+    The two formats want opposite settings. **DOCX** keeps ``placeholder``: Docling parses no
+    alt-text from DOCX XML, so we recover both the media and its alt-text from the source zip
+    (:func:`recovers_docx_images`) and inject real ``![alt](media)`` refs — the alt-text is worth
+    more than the pixels Docling would emit. A **PDF** has no zip to recover from and no alt-text to
+    recover, so unless Docling exports the images itself they are simply lost: that is why the
+    Kernel Developer's Guide converted to 539 ``<!-- image -->`` placeholders and no figures.
+
+    ``referenced`` writes the images beside the markdown and points each ref at its file, which the
+    stage then puts in the shared asset CAS and rewrites by basename — the same landing place DOCX
+    figures already reach."""
+    return "placeholder" if recovers_docx_images(ext) else "referenced"
+
+
 def recovers_docx_images(ext: str) -> bool:
     """Whether Docling's output needs the DOCX image-recovery pass.
 

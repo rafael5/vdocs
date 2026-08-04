@@ -149,6 +149,10 @@ class ConvertStage(Stage):
         return self.doc_error_gate(self._errors, self._total)
 
 
+# Image files Docling exports beside the markdown in `referenced` mode (VO.8d).
+_IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff", ".webp"})
+
+
 def _raw_index_entries(path) -> list[dict]:  # type: ignore[no-untyped-def,type-arg]
     """The fetched-CAS index entries, or empty when it is not written yet — preflight must be able
     to ask "will this run convert a PDF?" before `run` has parsed anything, and an absent index is
@@ -194,7 +198,12 @@ def _docling_convert(data: bytes, ext: str) -> ConvertedDoc:  # pragma: no cover
     import tempfile
     from pathlib import Path
 
-    from vdocs.stages.convert.convert_pure import ConvertedDoc, recovers_docx_images
+    from vdocs.stages.convert.convert_pure import (
+        ConvertedDoc,
+        ConvertedImage,
+        docling_image_mode,
+        recovers_docx_images,
+    )
     from vdocs.stages.convert.docx_images import extract_pictures, inject_placeholders
 
     exe = shutil.which("docling") or str(Path.home() / ".local" / "bin" / "docling")
@@ -208,14 +217,22 @@ def _docling_convert(data: bytes, ext: str) -> ConvertedDoc:  # pragma: no cover
         src.write_bytes(data)
         out = Path(td) / "out"
         out.mkdir()
-        cmd = [exe, "--to", "md", "--image-export-mode", "placeholder", "--output", str(out)]
+        mode = docling_image_mode(ext)
+        cmd = [exe, "--to", "md", "--image-export-mode", mode, "--output", str(out)]
         subprocess.run([*cmd, str(src)], capture_output=True, text=True, check=True)
         md_files = list(out.glob("*.md"))
         raw_markdown = md_files[0].read_text(encoding="utf-8") if md_files else ""
-    if not recovers_docx_images(ext):
-        # a PDF (VO.8): Docling's markdown stands on its own — the recovery pass below reads the
-        # source as a DOCX zip and would raise BadZipFile, losing the document entirely
-        return ConvertedDoc(markdown=raw_markdown, images=())
+        if not recovers_docx_images(ext):
+            # A PDF (VO.8): there is no source zip to recover media from — the DOCX pass below
+            # would raise BadZipFile — so Docling exported the figures itself (VO.8d) and we hand
+            # them to the stage, which CASes them and rewrites the refs by basename exactly as it
+            # does for DOCX. Read inside the temp dir: it is gone once the block exits.
+            exported = tuple(
+                ConvertedImage(ref=f.name, data=f.read_bytes(), ext=f.suffix.lstrip(".").lower())
+                for f in sorted(out.rglob("*"))
+                if f.is_file() and f.suffix.lower() in _IMAGE_SUFFIXES
+            )
+            return ConvertedDoc(markdown=raw_markdown, images=exported)
     markdown, images = inject_placeholders(raw_markdown, extract_pictures(data))
     return ConvertedDoc(markdown=markdown, images=tuple(images))
 
