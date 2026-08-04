@@ -123,6 +123,11 @@ class NormalizeStage(Stage):
                 if rev_flag:
                     doc_flags.append(rev_flag)
                 body, tables = tbl.extract_tables(body)
+                # ONE TABLE DIALECT IN GOLD (§6.5): rewrite what remains inline as GFM where GFM
+                # can say the same thing — after extraction, so this only touches tables that stay
+                # in the body. Kills the `colgroup`/`tbody`/`tr class` tag soup that was reaching
+                # FTS5 as search tokens; spans, cell-level block content and text-boxes stay HTML.
+                body = tbl.html_tables_to_gfm(body)
                 # STRIP the matched (doc_type, era) template scaffold + stamp template_id (§9.8).
                 # era is the title-page-date decade bucket (kernel.decade_bucket); doc_type is the
                 # baked identity FM. template_id is provenance → frontmatter, like source_sha256.

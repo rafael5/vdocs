@@ -166,3 +166,58 @@ def extract_tables(body: str) -> tuple[str, list[ExtractedTable]]:
         cursor = span.end
     out.append(body[cursor:])
     return "".join(out), tables
+
+
+# --- HTML → GFM canonicalisation (§6.5): one table dialect in gold -------------------------------
+# Pandoc emits complex tables as raw HTML, Docling as GFM. The big ones leave as CSV either way, but
+# the rest stayed inline in whichever dialect they arrived in — so 60% of gold documents carried
+# `<table>` markup, and **5,386 chunks (9.3% of the search index) indexed `colgroup` / `tbody` /
+# `tr class="odd"` as tokens**. Converting the faithfully-representable ones removes that noise and
+# lands both converters on one shape.
+_SPAN_ATTR_RE = re.compile(r"\b(?:colspan|rowspan)\s*=", re.IGNORECASE)
+# block content GFM has no cell-level equivalent for (the outer <table> is excluded by counting)
+_CELL_BLOCK_RE = re.compile(r"<(?:h[1-6]|ul|ol|pre)\b", re.IGNORECASE)
+
+
+def _gfm_cell(text: str) -> str:
+    """A cell's plain text, safe inside a pipe table."""
+    return text.replace("|", r"\|")
+
+
+def _to_gfm(rows: list[list[str]]) -> str:
+    """Rectangular rows → a GFM pipe table, first row as the header (GFM requires one)."""
+    width = len(rows[0])
+    lines = [
+        "| " + " | ".join(_gfm_cell(c) for c in rows[0]) + " |",
+        "|" + "|".join(["---"] * width) + "|",
+    ]
+    lines += ["| " + " | ".join(_gfm_cell(c) for c in r) + " |" for r in rows[1:]]
+    return "\n".join(lines)
+
+
+def html_tables_to_gfm(body: str) -> str:
+    """Rewrite inline Pandoc ``<table>`` blocks as GFM pipe tables where GFM can say the same thing.
+
+    Converts only a table that is **rectangular, span-free, and free of cell-level block content**,
+    and is not a 1x1 wrapper. Everything else is left as HTML on purpose: a ``colspan`` merge, a
+    heading or list inside a cell, or a nested table cannot be expressed in GFM, and flattening one
+    anyway produces something that *reads* like data while misrepresenting the source. Measured on
+    gold: 4,055 of 8,086 inline tables convert; 1,056 use spans, 2,023 hold block content, 774 are
+    Word text-boxes wrapping terminal screen captures, 134 are nested.
+
+    Idempotent — the output contains no ``<table>``, so a second pass finds nothing."""
+
+    def repl(m: re.Match[str]) -> str:
+        html = m.group(0)
+        if html.lower().count("<table") > 1 or _SPAN_ATTR_RE.search(html):
+            return html
+        if _CELL_BLOCK_RE.search(html):
+            return html
+        rows = [r for r in html_rows(html) if r]
+        if not rows or len({len(r) for r in rows}) > 1:
+            return html
+        if len(rows) == 1 and len(rows[0]) == 1:
+            return html  # a text-box, not a table
+        return _to_gfm(rows)
+
+    return TABLE_RE.sub(repl, body)
