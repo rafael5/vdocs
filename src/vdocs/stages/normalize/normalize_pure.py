@@ -27,6 +27,7 @@ for the F-toc helpers and existing callers.
 
 from __future__ import annotations
 
+import collections
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -57,6 +58,7 @@ __all__ = [
     "recover_headings",
     "infer_heading_levels",
     "level_headings_from_numbering",
+    "recover_headings_from_toc",
     "strip_artifacts",
     "subtract_phrases",
     "Boilerplate",
@@ -146,6 +148,93 @@ def infer_heading_levels(body: str) -> str:
         stack.append(level)
         lines[i] = "#" * new_level + " " + text
     return "\n".join(lines)
+
+
+_MIN_RECOVERED_TITLE = 3  # a one- or two-character "title" is noise, not a section
+# A figure/table caption from a "List of Tables"/"List of Figures" — captured like any legacy TOC
+# entry, but it names a figure, not a section. Keys on the caption *number*, so a real section
+# called "Table Maintenance" is untouched.
+_CAPTION_RE = re.compile(r"^(?:table|figure|exhibit|chart|screen)\s+\d", re.IGNORECASE)
+# A line that is structurally not a prose paragraph. `*`/`-`/`+` count as list markers only when
+# followed by whitespace — `**Installation Steps:**` is a bold pseudo-heading (a Word heading the
+# converter rendered as bold), which is exactly the kind of line worth recovering.
+_NON_PROSE_RE = re.compile(r"^(?:[|>#!<]|[-*+]\s|\d+[.)]\s)")
+
+
+def _heading_key(text: str) -> str:
+    """Heading identity for TOC correlation: emphasis, markup and trailing punctuation flattened,
+    case- and whitespace-insensitive — so ``**Installation Steps:**`` matches ``installation
+    steps``."""
+    return " ".join(re.sub(r"[*_`#]", " ", strip_tags(text)).split()).lower().strip(" .:")
+
+
+def recover_headings_from_toc(body: str, toc_titles: Sequence[str]) -> str:
+    """F-toc-recover (VO.8e): promote the paragraphs the document's own TOC declares as sections.
+
+    Docling reads headings off the page visually, so a section set in body-text style arrives as an
+    ordinary paragraph. The captured legacy TOC (VO.8b) is the author's own index of every section,
+    which makes it the evidence for putting those headings back — the PDF counterpart of
+    :func:`recover_headings`, which uses Word ``_Toc`` bookmarks for DOCX.
+
+    Measured on the 19 PDF-only documents: **+815 sections** over 5,400 detected headings, 797 of
+    them in the two Kernel binders.
+
+    Conservative by design — a candidate must match a TOC title exactly (modulo case, emphasis and
+    trailing punctuation), occur **exactly once** in the body, sit on its own line as prose, and not
+    already be a heading. A title occurring twice is ambiguous, and inventing structure in the wrong
+    place is worse than leaving a section undetected. The promoted heading takes the document's root
+    level; depth is :func:`level_headings_from_numbering`'s job, which runs next."""
+    wanted = {
+        k
+        for t in toc_titles
+        if len(k := _heading_key(t)) >= _MIN_RECOVERED_TITLE and not _CAPTION_RE.match(k)
+    }
+    if not wanted:
+        return body
+    found = list(iter_headings(body))
+    if not found:
+        return body  # no tree to promote into — `recover_headings` owns the structureless path
+    wanted -= {_heading_key(text) for _, _, text in found}
+    if not wanted:
+        return body
+    lines = body.split("\n")
+    fenced = {i for i, _l, _t in _fenced_line_indices(body)}
+    counts: dict[str, list[int]] = {}
+    for i, raw in enumerate(lines):
+        s = raw.strip()
+        if not s or i in fenced or _NON_PROSE_RE.match(s):
+            continue
+        if (k := _heading_key(s)) in wanted:
+            counts.setdefault(k, []).append(i)
+    # Promote to the document's SECTION level (the most common heading level), not its shallowest.
+    # A recovered section is a sibling of the existing sections, not of the document title — and
+    # promoting 478 of them to `#` would swamp the lone title, which is how the flat-document guard
+    # in `level_headings_from_numbering` decides a document still needs its outline rebuilt.
+    modal = collections.Counter(level for _, level, _ in found).most_common(1)[0][0]
+    root = "#" * modal
+    for k, where in counts.items():
+        # unambiguous only — two candidates means we cannot know which one is the section
+        if len(where) == 1:
+            i = where[0]
+            lines[i] = f"{root} {strip_tags(lines[i].strip()).strip('*_ ').strip()}"
+    return "\n".join(lines)
+
+
+def _fenced_line_indices(body: str) -> list[tuple[int, str, str]]:
+    """Indices of lines inside a fenced code block — recovery must never promote sample output."""
+    out: list[tuple[int, str, str]] = []
+    fence = ""
+    for i, line in enumerate(body.split("\n")):
+        s = line.strip()
+        if fence:
+            out.append((i, line, fence))
+            if s.startswith(fence):
+                fence = ""
+            continue
+        if s.startswith("```") or s.startswith("~~~"):
+            fence = s[:3]
+            out.append((i, line, fence))
+    return out
 
 
 _SECTION_NUMBER_RE = re.compile(r"^(\d+(?:\.\d+)*)\.?\s+\S")
@@ -812,6 +901,10 @@ def normalize_body(
     # page + anchor) *before* it leaves the body, then strip it (ATX-heading + plain-text forms).
     toc_entries = legacy_toc_entries(body, toc_titles)
     body = strip_legacy_toc(body, toc_titles)
+    # VO.8e, before the depth steps: the captured TOC is the author's index of every section, so
+    # the paragraphs it names are the headings the converter failed to detect. Recovering them
+    # first means a recovered *numbered* heading still gets its depth below.
+    body = recover_headings_from_toc(body, [e.title for e in toc_entries])
     # VO.8c, before the gap-filler: a flat document (every Docling-converted PDF) gets its outline
     # from its own section numbering; `infer_heading_levels` then normalises whatever gaps remain.
     body = level_headings_from_numbering(body)
