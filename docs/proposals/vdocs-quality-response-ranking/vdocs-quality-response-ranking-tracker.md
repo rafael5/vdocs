@@ -12,7 +12,7 @@ Proposal: [`vdocs-quality-response-ranking.md`](vdocs-quality-response-ranking.m
 Plan: [`vdocs-quality-response-ranking-implementation-plan.md`](vdocs-quality-response-ranking-implementation-plan.md) ·
 Prompts: [`prompts/`](prompts/)
 
-⛔ **Prerequisites: [`vdocs-quality-crawl-integrity`](../vdocs-quality-crawl-integrity/) `CI ✓` and [`vdocs-quality-report-card`](../vdocs-quality-report-card/) `RC ✓`, in that order** (revised 2026-08-03). Status: `CI ✓` ticked 2026-08-03 (`801f48c`); `RC ✓` still open, so this effort stays blocked. Scope decides what the collection contains; every measurement here is then taken with the answer key, which currently fails search for returning better answers than it names.
+⛔ **Prerequisites: [`vdocs-quality-crawl-integrity`](../vdocs-quality-crawl-integrity/) `CI ✓` and [`vdocs-quality-report-card`](../vdocs-quality-report-card/) `RC ✓`, in that order** (revised 2026-08-03). Status: `CI ✓` ticked 2026-08-03 (`801f48c`) and `RC ✓` ticked 2026-08-03 — **this effort is UNBLOCKED**; the kickoff prompt carries the post-RC baseline (nDCG@10 0.6386) and sizing table. Scope decides what the collection contains; every measurement here is then taken with the answer key, which currently fails search for returning better answers than it names.
 📏 **Measure before you act:** the first step below is a measurement, and no code, configuration, curation or gate lands until it is complete and written down.
 
 Tuning against an unrepaired key would optimise search toward measurably worse answers — that is the specific risk this ordering exists to prevent.

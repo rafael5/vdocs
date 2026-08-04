@@ -11,6 +11,20 @@ query the harness had scored 0.000.
 
 Since then every rollup carries `index_db`, `documents`, `chunks` and `corpus_content_hash`.
 
+## The current baseline is `rc-final-baseline.*` (2026-08-03, post-report-card key)
+
+The report-card effort (RC.1–RC.3) repaired the ANSWER KEY, not search: six scope-rotted queries
+retired and replaced, 34 labels added / 2 downgraded by reading, and the harness now **exits
+non-zero** when any labelled query is unscoreable. The number to measure ranking work against is
+**nDCG@10 0.6386 · MRR 0.7535 · recall@10 0.7134** (24 labelled, 109 labels,
+`corpus_content_hash 726d22a4…`, 57,895 chunks). Anything quoting **0.5305 / 18 answerable**
+is the pre-RC key — same engine, different ruler; do not compare across the key change. The
+intermediate steps are `rc1-key-repair.*` (retire+replace only) and `rc2-key-rejudged.*`
+(full re-judge; identical numbers to rc-final, kept as the per-step record).
+⚠️ The post-CI lake's `corpus_content_hash` is `726d22a4…`, not the `6dbec1f5…` in pre-RC
+reports — a metadata-only change (CI.3 lifecycle labels); verified 0 per-query drift on the
+unchanged queries, `documents`/`chunks` identical.
+
 **So:**
 
 - **Compare `index_db` + `documents` + `chunks`, not `corpus_content_hash` alone.**

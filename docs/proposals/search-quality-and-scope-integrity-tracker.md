@@ -6,10 +6,10 @@ page is the rollup. Step rows below are retained as the record of how the progra
 | # | effort | tracker | status |
 |---|---|---|---|
 | **1** | **Crawl integrity** (scope + master set) | [`crawl-integrity`](vdocs-quality-crawl-integrity/vdocs-quality-crawl-integrity-tracker.md) | ✅ **`CI ✓` complete 2026-08-03** (`d23f961`..`801f48c`) |
-| **2** | **Report card** | [`report-card`](vdocs-quality-report-card/vdocs-quality-report-card-tracker.md) | ⭐ **NEXT — unblocked** · blocks 3–5 |
-| 3 | Response ranking | [`response-ranking`](vdocs-quality-response-ranking/vdocs-quality-response-ranking-tracker.md) | ☐ blocked on 1, 2 |
-| 4 | Synonym layer | [`synonym-layer`](vdocs-quality-synonym-layer/vdocs-quality-synonym-layer-tracker.md) | ☐ blocked on 1, 2 · decision, not a build |
-| 5 | Pattern miner | [`pattern-miner`](vdocs-quality-pattern-miner/vdocs-quality-pattern-miner-tracker.md) | ☐ blocked on 1, 2 · decision, not a build |
+| **2** | **Report card** | [`report-card`](vdocs-quality-report-card/vdocs-quality-report-card-tracker.md) | ✅ **`RC ✓` complete 2026-08-03** (`c0a3931`..; baseline → nDCG@10 **0.6386**, 24 labelled, unscoreable gate live) |
+| **3** | **Response ranking** | [`response-ranking`](vdocs-quality-response-ranking/vdocs-quality-response-ranking-tracker.md) | ⭐ **NEXT — unblocked** (kickoff carries the post-RC sizing table) |
+| 4 | Synonym layer | [`synonym-layer`](vdocs-quality-synonym-layer/vdocs-quality-synonym-layer-tracker.md) | ☐ prerequisites met · sequenced after 3 · decision, not a build |
+| 5 | Pattern miner | [`pattern-miner`](vdocs-quality-pattern-miner/vdocs-quality-pattern-miner-tracker.md) | ☐ prerequisites met · sequenced after 3 · decision, not a build |
 | 6 | VDL observatory | [`vdl-observatory`](vdocs-quality-vdl-observatory/vdocs-quality-vdl-observatory-tracker.md) | ☐ after 1 · **VO.2 is time-sensitive** |
 
 **Reordered 2026-08-03.** Crawl integrity moved ahead of the report card: scope decides what the

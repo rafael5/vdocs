@@ -6,7 +6,15 @@
 
 > ## ⛔ Check this first
 >
-> **`vdocs-quality-crawl-integrity` `CI ✓` and `vdocs-quality-report-card` `RC ✓` must both be ticked before this effort starts** (ordering revised 2026-08-03: crawl integrity first, then the report card). If either is not, stop and run the earliest unfinished one instead.
+> **`vdocs-quality-crawl-integrity` `CI ✓` and `vdocs-quality-report-card` `RC ✓` are BOTH ticked (2026-08-03)** — this effort is unblocked. Later efforts wait on this tracker's `RR ✓`.
+>
+> **The baseline you compare against is `reports/rc-final-baseline.*`** (2026-08-03, post-RC key: 24 labelled queries, 109 labels, 0 unscoreable): **nDCG@10 0.6386 · MRR 0.7535 · recall@10 0.7134**, `corpus_content_hash 726d22a4…`, 57,895 chunks. Numbers quoting 0.5305/18-answerable predate the RC key repair and are not comparable. The harness now **exits non-zero** if any labelled query goes unscoreable — a red gate here means the key rotted again, not that you broke search.
+>
+> **Search-owned failures RC.2 hands you (the work list, read `reports/rc2-key-rejudged.*`):**
+> - `fileman-add-field` — the one remaining 0.000: ScreenMan-tutorial lexical trap outranks the real DG answers, which sit below rank 10.
+> - `vbecs-accept-order` — 0.05: the measured container/leaf twin defect (RR.3's case).
+> - `vista-signon-credentials` — 0.17: vocabulary gap ("credentials" vs Access/Verify-code prose).
+> - Zero key-owned failures remain; every other query scores ≥ 0.43.
 >
 > **Measure before you act.** The first step below is a measurement. No code, configuration, curation or gate lands until it is complete and written down.
 
@@ -16,22 +24,24 @@ and plan in [`..`](..), then tick the tracker per landed step. **Shared-lake rul
 
 ## The one measurement that sizes this work
 
-51 correct answers across the 18 answerable questions, by the position search returns them at:
+Recomputed 2026-08-03 on the post-RC key (109 judged answers across 24 questions; the pre-RC
+version of this table — 51 answers / 18 questions / 51.0% visible — is superseded):
 
 | position | count | share |
 |---|---:|---:|
-| **1–10** (visible) | 26 | **51.0%** |
-| 11–25 | 9 | 17.6% |
-| 26–100 | 3 | 5.9% |
-| 101–500 | 6 | 11.8% |
-| >500 / not returned | 7 | 13.7% |
+| **1–10** (visible) | 76 | **69.7%** |
+| 11–25 | 11 | 10.1% |
+| 26–100 | 7 | 6.4% |
+| 101–500 | 7 | 6.4% |
+| >500 / not returned | 8 | 7.3% |
 
-Share visible at list length 10 / 25 / 100: **51.0% / 68.6% / 74.5%** — the curve flattens after 25.
-**23.5% of correct answers are already retrieved and shown to nobody.** That band is this effort;
-the 25.5% that is never retrieved is not.
+Share visible at list length 10 / 25 / 100: **69.7% / 79.8% / 86.2%** — the curve still flattens
+after 25. **16.5% of correct answers are already retrieved and shown to nobody** (ranks 11–100).
+That band is this effort; the 13.7% at >100/absent is not. The near band is smaller than the
+pre-RC table claimed because RC.2 credited answers search was already surfacing — what remains
+is the honest residue.
 
-Defaults today: `mcp.DEFAULT_K = 8`, `ask --k 8`. Two failing questions have their answer at rank
-**13** and **14**.
+Defaults today: `mcp.DEFAULT_K = 8`, `ask --k 8`.
 
 ## The measurement discipline — this project has been burned three times
 

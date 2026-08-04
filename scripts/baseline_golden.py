@@ -236,6 +236,17 @@ def evaluate(
     return {"rollup": rollup, "queries": per_query}
 
 
+def gate_exit_code(rollup: dict[str, Any]) -> int:
+    """RC.3 (R‑19's real fix): unscoreable labelled queries are a FAILURE, not a footnote.
+
+    A labelled question whose every judged section is outside the collection measures label rot,
+    not the engine — six of them silently depressed every published number by ~13 points before
+    2026-08-02, and detection alone let them sit in the key for another day. Non-zero when any
+    are present; the caller still writes the full report first, because a red gate that reports
+    honest means beats one that refuses to produce a number."""
+    return 1 if rollup.get("unscoreable_queries") else 0
+
+
 def _render_md(result: dict[str, Any], data_dir: Path) -> str:
     r = result["rollup"]
     lines = [
@@ -298,6 +309,17 @@ def main() -> None:
 
     print(json.dumps(result["rollup"], indent=2))
     print(f"\nwrote {out_md} and {out_json}")
+
+    code = gate_exit_code(result["rollup"])
+    if code:
+        n = result["rollup"]["unscoreable_queries"]
+        print(
+            f"\nGOLDEN KEY: RED — {n} labelled quer{'y is' if n == 1 else 'ies are'} unscoreable "
+            "(every judged section is outside this collection). The key is measuring label rot, "
+            "not the engine: re-point or retire them in registries/golden-queries.yaml "
+            "(see the retired: block there for the recorded precedent)."
+        )
+        raise SystemExit(code)
 
 
 if __name__ == "__main__":
