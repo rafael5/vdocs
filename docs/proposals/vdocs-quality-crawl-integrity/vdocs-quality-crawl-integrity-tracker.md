@@ -73,17 +73,17 @@ dramatic one was inferred instead of checked.
 **What survives:** nothing tracks the admitted set's composition over time, so a real departure
 *would* be equally silent. The gap is genuine; the dramatic proof of it was not.
 
-## Open scope questions — flagged for the operator, deliberately NOT decided here
+## Open scope questions — RULED by the operator, 2026-08-03
 
-1. **Should the 102 never-acquired documents (XOBW 23 · KAAJEE 64 · LEX 15) be admitted?** They are
-   excluded by `system_type` (*Integration middleware* / *Data patch*), were never fetched, and six
-   golden questions cite them. This ruling is the input `vdocs-quality-report-card` RC.1 needs
-   before retiring or re-pointing those questions — rule on it at RC kickoff.
-2. **Should `decommissioned` applications now be admitted?** All 124 records are excluded while
-   1,079 genuine `archive` rows are partly admitted — the asymmetry nobody chose, now measured
-   (CI.0) and visible (CI.3). Retention protects what is already fetched either way; widening
-   admission is a product decision. If ruled in: flip `denied_app_status` in
-   `registries/inventory/scope-policy.yaml` and re-run from `serve-inventory`.
+1. **Should the 102 never-acquired documents (XOBW 23 · KAAJEE 64 · LEX 15) be admitted?**
+   **Ruling: KEEP EXCLUDED.** The six golden questions citing them are to be **replaced with six
+   different questions**, each gated on documents that actually exist in the fetched corpus —
+   retire the six with a recorded reason, do not re-point at excluded material. This is RC.1's
+   marching order.
+2. **Should `decommissioned` applications now be admitted?** **Ruling: KEEP EXCLUDED.** The
+   asymmetry (all 124 `decommissioned` excluded, 1,079 genuine `archive` rows partly admitted)
+   stays as measured (CI.0) and visible (CI.3); retention protects what is already fetched.
+   `scope-policy.yaml` is unchanged.
 
 ## Notes carried in
 

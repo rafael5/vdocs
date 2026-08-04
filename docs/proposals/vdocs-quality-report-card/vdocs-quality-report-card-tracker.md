@@ -2,7 +2,7 @@
 
 | Step | What lands | Status | Commit / notes |
 |------|-----------|--------|----------------|
-| RC.1 | The six impossible questions resolved — re-pointed at in-scope passages or retired with a recorded reason | ☐ | |
+| RC.1 | The six impossible questions resolved — **operator ruled 2026-08-03: retire all six with recorded reasons (XOBW/KAAJEE/LEX stay excluded) and author six replacement questions, each gated on documents that exist in the fetched corpus** | ☐ | |
 | RC.2 | Answer key re-judged against the current collection; grades added for good answers currently scored zero | ☐ | |
 | RC.3 | An unanswerable question **fails** the harness instead of scoring zero | ☐ | |
 | RC ✓ | `unscoreable_queries == 0`; every remaining zero attributed to search or to the key, in writing | ☐ | |

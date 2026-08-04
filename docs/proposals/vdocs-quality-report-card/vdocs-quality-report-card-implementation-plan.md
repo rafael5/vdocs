@@ -4,12 +4,17 @@ Proposal: [`vdocs-quality-report-card.md`](vdocs-quality-report-card.md) ·
 Tracker: [`vdocs-quality-report-card-tracker.md`](vdocs-quality-report-card-tracker.md) ·
 Prompts: [`prompts/`](prompts/)
 
-🥈 **This effort runs second, after [`vdocs-quality-crawl-integrity`](../vdocs-quality-crawl-integrity/) (`CI ✓`)** — ordering revised 2026-08-03: RC.1's retire/re-point decision depends on the scope ruling. Every later effort is blocked on this tracker's `RC ✓` row.
+🥈 **This effort runs second, after [`vdocs-quality-crawl-integrity`](../vdocs-quality-crawl-integrity/) (`CI ✓` — ticked 2026-08-03, `801f48c`)** — ordering revised 2026-08-03: RC.1's retire/re-point decision depended on the scope ruling, which the operator has now made (retire; XOBW/KAAJEE/LEX stay excluded). Every later effort is blocked on this tracker's `RC ✓` row.
 📏 **Measure before you act:** RC.1 opens by *confirming* the exclusions are real rather than assuming them.
 
 Three steps, commit subjects `RC.1:` / `RC.2:` / `RC.3:`. House rules apply: `make check` green before commit, tick the tracker in the same commit, and every claim of improvement measured on the production collection with a provenance-stamped report.
 
-## RC.1 — Resolve the six unanswerable questions
+## RC.1 — Retire the six unanswerable questions, and author six replacements
+
+> **Operator ruling, 2026-08-03 (the scope input this step waited on):** XOBW, KAAJEE and LEX
+> **stay excluded** — the 102 never-acquired documents are not admitted. Therefore all six
+> questions **retire**; none is re-pointed at excluded material. Six **different** questions are
+> authored to replace them, each gated on documents that actually exist in the fetched corpus.
 
 For each of `kids-delphi-components-install`, `hwsc-rest-from-vista-m`, `hwsc-install-privileges`,
 `kaajee-install-procedure`, `lexicon-lookup`, `hwsc-web-service-manager`:
@@ -17,17 +22,22 @@ For each of `kids-delphi-components-install`, `hwsc-rest-from-vista-m`, `hwsc-in
 1. Confirm the exclusion is real and deliberate — the application is in the gold inventory but not
    admitted (`system_type` is *Integration middleware* or *Data patch*, not *VistA*). Do not assume;
    re-check, because "the document is missing" and "the document is out of scope" look identical
-   from the answer key's side and mean opposite things.
-2. **Re-point** if the same information need is answerable from an in-scope manual — search the
-   collection for it and grade what you find by reading. **Retire** if it is not, moving the question
-   to a `retired:` block in the same file with a one-line reason naming the application and why it is
-   out of scope.
-3. Neither delete the question nor leave it labelled. A silently deleted question loses the evidence
-   that scope changed.
+   from the answer key's side and mean opposite things. This confirmation still runs: the ruling
+   decides what to *do* about an exclusion, not whether the exclusion is what we think it is.
+2. **Retire** each one into a `retired:` block in the same file with a one-line reason naming the
+   application and why it is out of scope. Neither delete the question nor leave it labelled — a
+   silently deleted question loses the evidence that scope changed.
+3. **Author six replacement questions** so the key keeps its size and topical spread. Each must be
+   **existence-gated before it is written down**: every marked answer resolves to a section that is
+   present, `ok`, latest and searchable in the production collection — check, do not assume, and
+   record the check. Prefer replacements covering the same information needs (installation
+   procedure, privileges, client/server call, lookup) from admitted VistA manuals, so the key's
+   shape is preserved rather than drifting toward whatever is easy to answer.
+4. Grade every replacement by **reading the passage**, never the title — the key already carries one
+   title-assigned label that was wrong when read.
 
-**Measure of done:** the harness reports `unscoreable_queries == 0`.
-**Operator decision required:** retiring narrows what the key claims to cover. Surface the
-retire/re-point split for sign-off rather than deciding it silently.
+**Measure of done:** the harness reports `unscoreable_queries == 0`, the key holds 24 labelled
+questions again, and no marked answer in it points outside the fetched corpus.
 
 ## RC.2 — Re-judge the key against the current collection
 
@@ -67,5 +77,7 @@ against an unrepaired key would optimise toward measurably worse answers.
 
 ## Out of scope
 
-Expanding the key, re-judging below rank ten, and any change to search behaviour. All three would
-either contaminate the baseline or invite optimising for positions no user reads.
+Growing the key beyond its current size, re-judging below rank ten, and any change to search
+behaviour. All three would either contaminate the baseline or invite optimising for positions no
+user reads. RC.1's six replacements are a **one-for-one swap**, not growth: the key ends the effort
+with the same 24 labelled questions it started with.

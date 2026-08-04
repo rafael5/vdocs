@@ -12,7 +12,7 @@ Proposal: [`vdocs-quality-synonym-layer.md`](vdocs-quality-synonym-layer.md) ·
 Plan: [`vdocs-quality-synonym-layer-implementation-plan.md`](vdocs-quality-synonym-layer-implementation-plan.md) ·
 Prompts: [`prompts/`](prompts/)
 
-⛔ **Prerequisites: [`vdocs-quality-crawl-integrity`](../vdocs-quality-crawl-integrity/) `CI ✓` and [`vdocs-quality-report-card`](../vdocs-quality-report-card/) `RC ✓`, in that order** (revised 2026-08-03). Scope decides what the collection contains; every measurement here is then taken with the answer key, which currently fails search for returning better answers than it names.
+⛔ **Prerequisites: [`vdocs-quality-crawl-integrity`](../vdocs-quality-crawl-integrity/) `CI ✓` and [`vdocs-quality-report-card`](../vdocs-quality-report-card/) `RC ✓`, in that order** (revised 2026-08-03). Status: `CI ✓` ticked 2026-08-03 (`801f48c`); `RC ✓` still open, so this effort stays blocked. Scope decides what the collection contains; every measurement here is then taken with the answer key, which currently fails search for returning better answers than it names.
 📏 **Measure before you act:** the first step below is a measurement, and no code, configuration, curation or gate lands until it is complete and written down.
 
 **This effort is a decision, not a build.** SL.1 (measurement) and SL.2 (the ruling) are mandatory; exactly one of SL.3a/SL.3b follows.

@@ -8,11 +8,14 @@ Prompts: [`prompts/`](prompts/) · Register row: **R‑19**
 > ## ⛔ Two standing rules
 >
 > **1. [`vdocs-quality-crawl-integrity`](../vdocs-quality-crawl-integrity/) runs before this effort**
-> (reordered 2026-08-03). Scope decides what the collection contains, and this effort's central
-> action — retiring or re-pointing six questions — **depends on that ruling**: if the scope policy
-> changes what is admitted, questions retired here would have to be resurrected. Fix the boundary,
-> then fix the instrument that measures inside it. This effort still blocks all three retrieval and
-> decision efforts that follow it.
+> (reordered 2026-08-03) — **ticked `CI ✓` 2026-08-03 (`801f48c`), so this effort is unblocked.**
+> Scope decides what the collection contains, and this effort's central action — retiring or
+> re-pointing six questions — **depended on that ruling**: if the scope policy changed what is
+> admitted, questions retired here would have to be resurrected. **The operator has now ruled
+> (2026-08-03): XOBW/KAAJEE/LEX stay excluded and `decommissioned` applications stay excluded — so
+> all six retire, and six replacement questions are authored against documents that exist in the
+> fetched corpus.** Fix the boundary, then fix the instrument that measures inside it. This effort
+> still blocks all three retrieval and decision efforts that follow it.
 >
 > **2. Measure before you act — including here.** RC.1 begins by *confirming* that the six
 > unanswerable questions really are out of scope rather than lost. Those look identical from the
@@ -89,9 +92,13 @@ The six impossible questions: `kids-delphi-components-install`, `hwsc-rest-from-
 
 ## 4. Proposal
 
-**4.1 Resolve the six impossible questions.** For each, either re-point it at in-scope passages that
-answer the same information need, or retire it with the reason recorded. Retiring is not deleting —
-a retired question is evidence about what the collection deliberately does not cover.
+**4.1 Retire the six impossible questions and replace them.** Per the operator's 2026-08-03 scope
+ruling, the three applications stay excluded, so all six retire with the reason recorded — retiring
+is not deleting; a retired question is evidence about what the collection deliberately does not
+cover. Six **replacement** questions are then authored, each **existence-gated before it is written
+down**: every marked answer must resolve to a section present, `ok`, latest and searchable in the
+production collection. The key ends the same size it started (24 labelled), covering the same kinds
+of information need from admitted VistA manuals.
 
 **4.2 Re-judge the answer key against the current collection.** Read the top ten results for every
 remaining question and add grades for genuinely good answers the key currently scores zero. Judge by

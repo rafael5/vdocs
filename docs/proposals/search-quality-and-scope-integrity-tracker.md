@@ -5,8 +5,8 @@ page is the rollup. Step rows below are retained as the record of how the progra
 
 | # | effort | tracker | status |
 |---|---|---|---|
-| **1** | **Crawl integrity** (scope + master set) | [`crawl-integrity`](vdocs-quality-crawl-integrity/vdocs-quality-crawl-integrity-tracker.md) | ☐ **not started — blocks ALL others** |
-| 2 | Report card | [`report-card`](vdocs-quality-report-card/vdocs-quality-report-card-tracker.md) | ☐ blocked on 1 · blocks 3–5 |
+| **1** | **Crawl integrity** (scope + master set) | [`crawl-integrity`](vdocs-quality-crawl-integrity/vdocs-quality-crawl-integrity-tracker.md) | ✅ **`CI ✓` complete 2026-08-03** (`d23f961`..`801f48c`) |
+| **2** | **Report card** | [`report-card`](vdocs-quality-report-card/vdocs-quality-report-card-tracker.md) | ⭐ **NEXT — unblocked** · blocks 3–5 |
 | 3 | Response ranking | [`response-ranking`](vdocs-quality-response-ranking/vdocs-quality-response-ranking-tracker.md) | ☐ blocked on 1, 2 |
 | 4 | Synonym layer | [`synonym-layer`](vdocs-quality-synonym-layer/vdocs-quality-synonym-layer-tracker.md) | ☐ blocked on 1, 2 · decision, not a build |
 | 5 | Pattern miner | [`pattern-miner`](vdocs-quality-pattern-miner/vdocs-quality-pattern-miner-tracker.md) | ☐ blocked on 1, 2 · decision, not a build |
@@ -15,6 +15,16 @@ page is the rollup. Step rows below are retained as the record of how the progra
 **Reordered 2026-08-03.** Crawl integrity moved ahead of the report card: scope decides what the
 collection contains, and the report card's central action (retiring or re-pointing six questions)
 depends on the scope ruling — questions retired first could need resurrecting.
+
+**Scope rulings (operator, 2026-08-03)** — the two questions crawl-integrity surfaced without
+deciding, now closed. Both: **keep excluded.**
+
+1. The 102 never-acquired documents (XOBW 23 · KAAJEE 64 · LEX 15) stay out of scope. The six
+   golden questions citing them therefore **retire**, and **six different questions replace them**,
+   each gated on documents that exist in the fetched corpus. This is RC.1.
+2. `decommissioned` applications (124 records) stay out of scope; `scope-policy.yaml` unchanged.
+   The measured archive/decommissioned asymmetry stands as recorded, not as a defect to fix here —
+   what VA means by `archive` is `vdl-observatory` VO.5.
 
 ---
 

@@ -8,9 +8,13 @@
 
 > ## ⛔ Check this first
 >
-> **`vdocs-quality-crawl-integrity` must be ticked `CI ✓` before this effort starts** (ordering revised 2026-08-03: RC.1's retire/re-point decision depends on the scope ruling). If it is not, stop and run that effort instead. Every *later* effort remains blocked on this tracker's `RC ✓` row.
+> **`vdocs-quality-crawl-integrity` is ticked `CI ✓`** (2026-08-03, `801f48c`) — this effort is unblocked. Every *later* effort remains blocked on this tracker's `RC ✓` row.
 >
-> **Measure before you act:** RC.1 opens by *confirming* the six questions are out of scope rather than lost — those look identical from the key's side and mean opposite things.
+> **The scope ruling RC.1 was waiting on has been made (operator, 2026-08-03).** Both crawl-integrity scope questions were ruled **keep excluded**: the 102 never-acquired documents (XOBW 23 · KAAJEE 64 · LEX 15) are *not* admitted, and `decommissioned` applications are *not* admitted. Consequences for RC.1, which are not yours to revisit:
+> - All six unanswerable questions **retire**. Do not re-point any of them at XOBW/KAAJEE/LEX material.
+> - **Author six different replacement questions**, each gated on documents that actually exist in the fetched corpus.
+>
+> **Measure before you act:** RC.1 still opens by *confirming* the six questions are out of scope rather than lost — those look identical from the key's side and mean opposite things. The ruling decides what to do about an exclusion, not whether the exclusion is what we believe it is.
 
 **Repo: `vdocs`** (`~/projects/vdocs`) — an offline analytical workload. Read `CLAUDE.md`, then the
 proposal and plan in [`..`](..), then register row **R‑19** in
@@ -60,8 +64,12 @@ check the rollup's `corpus_content_hash` and `chunks` match before comparing any
 - **Leave the deliberate decoys alone.** Several questions have near-miss lexical traps unlabelled on
   purpose (identically-titled sections belonging to other packages). They are discriminators, not
   omissions.
-- **Retiring a question is a scope decision.** Surface the retire-vs-re-point split for the operator
-  rather than settling it yourself.
+- **Retiring a question is a scope decision** — already made here (see the banner). What still needs
+  care is the *replacements*: authoring a question whose answer turns out not to exist would recreate
+  the exact defect this effort removes. Existence-gate each one against the production collection and
+  record the check.
+- **Do not grow the key.** Six out, six in — it ends at 24 labelled questions, so the published score
+  stays comparable.
 
 ## Close-out
 
