@@ -56,6 +56,7 @@ __all__ = [
     "parse_headings",
     "recover_headings",
     "infer_heading_levels",
+    "level_headings_from_numbering",
     "strip_artifacts",
     "subtract_phrases",
     "Boilerplate",
@@ -145,6 +146,62 @@ def infer_heading_levels(body: str) -> str:
         stack.append(level)
         lines[i] = "#" * new_level + " " + text
     return "\n".join(lines)
+
+
+_SECTION_NUMBER_RE = re.compile(r"^(\d+(?:\.\d+)*)\.?\s+\S")
+_MAX_HEADING_LEVEL = 6  # markdown's deepest; beyond it a heading stops being one
+
+
+def level_headings_from_numbering(body: str) -> str:
+    """F-depth (VO.8c): give a **flat** document its outline back from its own section numbering.
+
+    Docling detects headings in a PDF but assigns them all one level — every heading in the Kernel
+    Developer's Guide comes out `##`. :func:`infer_heading_levels` cannot help: it removes gaps in
+    an existing hierarchy, so flat stays flat, and the regenerated ``## Contents`` becomes hundreds
+    of siblings with a degenerate ``section_path``.
+
+    The documents state their own structure: ``2.6.10.1.1 Example 1`` is five levels deep. Depth is
+    the count of numbering components, offset from the document's root level; an unnumbered heading
+    stays at the root (``Revision History`` is a section, not an orphan), and depth is capped at
+    markdown's six levels.
+
+    **Applies only to a document with no hierarchy at all** (one distinct heading level, ignoring a
+    lone document title). Re-deriving levels for a document that already has a tree would rewrite
+    the structure of every DOCX-derived document in the corpus from a heuristic — far worse than the
+    flat case this fixes; measured, it touches 2 of the 615 existing gold documents, both of which
+    have genuinely numbered sections sitting flat. Fence-aware and idempotent: re-running on the
+    levelled output sees a tree and declines."""
+    found = list(iter_headings(body))  # fence- + generated-Contents-aware
+    body_headings = _below_document_title(found)
+    if len({level for _, level, _ in body_headings}) != 1:
+        return body  # no headings, or a real tree already — leave it alone
+    depths = [_SECTION_NUMBER_RE.match(text) for _, _, text in body_headings]
+    if not any(depths):
+        return body  # nothing to derive structure from
+    base = body_headings[0][1]
+    lines = body.split("\n")
+    for (i, _level, text), m in zip(body_headings, depths, strict=True):
+        depth = len(m.group(1).split(".")) - 1 if m else 0
+        lines[i] = "#" * min(base + depth, _MAX_HEADING_LEVEL) + " " + text
+    return "\n".join(lines)
+
+
+def _below_document_title(
+    found: list[tuple[int, int, str]],
+) -> list[tuple[int, int, str]]:
+    """``found`` minus a shallowest level that is just the document title.
+
+    A Docling-converted PDF typically emits one ``#`` title above a wall of identical ``##``
+    sections; counting the title as a second tier would make the document look structured and
+    decline the rescue. The same "a lone shallowest heading is a title, several are sections" rule
+    :func:`effective_toc_depth` already applies (§6.7) — kept at ≤2 here because a PDF cover page
+    often yields a title plus a subtitle."""
+    if not found:
+        return found
+    levels = sorted({level for _, level, _ in found})
+    if len(levels) > 1 and sum(1 for _, level, _ in found if level == levels[0]) <= 2:
+        return [h for h in found if h[1] != levels[0]]
+    return found
 
 
 def strip_artifacts(body: str) -> str:
@@ -755,6 +812,9 @@ def normalize_body(
     # page + anchor) *before* it leaves the body, then strip it (ATX-heading + plain-text forms).
     toc_entries = legacy_toc_entries(body, toc_titles)
     body = strip_legacy_toc(body, toc_titles)
+    # VO.8c, before the gap-filler: a flat document (every Docling-converted PDF) gets its outline
+    # from its own section numbering; `infer_heading_levels` then normalises whatever gaps remain.
+    body = level_headings_from_numbering(body)
     body = infer_heading_levels(body)
     headings = parse_headings(body, doc_id)
     # Resolve the TOC depth: an explicit non-default override (the template seam) wins; otherwise
