@@ -11,7 +11,9 @@ Tick the tracker per landed step. **Shared-lake rule:** `pgrep -af "vdocs run"` 
 
 > ## ⛔ Check this first
 >
-> **`vdocs-quality-crawl-integrity` `CI ✓` and `vdocs-quality-report-card` `RC ✓` must both be ticked before this effort starts** (ordering revised 2026-08-03: crawl integrity first, then the report card). If either is not, stop and run the earliest unfinished one instead.
+> **`CI ✓`, `RC ✓` and `RR ✓` are all ticked (2026-08-03)** — prerequisites met. Programme order runs `vdocs-quality-synonym-layer` before this one (both are rulings, not builds; SL is the one with a live failing case waiting on it).
+>
+> **The ruler, if you measure retrieval at all:** `reports/rr3-after-twin-demotion.*` — nDCG@10 **0.6447** · recall@10 **0.7238**, `corpus_content_hash 726d22a4…`, 57,895 chunks, 24 labelled / 0 unscoreable. Figures quoting 0.5305 / 18 answerable predate the report card and are a different ruler.
 >
 > **Measure before you act.** The first step below is a measurement. No code, configuration, curation or gate lands until it is complete and written down.
 

@@ -11,7 +11,11 @@ per landed step. **Shared-lake rule:** `pgrep -af "vdocs run"` before touching `
 
 > ## ⛔ Check this first
 >
-> **`vdocs-quality-crawl-integrity` `CI ✓` and `vdocs-quality-report-card` `RC ✓` must both be ticked before this effort starts** (ordering revised 2026-08-03: crawl integrity first, then the report card). If either is not, stop and run the earliest unfinished one instead.
+> **`CI ✓`, `RC ✓` and `RR ✓` are all ticked (2026-08-03)** — this effort is unblocked and is next in the programme order.
+>
+> **The ruler, if you measure retrieval at all:** `reports/rr3-after-twin-demotion.*` — nDCG@10 **0.6447** · MRR 0.7535 · recall@10 **0.7238**, `corpus_content_hash 726d22a4…`, 57,895 chunks, 24 labelled questions, 0 unscoreable. Anything quoting 0.5305/0.588/18-answerable predates the report card and is a different ruler, not a worse score. The harness **exits non-zero** if a labelled question becomes unscoreable.
+>
+> **A second live vocabulary-failure case, handed over by RC.2/RR:** `vista-signon-credentials` scores **0.175** — the passages exist, are indexed and are latest, but the question says "credentials" where Kernel's prose says *Access and Verify codes* / *2FA*. That is this effort's thesis failing in the open, and it is a fairer test than the file-200 point because nobody built the key around it. Fold it into SL.1's second measurement rather than treating file 200 as the only evidence.
 >
 > **Measure before you act.** The first step below is a measurement. No code, configuration, curation or gate lands until it is complete and written down.
 
