@@ -120,6 +120,12 @@ class Stage(ABC):
     # wiped ``state.db`` does not force re-running the producer (F4 — e.g. ``catalog`` off a
     # surviving ``catalog.raw.json``). Drift is still checked when a record *does* exist.
     requires_upstream_record: bool = True
+    # When True the stage is **off the default path**: range selections (a full build, `--from`/
+    # `--to`) skip it, and only an explicit `--only <name>` runs it. It stays a registered DAG node
+    # so the topological order is unchanged and `--only` can still find it. For stages whose output
+    # nothing `requires` and whose value is occasional — `discover` mines pattern *proposals* for a
+    # human curator (PM.3b), so paying for them on every rebuild is generate-and-discard.
+    on_demand: bool = False
 
     # --- the work (the only thing a concrete stage must implement) ---
     @abstractmethod

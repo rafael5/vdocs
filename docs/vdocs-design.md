@@ -1152,7 +1152,7 @@ plane), **DOC** = the document medallion (data plane) (§4). The inventory track
 | 🥇 INV | **serve-inventory** | `catalog.enriched` | `inventory/gold` — the **GOLD INVENTORY** (curated · browsable + machine-queryable selection surface; a pure function of `catalog.enriched`). **Postflight HARD GATE** — complete vs. the crawl, enriched, noise-classified, no information loss + sane distributions (crawl-spec §7); `ok` only if green. **This `ok` is the fetch gate.** | SKIP_IF_UNCHANGED |
 | 🥉 DOC | **fetch** | **gold inventory `ok` (the gate, green)** + an explicit **selection** (the selection surface, §5.6); reads `state.db:acquisitions` (prior status — *out-of-contract* mutable state, §5.5) + the prior `raw/index.json` (the CI.2 master set) + `registries/inventory/scope-changes.yaml` (CI.4 acknowledgements, in `inputs_fp`) | `documents/bronze:raw` (CAS docx), `raw/index.json` (derived CAS manifest, doc_id-keyed — **master-set retention, CI.2:** a prior entry the fresh derivation no longer produces is carried forward verbatim and listed under `retained`; once fetched, a scope/lifecycle relabel is metadata, never a removal), `inventory/gold/admitted-baseline.json` (the recorded admitted set); writes `state.db:acquisitions` (per-doc fetch status — the system of record, §5.5). **Composition gate (CI.4, R‑19), `deep_gate`:** admitted-set departures vs the baseline, by doc_id grouped by application — unacknowledged ⇒ red, baseline frozen, downstream blocked; acknowledged ⇒ pass, still reported (`departed`) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **convert** | `raw`, `raw/index.json` | `text@converted`, `assets` (CAS) | SKIP_IF_UNCHANGED |
-| 🥈 DOC | **discover** | `text@converted` (corpus-global) + `catalog.enriched` (for `doc_code` only — the authoritative doc_type for `(doc_type, era)` template induction; classification stays a `catalog` decision, not re-derived) | `reports/patterns` (candidate boilerplate / `(doc_type, era)` templates [`doc_type`←catalog `doc_code`, `era`←title-page publication date bucketed by decade] / dead phrases / glossary terms / structural patterns + evidence + proposed disposition) → proposes `registries/` updates (§9.6) | SKIP_IF_UNCHANGED |
+| 🥈 DOC | **discover** | `text@converted` (corpus-global) + `catalog.enriched` (for `doc_code` only — the authoritative doc_type for `(doc_type, era)` template induction; classification stays a `catalog` decision, not re-derived) | `reports/patterns` (candidate boilerplate / `(doc_type, era)` templates [`doc_type`←catalog `doc_code`, `era`←title-page publication date bucketed by decade] / dead phrases / glossary terms / structural patterns + evidence + proposed disposition) → proposes `registries/` updates (§9.6) | SKIP_IF_UNCHANGED, **ON DEMAND** (`Stage.on_demand`; PM.3b 2026-08-04 — off every range selection, so a full build never selects it; `vdocs discover` runs it. Nothing `requires` `reports/patterns`, and the PM.1 sample measured the approvable furniture at ~0.07% of the corpus against 18% of rebuild time) |
 | 🥈 DOC | **enrich** | `text@converted`, `catalog.enriched` | `text@enriched` (identity FM baked, incl. the **CI.3 VA lifecycle labels** — `app_status` always; `decommission_date`/`cots_dependent`/`out_of_scope_reason` only when VA supplies them), `index.db:doc_meta_staged` (identity + lifecycle + computed `word_count`) | SKIP_IF_UNCHANGED |
 | 🥈 DOC | **normalize** | `text@enriched`, `raw/index.json` (for source_sha256 — metadata only, not the binary tree), `registries` (curated patterns) | `text@normalized` — `revisions.yaml` + `tables/*.csv` + `refs.yaml` + `toc.yaml` + `flags.yaml` sidecars; **title-page publication date captured into the `published` identity FM before any strip** (§6.4 capture-before-strip), then the per-document **title-area logo image removed** (noise — a different VA seal/banner per doc; one small standard logo to be added at publish) and the legacy cover replaced by a standardized block; revision apparatus lifted to `revisions.yaml` (capture-gated; unparseable → retained + flagged); dead phrases deleted; boilerplate referenced (REFERENCE to `gold/_shared`); heading levels inferred; per-`(doc_type, era)` template scaffold stripped + `template_id` stamped (§9.8); the legacy in-body TOC's **original entries (title + printed page number + anchor) captured verbatim into `toc.yaml`** before it is stripped via `registries/structures` (CANONICALIZE `toc`) + correlated to the derived tree (role-1; misses → `flags.yaml`) then **TOC regenerated from headings + GitHub-slug anchors + round-trip back-links** (§6.7). Capture-before-strip fidelity signals (uncaptured date · unparseable revision apparatus · unresolved legacy-TOC anchors) are recorded in the `flags.yaml` sidecar. A **`capture.yaml` is written for *every* bundle** (not conditional) recording each capture attempt's typed outcome (`captured`/`failed`/`absent-expected`/`absent-unexpected`) plus an independent residue re-scan, so absence is never ambiguous (§6.4), **plus (P3.2) a typed `retention` block** (`{retention, verdict, enriched_words, kept_words}`) — the content-retention verdict as a dense record on every bundle rather than a sparse `flags.yaml` string, which is what the `validate` Step-6 gate reads. The retention score credits **in-window relocations only** — the legacy TOC captured to `toc.yaml` and boilerplate REFERENCEd to `gold/_shared` — because the baseline is taken *after* revisions and tables are lifted, so crediting those would inflate the score against a denominator that never counted them (P3.1, measured). (Glossary **PROMOTE** to the single `gold/glossary.md` is a gold-phase output — §9.7 lists `normalize` as a consumer of `registries/glossary`, but the shared artifact is materialised downstream, not in this silver body transform.) | SKIP_IF_UNCHANGED |
 | 🥇 DOC | **consolidate** | `text@normalized` (incl. each version's `revisions.yaml` + `published` FM + `flags.yaml`), `assets` | `consolidated` (version groups — one anchor document per group; ordered `history.yaml` lineage [folds each member's `revisions.yaml`, §6.4; `official_date` = revision-newest **else the title-page `published` date**] + retained prior bodies captured as travel-with sidecars; the latest member's `flags.yaml` + `toc.yaml` (original paper TOC, §6.7) + `capture.yaml` (typed capture-attempt records, §6.4) travel with the anchor; a **`bundle.yaml` signed manifest** (every part + `sha256` + folded capture outcomes + `bundle_digest`, §6.6) is written last so the bundle is a verifiable unit; `is_latest` flagged — the captured replay source, §6.6) | SKIP_IF_UNCHANGED |
@@ -1384,21 +1384,34 @@ from the spine, so no stage ever grows a baked-in pattern list.
    nothing in the corpus — it only *proposes*. The miners are the promoted v1 detectors
    (`boilerplate_pure`, `lexicon`, `headings`), and the clustering/shingling primitives live **once**
    in `kernel/discovery/` (tenet #4), shared by every discovery instance.
-2. **Curate (the gate).** Candidates are promoted into the curated registries under a **graded
-   policy**: high-confidence, high-frequency candidates (e.g. a block appearing verbatim in >N docs)
-   auto-approve; ambiguous ones land in a review queue and are approved by a human via a `registries/`
-   PR. Either way the decision is **recorded in version control** — the registry is reviewable,
+2. **Curate (the gate).** Candidates are promoted into the curated registries by a human via a
+   `registries/` PR. The decision is **recorded in version control** — the registry is reviewable,
    diffable, and reversible, never a silent heuristic. Curation is where judgment lives; it is
    deliberately *outside* the deterministic stages.
+
+   > **Nothing auto-approves, at any frequency** (PM.1, 2026-08-04). The candidates carry a
+   > `grade` of `auto`/`review`, but that is a sorting hint and no code consumes it. Frequency was
+   > measured to be a *poor* predictor of furniture at every frequency band: in the most frequent
+   > band (≥100 documents) 70% of the phrase candidates are single characters and markdown debris
+   > whose deletion would be destructive, and below 30 documents 92% are genuine content —
+   > transcripts, prompts, drug names, example output. Deleting text because it repeats is how this
+   > corpus previously lost its page-numbered contents entries with no record at all.
 3. **Apply (subtract by disposition).** `normalize` consumes the **curated** registries (inputs in
    its contract, §8) and deterministically applies each registry's disposition (below): *reference*
    boilerplate, *strip* template scaffold, *delete* dead phrases, *promote* glossary terms. Same
    registries in → same output: idempotent and provable (§7.4).
-4. **Re-discover (adapt).** On drift (§7.6) or on schedule, `discover` re-runs. A newly-published
-   manual of a new doc-type or era surfaces a new template candidate; a new boilerplate block or
-   dead phrase surfaces as a candidate; curation extends the registries; affected documents
-   re-`normalize`. The corpus **heals toward less noise over time without a code change** — exactly
-   the adaptivity the freeze must not foreclose.
+4. **Re-discover (adapt), on demand.** When someone intends to curate, `discover` is re-run
+   explicitly (`vdocs discover --force`). A newly-published manual of a new doc-type or era surfaces
+   a new template candidate; curation extends the registries; affected documents re-`normalize`. The
+   seam means the corpus **can be cleaned further without a code change** — the adaptivity the
+   freeze must not foreclose.
+
+   > **It is not on the rebuild path** (PM.3b, 2026-08-04) and the corpus is **not** continuously
+   > cleaning itself. Step 1 ran on every rebuild while step 2 essentially never ran: ~81,500
+   > proposals generated and discarded per build, against 109 curated entries, for 4m41s of a
+   > ~26-minute rebuild. Step 3 still applies the curated registries on every build — only the
+   > unasked-for *proposing* stopped. See
+   > [`proposals/vdocs-quality-pattern-miner/`](proposals/vdocs-quality-pattern-miner/).
 
 **The registry family — what gets discovered, and its disposition.** The patterns are *not* one
 undifferentiated pile; they fall into distinct kinds, each with its own registry, key, and

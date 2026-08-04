@@ -90,7 +90,9 @@ class Orchestrator:
         names = [s.name for s in order]
         start = names.index(from_) if from_ else 0
         end = names.index(to) + 1 if to else len(names)
-        return order[start:end]
+        # `on_demand` stages are off every range selection (PM.3b) — an explicit `--only` above is
+        # the single way in. The slice is taken first so the bounds still address the full order.
+        return [s for s in order[start:end] if not s.on_demand]
 
     def run(
         self,

@@ -73,8 +73,21 @@ vdocs build --fresh --yes
   `state.db` no longer forces a re-crawl.
 
 `build` runs, in one orchestrated pass: `crawl → catalog → serve-inventory → fetch (--all) → convert →
-discover → enrich → normalize → consolidate → index → validate → relate → manifest`, then `doctor`. It
+enrich → normalize → consolidate → index → validate → relate → manifest`, then `doctor`. It
 exits **non-zero** if any stage ERRORs or the corpus comes out **RED**.
+
+**`discover` is not in that pass** (PM.3b, 2026-08-04). The pattern miner *proposes* registry
+entries for a human curator; nothing downstream consumes them, so running it on every rebuild cost
+4m41s of ~26m to generate ~81,500 suggestions that were then discarded. It runs when you intend to
+curate:
+
+```bash
+vdocs discover --force        # rewrite reports/patterns/patterns.json
+```
+
+`normalize` still subtracts the **curated** `registries/` on every build — what changed is that the
+proposals are no longer regenerated unasked. Nothing about the corpus is continuously cleaned beyond
+what curation has approved.
 
 ## 3. Trust the result
 

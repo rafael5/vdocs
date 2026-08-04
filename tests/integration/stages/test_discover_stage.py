@@ -69,7 +69,7 @@ def test_discover_emits_candidate_patterns(ctx):
     _seed_converted(ctx, n=4)
     bodies_before = {p: p.read_bytes() for p in ctx.cfg.silver_converted.rglob("body.md")}
 
-    (result,) = Orchestrator([DiscoverStage()]).run(ctx)
+    (result,) = Orchestrator([DiscoverStage()]).run(ctx, only="discover")
     assert result.status == "ok"
     assert result.counts["documents"] == 4
     assert result.counts["boilerplate"] >= 1  # per-registry count
@@ -100,5 +100,25 @@ def test_discover_emits_candidate_patterns(ctx):
 def test_discover_skips_on_clean_rerun(ctx):
     _seed_converted(ctx, n=4)
     orch = Orchestrator([DiscoverStage()])
-    orch.run(ctx)
-    assert orch.run(ctx) == [None]
+    orch.run(ctx, only="discover")
+    assert orch.run(ctx, only="discover") == [None]
+
+
+def test_discover_is_off_the_default_rebuild_path() -> None:
+    """PM.3b — the miner runs on demand only.
+
+    Nothing `requires` its `reports/patterns` output, and the PM.1 sample put the whole
+    approvable furniture fraction at ~0.07% of the corpus (~1 char of a median retrieved
+    passage), against 4m41s of a ~26-minute rebuild. So it is off every range selection: a
+    full `crawl → doctor` build must not select it, while `--only discover` still does.
+    """
+    from vdocs.cli.app import build_stages
+
+    stages = build_stages()
+    assert DiscoverStage.on_demand is True
+    # still registered, so `vdocs discover` can address it by name
+    assert "discover" in {s.name for s in stages}
+    orch = Orchestrator(stages)
+    full_build = {s.name for s in orch._select("crawl", "doctor", None)}
+    assert "discover" not in full_build
+    assert [s.name for s in orch._select(None, None, "discover")] == ["discover"]

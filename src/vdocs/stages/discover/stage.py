@@ -32,6 +32,11 @@ class DiscoverStage(Stage):
     requires = [TEXT_CONVERTED, CATALOG_ENRICHED]
     produces = [PATTERNS]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
+    # PM.3b — **on demand only**: `vdocs discover` runs it, a rebuild does not. Nothing `requires`
+    # `reports/patterns`; it is a proposal surface for a human curator, and the PM.1 sample measured
+    # the entire approvable furniture fraction at ~0.07% of the corpus (~1 character of a median
+    # retrieved passage) against 4m41s of a ~26-minute rebuild. Run it when you intend to curate.
+    on_demand = True
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         from vdocs.stages.discover import discover_pure as dp

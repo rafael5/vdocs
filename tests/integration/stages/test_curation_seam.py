@@ -154,7 +154,7 @@ def test_curation_seam_discover_to_normalize(ctx):
     _seed_converted(ctx, n=4)
     bodies_before = {p: p.read_bytes() for p in ctx.cfg.silver_converted.rglob("body.md")}
 
-    (dres,) = Orchestrator([DiscoverStage()]).run(ctx)
+    (dres,) = Orchestrator([DiscoverStage()]).run(ctx, only="discover")
     assert dres.status == "ok"
     report = PatternReport.model_validate_json(ctx.cfg.patterns_report.read_text())
 

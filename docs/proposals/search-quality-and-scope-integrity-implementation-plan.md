@@ -11,7 +11,7 @@ ordering; the efforts are where the work is tracked:**
 | 2 | [`vdocs-quality-report-card/`](vdocs-quality-report-card/) | the answer key we grade search with is stale |
 | 3 | [`vdocs-quality-response-ranking/`](vdocs-quality-response-ranking/) | the right answer is found, then shown below the fold |
 | 4 | [`vdocs-quality-synonym-layer/`](vdocs-quality-synonym-layer/) | the synonym feature knows one synonym (R‑12) |
-| 5 | [`vdocs-quality-pattern-miner/`](vdocs-quality-pattern-miner/) | ~81,500 suggestions per rebuild, 29 accepted |
+| 5 | [`vdocs-quality-pattern-miner/`](vdocs-quality-pattern-miner/) | ~81,500 suggestions per rebuild, 109 accepted — **RULED 2026-08-04: off the default path.** The whole approvable furniture fraction is 0.073% of the corpus (~0.6 chars of a median passage) for 18% of every rebuild; `discover` is now on-demand |
 | 6 | [`vdocs-quality-vdl-observatory/`](vdocs-quality-vdl-observatory/) | the source is copied, never recorded — no timeline, no lifecycle signal |
 
 **Ordering revised 2026-08-03** (operator challenge, accepted): crawl integrity moved from third to
