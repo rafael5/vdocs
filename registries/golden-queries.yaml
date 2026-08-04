@@ -22,6 +22,15 @@
 # (deterministic `doc_key/slug`). They are RE-VALIDATED against the dev lake in step 0.4 once the DAG
 # runs — slugs are deterministic but any normalize/chunking change since the prod build is reconciled
 # there. Expand toward ~20–30 queries as the set proves out.
+#
+# RC.1 (2026-08-03, operator scope ruling): the six queries citing XOBW/KAAJEE/LEX + XU/kdc1_0ig
+# moved to the `retired:` block at the bottom — every judged section verified absent from the
+# production collection, each absence traced to a deliberate admission gate (app-scope
+# system_type for XOBW/KAAJEE/LEX; doctype-policy IG-omit for XU/kdc1_0ig). Six replacements
+# added in their place, each EXISTENCE-GATED: every judged section verified present, is_latest,
+# searchable in ~/data/vdocs/index.db (1,040 docs, corpus_content_hash 6dbec1f5…) before the
+# label was written, and graded by reading the passage text, never the title. The key stays at
+# 24 labelled queries + 1 unlabelled redundancy probe.
 
 version: 1
 k: 10
@@ -35,48 +44,13 @@ queries:
     relevant:
       - { section_id: XU/krn_8_0_tm/installation, grade: 3 }
       - { section_id: XU/krn_8_0_tm/install-vista-patchxu8787, grade: 2 }
-      - { section_id: XOBW/xobw1_0ig/sample-kids-installation, grade: 2 }
-      - { section_id: XOBW/xobw1_0ig/load-and-install-distribution, grade: 1 }
-    notes: A non-latest Kernel TM version answering this would be a version-correctness miss.
-
-  - id: kids-delphi-components-install
-    query: Steps to install the Kernel Delphi Components (KDC)
-    intent: KDC installation procedure from the KIDS distribution IG.
-    axis: kids-install
-    relevant:
-      - { section_id: XU/kdc1_0ig/5-run-the-kernel-delphi-components-installation-program-required, grade: 3 }
-      - { section_id: XU/kdc1_0ig/about-the-installation-procedures, grade: 2 }
-      - { section_id: XU/kdc1_0ig/6-verify-the-installation-of-the-kernel-delphi-components-recommended, grade: 1 }
-
-  # ── answerable-Q: hwsc-rest (XOBW HWSC / HTTP) ─────────────────────────────────────────────────
-  - id: hwsc-rest-from-vista-m
-    query: How does VistA M call a REST web service via HWSC?
-    intent: Using SOAP/REST web-service clients to reach Health*e*Vet from VistA M.
-    axis: hwsc-rest
-    relevant:
-      - { section_id: XOBW/xobw1_0dg/using-soap-and-rest-to-access-healthevet-from-vista-m, grade: 3 }
-      - { section_id: XOBW/xobw1_0dg/cachés-web-services-client-features, grade: 2 }
-      - { section_id: XOBW/xobw1_0dg/support-for-encryption-and-http-basic-authentication, grade: 1 }
-
-  - id: hwsc-install-privileges
-    query: What privileges and steps are needed to install HWSC (XOBW)?
-    intent: HWSC installation prerequisites and KIDS load procedure.
-    axis: hwsc-rest
-    relevant:
-      - { section_id: XOBW/xobw1_0ig/privilegesstaff-needed-to-install, grade: 3 }
-      - { section_id: XOBW/xobw1_0ig/load-and-install-distribution, grade: 2 }
-      - { section_id: XOBW/xobw1_0ig/transfer-xobw-installation-files-to-m-server-file-system, grade: 1 }
-
-  # ── answerable-Q: kaajee-auth (KAAJEE) ─────────────────────────────────────────────────────────
-  - id: kaajee-install-procedure
-    query: How is KAAJEE SSOWAP deployed and installed for VistA authentication?
-    intent: KAAJEE deploy/install procedure (VistA + WebLogic) for single sign-on.
-    axis: kaajee-auth
-    relevant:
-      - { section_id: KAAJEE/kaajee_xu_8_791_dibrg/vista-installation-procedure, grade: 3 }
-      - { section_id: KAAJEE/kaajee_xu_8_791_dibrg/weblogic-installation, grade: 2 }
-      - { section_id: KAAJEE/kaajee_xu_8_791_dibrg/pre-installation-and-system-requirements, grade: 1 }
-      - { section_id: KAAJEE/kaajee_xu_8_791_dibrg/platform-installation-and-preparation, grade: 1 }
+    notes: >
+      A non-latest Kernel TM version answering this would be a version-correctness miss.
+      RC.1 (2026-08-03): two XOBW labels removed (xobw1_0ig/sample-kids-installation g2,
+      xobw1_0ig/load-and-install-distribution g1) — XOBW is app-scope-excluded (Integration
+      middleware), so those sections are structurally unretrievable; leaving them judged
+      inflated this query's IDCG and recall denominators against answers search could never
+      return. Same scope artefact as the six retired queries, hiding inside an answerable one.
 
   # ── redundancy@k probe (near-duplicate Pharmacy API pair) ──────────────────────────────────────
   - id: pharmacy-api-dispense
@@ -198,15 +172,6 @@ queries:
       - { section_id: VBECS/vbecs_2_4_1_user_guide/accept-orders-cancel-a-pending-order, grade: 2 }
       - { section_id: VBECS/vbecs_2_4_1_user_guide/accept-orders-pending-order-list, grade: 1 }
 
-  # ── answerable-Q: lexicon (LEX Clinical Lexicon Technical Manual) ──────────────────────────────
-  - id: lexicon-lookup
-    query: How do I perform a Lexicon lookup with LEXA?
-    intent: Using the Lexicon lookup API/utility (LEXA).
-    axis: lexicon
-    relevant:
-      - { section_id: LEX/lextm2_0/2950-lexicon-lookup---lexa, grade: 3 }
-      - { section_id: LEX/lextm2_0/1597-expression-information--lexa, grade: 2 }
-
   # ── answerable-Q: hl7-security (HL7 Package Security Guide) ────────────────────────────────────
   - id: hl7-security-keys
     query: What security keys does the HL7 package use?
@@ -215,17 +180,6 @@ queries:
     relevant:
       - { section_id: HL7/hl71_6sg/security-keys, grade: 3 }
       - { section_id: HL7/hl71_6sg/va-fileman-access-codes, grade: 1 }
-
-  # ── answerable-Q: hwsc-manage (XOBW HWSC Systems Management Guide) ─────────────────────────────
-  - id: hwsc-web-service-manager
-    query: How do I manage web services with the HWSC Web Service Manager?
-    intent: Using the HWSC Web Service / Web Server Manager to register and check services.
-    axis: hwsc-manage
-    relevant:
-      - { section_id: XOBW/xobw1_0sg/using-web-service-manager, grade: 3 }
-      - { section_id: XOBW/xobw1_0sg/using-the-web-server-manager, grade: 2 }
-      - { section_id: XOBW/xobw1_0sg/hwsc-availability-checking, grade: 1 }
-      - { section_id: XOBW/xobw1_0sg/securing-a-web-service-using-http-basic-authentication, grade: 1 }
 
   # ── answerable-Q: fileman-dd — the SKL vocabulary-mismatch fix (S3.4) ──────────────────────────
   # The entity is named by its NUMBER in the query but by its NAME ("NEW PERSON") in the docs that
@@ -315,3 +269,196 @@ queries:
       label in this set I did not read before assigning — and an adversarial re-read (2026-08-02)
       found it names HL7 Table 0136 explicitly and gives the Y/N values, i.e. it answers as fully
       as the other two. Corrected to 3. Grade by reading, always; a title is a hypothesis.
+
+  # ════════════════════════════════════════════════════════════════════════════════════════════════
+  # RC.1 replacements (2026-08-03): six new queries replacing the six retired scope casualties
+  # below, one per lost information-need shape (install step · external interface · privileges ·
+  # authentication · lookup API · service management), re-pointed at admitted VistA manuals.
+  # Every judged section verified present + is_latest + searchable in the PRODUCTION index.db
+  # before labelling; every grade assigned by reading the passage text. Near-miss twins in other
+  # packages (per-package logical-link setup, per-package FileMan access-code tables) are
+  # deliberately unlabelled discriminators, per house rule.
+  # ════════════════════════════════════════════════════════════════════════════════════════════════
+
+  # ── answerable-Q: kids-install (XU KIDS User Guide) — replaces kids-delphi-components-install ──
+  - id: kids-backup-transport-global
+    query: How do I back up a transport global before installing a KIDS patch?
+    intent: The KIDS Backup a Transport Global option — restoring the pre-patch state.
+    axis: kids-install
+    relevant:
+      - { section_id: XU/krn_8_0_sm_kids_ug/backing-up-transport-globals, grade: 3 }
+    notes: >
+      One judged section on purpose (precedent: fileman-input-transform-definition) — the XPD
+      BACKUP option is documented exactly here (read: backs up routines or a full backup build;
+      the result restores the system to its pre-patch state). Generic installation-menu sections
+      merely list the option and stay unlabelled.
+
+  # ── answerable-Q: hl7-links (HL7 1.6) — replaces hwsc-rest-from-vista-m ────────────────────────
+  - id: hl7-start-tcpip-link
+    query: How do I start a TCP/IP logical link to enable HL7 message exchange?
+    intent: Starting an HL7 TCP/IP logical link (START LLP) so messages flow to a remote system.
+    axis: hl7-links
+    relevant:
+      - { section_id: HL7/hl71_6p19/starting-tcpip-logical-links, grade: 3 }
+      - { section_id: HL7/hl71_6p19/how-to-set-up-tcpip-logical-links, grade: 2 }
+      - { section_id: HL7/hl71_6p56_p66/tcp-link-setup, grade: 1 }
+    notes: >
+      Read: the g3 says START LLP "is all you need to do to enable exchange of messages over the
+      link". Per-package link start/setup twins (VBECS, TIU, PAIT, PSO "new logical link") answer
+      for THEIR packages and stay unlabelled as discriminators. ⚠️ HL7/hl71_6p56_p66/link-setup
+      looks ideal by title but has ZERO chunk text (hollow container) — checked and excluded; a
+      label pointing at it would recreate the defect this replacement set exists to remove.
+
+  # ── answerable-Q: kernel-security (Kernel / FileMan file security) — replaces hwsc-install-privileges
+  - id: fileman-file-access-security
+    query: How does Kernel's File Access Security control which VA FileMan files a user can access?
+    intent: The Kernel File Access Security system (ACCESSIBLE FILE #32 multiple) vs DUZ(0) codes.
+    axis: kernel-security
+    relevant:
+      - { section_id: DI/fm22_krn8_file_security/kernel-file-access-security, grade: 3 }
+      - { section_id: XU/krn_8_0_sm_signon_security_ug/what-in-va-fileman-is-still-protected-by-the-file-manager-access-code, grade: 2 }
+      - { section_id: XU/krn8_0st/users-access-to-va-fileman-files, grade: 1 }
+    notes: >
+      Read: the g3 states the mechanism (lookup on the user's ACCESSIBLE FILE #32 multiple, not
+      the DUZ(0) access code); the g2 delimits exactly what DUZ(0) still protects when the system
+      is enabled; the g1 frames ordinary option-based access control. Per-package FileMan
+      access-code tables (ADT, HL7 — the latter judged under hl7-security-keys) answer a
+      different, package-specific question and stay unlabelled here.
+
+  # ── answerable-Q: kernel-auth (Kernel Signon/Security UG) — replaces kaajee-install-procedure ──
+  - id: vista-signon-credentials
+    query: How does a user sign on to VistA, and what credentials are required?
+    intent: The Kernel signon interface — Access/Verify codes vs 2FA (PIV + PIN via IAM).
+    axis: kernel-auth
+    relevant:
+      - { section_id: XU/krn_8_0_sm_signon_security_ug/signing-on, grade: 3 }
+      - { section_id: XU/krn_8_0_sm_signon_security_ug/signonsecurity-user-interface, grade: 2 }
+      - { section_id: XU/krn_8_0_sm_signon_security_ug/signon-process, grade: 2 }
+      - { section_id: XU/krn_8_0_sm_signon_security_ug/parameters-checked-during-signon, grade: 1 }
+    notes: >
+      Read: the g3 is the full authentication treatment (2FA via IAM smart-card PKI, Access/Verify
+      codes, per-application variation); the chapter lead-in answers the same more briefly (g2);
+      signon-process covers the internal flow (KERNEL SYSTEM PARAMETERS #8989.3 → DEVICE #3.5)
+      rather than the credentials themselves (g2); parameter details g1.
+
+  # ── answerable-Q: fileman-api (DI FileMan DG lookup APIs) — replaces lexicon-lookup ────────────
+  - id: fileman-finder-api
+    query: How do I find records in a FileMan file with the FIND^DIC Finder API?
+    intent: The FIND^DIC (Finder) DBS call — inputs, indexes, screening, output.
+    axis: fileman-api
+    relevant:
+      - { section_id: DI/fm22_2dg/finddic-finder, grade: 3 }
+      - { section_id: DI/fm22_2dg/find1dic-finder-single-record, grade: 2 }
+      - { section_id: DI/fm22_2dg/listdic-lister, grade: 1 }
+      - { section_id: DI/fm22_2dg/dic-lookupadd-with-b-cross-references, grade: 1 }
+    notes: >
+      Read: the g3 is the full FIND^DIC contract (ICR 2051, DBS category, inputs/outputs); the g2
+      is its single-record variant $$FIND1^DIC; the two g1s are the sibling Lister and the classic
+      ^DIC lookup — genuinely related lookup APIs, not the asked-for one. Like lexicon-lookup, an
+      API-name query whose answer is a named API reference section.
+
+  # ── answerable-Q: kernel-ops (TaskMan UG) — replaces hwsc-web-service-manager ──────────────────
+  - id: taskman-monitor
+    query: How do I monitor TaskMan's current state and check its environment?
+    intent: The Monitor Taskman [XUTM ZTMON] and Check Taskman's Environment [XUTM CHECK ENV] options.
+    axis: kernel-ops
+    relevant:
+      - { section_id: XU/krn_8_0_sm_taskman_ug/monitor-taskman-option-1, grade: 3 }
+      - { section_id: XU/krn_8_0_sm_taskman_ug/check-taskmans-environment-option, grade: 2 }
+      - { section_id: XU/krn_8_0_sm_taskman_ug/inspecting-the-tasks-in-the-monitors-lists, grade: 2 }
+      - { section_id: XU/krn_8_0_sm_taskman_ug/monitor-taskman-option, grade: 1 }
+      - { section_id: XU/krn_8_0_sm_taskman_ug/taskman-management-utilities, grade: 1 }
+    notes: >
+      Same admin-console information need as the retired HWSC Web Service Manager query, on an
+      admitted manual. TWIN TITLES graded by content, not name (precedent: hl7-table-0136-values):
+      monitor-taskman-option-1 is the full XUTM ZTMON description (g3); the identically-titled
+      monitor-taskman-option is the short multi-manager BALANCE note (g1). Check Environment and
+      the monitor's list-inspection flow are direct parts of the need (g2); the utilities menu
+      that lists both options is context (g1).
+
+# ══════════════════════════════════════════════════════════════════════════════════════════════════
+# RETIRED (RC.1, 2026-08-03) — retiring is not deleting: each entry below is evidence of what the
+# collection deliberately does not cover. Operator scope ruling 2026-08-03: XOBW/KAAJEE/LEX stay
+# excluded (app-scope: system_type Integration middleware / Data patch); `decommissioned` apps stay
+# excluded. Confirmed before retiring (measure-before-you-act): every judged section verified
+# ABSENT from production index.db, and each absence traced to its actual gate — which for
+# kids-delphi-components-install is NOT the gate R‑19 assumed (correction recorded below).
+# The harness ignores this block; these queries no longer count toward any metric.
+# ══════════════════════════════════════════════════════════════════════════════════════════════════
+retired:
+  - id: kids-delphi-components-install
+    query: Steps to install the Kernel Delphi Components (KDC)
+    axis: kids-install
+    retired: 2026-08-03
+    reason: >
+      All three judged sections live in XU/kdc1_0ig — which, CORRECTING R‑19 and the RC kickoff,
+      is NOT system_type-excluded (inventory: system_type=VistA, app_status=active). It is
+      excluded by registries/inventory/doctype-policy.yaml: doc_code IG is Tier B `omit`
+      ("version-specific install procedure"). Its sibling kdc1_0dgrm (DG) IS admitted and fetched.
+      Deliberate scope either way, but a different gate than recorded — re-admitting install
+      guides would be a doctype-policy decision, not a scope-policy one.
+    relevant:
+      - { section_id: XU/kdc1_0ig/5-run-the-kernel-delphi-components-installation-program-required, grade: 3 }
+      - { section_id: XU/kdc1_0ig/about-the-installation-procedures, grade: 2 }
+      - { section_id: XU/kdc1_0ig/6-verify-the-installation-of-the-kernel-delphi-components-recommended, grade: 1 }
+
+  - id: hwsc-rest-from-vista-m
+    query: How does VistA M call a REST web service via HWSC?
+    axis: hwsc-rest
+    retired: 2026-08-03
+    reason: >
+      XOBW (HWSC) is app-scope-excluded: system_type "Integration middleware" fails the
+      scope-policy VistA prefix. 23 inventory documents, acquisitions=0 in production; all three
+      judged sections absent. Operator ruling 2026-08-03: stays excluded.
+    relevant:
+      - { section_id: XOBW/xobw1_0dg/using-soap-and-rest-to-access-healthevet-from-vista-m, grade: 3 }
+      - { section_id: XOBW/xobw1_0dg/cachés-web-services-client-features, grade: 2 }
+      - { section_id: XOBW/xobw1_0dg/support-for-encryption-and-http-basic-authentication, grade: 1 }
+
+  - id: hwsc-install-privileges
+    query: What privileges and steps are needed to install HWSC (XOBW)?
+    axis: hwsc-rest
+    retired: 2026-08-03
+    reason: Same exclusion as hwsc-rest-from-vista-m (XOBW app-scope, Integration middleware).
+    relevant:
+      - { section_id: XOBW/xobw1_0ig/privilegesstaff-needed-to-install, grade: 3 }
+      - { section_id: XOBW/xobw1_0ig/load-and-install-distribution, grade: 2 }
+      - { section_id: XOBW/xobw1_0ig/transfer-xobw-installation-files-to-m-server-file-system, grade: 1 }
+
+  - id: kaajee-install-procedure
+    query: How is KAAJEE SSOWAP deployed and installed for VistA authentication?
+    axis: kaajee-auth
+    retired: 2026-08-03
+    reason: >
+      KAAJEE is app-scope-excluded: system_type "Integration middleware". 64 inventory documents,
+      acquisitions=0 in production; all four judged sections absent. Operator ruling 2026-08-03:
+      stays excluded.
+    relevant:
+      - { section_id: KAAJEE/kaajee_xu_8_791_dibrg/vista-installation-procedure, grade: 3 }
+      - { section_id: KAAJEE/kaajee_xu_8_791_dibrg/weblogic-installation, grade: 2 }
+      - { section_id: KAAJEE/kaajee_xu_8_791_dibrg/pre-installation-and-system-requirements, grade: 1 }
+      - { section_id: KAAJEE/kaajee_xu_8_791_dibrg/platform-installation-and-preparation, grade: 1 }
+
+  - id: lexicon-lookup
+    query: How do I perform a Lexicon lookup with LEXA?
+    axis: lexicon
+    retired: 2026-08-03
+    reason: >
+      LEX is app-scope-excluded: system_type "Data patch" fails the scope-policy VistA prefix.
+      15 inventory documents, acquisitions=0 in production; both judged sections absent. Operator
+      ruling 2026-08-03: stays excluded. (The Clinical Lexicon is real VistA code — the VDL's
+      "Data patch" system_type for it is the kind of label question vdl-observatory VO.5 owns.)
+    relevant:
+      - { section_id: LEX/lextm2_0/2950-lexicon-lookup---lexa, grade: 3 }
+      - { section_id: LEX/lextm2_0/1597-expression-information--lexa, grade: 2 }
+
+  - id: hwsc-web-service-manager
+    query: How do I manage web services with the HWSC Web Service Manager?
+    axis: hwsc-manage
+    retired: 2026-08-03
+    reason: Same exclusion as hwsc-rest-from-vista-m (XOBW app-scope, Integration middleware).
+    relevant:
+      - { section_id: XOBW/xobw1_0sg/using-web-service-manager, grade: 3 }
+      - { section_id: XOBW/xobw1_0sg/using-the-web-server-manager, grade: 2 }
+      - { section_id: XOBW/xobw1_0sg/hwsc-availability-checking, grade: 1 }
+      - { section_id: XOBW/xobw1_0sg/securing-a-web-service-using-http-basic-authentication, grade: 1 }
