@@ -64,7 +64,7 @@ proposals.
 
 ## Sequencing
 
-⛔ **Do not start before `vdocs-quality-report-card` is ticked `RC ✓`** — the family-wide rule (operator direction, 2026-08-03), even though this effort does not consume the answer key directly.
+⛔ **Do not start before `vdocs-quality-crawl-integrity` is ticked `CI ✓` and `vdocs-quality-report-card` `RC ✓`** (in that order, revised 2026-08-03), even though this effort does not consume the answer key directly.
 
 Last of the five quality efforts. Nothing depends on it and nobody is blocked by it, and both rulings are cheap — which is exactly why it must not be allowed to drift: the failure mode is a third generate-and-discard cycle with the decision still open.
 

@@ -4,7 +4,7 @@ Proposal: [`vdocs-quality-response-ranking.md`](vdocs-quality-response-ranking.m
 Tracker: [`vdocs-quality-response-ranking-tracker.md`](vdocs-quality-response-ranking-tracker.md) ·
 Prompts: [`prompts/`](prompts/)
 
-⛔ **Do not start before `vdocs-quality-report-card` is ticked `RC ✓`.** Four steps, commit subjects `RR.1:` /
+⛔ **Do not start before `vdocs-quality-crawl-integrity` is ticked `CI ✓` and `vdocs-quality-report-card` `RC ✓`** (in that order, revised 2026-08-03). Four steps, commit subjects `RR.1:` /
 `RR.2:` / `RR.3:`, cheapest first, each adopted **only** on a measured win. House rules: TDD,
 `make check` green before commit, tick the tracker in the same commit.
 

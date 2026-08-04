@@ -6,7 +6,7 @@
 
 > ## ⛔ Check this first
 >
-> **`vdocs-quality-report-card` must be ticked `RC ✓` before this effort starts** — the family-wide rule (operator direction, 2026-08-03). If it is not, stop and run that effort instead.
+> **`vdocs-quality-crawl-integrity` `CI ✓` and `vdocs-quality-report-card` `RC ✓` must both be ticked before this effort starts** (ordering revised 2026-08-03: crawl integrity first, then the report card). If either is not, stop and run the earliest unfinished one instead.
 >
 > **Measure before you act.** The first step below is a measurement. No code, configuration, curation or gate lands until it is complete and written down.
 

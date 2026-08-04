@@ -1,4 +1,4 @@
-# Kickoff — vdocs-quality-crawl-integrity (CI.1–CI.2)
+# Kickoff — vdocs-quality-crawl-integrity (CI.0–CI.4)
 
 > **To start the session**, `cd ~/projects/vdocs` and say:
 >
@@ -9,13 +9,17 @@ and plan in [`..`](..), then register rows **R‑4** and **R‑19** in
 `docs/reference/pipeline-adversarial-audit.md`. Tick the tracker per landed step.
 **Shared-lake rule:** `pgrep -af "vdocs run"` before any command touching `~/data/vdocs`.
 
-> ## ⛔ Check this first
+> ## 🥇 This effort runs first — nothing gates it
 >
-> **`vdocs-quality-report-card` must be ticked `RC ✓` before this effort starts** — the family-wide rule (operator direction, 2026-08-03). If it is not, stop and run that effort instead.
+> Ordering revised 2026-08-03 (operator challenge, accepted): scope decides what the collection
+> contains, and the report card's central action — retiring or re-pointing six questions — depends
+> on the scope ruling. Every other `vdocs-quality-*` effort waits on this tracker's `CI ✓`.
 >
 > **Measure before you act.** The first step below is a measurement. No code, configuration, curation or gate lands until it is complete and written down.
 
-This effort touches no search behaviour, so it *could* technically run alongside the retrieval work. It deliberately does not — the report card is the underlying issue and is fixed first.
+This effort touches no search behaviour. It runs *ahead of* the report card because the card's six
+unanswerable questions are a scope artefact — repairing the key before the scope policy is settled
+risks retiring questions a corrected policy would make answerable again.
 
 ## Why this exists
 
@@ -65,6 +69,6 @@ collection to show a gate works — the P2 precedent used a scratch-lake copy fo
 
 ## Close-out
 
-Tick CI.1–CI.2 and CI ✓ citing the scratch-lake red paths and a green live run, then record in the
-tracker whether the 102 departed documents should be revisited as a scope question — flag it for the
-operator; do not decide it here.
+Tick CI.0–CI.4 and CI ✓ citing the scratch-lake red paths and a green live run, then record in the
+tracker whether the 102 never-acquired documents (XOBW, KAAJEE, LEX) should be admitted — a scope
+question to flag for the operator; do not decide it here.

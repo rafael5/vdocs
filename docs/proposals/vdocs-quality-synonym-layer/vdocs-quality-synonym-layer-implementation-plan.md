@@ -68,7 +68,7 @@ system does.
 
 ## Sequencing and dependency
 
-⛔ **Do not start before `vdocs-quality-report-card` is ticked `RC ✓`.** SL.1(b) leans on the answer key, and an unrepaired key misattributes vocabulary failures — it would tell you this feature is needed (or not) for the wrong reasons. Independent of the retrieval efforts in mechanism, but not in sequence.
+⛔ **Do not start before `vdocs-quality-crawl-integrity` is ticked `CI ✓` and `vdocs-quality-report-card` `RC ✓`** (in that order, revised 2026-08-03). SL.1(b) leans on the answer key, and an unrepaired key misattributes vocabulary failures — it would tell you this feature is needed (or not) for the wrong reasons. Independent of the retrieval efforts in mechanism, but not in sequence.
 
 ## Out of scope
 

@@ -11,7 +11,7 @@ Proposal: [`vdocs-quality-report-card.md`](vdocs-quality-report-card.md) ·
 Plan: [`vdocs-quality-report-card-implementation-plan.md`](vdocs-quality-report-card-implementation-plan.md) ·
 Prompts: [`prompts/`](prompts/)
 
-🥇 **This effort is the prerequisite for the whole `vdocs-quality-*` family.** No other effort starts until `RC ✓` is ticked.
+🥈 **Runs second, after [`vdocs-quality-crawl-integrity`](../vdocs-quality-crawl-integrity/) is ticked `CI ✓`** (ordering revised 2026-08-03: the six impossible questions are a scope artefact, and RC.1's retire/re-point decision depends on the scope ruling). Every later effort waits on this tracker's `RC ✓`.
 📏 **Measure before you act:** RC.1 begins by *confirming* the six questions are out of scope rather than lost — those look identical from the key's side and mean opposite things.
 
 Update **per landed step** (judge → `make check` → commit → tick). A step is DONE only when its measure is demonstrated on the production collection with a provenance-stamped report.

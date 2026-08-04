@@ -6,9 +6,9 @@
 >
 > Self-contained: it names every document to read and carries the measured baseline.
 
-> ## 🥇 This effort runs first
+> ## ⛔ Check this first
 >
-> Every other `vdocs-quality-*` effort is blocked on this tracker's `RC ✓` row (operator direction, 2026-08-03). Nothing else in the family starts until it is ticked.
+> **`vdocs-quality-crawl-integrity` must be ticked `CI ✓` before this effort starts** (ordering revised 2026-08-03: RC.1's retire/re-point decision depends on the scope ruling). If it is not, stop and run that effort instead. Every *later* effort remains blocked on this tracker's `RC ✓` row.
 >
 > **Measure before you act:** RC.1 opens by *confirming* the six questions are out of scope rather than lost — those look identical from the key's side and mean opposite things.
 
@@ -17,12 +17,14 @@ proposal and plan in [`..`](..), then register row **R‑19** in
 `docs/reference/pipeline-adversarial-audit.md`. Tick the tracker per landed step.
 **Shared-lake rule:** `pgrep -af "vdocs run"` before any command touching `~/data/vdocs`.
 
-## Why you are doing this first
+## Why this runs ahead of all retrieval work
 
 The answer key we grade search with is stale, and the two failure modes point in opposite
 directions: six questions can never pass (they cite three applications the admission gate excludes),
 and at least two questions fail search for returning a *better* answer than the key names. Until
-both are fixed, any ranking work would be tuned against measurably wrong targets.
+both are fixed, any ranking work would be tuned against measurably wrong targets. It runs *after*
+`vdocs-quality-crawl-integrity` because those six questions are a scope artefact, and the
+retire-vs-re-point call depends on the scope ruling.
 
 **You are not allowed to change search in this effort.** The next effort's before/after depends on
 this baseline holding still.
