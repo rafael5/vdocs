@@ -12,7 +12,7 @@ Proposal: [`vdocs-quality-pattern-miner.md`](vdocs-quality-pattern-miner.md) ·
 Plan: [`vdocs-quality-pattern-miner-implementation-plan.md`](vdocs-quality-pattern-miner-implementation-plan.md) ·
 Prompts: [`prompts/`](prompts/)
 
-⛔ **Prerequisites: [`vdocs-quality-crawl-integrity`](../vdocs-quality-crawl-integrity/) `CI ✓` and [`vdocs-quality-report-card`](../vdocs-quality-report-card/) `RC ✓`, in that order** (revised 2026-08-03). Status: `CI ✓` and `RC ✓` both ticked 2026-08-03 — prerequisites met; programme order runs `response-ranking` first. Scope decides what the collection contains; every measurement here is then taken with the answer key, which currently fails search for returning better answers than it names.
+⛔ **Prerequisites: [`vdocs-quality-crawl-integrity`](../vdocs-quality-crawl-integrity/) `CI ✓` and [`vdocs-quality-report-card`](../vdocs-quality-report-card/) `RC ✓`, in that order** (revised 2026-08-03). **Status: all four preceding efforts are closed — `CI ✓` `RC ✓` `RR ✓` (2026-08-03) and `SL ✓` (2026-08-04, ruled *stop*). This effort is next and nothing is ahead of it.** Scope decides what the collection contains; every measurement here is then taken inside that boundary.
 📏 **Measure before you act:** the first step below is a measurement, and no code, configuration, curation or gate lands until it is complete and written down.
 
 **A decision, not a build.** PM.1 (measurement) and PM.2 (the ruling) are mandatory; exactly one of PM.3a/PM.3b follows. Sequenced last of the five.

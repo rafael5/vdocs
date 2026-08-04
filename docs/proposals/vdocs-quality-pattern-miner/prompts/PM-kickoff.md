@@ -11,11 +11,34 @@ Tick the tracker per landed step. **Shared-lake rule:** `pgrep -af "vdocs run"` 
 
 > ## ⛔ Check this first
 >
-> **`CI ✓`, `RC ✓` and `RR ✓` are all ticked (2026-08-03)** — prerequisites met. Programme order runs `vdocs-quality-synonym-layer` before this one (both are rulings, not builds; SL is the one with a live failing case waiting on it).
+> **`CI ✓`, `RC ✓`, `RR ✓` and `SL ✓` are all ticked** (the first three 2026-08-03, `SL ✓` 2026-08-04) — **this effort is next in the programme order and nothing is ahead of it.**
 >
-> **The ruler, if you measure retrieval at all:** `reports/rr3-after-twin-demotion.*` — nDCG@10 **0.6447** · recall@10 **0.7238**, `corpus_content_hash 726d22a4…`, 57,895 chunks, 24 labelled / 0 unscoreable. Figures quoting 0.5305 / 18 answerable predate the report card and are a different ruler.
+> **The ruler, if you measure retrieval at all:** `reports/rr3-after-twin-demotion.*` — nDCG@10 **0.6447** · recall@10 **0.7238**, `corpus_content_hash 726d22a4…`, 57,895 chunks, 24 labelled / 0 unscoreable. Figures quoting 0.5305 / 18 answerable predate the report card and are a different ruler. (SL touched no ranking, so this is still current.)
 >
 > **Measure before you act.** The first step below is a measurement. No code, configuration, curation or gate lands until it is complete and written down.
+>
+> ### Two things `vdocs-quality-synonym-layer` learned the hard way — apply both here
+>
+> SL was the same shape as this effort (a dormant proposal side, an approval side that never ran) and
+> **both of its headline framings turned out to be wrong**. Read
+> [`../../vdocs-quality-synonym-layer/sl1-findings.md`](../../vdocs-quality-synonym-layer/sl1-findings.md)
+> before trusting any number below.
+>
+> 1. **Check what the queue count counts.** SL's "4,415 candidates awaiting approval" was a count of
+>    *mentions* — the stage reported `len(unresolved)` while the artifact it wrote aggregated to one
+>    row per `(type, surface)`. The real queue was **307**. The wrong figure reached the proposal, the
+>    plan, the tracker, this effort's sibling kickoff and the audit register before anyone opened the
+>    file. **So: open `discover`'s actual output artifacts and count the rows a curator would face**,
+>    for each of the three streams separately (34,822 phrases / 23,885 boilerplate / 18,011 glossary
+>    terms). Do not carry those numbers into a ruling until you have.
+> 2. **Establish the consumers before costing the retirement.** SL's "stop" turned out to be blocked:
+>    `resolve` fed two *working* consumers nobody had listed (the 483-term termbase and the glossary
+>    Entities section), and `merge`'s tables are published in **read contract v1**, so removal is a
+>    breaking change `contract-lint` refuses as a MINOR. Retiring it would have traded a breaking
+>    change for 33 s of an ~18-minute rebuild. **Here the cost is far larger (4m41s, ~18%), so the
+>    trade may well go the other way — but find `discover`'s consumers and contract surface first, or
+>    the ruling is unexecutable.** Note also that a ruling can be *stop the claim, keep the code*;
+>    that third option is what SL took.
 
 ## This is a decision, not a build
 
