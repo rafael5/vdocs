@@ -71,6 +71,7 @@ __all__ = [
     "legacy_toc_targets",
     "correlate_legacy_toc",
     "correlate_bookmarks_by_title",
+    "resolve_toc_anchors_by_title",
     "strip_existing_toc",
     "build_toc",
     "effective_toc_depth",
@@ -755,6 +756,38 @@ def correlate_legacy_toc(targets: list[str], headings: list[Heading]) -> list[st
     return unresolved
 
 
+def resolve_toc_anchors_by_title(
+    toc_entries: list[LegacyTocEntry], headings: list[Heading]
+) -> list[LegacyTocEntry]:
+    """Give an **anchorless** legacy-TOC entry the anchor of the heading it names (VO.8f).
+
+    A Word TOC carries ``](#_Toc…)`` links, so the DOCX path fills ``toc.yaml``'s ``anchor`` and
+    ``resolved`` columns. A PDF's TOC is printed text — ``Introduction .......... 1`` — with no link
+    of any kind, so every Docling-captured entry landed ``anchor: ''``, ``resolved: false``: the
+    same schema, but two columns dead on one converter and live on the other, and a sidecar unusable
+    as a navigation index for exactly the documents whose outline we most need.
+
+    Composes what is already in hand — the entry gives a title, the derived tree gives title → slug,
+    the same correlation :func:`correlate_bookmarks_by_title` performs for Word bookmarks, keyed
+    here on the title itself. First match in document order, since a repeated title is inherently
+    ambiguous.
+
+    An entry that already carries an anchor is never second-guessed (the Word bookmark is
+    authoritative), and one that matches no heading **stays anchorless** — it never pointed
+    anywhere, and per P3.1 it must not become a fidelity flag manufactured out of printed
+    pagination."""
+    by_base: dict[str, str] = {}
+    for hd in headings:
+        by_base.setdefault(github_slug_base(hd.text), hd.slug)
+    out: list[LegacyTocEntry] = []
+    for e in toc_entries:
+        if not e.anchor and (slug := by_base.get(github_slug_base(e.title))):
+            out.append(LegacyTocEntry(e.title, e.page, f"#{slug}"))
+        else:
+            out.append(e)
+    return out
+
+
 def correlate_bookmarks_by_title(
     toc_entries: list[LegacyTocEntry], headings: list[Heading]
 ) -> dict[str, str]:
@@ -919,6 +952,9 @@ def normalize_body(
     # then thread it through outbound resolution AND the legacy-TOC resolved/unresolved views so
     # refs.yaml stays internally consistent (a recovered anchor is no longer "lost").
     recovered = correlate_bookmarks_by_title(toc_entries, headings)
+    # VO.8f: a printed (anchorless) TOC entry gets the anchor of the heading it names, so `toc.yaml`
+    # has the same live `anchor`/`resolved` columns whichever converter produced the body.
+    toc_entries = resolve_toc_anchors_by_title(toc_entries, headings)
     slugs = {h.slug for h in headings}
 
     def _anchor_resolves(anchor: str) -> bool:
