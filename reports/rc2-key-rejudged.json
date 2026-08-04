@@ -1,0 +1,966 @@
+{
+  "rollup": {
+    "k": 10,
+    "index_db": "/home/rafael/data/vdocs/index.db",
+    "documents": 1040,
+    "chunks": 57895,
+    "corpus_content_hash": "726d22a4a0306f68e6b3d0f3317f9de6adb03e96b6b8aeccbadc1160d2761ded",
+    "labeled_queries": 24,
+    "unscoreable_queries": 0,
+    "total_queries": 25,
+    "mean_ndcg@k": 0.6386,
+    "mean_mrr": 0.7535,
+    "mean_recall@k": 0.7134,
+    "mean_redundancy@k": 0.048,
+    "mode": "lexical (FTS5+BM25)"
+  },
+  "queries": [
+    {
+      "id": "kids-install-build",
+      "axis": "kids-install",
+      "n_judged": 7,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XU/krn_8_0_sm_kids_ug/running-installations",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "XU/krn_8_0_sm_kids_ug/purging-the-build-and-install-files",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XU/krn_8_0_dg_kids_ug/environment-check-is-run-twice",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "XU/krn_8_0_sm_kids_ug/installation-menu",
+          "grade": 2
+        },
+        {
+          "rank": 5,
+          "section_id": "XU/krn_8_0_sm_kids_ug/introduction",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.8109,
+      "mrr": 1.0,
+      "recall@k": 0.5714
+    },
+    {
+      "id": "pharmacy-api-dispense",
+      "axis": "redundancy-probe",
+      "n_judged": 0,
+      "hits": 10,
+      "redundancy@k": 0.3,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "PSO/pso_7_tm_sg/oneva-pharmacy-component-diagram",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "PSX/phar_1_api_r0110/open-subscription-for-outpatient-pharmacy-prescription-data",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "PSA/phar_1_api_r0520/open-subscription-for-outpatient-pharmacy-prescription-data",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "PSN/phar_1_api_0520/open-subscription-for-outpatient-pharmacy-prescription-data",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "PSX/phar_1_api_r0110/checks-if-the-value-is-a-valid-entry-and-the-intended-use-field-30-from-the-medication-instruction-file-51-is-for-outpatient-use-less-than-2",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false
+    },
+    {
+      "id": "fileman-add-field",
+      "axis": "fileman-dd",
+      "n_judged": 4,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "DI/scrn_tut/starting-out-with-forms",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "DI/scrn_tut/add-the-secondary-menu-options-synonym-field",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "DI/scrn_tut/adding-ssn-field",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "DI/scrn_tut/add-data-dictionary-fields-1",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "DI/scrn_tut/reposition-fields",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.0,
+      "mrr": 0.0,
+      "recall@k": 0.0
+    },
+    {
+      "id": "rpc-broker-client-call",
+      "axis": "rpc-broker",
+      "n_judged": 9,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XWB/xwb_1_1_dg_r/rpc-overview",
+          "grade": 2
+        },
+        {
+          "rank": 2,
+          "section_id": "XWB/xwb_1_1_dg_r/relationship-between-an-m-entry-point-and-an-rpc",
+          "grade": 1
+        },
+        {
+          "rank": 3,
+          "section_id": "XWB/xwb_1_1_ug_r/what-is-a-remote-procedure-call",
+          "grade": 2
+        },
+        {
+          "rank": 4,
+          "section_id": "XWB/xwb_1_1_ug_r/rpc-error-trapping",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XWB/xwb_1_1_dg_r/how-to-debug-the-application",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.4319,
+      "mrr": 1.0,
+      "recall@k": 0.5556
+    },
+    {
+      "id": "mailman-decnet-transmission",
+      "axis": "mailman-network",
+      "n_judged": 7,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XM/xm_8_0_netrefguide/revision-history",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XM/xm_8_0_netrefguide/2-enter-a-transmission-script-in-the-domain-file",
+          "grade": 3
+        },
+        {
+          "rank": 3,
+          "section_id": "XM/xm_8_0_netrefguide/setting-up-a-decnet-channel-for-mailman",
+          "grade": 2
+        },
+        {
+          "rank": 4,
+          "section_id": "XM/xm_8_0_netrefguide/index",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XM/xm_8_0_netrefguide/7-create-the-logincom-file",
+          "grade": 1
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.5861,
+      "mrr": 0.5,
+      "recall@k": 0.7143
+    },
+    {
+      "id": "radiology-cancel-exam",
+      "axis": "radiology",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "RA/ra5_0um/cancel-an-exam-18",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "RA/ra5_0um/radiologynuclear-med-order-entry-menu",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "RA/ra5_0tm/radnuc-med-clerk-menu-ra-clerkmenu",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "RA/ra5_0um/cancel-a-request",
+          "grade": 2
+        },
+        {
+          "rank": 5,
+          "section_id": "RA/ra5_0um/exam-deletion-360",
+          "grade": 1
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.924,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "pharmacy-release-signed-order",
+      "axis": "pharmacy-release",
+      "n_judged": 6,
+      "hits": 9,
+      "redundancy@k": 0.2,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "PSO/pso_7_tech_p737_um/preface",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "PSO/pso_7_0_p770_pharm_um_1/changes-to-releasing-orders-function---digitally-signed-orders-only",
+          "grade": 3
+        },
+        {
+          "rank": 3,
+          "section_id": "PSO/pso_7_0_p653_man_um/changes-to-releasing-orders-function--digitally-signed-orders-only",
+          "grade": 3
+        },
+        {
+          "rank": 4,
+          "section_id": "PSO/pso_7_tech_p737_um/changes-to-releasing-orders-function---digitally-signed-orders-only",
+          "grade": 3
+        },
+        {
+          "rank": 5,
+          "section_id": "PSO/pso_7_0_p653_man_um/chapter-1-introduction",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.7265,
+      "mrr": 0.5,
+      "recall@k": 0.8333
+    },
+    {
+      "id": "tiu-unsigned-notes",
+      "axis": "tiu-notes",
+      "n_judged": 4,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "TIU/tiuum/all-my-unsigned-progress-notes",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "TIU/tiutm/menu-and-option-assignment",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "TIU/tiuum/chapter-10-menus-and-option-assignment",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "TIU/tiutm/actionsfunctions-across-applications",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "TIU/tiuum/index",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.7391,
+      "mrr": 1.0,
+      "recall@k": 0.5
+    },
+    {
+      "id": "vpr-allergy-data",
+      "axis": "vpr-domains",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "VPR/vpr_dg/allergyadverse-reaction-tracking-gmra-1",
+          "grade": 1
+        },
+        {
+          "rank": 2,
+          "section_id": "VPR/vpr_dg/allergyadverse-reaction-tracking-gmra",
+          "grade": 3
+        },
+        {
+          "rank": 3,
+          "section_id": "VPR/vpr_dg/vital-measurements-gmv",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "GMRA/gmra_4_0_tm/gmra446-allergy-order-check-signssymptoms",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "GMRA/gmra_4_0_um/gmra446--allergy-order-check-signssymptoms",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.669,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "lab-file60-audit",
+      "axis": "lab-audit",
+      "n_judged": 6,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "LR/lr_5_2_425_ps_ug/file-60-audit-tool-options",
+          "grade": 2
+        },
+        {
+          "rank": 2,
+          "section_id": "LR/lr_5_2_425_ps_ug/display-file-60-changes",
+          "grade": 2
+        },
+        {
+          "rank": 3,
+          "section_id": "LR/lr_5_2_425_ps_ug/file-60-audit-reports",
+          "grade": 1
+        },
+        {
+          "rank": 4,
+          "section_id": "LR/lr_5_2_425_ps_ug/send-extract-file-as-mail-message",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "LR/lr_5_2_425_ps_ug/send-file-60-changes-in-mail",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.7068,
+      "mrr": 1.0,
+      "recall@k": 0.8333
+    },
+    {
+      "id": "cprs-enter-immunization",
+      "axis": "cprs-gui",
+      "n_judged": 6,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "CPRS/cprsguium/deleting-an-immunizationskin-test-in-cprs",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "CPRS/cprsguium/editing-an-immunizationskin-test-in-cprs",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "CPRS/cprsguium/accessing-the-enter-immunization-screen-from-the-coversheet",
+          "grade": 3
+        },
+        {
+          "rank": 4,
+          "section_id": "CPRS/cprsguium/viewing-the-immunizationskin-test-status-in-cprs",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "CPRS/cprsguium/description-of-the-enter-immunizationskin-test-screens",
+          "grade": 2
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.5842,
+      "mrr": 0.3333,
+      "recall@k": 1.0
+    },
+    {
+      "id": "vbecs-accept-order",
+      "axis": "vbecs-orders",
+      "n_judged": 4,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/collecting-workload-uc_15",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/accept-orders-pending-order-list-uc_88",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/accept-orders-cancel-a-pending-order-uc_61",
+          "grade": 1
+        },
+        {
+          "rank": 4,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/additional-information-53",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/maintain-specimen-uc_35",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.0509,
+      "mrr": 0.3333,
+      "recall@k": 0.25
+    },
+    {
+      "id": "hl7-security-keys",
+      "axis": "hl7-security",
+      "n_judged": 2,
+      "hits": 10,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "HL7/hl71_6sg/security-keys",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "VDEF/vdef_1_0_technical_manual/remote-systems",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "GMRA/gmra_4_0_um/security-keys",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "HL7/hl71_6p56_p66/what-is-the-role-of-the-vista-hl7-package",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "HL7/hl71_6smdm_p161/what-is-the-role-of-the-vista-hl7-package",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.9173,
+      "mrr": 1.0,
+      "recall@k": 0.5
+    },
+    {
+      "id": "fileman-file-200-new-person",
+      "axis": "fileman-dd",
+      "n_judged": 3,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "DI/scrn_tut/procedure-5",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "DI/fm22_2um2/compare-data-dictionaries",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XU/krn_8_0_tm/new-person-fileaudit-fields",
+          "grade": 2
+        },
+        {
+          "rank": 4,
+          "section_id": "DI/scrn_tut/procedure",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "DI/fm22_krn8_file_security/what-type-of-file-access-security-is-your-site-using",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.4327,
+      "mrr": 0.3333,
+      "recall@k": 1.0
+    },
+    {
+      "id": "fileman-import-host-file",
+      "axis": "api-leadin",
+      "n_judged": 6,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "DI/fm22_2um2/specify-data-format-source-file-and-destination-file",
+          "grade": 2
+        },
+        {
+          "rank": 2,
+          "section_id": "DI/fm22_2um2/how-data-is-moved-between-applications",
+          "grade": 1
+        },
+        {
+          "rank": 3,
+          "section_id": "DI/fm22_2um2/how-to-import-data",
+          "grade": 3
+        },
+        {
+          "rank": 4,
+          "section_id": "DI/fm22_2dg/fileddmp-data-import",
+          "grade": 3
+        },
+        {
+          "rank": 5,
+          "section_id": "DI/fm22_2dg/error-codes",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.72,
+      "mrr": 1.0,
+      "recall@k": 0.6667
+    },
+    {
+      "id": "fileman-input-transform-definition",
+      "axis": "api-leadin",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "DI/fm22_2dg/input-transform",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "DI/fm22_2um2/input-transform-syntax",
+          "grade": 1
+        },
+        {
+          "rank": 3,
+          "section_id": "DI/fm22_2dg/what-is-checked",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "DI/fm22_2dg/example-of-call-to-va-fileman-dbs",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "DI/fm22_tutorial/lesson-4-transforms-on-subscripts",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.9795,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "fileman-blddialog-icr-number",
+      "axis": "api-leadin",
+      "n_judged": 2,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "DI/fm22_2dg/example-6-dup-1",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "DI/fm22_2dg/example-5-dup-1",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "DI/fm22_2dg/example-7-dup-1",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "DI/fm22_2dg/blddialog-dialog-extractor",
+          "grade": 3
+        },
+        {
+          "rank": 5,
+          "section_id": "DI/fm22_2dg/example-1-9",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.3951,
+      "mrr": 0.25,
+      "recall@k": 0.5
+    },
+    {
+      "id": "quasar-package-wide-variables",
+      "axis": "short-reference",
+      "n_judged": 1,
+      "hits": 10,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "ACKQ/ackq3_0tm/package-wide-variables",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "PSX/psx_2_0_p91_tm/package-wide-variables",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "PSA/psa_3_tm_r0509/package-wide-variables",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "MAG/imgtechman_f/chapter-14-package-wide-variables",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XT/ktk7_3tm/package-wide-variables",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 1.0,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "hl7-table-0136-values",
+      "axis": "short-reference",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "ACR/acr_p_pimstm/table-0136---yesno-indicator",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "ADT/adt_pims_tm/table-0136yesno-indicator",
+          "grade": 3
+        },
+        {
+          "rank": 3,
+          "section_id": "MPIF/mpif_1_0is/pid-30-patient-death-indicator-id-00741",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "MPIF/mpif_1_0is/pid-24-multiple-birth-indicator-id-00127",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "MPIF/mpif_1_0is/yesno-indicator-table",
+          "grade": 3
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.9469,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "kids-backup-transport-global",
+      "axis": "kids-install",
+      "n_judged": 1,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XU/krn_8_0_sm_kids_ug/verifying-checksums-in-a-transport-global",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XU/krn_8_0_sm_kids_ug/installations",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XU/krn_8_0_sm_kids_ug/backing-up-transport-globals",
+          "grade": 3
+        },
+        {
+          "rank": 4,
+          "section_id": "XU/krn_8_0_sm_kids_ug/printing-loaded-transport-globals",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "EPI/lab_epi_rollup_mod_tech_user_manual/installation-instructions",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.5,
+      "mrr": 0.3333,
+      "recall@k": 1.0
+    },
+    {
+      "id": "hl7-start-tcpip-link",
+      "axis": "hl7-links",
+      "n_judged": 6,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "HL7/hl71_6p19/starting-tcpip-logical-links",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "HL7/hl71_6p19/how-to-start-and-stop-the-listener-2",
+          "grade": 1
+        },
+        {
+          "rank": 3,
+          "section_id": "HL7/hl71_6p19/how-to-set-up-tcpip-logical-links",
+          "grade": 2
+        },
+        {
+          "rank": 4,
+          "section_id": "HL7/hl71_6p19/how-to-start-and-stop-the-listener",
+          "grade": 2
+        },
+        {
+          "rank": 5,
+          "section_id": "TIU/tiuhl7/2-the-hl7-logical-link-file-870--link-for-ddc",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.9247,
+      "mrr": 1.0,
+      "recall@k": 0.8333
+    },
+    {
+      "id": "fileman-file-access-security",
+      "axis": "kernel-security",
+      "n_judged": 7,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XU/krn_8_0_sm_signon_security_ug/file-access-security-system-management",
+          "grade": 2
+        },
+        {
+          "rank": 2,
+          "section_id": "DI/fm22_krn8_file_security/kernel-file-access-security",
+          "grade": 3
+        },
+        {
+          "rank": 3,
+          "section_id": "XU/krn8_0st/users-access-to-va-fileman-files",
+          "grade": 1
+        },
+        {
+          "rank": 4,
+          "section_id": "XU/krn8_0st/menus-and-options",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "DI/fm22_krn8_file_security/kernel-file-access-security-vs-classic-va-fileman-file-access-security",
+          "grade": 2
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.7575,
+      "mrr": 1.0,
+      "recall@k": 0.8571
+    },
+    {
+      "id": "vista-signon-credentials",
+      "axis": "kernel-auth",
+      "n_judged": 4,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "VBECS/vbecs_2_4_1_tech_security_guide/introduction",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XU/krn_8_0_sm_signon_security_ug/signonsecurity-user-interface",
+          "grade": 2
+        },
+        {
+          "rank": 3,
+          "section_id": "MAG/mag_vx_20_0_ag/periodic-processing-of-roi-disclosure-requests",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "PSB/psb_3_um/revision-history",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "MAG/mag_vx_20_0_ag/purging-completed-disclosures",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.1749,
+      "mrr": 0.5,
+      "recall@k": 0.25
+    },
+    {
+      "id": "fileman-finder-api",
+      "axis": "fileman-api",
+      "n_judged": 5,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "DI/fm22_2dg/finddic-finder",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "DI/fm22_2dg/example-5-1",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "DI/fm22_2dg/example-1-12",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "DI/fm22_2dg/error-codes-returned-7",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "DI/fm22_2dg/details-and-features-4",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.7139,
+      "mrr": 1.0,
+      "recall@k": 0.4
+    },
+    {
+      "id": "taskman-monitor",
+      "axis": "kernel-ops",
+      "n_judged": 7,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XU/krn_8_0_sm_taskman_ug/taskman-management-utilities",
+          "grade": 1
+        },
+        {
+          "rank": 2,
+          "section_id": "XU/krn_8_0_sm_taskman_ug/check-taskmans-environment-option",
+          "grade": 2
+        },
+        {
+          "rank": 3,
+          "section_id": "XU/krn_8_0_sm_taskman_ug/second-screencheck-taskmans-environment-option",
+          "grade": 2
+        },
+        {
+          "rank": 4,
+          "section_id": "XU/krn_8_0_sm_taskman_ug/monitor-taskman-option-1",
+          "grade": 3
+        },
+        {
+          "rank": 5,
+          "section_id": "XU/krn_8_0_sm_taskman_ug/status-list",
+          "grade": 1
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.6344,
+      "mrr": 1.0,
+      "recall@k": 0.8571
+    }
+  ]
+}

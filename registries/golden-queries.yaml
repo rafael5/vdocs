@@ -42,8 +42,13 @@ queries:
     intent: Step-by-step KIDS build installation procedure.
     axis: kids-install
     relevant:
-      - { section_id: XU/krn_8_0_tm/installation, grade: 3 }
-      - { section_id: XU/krn_8_0_tm/install-vista-patchxu8787, grade: 2 }
+      - { section_id: XU/krn_8_0_sm_kids_ug/running-installations, grade: 3 }
+      - { section_id: XU/krn_8_0_sm_kids_ug/installations, grade: 2 }
+      - { section_id: XU/krn_8_0_sm_kids_ug/installation-menu, grade: 2 }
+      - { section_id: XU/krn_8_0_sm_kids_ug/installing-standard-distributions, grade: 1 }
+      - { section_id: XU/krn_8_0_sm_kids_ug/scheduling-installations, grade: 1 }
+      - { section_id: XU/krn_8_0_tm/installation, grade: 1 }
+      - { section_id: XU/krn_8_0_tm/install-vista-patchxu8787, grade: 1 }
     notes: >
       A non-latest Kernel TM version answering this would be a version-correctness miss.
       RC.1 (2026-08-03): two XOBW labels removed (xobw1_0ig/sample-kids-installation g2,
@@ -51,6 +56,15 @@ queries:
       middleware), so those sections are structurally unretrievable; leaving them judged
       inflated this query's IDCG and recall denominators against answers search could never
       return. Same scope artefact as the six retired queries, hiding inside an answerable one.
+      RC.2 (2026-08-03, read the top ten): this zero was the KEY'S fault, exactly as suspected —
+      search's #1 hit was the KIDS User Guide's own "Running Installations" ("Once you have loaded
+      the transport globals … install them … [XPD INSTALL BUILD]"), graded 0. Now g3; the UG's
+      Installations chapter (load/print/compare/install capabilities) and the actual Installation
+      menu (XPD LOAD DISTRIBUTION…) g2; the standard-distributions lead-in and the device/queue
+      step g1. The two ORIGINAL labels were also wrong when finally read: krn_8_0_tm/installation
+      is about installing KERNEL ITSELF and defers to the (doctype-omitted) Kernel IG, and
+      install-vista-patchxu8787 is one TLS patch's instructions — both 3/2 → 1. The original
+      ideal was assigned from a title; a title is a hypothesis.
 
   # ── redundancy@k probe (near-duplicate Pharmacy API pair) ──────────────────────────────────────
   - id: pharmacy-api-dispense
@@ -79,6 +93,13 @@ queries:
       - { section_id: DI/fm22_2dg/adding, grade: 2 }
       - { section_id: DI/fm22_2dg/adding-new-subentries-to-a-multiple, grade: 1 }
       - { section_id: DI/fm22_2dg/assigning-a-location-for-fields-stored-within-a-global, grade: 1 }
+    notes: >
+      RC.2 (2026-08-03, read the top ten): this zero is SEARCH'S fault, refuting the kickoff's
+      key-defect suspicion. All ten hits are DI/scrn_tut ScreenMan-tutorial sections — read,
+      "Adding SSN Field" et al. are about PLACING existing fields on a form block with the Form
+      Editor (\<PF2\>F), not defining a field in the data dictionary. Their zeros are correct;
+      the genuine answers (adding-fields-f etc.) rank below 10. Lexical trap: "add" + "field" +
+      "file" dominate the tutorial's vocabulary.
 
   # ── answerable-Q: rpc-broker (XWB RPC Broker Developer's Guide) ────────────────────────────────
   - id: rpc-broker-client-call
@@ -90,6 +111,19 @@ queries:
       - { section_id: XWB/xwb_1_1_dg_r/c-connect-to-the-server, grade: 2 }
       - { section_id: XWB/xwb_1_1_dg_r/c-create-broker-instances, grade: 2 }
       - { section_id: XWB/xwb_1_1_dg_r/broker-security-enhancement-bse-overview, grade: 1 }
+      - { section_id: XWB/xwb_1_1_dg_r/rpc-overview, grade: 2 }
+      - { section_id: XWB/xwb_1_1_ug_r/what-is-a-remote-procedure-call, grade: 2 }
+      - { section_id: XWB/xwb_1_1_sm_r/how-does-it-all-work, grade: 2 }
+      - { section_id: XWB/xwb_1_1_dg_r/relationship-between-an-m-entry-point-and-an-rpc, grade: 1 }
+      - { section_id: XWB/xwb_1_1_dg_r/tutorial-introduction, grade: 1 }
+    notes: >
+      RC.2 (2026-08-03, read the top ten): this zero was the KEY'S fault — the top three hits all
+      answer and were graded 0. rpc-overview and the UG's what-is-a-remote-procedure-call both
+      state the mechanism directly ("a client application, through the RPC Broker, can make a
+      call to the VistA M Server and execute an RPC"), and the SM's how-does-it-all-work walks
+      the workstation→LAN→listener flow end-to-end: g2 each (broker-call-steps stays the g3
+      step-by-step ideal). The M-entry-point relationship and the Delphi tutorial lead-in are
+      related context, g1.
 
   # ── answerable-Q: mailman-network (XM MailMan Network Reference Guide) ─────────────────────────
   - id: mailman-decnet-transmission
@@ -99,8 +133,16 @@ queries:
     relevant:
       - { section_id: XM/xm_8_0_netrefguide/2-enter-a-transmission-script-in-the-domain-file, grade: 3 }
       - { section_id: XM/xm_8_0_netrefguide/1-create-an-entry-for-the-decnet-protocol, grade: 2 }
+      - { section_id: XM/xm_8_0_netrefguide/setting-up-a-decnet-channel-for-mailman, grade: 2 }
       - { section_id: XM/xm_8_0_netrefguide/components-of-network-mailman, grade: 1 }
       - { section_id: XM/xm_8_0_netrefguide/avoiding-infinite-transmission-loops, grade: 1 }
+      - { section_id: XM/xm_8_0_netrefguide/3-create-a-logincom-file-on-your-local-machine, grade: 1 }
+      - { section_id: XM/xm_8_0_netrefguide/7-create-the-logincom-file, grade: 1 }
+    notes: >
+      RC.2 (2026-08-03, read the top ten): setting-up-a-decnet-channel-for-mailman is the
+      procedure overview naming the exact steps (protocol entry, transmission script in the
+      DOMAIN file, LOGIN.COM) — g2, it was ranked #3 and graded 0. The two LOGIN.COM steps are
+      siblings of the graded step-1/step-2 in the same setup, g1.
 
   # ── answerable-Q: radiology (RA Radiology User Manual) ─────────────────────────────────────────
   - id: radiology-cancel-exam
@@ -110,6 +152,12 @@ queries:
     relevant:
       - { section_id: RA/ra5_0um/cancel-an-exam-18, grade: 3 }
       - { section_id: RA/ra5_0um/cancel-a-request, grade: 2 }
+      - { section_id: RA/ra5_0um/exam-deletion-360, grade: 1 }
+    notes: >
+      RC.2 (2026-08-03): exam-deletion-360 explicitly contrasts itself with Cancel an Exam
+      (permanent deletion vs cancel, RA MGR key) — related, g1. The HL7 interface-spec
+      exam-cancel section describes the ORM broadcast a cancellation triggers, not how to
+      cancel; deliberately left 0.
 
   # ── answerable-Q: pharmacy-release (PSO Outpatient Pharmacy User Manual) ───────────────────────
   - id: pharmacy-release-signed-order
@@ -118,8 +166,17 @@ queries:
     axis: pharmacy-release
     relevant:
       - { section_id: PSO/pso_7_0_p770_pharm_um_1/changes-to-releasing-orders-function---digitally-signed-orders-only, grade: 3 }
+      - { section_id: PSO/pso_7_0_p653_man_um/changes-to-releasing-orders-function--digitally-signed-orders-only, grade: 3 }
+      - { section_id: PSO/pso_7_tech_p737_um/changes-to-releasing-orders-function---digitally-signed-orders-only, grade: 3 }
       - { section_id: PSO/pso_7_0_p770_pharm_um_1/changes-to-finishing-pending-orders-process---digitally-signed-orders-only, grade: 2 }
+      - { section_id: PSO/pso_7_0_p653_man_um/changes-to-finishing-pending-orders-process---digitally-signed-orders-only, grade: 2 }
       - { section_id: PSO/pso_7_0_p770_pharm_um_1/changes-to-releasing-orders-function--signature-alert, grade: 1 }
+    notes: >
+      RC.2 (2026-08-03, read the top ten): the p653 and p737 patch manuals carry near-identical
+      text to the graded p770 sections (same PSO*7*131 release-function content; compared
+      side-by-side) and are separate is_latest documents — graded equally by content, per the
+      hl7-table-0136 precedent. Search returning them WAS returning the answer and being scored
+      0. This near-dup triple is also live evidence for the redundancy/twin work (Q2.3).
 
   # ── answerable-Q: tiu-notes (TIU Clinical Coordinator & User Manual) ───────────────────────────
   - id: tiu-unsigned-notes
@@ -129,7 +186,12 @@ queries:
     relevant:
       - { section_id: TIU/tiuum/all-my-unsigned-progress-notes, grade: 3 }
       - { section_id: TIU/tiuum/all-my-unsigned-documents, grade: 2 }
+      - { section_id: TIU/tiuum/show-progress-notes-across-patients, grade: 2 }
       - { section_id: TIU/tiuum/clinical-document-print-1, grade: 1 }
+    notes: >
+      RC.2 (2026-08-03): show-progress-notes-across-patients (read) searches notes by status/
+      type/date — a genuine route to one's unsigned notes, ranked #7 and graded 0 → g2. The
+      tiuqr/body hit is a scanned quick-reference card (WMF images, no usable text): 0 stands.
 
   # ── answerable-Q: vpr-domains (VPR Developer's Guide) ──────────────────────────────────────────
   - id: vpr-allergy-data
@@ -149,8 +211,14 @@ queries:
     relevant:
       - { section_id: LR/lr_5_2_425_ps_ug/laboratory-test-file-60-audit-tool-overview, grade: 3 }
       - { section_id: LR/lr_5_2_425_ps_ug/file-60-audit-tool-options, grade: 2 }
+      - { section_id: LR/lr_5_2_425_ps_ug/display-file-60-changes, grade: 2 }
       - { section_id: LR/lr_5_2_425_ps_ug/manually-run-file-60-audit-reports, grade: 1 }
       - { section_id: LR/lr_5_2_425_ps_ug/display-list-of-audited-fields, grade: 1 }
+      - { section_id: LR/lr_5_2_425_ps_ug/file-60-audit-reports, grade: 1 }
+    notes: >
+      RC.2 (2026-08-03): display-file-60-changes (read) is the concrete audit-display procedure
+      ([LRJ SYS MAP AUD DISPLAY FILE 60 CHANGES]), ranked #2 and graded 0 → g2; the
+      file-60-audit-reports pointer section (TaskMan-automatic vs manual) → g1.
 
   # ── answerable-Q: cprs-gui (CPRS GUI User Manual) ──────────────────────────────────────────────
   - id: cprs-enter-immunization
@@ -159,8 +227,16 @@ queries:
     axis: cprs-gui
     relevant:
       - { section_id: CPRS/cprsguium/accessing-the-enter-immunization-screen-from-the-coversheet, grade: 3 }
+      - { section_id: CPRS/cprsguium/adding-an-immunizationskin-test-to-cprs, grade: 3 }
       - { section_id: CPRS/cprsguium/accessing-the-enter-immunizationskin-test-screen-from-the-encounter-form, grade: 2 }
+      - { section_id: CPRS/cprsguium/description-of-the-enter-immunizationskin-test-screens, grade: 2 }
       - { section_id: CPRS/cprsguium/accessing-the-enter-immunizationskin-test-screen-from-the-reminder-dialogs, grade: 1 }
+      - { section_id: CPRS/cprsguium/documenting-a-patients-immunizations-and-skin-tests-in-cprs, grade: 1 }
+    notes: >
+      RC.2 (2026-08-03, read the top ten): adding-an-immunizationskin-test-to-cprs is the actual
+      numbered entry procedure on the Enter screen — as direct as the coversheet-access ideal,
+      g3 (it ranked #6, graded 0); the screens reference g2; the chapter lead-in g1. Editing/
+      deleting/viewing siblings answer different actions and stay 0.
 
   # ── answerable-Q: vbecs-orders (VBECS Blood Bank User Guide) ───────────────────────────────────
   - id: vbecs-accept-order
@@ -171,6 +247,13 @@ queries:
       - { section_id: VBECS/vbecs_2_4_1_user_guide/accept-orders-accept-an-order, grade: 3 }
       - { section_id: VBECS/vbecs_2_4_1_user_guide/accept-orders-cancel-a-pending-order, grade: 2 }
       - { section_id: VBECS/vbecs_2_4_1_user_guide/accept-orders-pending-order-list, grade: 1 }
+      - { section_id: VBECS/vbecs_2_4_1_user_guide/accept-orders-cancel-a-pending-order-uc_61, grade: 1 }
+    notes: >
+      RC.2 (2026-08-03, read the top ten): this zero is SEARCH'S fault — specifically the
+      measured Q2.3 container/leaf twin defect. The judged leaf sections rank below 10 while
+      their one-line "-uc_NN" container stubs rank 2–3. Read: uc_61 ("The user cancels an
+      unaccepted order on the POL", 118 chars) states the answer at summary level → g1; uc_88
+      (POL definition stub) stays 0. The real fix is ranking, not more labels.
 
   # ── answerable-Q: hl7-security (HL7 Package Security Guide) ────────────────────────────────────
   - id: hl7-security-keys
@@ -192,7 +275,11 @@ queries:
     relevant:
       - { section_id: DI/fm22_2um2/new-person-file-for-standalone-va-fileman, grade: 3 }
       - { section_id: XU/krn_8_0_tm/new-person-fileaudit-fields, grade: 2 }
-    notes: A vocabulary-mismatch query (number ↔ name); the precursor the SKL was built for (§8).
+      - { section_id: XU/krn_8_0_sm_signon_security_ug/understanding-duz-user-number, grade: 1 }
+    notes: >
+      A vocabulary-mismatch query (number ↔ name); the precursor the SKL was built for (§8).
+      RC.2 (2026-08-03): understanding-duz-user-number (read) explains DUZ as the unique
+      identifier of an entry in NEW PERSON (#200) — genuinely related, g1.
 
   # ── P6.4 (2026-08-02): the SHORT-REFERENCE / API-LEAD-IN class ─────────────────────────────────
   # Why these exist: P6.1b made 8,447 previously chunk-less sections searchable, and this set did
@@ -208,14 +295,21 @@ queries:
     axis: api-leadin
     relevant:
       - { section_id: DI/fm22_2dg/fileddmp-data-import, grade: 3 }
+      - { section_id: DI/fm22_2um2/how-to-import-data, grade: 3 }
+      - { section_id: DI/fm22_2um2/specify-data-format-source-file-and-destination-file, grade: 2 }
+      - { section_id: DI/fm22_2um2/how-data-is-moved-between-applications, grade: 1 }
       - { section_id: DI/fm22_2dg/exportddxp-data-export, grade: 1 }
       - { section_id: DI/fm22_2um2/sending-export-data-to-a-host-file, grade: 1 }
     notes: >
       The audit's cited class ([S10]): the API contract — Reference Type, Supported, Category,
       ICR# 2648, Description — lives in the container's own lead-in, above its first child
-      heading, so it was never chunked. The two grade-1s are the opposite direction (export),
-      genuinely related but not the answer. A CPRS "quick order auditing" section is a lexical
-      near-miss on "host file … import" and is deliberately unlabelled.
+      heading, so it was never chunked. The export-direction grade-1s are genuinely related but
+      not the answer. A CPRS "quick order auditing" section is a lexical near-miss on "host file
+      … import" and is deliberately unlabelled. RC.2 (2026-08-03, read the top ten): the
+      question as phrased has a SECOND ideal — the UM's Import Tool ([DDMP IMPORT] "lets you
+      import records stored in an ASCII data file into a VA FileMan file"), the user-side twin
+      of the FILE^DDMP API; it ranked #3 graded 0 → g3, its form-page procedure g2, the
+      import/export lead-in g1.
 
   - id: fileman-input-transform-definition
     query: What is an INPUT transform in VA FileMan?
@@ -223,10 +317,15 @@ queries:
     axis: api-leadin
     relevant:
       - { section_id: DI/fm22_2dg/input-transform, grade: 3 }
+      - { section_id: DI/fm22_2um2/input-transform-syntax, grade: 1 }
+      - { section_id: DI/fm22_2dg/input-transforms-and-the-verify-fields-option, grade: 1 }
     notes: >
-      One judged section on purpose — the definition sits in a container lead-in and nothing else
+      One grade-3 on purpose — the definition sits in a container lead-in and nothing else
       in the corpus defines the term as directly. Data-dictionary listings that merely *contain*
-      input transforms are not answers and stay unlabelled.
+      input transforms are not answers and stay unlabelled. RC.2 (2026-08-03): two related
+      sections read and credited g1 — the UM's syntax note (mostly a pointer to the definition)
+      and the DG's Verify Fields execution-context detail. Neither defines the term; both are
+      genuinely related.
 
   - id: fileman-blddialog-icr-number
     query: What is the ICR number for the BLD^DIALOG API?
@@ -301,6 +400,9 @@ queries:
     relevant:
       - { section_id: HL7/hl71_6p19/starting-tcpip-logical-links, grade: 3 }
       - { section_id: HL7/hl71_6p19/how-to-set-up-tcpip-logical-links, grade: 2 }
+      - { section_id: HL7/hl71_6p19/how-to-start-and-stop-the-listener, grade: 2 }
+      - { section_id: HL7/hl71_6p19/how-to-start-and-stop-the-listener-1, grade: 2 }
+      - { section_id: HL7/hl71_6p19/how-to-start-and-stop-the-listener-2, grade: 1 }
       - { section_id: HL7/hl71_6p56_p66/tcp-link-setup, grade: 1 }
     notes: >
       Read: the g3 says START LLP "is all you need to do to enable exchange of messages over the
@@ -308,6 +410,10 @@ queries:
       for THEIR packages and stay unlabelled as discriminators. ⚠️ HL7/hl71_6p56_p66/link-setup
       looks ideal by title but has ZERO chunk text (hollow container) — checked and excluded; a
       label pointing at it would recreate the defect this replacement set exists to remove.
+      RC.2 (2026-08-03, read the top ten): THREE identically-titled listener sections, graded by
+      content — the single-threaded and Caché/NT variants both say "use the Start LLP option …
+      To stop the listener, use the Stop LLP option" (g2 each); the OpenVMS variant says you
+      do NOT start it with HL7 options (UCX service) — useful negative guidance, g1.
 
   # ── answerable-Q: kernel-security (Kernel / FileMan file security) — replaces hwsc-install-privileges
   - id: fileman-file-access-security
@@ -316,14 +422,22 @@ queries:
     axis: kernel-security
     relevant:
       - { section_id: DI/fm22_krn8_file_security/kernel-file-access-security, grade: 3 }
+      - { section_id: XU/krn_8_0_sm_signon_security_ug/file-access-security-system-management, grade: 2 }
+      - { section_id: DI/fm22_krn8_file_security/kernel-file-access-security-vs-classic-va-fileman-file-access-security, grade: 2 }
       - { section_id: XU/krn_8_0_sm_signon_security_ug/what-in-va-fileman-is-still-protected-by-the-file-manager-access-code, grade: 2 }
+      - { section_id: XU/krn_8_0_sm_signon_security_ug/file-access-security-user-interface, grade: 1 }
+      - { section_id: DI/fm22_krn8_file_security/what-type-of-file-access-security-is-your-site-using, grade: 1 }
       - { section_id: XU/krn8_0st/users-access-to-va-fileman-files, grade: 1 }
     notes: >
       Read: the g3 states the mechanism (lookup on the user's ACCESSIBLE FILE #32 multiple, not
-      the DUZ(0) access code); the g2 delimits exactly what DUZ(0) still protects when the system
-      is enabled; the g1 frames ordinary option-based access control. Per-package FileMan
-      access-code tables (ADT, HL7 — the latter judged under hl7-security-keys) answer a
-      different, package-specific question and stay unlabelled here.
+      the DUZ(0) access code); what-in-va-fileman… delimits exactly what DUZ(0) still protects
+      when the system is enabled; users-access… frames ordinary option-based access control.
+      Per-package FileMan access-code tables (ADT, HL7 — the latter judged under
+      hl7-security-keys) answer a different, package-specific question and stay unlabelled here.
+      RC.2 (2026-08-03, read the top ten): the corpus holds a whole File Access Security family
+      the authored set undersold — the SM chapter (pre-FAS DUZ(0) matching vs Kernel's optional
+      FAS) and the Kernel-vs-Classic contrast both explain the control mechanism, g2 each; the
+      user-interface view and the which-system-is-your-site-using triage, g1 each.
 
   # ── answerable-Q: kernel-auth (Kernel Signon/Security UG) — replaces kaajee-install-procedure ──
   - id: vista-signon-credentials
@@ -351,11 +465,13 @@ queries:
       - { section_id: DI/fm22_2dg/find1dic-finder-single-record, grade: 2 }
       - { section_id: DI/fm22_2dg/listdic-lister, grade: 1 }
       - { section_id: DI/fm22_2dg/dic-lookupadd-with-b-cross-references, grade: 1 }
+      - { section_id: DI/fm22_2dg/finddic-parameters, grade: 1 }
     notes: >
       Read: the g3 is the full FIND^DIC contract (ICR 2051, DBS category, inputs/outputs); the g2
-      is its single-record variant $$FIND1^DIC; the two g1s are the sibling Lister and the classic
-      ^DIC lookup — genuinely related lookup APIs, not the asked-for one. Like lexicon-lookup, an
-      API-name query whose answer is a named API reference section.
+      is its single-record variant $$FIND1^DIC; the g1s are the sibling Lister, the classic
+      ^DIC lookup, and (RC.2) the FIND^DIC Parameters form-configuration detail — genuinely
+      related, none the asked-for contract. Like lexicon-lookup, an API-name query whose answer
+      is a named API reference section.
 
   # ── answerable-Q: kernel-ops (TaskMan UG) — replaces hwsc-web-service-manager ──────────────────
   - id: taskman-monitor
@@ -366,15 +482,19 @@ queries:
       - { section_id: XU/krn_8_0_sm_taskman_ug/monitor-taskman-option-1, grade: 3 }
       - { section_id: XU/krn_8_0_sm_taskman_ug/check-taskmans-environment-option, grade: 2 }
       - { section_id: XU/krn_8_0_sm_taskman_ug/inspecting-the-tasks-in-the-monitors-lists, grade: 2 }
+      - { section_id: XU/krn_8_0_sm_taskman_ug/second-screencheck-taskmans-environment-option, grade: 2 }
       - { section_id: XU/krn_8_0_sm_taskman_ug/monitor-taskman-option, grade: 1 }
       - { section_id: XU/krn_8_0_sm_taskman_ug/taskman-management-utilities, grade: 1 }
+      - { section_id: XU/krn_8_0_sm_taskman_ug/status-list, grade: 1 }
     notes: >
       Same admin-console information need as the retired HWSC Web Service Manager query, on an
       admitted manual. TWIN TITLES graded by content, not name (precedent: hl7-table-0136-values):
       monitor-taskman-option-1 is the full XUTM ZTMON description (g3); the identically-titled
       monitor-taskman-option is the short multi-manager BALANCE note (g1). Check Environment and
       the monitor's list-inspection flow are direct parts of the need (g2); the utilities menu
-      that lists both options is context (g1).
+      that lists both options is context (g1). RC.2 (2026-08-03, read the top ten): the Check
+      Environment second screen carries the actual environment report (g2) and the Status List
+      internals are related monitoring detail (g1).
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════
 # RETIRED (RC.1, 2026-08-03) — retiring is not deleting: each entry below is evidence of what the
