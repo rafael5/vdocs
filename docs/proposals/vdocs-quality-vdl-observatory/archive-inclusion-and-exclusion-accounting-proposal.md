@@ -1,6 +1,6 @@
 # Accounting for the whole library — exclusion reasons, and admitting the unique archive documents
 
-**Status: DRAFT · proposed 2026-08-04 · needs sign-off before any code** ·
+**Status: ACCEPTED + BUILT · proposed and signed off 2026-08-04** — operator: *build all three, keep it inside vdl-observatory*, plus a fourth piece (VO.9) on the operator's observation that the root cause is the missing definition of completeness. Tracked as VO.6–VO.9. ·
 Evidence: [`vo5-archive-meaning-findings.md`](vo5-archive-meaning-findings.md)
 
 Operator direction, 2026-08-04:
@@ -139,9 +139,21 @@ reading them. The other 16 PDF-only records library-wide can follow if they prov
 | 4.3 PDF routing | small — 3 registry entries and a verification read |
 | fetch + rebuild | 169 new documents on ~1,040; a rebuild, not a re-crawl |
 
-## 7. Decision needed
+## 7. Decision — taken 2026-08-04
 
-1. Build 4.1 (accounting), 4.2 (sole-survivor admission), 4.3 (PDF routing) — or a subset?
-2. Does this become a step inside `vdl-observatory`, or its own small effort? It is adjacent to VO
-   (accounting for the source rather than harvesting it) but it changes what the corpus *contains*,
-   which was `crawl-integrity`'s territory.
+Build all three, inside `vdl-observatory` as VO.6–VO.8. The operator added the piece the proposal
+had missed: all five problems are symptoms of **no definition of completeness**, so a definition
+plus a check shipped as **VO.9** (`vdocs completeness`).
+
+**Corrections found while building** — both in the direction of the proposal understating things:
+
+- The sole-survivor set is **445, not 488** (43 were genuinely superseded once patch identity was
+  respected), so VO.7 admits **159**, not 166.
+- **VO.8 was scoped wrongly and too small.** Restricting it to sole survivors would have recovered
+  one document. The right rule is format-based — *no document is excluded for being unreadable by
+  our converter* — which recovers 6 more of types the policy already wants, including **both CPRS
+  Technical Manuals** and **both Kernel 8.0 binders**. Those were absent by no decision at all.
+- **VO.8 and VO.9 initially disagreed:** the classifier still called PDF-only documents
+  `unreachable` after the gate began admitting them. `CONVERTIBLE_FORMATS` now defines the
+  policy/limitation boundary in one place, and legacy `.doc` — which no converter reads — is the
+  live example of a genuine hole.

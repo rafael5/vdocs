@@ -198,6 +198,32 @@ class GatePolicy:
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def sole_survivors(records: list[EnrichedRecord], policy: GatePolicy) -> set[str]:
+    """``anchor_key``s of archived documents whose doc-type is omitted and which **nothing newer
+    supersedes** — the VO.7 exception to the doc-type policy.
+
+    The policy omits release notes, install guides and the like because they are version-bound and
+    go stale; omitting them defers the reader to a current version. When no current version exists,
+    that reasoning inverts: the archived document is the *only* documentation of its kind for code
+    still installed in VistA, and omitting it discards the content rather than deferring it.
+
+    Deliberately narrow — an archived, omitted-type, in-scope, non-noise document for which no
+    **active** record shares its ``anchor_key``. A current document of an omitted type never
+    qualifies (those are the ~1,766 the policy means to exclude), and the rule relaxes the doc-type
+    axis only: app scope and the noise invariant are untouched.
+    """
+    genuine = [r for r in records if not r.noise_type and policy.app_in_scope(r)]
+    live = {r.anchor_key for r in genuine if r.app_status == "active" and r.anchor_key}
+    return {
+        r.anchor_key
+        for r in genuine
+        if r.app_status == "archive"
+        and r.anchor_key
+        and not policy.doctype_kept(r)
+        and r.anchor_key not in live
+    }
+
+
 def select_fetch_targets(
     records: list[EnrichedRecord], selection: Selection, policy: GatePolicy | None = None
 ) -> list[EnrichedRecord]:
@@ -221,10 +247,16 @@ def select_fetch_targets(
     4. **DOCX dedup**: one target per ``doc_slug`` (a PDF/DOCX pair shares it; only the in-scope
        DOCX survives step 1, and distinct versions keep distinct slugs → every version is a target).
     """
+    soles = sole_survivors(records, policy) if policy is not None else set()
+    readable = {r.anchor_key for r in records if r.doc_format == "docx" and r.anchor_key}
     genuine = [
         r
         for r in records
-        if not r.noise_type and not r.out_of_scope_reason and (policy is None or policy.admits(r))
+        if not r.noise_type
+        # §1 DOCX-only, relaxed by VO.8: a non-DOCX row is admitted only when NO DOCX
+        # representation of that document exists anywhere — never when it is a duplicate.
+        and (not r.out_of_scope_reason or (r.anchor_key and r.anchor_key not in readable))
+        and (policy is None or policy.admits(r) or r.anchor_key in soles)
     ]
     matched_ids = {id(r) for r in genuine if selection.matches(r)}
     anchors = {r.anchor_key for r in genuine if id(r) in matched_ids and r.anchor_key}

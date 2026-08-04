@@ -56,9 +56,18 @@ class ConvertStage(Stage):
         routing = _load_converter_routing(
             ctx.cfg.registries / "converter-routing" / "converter-routing.yaml"
         )
+        # Docling is needed for the ADR-010 allowlist *and* for any format Pandoc cannot read at
+        # all (VO.8 admits PDF-only documents) — otherwise a PDF fails mid-run on a missing binary
+        # instead of failing preflight with an install hint.
+        from vdocs.stages.convert.convert_pure import PANDOC_UNREADABLE
+
+        pdf_pending = any(
+            e.get("ext", "").lower() in PANDOC_UNREADABLE
+            for e in _raw_index_entries(ctx.cfg.raw_index)
+        )
         missing = missing_converters(
             need_pandoc=self._pandoc is None,
-            need_docling=self._docling is None and bool(routing),
+            need_docling=self._docling is None and (bool(routing) or pdf_pending),
             available=_converter_available,
         )
         if missing:
@@ -101,7 +110,7 @@ class ConvertStage(Stage):
             kept.add(key)
             with loop.guard(f"{doc_id} ({key})"):
                 ext = entry["ext"]
-                use_docling = key in routing
+                use_docling = cp.needs_docling(ext, key=key, routing=routing)
                 doc = (docling if use_docling else pandoc)(raw.get(entry["sha256"], ext=ext), ext)
                 n_docling += use_docling
 
@@ -138,6 +147,22 @@ class ConvertStage(Stage):
     def deep_gate(self, ctx: StageContext) -> PostflightResult:
         """Fail only if the per-document error rate is systemic (R6); one bad doc is isolated."""
         return self.doc_error_gate(self._errors, self._total)
+
+
+def _raw_index_entries(path) -> list[dict]:  # type: ignore[no-untyped-def,type-arg]
+    """The fetched-CAS index entries, or empty when it is not written yet — preflight must be able
+    to ask "will this run convert a PDF?" before `run` has parsed anything, and an absent index is
+    a normal pre-fetch state, not an error."""
+    import json as _json
+
+    if not path.exists():
+        return []
+    try:
+        from vdocs.stages.fetch.fetch_pure import parse_raw_index
+
+        return list(parse_raw_index(_json.loads(path.read_text(encoding="utf-8"))).values())
+    except (ValueError, KeyError, TypeError):
+        return []  # a malformed index is the input gate's problem, not the binary check's
 
 
 def _load_converter_routing(path) -> frozenset[str]:  # type: ignore[no-untyped-def]

@@ -159,9 +159,21 @@ def test_select_all_picks_docx_per_logical_doc():
     assert targets[0].doc_format == "docx"
 
 
-def test_select_excludes_pdf_only_doc():
-    # PDF is out of scope (§1): a doc with no DOCX representation is never a target
-    assert fp.select_fetch_targets([_rec("only_pdf", "pdf")], ALL) == []
+def test_select_admits_a_pdf_only_doc():
+    """VO.8 (2026-08-04) REVERSES the original §1 rule for this case. DOCX-only was right while
+    every document had a DOCX twin; for the 19 that do not — including both CPRS Technical Manuals
+    and both Kernel 8.0 binders — it silently turned a converter limitation into a scope decision.
+    A doc with no DOCX representation anywhere is now a target (and `convert` routes it to
+    Docling, which Pandoc cannot do)."""
+    assert [t.doc_slug for t in fp.select_fetch_targets([_rec("only_pdf", "pdf")], ALL)] == [
+        "only_pdf"
+    ]
+
+
+def test_select_still_excludes_a_pdf_that_has_a_docx_twin():
+    """The 2,866-record case §1 was really written for — unchanged."""
+    docs = [_rec("m", "pdf"), _rec("m")]
+    assert [t.doc_format for t in fp.select_fetch_targets(docs, ALL)] == ["docx"]
 
 
 def test_select_excludes_noise_even_under_all():

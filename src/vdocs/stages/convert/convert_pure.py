@@ -21,6 +21,22 @@ PANDOC_HINT = "install pandoc — `sudo apt install pandoc` (or `brew install pa
 DOCLING_HINT = "install the Docling CLI isolated: `uv tool install 'docling-slim[standard]'`"
 
 
+# Formats Pandoc cannot read at all — Docling is the only route for these (VO.8). DOCX is the
+# corpus norm and goes to Pandoc unless the ADR-010 allowlist says otherwise.
+PANDOC_UNREADABLE = frozenset({"pdf"})
+
+
+def needs_docling(ext: str, *, key: str, routing: frozenset[str]) -> bool:
+    """Whether this document must be converted by Docling rather than Pandoc.
+
+    Two independent reasons, either sufficient: the **format** is one Pandoc cannot read (a PDF —
+    admitted by VO.8 when no DOCX representation of the document exists anywhere), or the document
+    is on the curated ADR-010 ``registries/converter-routing`` allowlist because Pandoc shreds its
+    Word cross-reference fields. The format rule is universal and needs no curation; the allowlist
+    stays a per-document judgement."""
+    return ext.lower() in PANDOC_UNREADABLE or key in routing
+
+
 def missing_converters(
     need_pandoc: bool, need_docling: bool, available: Callable[[str], bool]
 ) -> list[tuple[str, str]]:

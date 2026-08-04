@@ -245,6 +245,78 @@ def fetch(
 
 @app.command()
 @_guarded
+def completeness(
+    as_json: bool = typer.Option(False, "--json", help="machine-readable report on stdout"),
+) -> None:
+    """Rule on whether the library is **complete**, and show why not (VO.9).
+
+    Complete does **not** mean "we hold everything". It means *nothing is missing for a reason we
+    did not choose*: every genuine VistA document is either held, or carries an explicit reason
+    from a closed vocabulary, and none is lost to an **implementation limitation**.
+
+    That distinction is the point. Omitting release notes is a decision, recorded in a registry and
+    reversible — it is compatible with completeness. A document absent because it is a PDF and the
+    converter reads DOCX is a limitation wearing a decision's clothes, and it makes the corpus
+    incomplete however the registries are set. Exits non-zero when anything is unreachable, so the
+    claim can be checked rather than asserted.
+    """
+    import json
+
+    from vdocs.models.catalog import EnrichedInventory
+    from vdocs.stages.fetch.fetch_pure import sole_survivors
+    from vdocs.stages.fetch.policy import load_gate_policy
+    from vdocs.stages.serve_inventory.completeness_pure import completeness_report
+
+    cfg = Settings()
+    if not cfg.gold_inventory_json.exists():
+        typer.echo("no gold inventory yet — run `vdocs serve-inventory` first.")
+        raise typer.Exit(code=1)
+    records = EnrichedInventory.model_validate_json(
+        cfg.gold_inventory_json.read_text(encoding="utf-8")
+    ).records
+    policy = load_gate_policy(cfg.registries)
+    report = completeness_report(records, policy, sole_survivors=sole_survivors(records, policy))
+
+    if as_json:
+        typer.echo(
+            json.dumps(
+                {
+                    "verdict": report.verdict,
+                    "complete": report.complete,
+                    "total": report.total,
+                    "held": report.held,
+                    "not_vista": report.not_vista,
+                    "excluded_by_policy": report.excluded_by_policy,
+                    "covered_by_other_format": report.covered_by_other_format,
+                    "unreachable": report.unreachable,
+                    "by_reason": report.by_reason,
+                    "unreachable_by_reason": report.unreachable_by_reason,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        raise typer.Exit(code=0 if report.complete else 1)
+
+    typer.echo("=== vdocs library completeness ===")
+    typer.echo(f"  inventory records:            {report.total}")
+    typer.echo(f"  HELD (in or admitted to gold):{report.held:>7}")
+    typer.echo(f"  outside the library (not VistA):{report.not_vista:>5}")
+    typer.echo(f"  excluded by policy (a choice):{report.excluded_by_policy:>7}")
+    typer.echo(f"  covered in another format:    {report.covered_by_other_format}")
+    typer.echo(f"  UNREACHABLE (a real hole):    {report.unreachable}")
+    typer.echo("\n  every exclusion, by recorded reason:")
+    for reason, n in sorted(report.by_reason.items(), key=lambda kv: (-kv[1], kv[0])):
+        typer.echo(f"    {reason:<40} {n}")
+    if not report.complete:
+        typer.echo("\n  unreachable — these are not decisions, they are limitations:")
+        for reason, n in sorted(report.unreachable_by_reason.items()):
+            typer.echo(f"    {reason:<40} {n}")
+    typer.echo(f"\nVERDICT: {report.verdict}")
+    raise typer.Exit(code=0 if report.complete else 1)
+
+
+@app.command()
 def gate(
     counts: bool = typer.Option(
         True, "--counts/--no-counts", help="also show admitted counts against the gold inventory"
