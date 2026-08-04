@@ -57,6 +57,7 @@ guess written as a finding is the failure mode this project has spent a whole pr
 
 - **Do not infer intent from a label.** Record what changed; mark the why unknown when it is.
 - **No backfilling.** The timeline starts when snapshots start.
-- **`archive` is not exclusion today:** 589 archived applications are already in the collection while
-  all 124 `decommissioned` ones are excluded. That asymmetry is `crawl-integrity`'s to rule on — your
-  job is to supply the evidence, not to change admission.
+- **`archive` is not exclusion today:** 255 archive-status documents (26 applications) are already
+  in the collection while all 124 `decommissioned` records are excluded (CI.0 measurement — the
+  draft's "589" reproduced under no definition). That asymmetry is `crawl-integrity`'s to rule on —
+  your job is to supply the evidence, not to change admission.

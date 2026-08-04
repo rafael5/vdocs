@@ -40,6 +40,7 @@ Historical snapshots of the source: **none**. Single-copy files, overwritten eve
   what the crawl already produces, not extracting anything new.
 - **Do not infer VA's intent from a label.** Record what changed; where the *why* is unknown, say so.
 - **The timeline starts when we start.** No backfilling — manufactured history is worse than none.
-- **`archive` ≠ excluded today:** 589 archived applications are already admitted and in the
-  collection, while all 124 `decommissioned` ones are excluded. That asymmetry is the crawl-integrity
-  effort's to rule on; this effort supplies the evidence.
+- **`archive` ≠ excluded today:** 255 archive-status documents (26 applications) are already
+  admitted and in the collection, while all 124 `decommissioned` records are excluded (CI.0
+  measurement, 2026-08-03 — the draft's "589" reproduced under no definition). That asymmetry is the
+  crawl-integrity effort's to rule on; this effort supplies the evidence.

@@ -87,18 +87,20 @@ Verified on the code, the inventory and the production collection, 2026-08-02/03
 | behaviour on a degraded crawl | the smaller result overwrites the previous good one |
 | historical snapshots of the source | **none** — inventory files are single-copy, overwritten each crawl |
 
-**What VA's labels do to admission today:**
+**What VA's labels do to admission today** (re-measured at CI.0, 2026-08-03, with the pipeline's
+own gate code — the first draft's admitted column, 1,604/589, reproduced under no tested
+definition and is corrected here):
 
-| `app_status` | inventory records | admitted | share admitted |
+| `app_status` | inventory records | admitted fetch targets | fetched (in collection) |
 |---|---:|---:|---:|
-| `active` | 5,379 (60.4%) | 1,604 | 29.8% |
-| `archive` | **3,404 (38.2%)** | 589 | 17.3% |
-| `decommissioned` | 124 (1.4%) | **0** | **0.0%** |
-| **total** | **8,907** | | |
+| `active` | 5,379 (60.4%) | 789 (111 apps) | 785 (109 apps) |
+| `archive` | **3,404 (38.2%)** | **255 (26 apps)** | **255 (26 apps)** |
+| `decommissioned` | 124 (1.4%) | **0** | **0** |
+| **total** | **8,907** | 1,044 | 1,040 |
 
-So archived applications *are* partly admitted — the corpus already contains 589 of them — while
-decommissioned ones are excluded outright. That asymmetry is undocumented and, on the reasoning
-above, backwards.
+So archived applications *are* partly admitted — the collection already holds 255 archive-status
+documents across 26 applications — while decommissioned ones are excluded outright. That asymmetry
+is undocumented and, on the reasoning above, backwards.
 
 **Signals VA gives us that we capture and then ignore:**
 
