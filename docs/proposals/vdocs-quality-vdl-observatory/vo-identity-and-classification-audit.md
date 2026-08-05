@@ -82,13 +82,54 @@ application**, creating **63 surplus identities**:
 This is not corruption. VA publishes a multi-package document **once per package folder**, titled
 from each package's perspective. The pipeline then mints one identity per copy.
 
-## A5. What this means
+## A5. The cross-listed copies, finally measured — and the recommendation narrows
 
-The identity is **1 document → N ids** (cross-listing) and **1 document → different id over time**
-(re-filing), across 447,525 rows and the directory layout. The recommendation from the earlier
-findings stands and now has its size attached — document = `doc_slug`, payload = `sha256`, version
-family = an app-free `anchor_key`. **Still not built:** this is a contract change (v1.6 → v2)
-touching every store and both consumers, and it deserves its own proposal, not a drive-by edit.
+A4 called the 63 extra ids "surplus" on the strength of same-filename-different-folder. That was an
+inference, and it was flagged unproven: the fetch gate admits one copy per document, so we had never
+held two to compare. **Measured 2026-08-05** by fetching every copy of the six most widely
+cross-listed slugs (21 files) and comparing both bytes and extracted text:
+
+| slug | copies | byte-identical? | text |
+|---|---:|---|---|
+| `phar_1_api_r0520` | 5 | no (265,658–265,879 B) | 56,819–56,843 words — **Δ 24 (0.04%)** |
+| `icd_10_ptf_modifications_ig` | 4 | no | 10,450–10,455 words — **Δ 5** |
+| `psj_5_pso_7_psu_4_dg_5_3_pss_1_rn` | 4 | no (23,139–38,178 B) | **618 words, byte-for-byte identical text** |
+| `ecme_hipaa_ncpdp_1_rn` | 3 | no (**78 KB vs 497 KB**) | 5,619–5,620 words — **Δ 1** |
+| `pss_1_dosing_ord_ck_um_r0918` | 3 | no | 69,131 words in all three |
+| `m1e1_pso_7_psj_5_pss_1_rn` | 3 | no | 2,526–2,527 words — **Δ 1** |
+
+**No copy is byte-identical to another, and the text is 99.96%+ identical.** The largest word
+difference anywhere is 24 words in 56,843; three of the six differ by a single word. The byte
+divergence is embedded images and Word re-export metadata — `ecme_hipaa_ncpdp_1_rn` is 78 KB under
+ECME and 497 KB under PSS, for **one word** of text difference.
+
+That one word is the point: each package's copy carries **its own patch reference in the title**
+(`BPS*1*1 ECME HIPAA NCPDP Release Notes` vs `PSS*1*90 Release Notes — HIPAA NCPDP Connection for
+EDI Pharmacy`). So the copies are the same document, published once per package and labelled from
+that package's side.
+
+**What this changes.** Two conclusions, and they point in opposite directions:
+
+- **Cross-listing is not a defect.** Collapsing these to one `doc_slug` identity would merge
+  documents that are the same in substance but differ in exactly the field a reader searches by —
+  the package's own patch number. Keeping them distinct is a defensible modelling choice, not an
+  accident. ~~63 surplus ids~~ → **63 deliberate variants**. The word "surplus" in A4 is withdrawn.
+- **Re-filing remains a real defect.** When VA moved the ISS documents from ADT to Scheduling,
+  nothing about them changed — same file, same content, new id. That is identity churn with no
+  informational content, and it is the case worth fixing.
+
+**Revised recommendation.** The earlier three-layer proposal (document = `doc_slug`) is
+**withdrawn** — the measurement does not support it. What survives is much narrower:
+
+> Identity should be **continuous across re-filing**: when a document that has already been
+> acquired reappears under a different application, it should keep the identity it had, rather than
+> departing and being re-born. This is the identity analogue of CI.2 master-set retention, which
+> already protects the *set* but not the *key*. The precedent for the mechanism is
+> `registries/anchor-aliases.yaml`.
+
+**Not a contract change.** That reframing removes the case for v1.6 → v2: `doc_id` keeps its shape,
+and the fix is continuity of assignment, not a new key. Scope, cost and risk all drop by an order of
+magnitude — which is the whole reason the measurement was worth running before building anything.
 
 ---
 
@@ -237,11 +278,19 @@ applications where the code model and the documentation will disagree, by constr
 updated to assert the compound value *and* that it still starts with `VistA`. Admitted targets
 1,212, unchanged. 1,488 tests, coverage 96.39%, `make check` exit 0.
 
-**Not changed, deliberately** — each needs a decision, not a drive-by edit:
+## Follow-ups — resolved 2026-08-05
 
-1. **The identity rework** (`doc_slug` / `sha256` / app-free `anchor_key`) — 447,525 rows, the
-   directory layout, and both consumers. Contract change.
-2. **Collapsing `cots_dependent` into a companion list** — removes the two-vocabularies
-   contradiction, but changes a captured field.
-3. **Making `system-type=unclassified` a reportable WARN in `completeness`** — so the next new VDL
-   application forces a ruling instead of vanishing.
+1. **Identity rework — investigated and WITHDRAWN as specified.** The measurement in A5 disproved
+   its premise. What replaces it is the much smaller "identity continuity across re-filing", and it
+   is *not* a contract change. Not built; it now needs a short proposal, not a migration.
+2. **`cots_dependent` vs `VistA + COTS` — DONE.** `split_system_type` separates a platform from its
+   companions, and `classify_system` derives `cots_dependent` from **both** sources, so a
+   `"VistA + COTS"` application is COTS-dependent whether or not anyone remembered the second list.
+   Two registry-wide invariants now assert it for all 197 applications, plus a closed vocabulary for
+   platforms (8) and companions (GUI, COTS, middleware, ObjectScript) so a typo cannot quietly
+   become a new category admitted at 0%.
+3. **`system-type=unclassified` — DONE.** It is now its own disposition, `undecided`, not
+   `not-vista`: an absence of a decision rather than a decision. It counts against `complete`
+   (exit 1) and the report **names the applications to classify** and where to do it. The live lake
+   is still COMPLETE — RMPV is classified, so nothing is undecided — so the gate is armed without
+   firing today.

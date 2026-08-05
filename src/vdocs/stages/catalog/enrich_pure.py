@@ -285,9 +285,34 @@ def apply_canonical_label(doc_code: str, current: str, labels: dict[str, str]) -
 
 
 # --- system classification (Stage C, §4.6) ---------------------------------
+def split_system_type(system_type: str) -> tuple[str, tuple[str, ...]]:
+    """Split ``"VistA + COTS"`` into its **platform** and its **companions**.
+
+    ``system_type`` carries two independent facts in one string: what the application *runs on*
+    (VistA/M, a web client, a data patch…) and what else it *needs* (a GUI client, a COTS product,
+    a middleware tier, ObjectScript classes). Only the platform decides scope — the fetch gate
+    matches the leading ``"VistA"`` — so keeping the companions readable separately is what lets
+    the taxonomy describe a hybrid without changing what is admitted.
+    """
+    parts = [p.strip() for p in system_type.split("+")]
+    platform = parts[0] if parts else ""
+    return platform, tuple(p for p in parts[1:] if p)
+
+
 def classify_system(abbrev: str, reg: Registries) -> tuple[str, bool]:
-    """(system_type, cots_dependent) by app abbrev; 'unclassified' if unmapped."""
-    return reg.system_type.get(abbrev, "unclassified"), abbrev in reg.cots_dependency
+    """(system_type, cots_dependent) by app abbrev; 'unclassified' if unmapped.
+
+    ``cots_dependent`` is derived from **both** sources so the two cannot drift apart: a platform
+    string naming COTS as a companion is COTS-dependent whether or not anyone remembered to add it
+    to ``cots_dependency``, and an explicit entry counts on any platform (CPT is a ``Data patch``
+    that needs an AMA licence). Previously the flag came from the list alone, so a new
+    ``"VistA + COTS"`` application would have read as *not* COTS-dependent until someone updated a
+    second place.
+    """
+    system_type = reg.system_type.get(abbrev, "unclassified")
+    _, companions = split_system_type(system_type)
+    cots = abbrev in reg.cots_dependency or any(c.upper() == "COTS" for c in companions)
+    return system_type, cots
 
 
 # --- the full pipeline -----------------------------------------------------

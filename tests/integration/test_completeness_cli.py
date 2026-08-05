@@ -47,6 +47,39 @@ def test_a_clean_library_is_complete(tmp_path, monkeypatch):
     assert "COMPLETE" in res.output and "INCOMPLETE" not in res.output
 
 
+def test_an_unclassified_application_reds_the_check_and_names_itself(tmp_path, monkeypatch):
+    """The RMPV case, made impossible to miss.
+
+    A new VDL application lands in no registry, classifies as `unclassified`, and every one of its
+    documents is dropped as not-VistA — while the verdict read COMPLETE. Now it reds, and it names
+    the application so the operator knows exactly what to rule on.
+    """
+    records = [_rec("um"), _rec("new", app_name_abbrev="RMPV", system_type="unclassified")]
+    for k, v in _seed(tmp_path, records).items():
+        monkeypatch.setenv(k, v)
+
+    res = runner.invoke(app, ["completeness"])
+
+    assert res.exit_code == 1
+    assert "INCOMPLETE" in res.output
+    assert "UNDECIDED" in res.output
+    assert "RMPV" in res.output
+    assert "system-types.yaml" in res.output  # tells them where to fix it
+
+
+def test_undecided_is_machine_readable(tmp_path, monkeypatch):
+    records = [_rec("new", app_name_abbrev="RMPV", system_type="unclassified")]
+    for k, v in _seed(tmp_path, records).items():
+        monkeypatch.setenv(k, v)
+
+    res = runner.invoke(app, ["completeness", "--json"])
+
+    payload = json.loads(res.output)
+    assert payload["undecided"] == 1
+    assert payload["undecided_apps"] == ["RMPV"]
+    assert payload["complete"] is False
+
+
 def test_an_unreadable_format_makes_it_incomplete_and_exits_nonzero(tmp_path, monkeypatch):
     """The gate that stops a converter limitation hardening into scope. A document no converter
     can read is a hole in the library however the registries are set. Legacy `.doc` is the live

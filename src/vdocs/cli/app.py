@@ -342,8 +342,11 @@ def completeness(
                     "excluded_by_policy": report.excluded_by_policy,
                     "covered_by_other_format": report.covered_by_other_format,
                     "unreachable": report.unreachable,
+                    "undecided": report.undecided,
                     "by_reason": report.by_reason,
                     "unreachable_by_reason": report.unreachable_by_reason,
+                    "undecided_by_reason": report.undecided_by_reason,
+                    "undecided_apps": sorted(report.undecided_apps),
                 },
                 indent=2,
                 sort_keys=True,
@@ -358,13 +361,24 @@ def completeness(
     typer.echo(f"  excluded by policy (a choice):{report.excluded_by_policy:>7}")
     typer.echo(f"  covered in another format:    {report.covered_by_other_format}")
     typer.echo(f"  UNREACHABLE (a real hole):    {report.unreachable}")
+    typer.echo(f"  UNDECIDED (nobody has ruled): {report.undecided}")
     typer.echo("\n  every exclusion, by recorded reason:")
     for reason, n in sorted(report.by_reason.items(), key=lambda kv: (-kv[1], kv[0])):
         typer.echo(f"    {reason:<40} {n}")
-    if not report.complete:
+    if report.unreachable:
         typer.echo("\n  unreachable — these are not decisions, they are limitations:")
         for reason, n in sorted(report.unreachable_by_reason.items()):
             typer.echo(f"    {reason:<40} {n}")
+    if report.undecided:
+        typer.echo(
+            "\n  undecided — an application nobody has classified. This is the absence of a\n"
+            "  decision, not a decision: classify it in registries/inventory/system-types.yaml\n"
+            "  (a VistA application is one installed by KIDS), then re-run serve-inventory."
+        )
+        for reason, n in sorted(report.undecided_by_reason.items()):
+            typer.echo(f"    {reason:<40} {n}")
+        for app_code in sorted(report.undecided_apps):
+            typer.echo(f"      unclassified application: {app_code}")
     typer.echo(f"\nVERDICT: {report.verdict}")
     raise typer.Exit(code=0 if report.complete else 1)
 

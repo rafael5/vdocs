@@ -42,6 +42,13 @@ NOISE_REASONS = {
 # (a converter for legacy `.doc`) is how a hole gets closed; nothing else here needs to change.
 CONVERTIBLE_FORMATS = frozenset({"docx", "pdf"})
 
+# `system_type` values meaning "nobody has looked at this application yet". They are **not**
+# exclusions: `classify_system` returns "unclassified" for any app_code absent from
+# `registries/inventory/system-types.yaml`, so a brand-new VDL application lands here by default.
+# Reporting that as not-VistA would record an accident as a decision — the RMPV case, where a
+# genuinely new VistA application was dropped in full while the verdict still read COMPLETE.
+UNDECIDED_SYSTEM_TYPES = frozenset({"", "unclassified", "unknown"})
+
 
 @dataclass(frozen=True)
 class Disposition:
@@ -52,7 +59,8 @@ class Disposition:
       * ``not-vista`` — outside the library's subject entirely (forms, non-VistA systems);
       * ``excluded`` — a genuine VistA document we **decided** not to keep (policy);
       * ``covered-by-other-format`` — not fetched, but we hold the same document in another format;
-      * ``unreachable`` — a genuine VistA document we **cannot** currently read (a real hole).
+      * ``unreachable`` — a genuine VistA document we **cannot** currently read (a real hole);
+      * ``undecided`` — its application has never been classified, so no one has ruled on it.
     """
 
     status: str
@@ -82,6 +90,9 @@ def classify(
         # name the disqualifying value, not just the fact — an operator needs to see *what* it was
         if rec.app_status in policy.denied_app_status:
             return Disposition("not-vista", f"not-vista:app-status={rec.app_status}")
+        if rec.system_type.strip().lower() in UNDECIDED_SYSTEM_TYPES:
+            # an absence of classification, not a classification of absence
+            return Disposition("undecided", "undecided:system-type-unclassified")
         return Disposition("not-vista", f"not-vista:system-type={rec.system_type or 'unknown'}")
 
     admitted = policy.doctype_kept(rec) or rec.anchor_key in sole_survivors
@@ -121,12 +132,19 @@ class CompletenessReport:
     excluded_by_policy: int
     covered_by_other_format: int
     unreachable: int
+    undecided: int = 0
     by_reason: dict[str, int] = field(default_factory=dict)
     unreachable_by_reason: dict[str, int] = field(default_factory=dict)
+    undecided_by_reason: dict[str, int] = field(default_factory=dict)
+    # the app codes to classify — a count alone tells an operator nothing they can act on
+    undecided_apps: set[str] = field(default_factory=set)
 
     @property
     def complete(self) -> bool:
-        return self.unreachable == 0
+        """Nothing missing for a reason we did not choose — so an **unruled** application counts
+        against it exactly as a real hole does. The two are reported separately because the
+        remedies differ: ``undecided`` needs a registry line, ``unreachable`` needs a converter."""
+        return self.unreachable == 0 and self.undecided == 0
 
     @property
     def verdict(self) -> str:
@@ -151,6 +169,8 @@ def completeness_report(
     counts: Counter[str] = Counter()
     reasons: Counter[str] = Counter()
     unreachable: Counter[str] = Counter()
+    undecided: Counter[str] = Counter()
+    undecided_apps: set[str] = set()
     for rec in records:
         d = classify(rec, policy, docx_anchors=anchors, sole_survivors=soles)
         counts[d.status] += 1
@@ -158,6 +178,9 @@ def completeness_report(
             reasons[d.reason] += 1
         if d.status == "unreachable":
             unreachable[d.reason] += 1
+        if d.status == "undecided":
+            undecided[d.reason] += 1
+            undecided_apps.add(rec.app_name_abbrev)
     return CompletenessReport(
         total=len(records),
         held=counts["held"],
@@ -165,6 +188,9 @@ def completeness_report(
         excluded_by_policy=counts["excluded"],
         covered_by_other_format=counts["covered-by-other-format"],
         unreachable=counts["unreachable"],
+        undecided=counts["undecided"],
         by_reason=dict(reasons),
         unreachable_by_reason=dict(unreachable),
+        undecided_by_reason=dict(undecided),
+        undecided_apps=undecided_apps,
     )

@@ -8,6 +8,8 @@ label collapse, anchor_key, and system classification. Uses the real in-repo reg
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
 from vdocs.config import Settings
@@ -272,6 +274,49 @@ def test_edge_cases(reg):
     )
     # unknown abbrev → unclassified, not COTS-dependent
     assert ep.classify_system("NOPE", reg) == ("unclassified", False)
+
+
+class TestPlatformAndCompanions:
+    """`system_type` conflates two orthogonal facts, and that let them contradict each other.
+
+    "VistA + COTS" states a COTS dependency inside the platform string, while `cots_dependency`
+    states the same fact as a separate list. Today they happen to agree; nothing makes them. Three
+    applications (CPT, DRG, PREM) carry the flag while their platform says `Data patch` or
+    `Integration middleware` — which is legitimate, and proves the two axes really are independent.
+    Splitting them makes the invariant hold by construction instead of by coincidence.
+    """
+
+    def test_a_plain_platform_has_no_companions(self):
+        assert ep.split_system_type("VistA") == ("VistA", ())
+
+    def test_a_compound_value_splits_into_platform_and_companions(self):
+        assert ep.split_system_type("VistA + COTS") == ("VistA", ("COTS",))
+        assert ep.split_system_type("VistA + ObjectScript") == ("VistA", ("ObjectScript",))
+
+    def test_multiple_companions_are_all_kept(self):
+        assert ep.split_system_type("VistA + GUI + COTS") == ("VistA", ("GUI", "COTS"))
+
+    def test_whitespace_and_empties_do_not_become_companions(self):
+        assert ep.split_system_type("  VistA +  ") == ("VistA", ())
+        assert ep.split_system_type("") == ("", ())
+
+    def test_cots_dependency_cannot_disagree_with_a_cots_platform(self, reg):
+        """The defect this closes: a '+ COTS' app missing from the list read as not dependent."""
+        reg2 = dataclasses.replace(
+            reg,
+            system_type={**reg.system_type, "FOO": "VistA + COTS"},
+            cots_dependency={},  # deliberately NOT listed
+        )
+        assert ep.classify_system("FOO", reg2) == ("VistA + COTS", True)
+
+    def test_an_explicit_dependency_still_counts_on_a_non_vista_platform(self, reg):
+        """CPT is a `Data patch` that needs an AMA licence — the axes are independent."""
+        reg2 = dataclasses.replace(
+            reg,
+            system_type={**reg.system_type, "CPT": "Data patch"},
+            cots_dependency={"CPT": "AMA CPT code set"},
+        )
+        assert ep.classify_system("CPT", reg2) == ("Data patch", True)
 
 
 def test_enrich_unknown_package_keeps_abbrev_as_canonical(reg):

@@ -40,6 +40,23 @@ platform mentions and glossary entries, *not* dependencies). ⚠️ Consequence:
 only, so the ObjectScript half of such an application is structurally invisible** to the measured
 model. Admission unchanged (prefix rule); 1,488 tests, `make check` exit 0.
 
+✅ **All three follow-ups resolved 2026-08-05.** **(1) Identity rework WITHDRAWN as specified** — the
+gating measurement was run (fetched all 21 copies of the 6 most cross-listed slugs) and **disproved
+its own premise**: no copy is byte-identical, but the text is **99.96%+ identical** (largest
+difference 24 words in 56,843; three differ by **one** word) and each copy carries its **own package
+patch reference in the title**. So cross-listing is a **deliberate variant, not a surplus id** — the
+"63 surplus ids" framing is withdrawn — and collapsing to `doc_slug` would merge the field a reader
+searches by. What survives is far smaller: **identity continuity across re-filing** (keep the id a
+document already had when VA moves it — the identity analogue of CI.2, precedent
+`anchor-aliases.yaml`). **Not a contract change**; needs a short proposal, not a migration.
+**(2) `cots_dependent` DONE** — `split_system_type` separates platform from companions and
+`classify_system` derives the flag from **both** sources, so a `VistA + COTS` app cannot read as
+non-dependent; registry-wide invariants assert it for all 197 apps + closed vocabularies (8
+platforms, 4 companions) so a typo cannot become a category admitted at 0%. **(3) `unclassified`
+DONE** — now its own `undecided` disposition (an absence of a decision, not `not-vista`), counts
+against `complete` (exit 1), and the report **names the apps to classify and where**. Live lake
+still COMPLETE — armed, not firing. 1,503 tests, coverage 96.41%, `make check` exit 0.
+
 | Step | What lands | Status | Commit / notes |
 |------|-----------|--------|----------------|
 | VO.0 | **Bank the current inventory now** — dated copy of bronze+gold to `inventory/snapshots/2026-06-10/`, sha256-verified, **before** the +174 fetch or any crawl | ✅ 2026-08-05 | `$DATA_DIR/inventory/snapshots/2026-06-10/` — `bronze/catalog.raw.{json,csv}` + `gold/inventory.{json,csv}`, **all 4 sha256-verified against their originals**, `SHA256SUMS` + `SNAPSHOT.md` recording provenance. The zero point of the timeline: crawl `2026-06-10T03:18:38Z`→`03:36:12Z` (`stage_runs`), 5 sections · 396 applications · 8,907 documents. ⚠️ The gold copy is the **2026-07-04 catalog run** over that same crawl — the layers are dated differently on purpose |

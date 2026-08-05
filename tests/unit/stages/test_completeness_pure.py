@@ -62,6 +62,24 @@ class TestClassify:
         )
         assert d.reason == "not-vista:system-type=Web client"
 
+    def test_an_unclassified_application_is_undecided_not_excluded(self) -> None:
+        """`unclassified` is the ABSENCE of a decision, so it must not read as one.
+
+        RMPV (Prosthetics 4-Sight II) arrived on the VDL in no registry, so it classified as
+        `unclassified`, was treated as not-VistA, and all 15 of its records were dropped — while
+        `completeness` still reported COMPLETE. A genuinely new VistA application vanished from the
+        corpus without anyone ruling on it.
+        """
+        d = classify(
+            rec(system_type="unclassified"), POLICY, docx_anchors=set(), sole_survivors=set()
+        )
+        assert d == Disposition("undecided", "undecided:system-type-unclassified")
+
+    def test_an_unmapped_application_is_also_undecided(self) -> None:
+        """An empty system_type is the same absence, reached a different way."""
+        d = classify(rec(system_type=""), POLICY, docx_anchors=set(), sole_survivors=set())
+        assert d.status == "undecided"
+
     def test_decommissioned_app_is_named(self) -> None:
         d = classify(
             rec(app_status="decommissioned"), POLICY, docx_anchors=set(), sole_survivors=set()
@@ -139,6 +157,46 @@ class TestCompletenessReport:
         assert report.complete is False
         assert report.unreachable == 1
         assert "format:doc-only" in report.unreachable_by_reason
+
+    def test_an_undecided_application_makes_the_corpus_incomplete(self) -> None:
+        """The whole point: an unclassified application must force a ruling, not pass silently.
+
+        `complete` means nothing is missing for a reason we did not choose — and nobody chose to
+        drop an application that simply arrived after the registries were last curated.
+        """
+        report = completeness_report([rec(), rec(doc_slug="t", system_type="unclassified")], POLICY)
+        assert report.undecided == 1
+        assert report.complete is False
+        assert report.verdict == "INCOMPLETE"
+        assert report.undecided_by_reason == {"undecided:system-type-unclassified": 1}
+
+    def test_the_undecided_applications_are_named(self) -> None:
+        """A count is not actionable — the operator needs to know which app_code to classify."""
+        report = completeness_report(
+            [
+                rec(app_name_abbrev="RMPV", system_type="unclassified"),
+                rec(app_name_abbrev="RMPV", doc_slug="t", system_type="unclassified"),
+                rec(app_name_abbrev="NEW", doc_slug="u", system_type=""),
+                rec(),
+            ],
+            POLICY,
+        )
+        assert report.undecided == 3
+        assert report.undecided_apps == {"NEW", "RMPV"}  # deduplicated, not one entry per record
+
+    def test_undecided_is_reported_separately_from_a_real_hole(self) -> None:
+        """Two different problems: one needs a ruling, the other needs a converter."""
+        report = completeness_report(
+            [
+                rec(system_type="unclassified"),
+                # a distinct anchor_key, or the first record's DOCX would make this one read as a
+                # harmless duplicate instead of the unreadable-format hole the test is about
+                rec(doc_slug="t", doc_format="doc", anchor_key="XU:XU:TM"),
+            ],
+            POLICY,
+        )
+        assert report.undecided == 1 and report.unreachable == 1
+        assert report.undecided_by_reason and report.unreachable_by_reason
 
     def test_a_pdf_duplicate_does_not_make_the_corpus_incomplete(self) -> None:
         report = completeness_report([rec(), rec(doc_slug="t", doc_format="pdf")], POLICY)

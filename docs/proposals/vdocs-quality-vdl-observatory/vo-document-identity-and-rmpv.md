@@ -7,6 +7,19 @@ Measured on the 2026-08-05 inventory (8,983 records, 7,641 genuine) and the two 
 
 # 1. Document identity — we need one authoritative id, and today we do not have one
 
+> ## ⚠️ Superseded in part (2026-08-05, same day)
+>
+> §1's recommendation — **document identity = `doc_slug`** — was built on the inference that
+> cross-listed copies are one document split into N ids. That inference was flagged unproven here
+> and has since been **measured and withdrawn**: the copies are byte-different and each carries its
+> own package patch reference in the title, so collapsing them would merge the very field a reader
+> searches by. See
+> [`vo-identity-and-classification-audit.md` §A5](vo-identity-and-classification-audit.md).
+>
+> **What survives:** re-filing is a real defect, and the fix is *identity continuity* (keep the id a
+> document already had when VA moves it) — not a new key, and not a contract change. Read §1 below
+> for the evidence about re-filing; treat its `doc_slug` recommendation as withdrawn.
+
 ## The problem, restated from evidence
 
 `doc_id` is `<app_name_abbrev>:<doc_slug>` (`kernel/ids.py`). The application component is supplied

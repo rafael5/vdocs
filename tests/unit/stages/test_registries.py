@@ -84,6 +84,54 @@ def test_system_types_full_coverage_and_cots():
     assert set(reg.cots_dependency) == {"MD", "YS", "ROI", "CPT", "DRG", "PREM"}
 
 
+def test_every_platform_and_companion_is_from_a_known_vocabulary():
+    """Guard the taxonomy against a typo silently becoming a new category.
+
+    `system_type` is two facts in one string — platform + companions — and the platform half
+    decides scope (the gate matches the "VistA" prefix). A misspelled platform would be admitted
+    at 0% without anything saying so, which is precisely how RMPV's 15 documents disappeared.
+    """
+    from vdocs.stages.catalog.enrich_pure import split_system_type
+
+    platforms, companions = set(), set()
+    for value in _load().system_type.values():
+        p, c = split_system_type(value)
+        platforms.add(p)
+        companions.update(c)
+
+    assert platforms == {
+        "VistA",
+        "Web client",
+        "VA enterprise service",
+        "Integration middleware",
+        "Data patch",
+        "COTS product",
+        "Program documentation",
+        "VBA system",
+    }
+    assert companions == {"GUI", "COTS", "middleware", "ObjectScript"}
+
+
+def test_a_cots_companion_and_the_cots_list_cannot_disagree():
+    """One fact, two places to write it — so assert they agree for every application.
+
+    They do today; nothing enforced it. An app typed "VistA + COTS" but missing from
+    `cots_dependency` would have carried cots_dependent=False all the way to the read contract.
+    """
+    from vdocs.stages.catalog.enrich_pure import classify_system, split_system_type
+
+    reg = _load()
+    for app, value in reg.system_type.items():
+        _, companions = split_system_type(value)
+        if any(c.upper() == "COTS" for c in companions):
+            _, cots = classify_system(app, reg)
+            assert cots, f"{app} is typed {value!r} but does not read as COTS-dependent"
+
+    # and the reverse direction is legitimate: a COTS dependency on a non-VistA platform
+    assert reg.system_type["CPT"] == "Data patch"
+    assert classify_system("CPT", reg)[1] is True
+
+
 def test_doc_labels_canonical():
     reg = _load()
     assert len(reg.doc_labels) == 31
