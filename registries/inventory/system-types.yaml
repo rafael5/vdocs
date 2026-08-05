@@ -98,9 +98,17 @@ system_type:
   # VistA by the KIDS rule, from its own RMPV*1*6 Technical Manual: "This VistA software includes
   # Kernel Installation and Distribution System (KIDS) software"; patch RMPV*1*6; 18 M routines in
   # the RMPV namespace; requires Kernel + VA FileMan on a VistA facility server; ICR #6540 to
-  # Prosthetics file #668 and ICR #2980 to Consults. It also ships an InterSystems IRIS
-  # ObjectScript XML (the REST side) — a hybrid, but the KIDS half is what decides it.
-  RMPV: VistA
+  # Prosthetics file #668 and ICR #2980 to Consults.
+  #
+  # "+ ObjectScript" is a NEW compound value and it is not decoration: installing this application
+  # takes TWO artifacts — the KIDS build *and* 4Sight-II_Deployment_1_2_20260528.xml, a set of
+  # InterSystems IRIS ObjectScript classes (a FileMan-to-Class REST service into VALIP). Unlike
+  # "VistA + GUI" (a Delphi *client*) or "VistA + middleware" (a separate tier), that second
+  # artifact runs server-side, inside the same instance as the M code. Consequence worth carrying:
+  # vista-meta measures M routines/globals/FileMan, so the ObjectScript half of such an
+  # application is structurally invisible to the measured model.
+  # Admission is unaffected — scope-policy matches the "VistA" PREFIX (see its own note).
+  RMPV: VistA + ObjectScript
   AMT: VistA
   NUPA: VistA
   ACR: VistA

@@ -21,8 +21,24 @@ payload = `sha256`, version family = `anchor_key` — with two cheap measurement
 contract, so it is a contract change, not a refactor. **(2) RMPV IS VistA and is now classified** —
 its own TM says "includes Kernel Installation and Distribution System (KIDS) software", patch
 `RMPV*1*6`, 18 M routines, Kernel+FileMan required, ICR #6540 → Prosthetics file #668. One registry
-line (`RMPV: VistA`); targets 1,209 → **1,212**, unclassified warning gone. ⚠️ vista-meta has 0 RMPV
+line; targets 1,209 → **1,212**, unclassified warning gone. ⚠️ vista-meta has 0 RMPV
 routines but its extract predates the docs — documented ≠ measured, not reconciled.
+
+📐 **Full end-to-end audit:** [`vo-identity-and-classification-audit.md`](vo-identity-and-classification-audit.md).
+**(A)** The app code contaminates **all four** identity keys, not just `doc_id` — `doc_key`,
+`anchor_key` (**1,040/1,040**) and `group_key` (931/1,040) too, so a re-filing changes which
+*version family* a document belongs to. **447,525 rows** across 4 stores are keyed on it, plus the
+`<app>/<slug>/` directory layout. The real 2026-08-05 re-filing would re-key **~1,550 rows for 14
+documents whose content did not change**; cross-listing mints **63 surplus ids** for 42 documents.
+**(B)** `system_type` is the axis that decides admission (non-`VistA` prefixes admit at **exactly
+0%**), and `cots_dependent` is a **second, contradictory** vocabulary — CPT/DRG are `Data patch`
+and PREM is `Integration middleware`, all three flagged COTS-dependent. **(C)** `VistA + ObjectScript`
+added — a **new kind** of hybrid: unlike `+ GUI` (client), `+ COTS` (separate system) or
+`+ middleware` (separate tier), its second artifact runs **inside the same instance**. `ObjectScript`
+appears in **0** other corpus applications (Delphi 31, Java 25, InterSystems 13 — but those are
+platform mentions and glossary entries, *not* dependencies). ⚠️ Consequence: **vista-meta models M
+only, so the ObjectScript half of such an application is structurally invisible** to the measured
+model. Admission unchanged (prefix rule); 1,488 tests, `make check` exit 0.
 
 | Step | What lands | Status | Commit / notes |
 |------|-----------|--------|----------------|

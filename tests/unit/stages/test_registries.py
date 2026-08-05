@@ -76,7 +76,11 @@ def test_system_types_full_coverage_and_cots():
     assert reg.system_type["CPRS"] == "VistA + GUI"
     assert reg.system_type["MD"] == "VistA + COTS"
     assert reg.system_type["JLV"] == "Web client"
-    assert reg.system_type["RMPV"] == "VistA"
+    # a compound value: KIDS-installed *and* ships IRIS ObjectScript classes server-side. The
+    # fetch gate matches the "VistA" PREFIX, so a hybrid is admitted exactly like plain VistA —
+    # that is what lets the taxonomy stay honest about the runtime without changing scope.
+    assert reg.system_type["RMPV"] == "VistA + ObjectScript"
+    assert reg.system_type["RMPV"].startswith("VistA")
     assert set(reg.cots_dependency) == {"MD", "YS", "ROI", "CPT", "DRG", "PREM"}
 
 
