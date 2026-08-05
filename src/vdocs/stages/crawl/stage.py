@@ -12,6 +12,7 @@ run only when explicitly requested.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import structlog
@@ -24,6 +25,7 @@ from vdocs.models.catalog import Catalog
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import PostflightError, Stage, StageContext
 from vdocs.stages.crawl.floor_pure import CrawlYield, check_floor, yield_of
+from vdocs.stages.crawl.snapshot_pure import canonical_hash, snapshot_name, snapshot_order
 
 log = structlog.get_logger(__name__)
 
@@ -108,8 +110,10 @@ class CrawlStage(Stage):
                     "vdocs crawl --accept-shrink"
                 )
             log.warning("crawl-shrink-accepted", reason=verdict.reason)
-        cas.atomic_write(ctx.cfg.catalog_raw, catalog.model_dump_json(indent=2).encode("utf-8"))
+        payload = catalog.model_dump_json(indent=2).encode("utf-8")
+        cas.atomic_write(ctx.cfg.catalog_raw, payload)
         cas.atomic_write(ctx.cfg.catalog_raw.with_suffix(".csv"), _to_csv(catalog).encode("utf-8"))
+        _keep_snapshot(ctx.cfg.inventory_snapshots, catalog, payload, taken_at=ctx.clock())
         return RunResult(
             counts={
                 "sections": len(sections),
@@ -133,6 +137,59 @@ class CrawlStage(Stage):
         except ValueError:
             log.warning("crawl-baseline-unreadable", path=str(catalog_raw))
             return None
+
+
+def _keep_snapshot(root: Path, catalog: Catalog, payload: bytes, *, taken_at: str) -> str | None:
+    """Preserve this crawl as dated, immutable evidence (VO.2); ``None`` when it duplicates.
+
+    Deduplicated against the **newest** snapshot's canonical content hash, so a crawl that found
+    the same thing (or the same thing in a different page order) does not fabricate history —
+    while a VDL that reverts to an earlier state still records that it did. Nothing already in
+    ``root`` is ever rewritten: the name is chosen to be free.
+    """
+    existing = (
+        sorted((p.name for p in root.iterdir() if p.is_dir()), key=snapshot_order)
+        if root.exists()
+        else []
+    )
+    digest = canonical_hash(catalog)
+    if existing and _recorded_hash(root / existing[-1]) == digest:
+        log.info("crawl-snapshot-unchanged", newest=existing[-1], canonical_hash=digest[:12])
+        return None
+
+    name = snapshot_name(taken_at[:10], existing)
+    cas.atomic_write(root / name / "catalog.raw.json", payload)
+    cas.atomic_write(
+        root / name / "SNAPSHOT.json",
+        json.dumps(
+            {
+                "taken_at": taken_at,
+                "canonical_hash": digest,
+                "sections": len(catalog.sections),
+                "applications": sum(len(s.applications) for s in catalog.sections),
+                "documents": sum(
+                    len(a.documents) for s in catalog.sections for a in s.applications
+                ),
+            },
+            indent=2,
+            sort_keys=True,
+        ).encode("utf-8"),
+    )
+    log.info("crawl-snapshot-kept", snapshot=name, canonical_hash=digest[:12])
+    return name
+
+
+def _recorded_hash(snapshot: Path) -> str:
+    """The canonical hash a snapshot recorded, or '' when it has none (unreadable/legacy)."""
+    meta = snapshot / "SNAPSHOT.json"
+    if not meta.is_file():
+        return ""
+    try:
+        value = json.loads(meta.read_text(encoding="utf-8")).get("canonical_hash", "")
+    except (ValueError, OSError):
+        log.warning("crawl-snapshot-meta-unreadable", path=str(meta))
+        return ""
+    return str(value)
 
 
 def _to_csv(catalog: Catalog) -> str:

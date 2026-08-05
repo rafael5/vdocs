@@ -82,8 +82,28 @@ figure should never be quoted unqualified again — 36% of it is benefits forms,
 remainder is superseded copies plus release-pinned documents.
 
 **Not settled:** whether VA uses the label deliberately and consistently, or whether it is editorial
-habit. That needs VA's own statement or a change-over-time record, which is what VO.2–VO.4 exist to
-build. One snapshot cannot distinguish a policy from a convention.
+habit. One snapshot cannot distinguish a policy from a convention.
+
+## VO.5 is CLOSED — the intent question is declared unestablished (2026-08-05)
+
+The paragraph above originally deferred intent to "what VO.2–VO.4 exist to build". **That deferral
+was wrong, and closing it is the honest result rather than a gap left open.**
+
+The timeline VO.2 starts records the VDL from 2026-08-05 forward. The labels whose meaning is in
+question were applied over **2005–2022** — the 115 populated `decommission_date` values span exactly
+that range, all of them before our first snapshot. A record that begins after every event it would
+need to explain cannot explain them. Waiting for VO.3/VO.4 to answer this would be waiting for
+evidence that, by construction, will never arrive.
+
+What *would* settle it is outside this pipeline's reach: a statement from VA about its own editorial
+policy. Nothing in the crawl, the corpus, or the measured VistA model substitutes for that.
+
+**Therefore:** the composition of the archive population is established and recorded above; **VA's
+intent behind the label is unestablished and no further work is scheduled to establish it.** Per the
+effort's standing rule, that is recorded as a known unknown — not as a finding, and not as an open
+task pretending to be actionable. Future timeline deltas may still show a *new* label being applied,
+which is evidence about VA's behaviour going forward; it is not evidence about the 2005–2022 back
+catalogue, and must not be presented as such.
 
 **Method note.** Two measurement traps were hit and corrected while doing this, both worth carrying:
 

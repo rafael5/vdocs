@@ -135,6 +135,53 @@ def crawl(
     _drive(only="crawl", stages=stages, force=True)
 
 
+@app.command(name="vdl-delta")
+def vdl_delta_cmd(
+    before: str = typer.Argument("", help="earlier snapshot name (default: second-newest)"),
+    after: str = typer.Argument("", help="later snapshot name (default: newest)"),
+) -> None:
+    """What changed on the VDL between two preserved crawl snapshots (VO.3/VO.4a).
+
+    Reads only inventory-bronze snapshots, so two consecutive crawls are comparable long after the
+    fact without re-crawling. Applications are keyed on the VDL's own `appid`, so a rename reads as
+    a rename rather than a departure plus an arrival. A corpus-wide lifecycle change is reported as
+    SUSPECT-PARSER instead of as history — `app_status` is parsed from the application name's
+    suffix, so that shape is a broken regex until proven otherwise.
+    """
+    from vdocs.models.catalog import Catalog
+    from vdocs.stages.crawl.delta_pure import render_delta, vdl_delta
+    from vdocs.stages.crawl.snapshot_pure import snapshot_order
+
+    cfg = Settings()
+    root = cfg.inventory_snapshots
+    names = (
+        sorted((p.name for p in root.iterdir() if p.is_dir()), key=snapshot_order)
+        if root.exists()
+        else []
+    )
+    if len(names) < 2:
+        typer.echo(
+            f"need two snapshots to compare, found {len(names)} in {root}. "
+            "The timeline starts when snapshots start — each crawl keeps one."
+        )
+        raise typer.Exit(code=1)
+
+    before, after = (before or names[-2]), (after or names[-1])
+    for name in (before, after):
+        if name not in names:
+            typer.echo(f"no snapshot named {name!r}. Available: {', '.join(names)}")
+            raise typer.Exit(code=1)
+
+    def _read(name: str) -> Catalog:
+        return Catalog.model_validate_json(
+            (root / name / "catalog.raw.json").read_text(encoding="utf-8")
+        )
+
+    typer.echo(
+        render_delta(vdl_delta(_read(before), _read(after)), before_name=before, after_name=after)
+    )
+
+
 @app.command()
 def catalog(force: bool = typer.Option(False, "--force", "-f")) -> None:
     """Enrich catalog.raw into the conformed inventory (identity, doc-type, noise, groups)."""

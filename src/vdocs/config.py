@@ -128,6 +128,16 @@ class Settings(BaseSettings):
         return self.inventory_bronze / "catalog.raw.json"
 
     @property
+    def inventory_snapshots(self) -> Path:
+        """inv-bronze history (VO.2): one immutable dated directory per crawl.
+
+        Bronze only, deliberately — it is VA's raw statement. A delta computed over the *gold*
+        inventory would conflate a change in the VDL with a change in our own registry-driven
+        classification of it.
+        """
+        return self.inventory / "snapshots"
+
+    @property
     def catalog_enriched(self) -> Path:
         """inv-silver: the conformed/enriched per-record inventory."""
         return self.inventory_silver / "catalog.enriched.json"
