@@ -432,7 +432,9 @@ def test_normalize_writes_refs_yaml_sidecar(ctx):
     assert "[↑ Back to Contents](#contents)" in body
 
     refs = yaml.safe_load((bundle / "refs.yaml").read_text())
-    assert refs["doc_id"] == "ADT/rm_doc" and refs["toc_depth"] == [2, 3]
+    # the span now reflects the levels the document actually uses (H1 title + H2 sections), not a
+    # fixed two-level window — see effective_toc_depth
+    assert refs["doc_id"] == "ADT/rm_doc" and refs["toc_depth"] == [2, 2]
     by_slug = {a["slug"]: a for a in refs["anchors"]}
     assert by_slug["setup"]["stable_id"] == "ADT/rm_doc/setup"
     assert by_slug["setup"]["bookmark"] == "_Toc555" and by_slug["setup"]["toc_level"] is True

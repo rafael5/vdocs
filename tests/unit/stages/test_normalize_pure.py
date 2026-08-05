@@ -103,14 +103,25 @@ def test_subtract_phrases_short_phrase_stays_exact_to_avoid_false_deletes():
     assert nz.subtract_phrases(body, frozenset({"End of document"})) == body
 
 
-def test_effective_toc_depth_includes_top_level_when_there_is_no_single_title():
-    # a lone leading H1 is the document title → H2–H3 (the default)
-    single = nz.parse_headings("# Title\n\n## A\n\n### B\n")
-    assert nz.effective_toc_depth(single) == (2, 3)
-    # many H1s (sections, not a title) → include H1 so the doc gets a Contents
+def test_effective_toc_depth_spans_every_level_the_document_uses():
+    """Human review, 2026-08-04: the source PDF's printed TOC lists every level and ours listed
+    two, so the Contents was silently truncated — 704 of 846 headings absent on `fm22_2dg`, and
+    1,589 of 2,144 on `cprsguitm_0_636`. The window now runs from the top section level to the
+    deepest heading actually present."""
+    # a lone leading H1 is the document title → start below it, run to the deepest level used
+    single = nz.parse_headings("# Title\n\n## A\n\n### B\n\n#### C\n")
+    assert nz.effective_toc_depth(single) == (2, 4)
+    # many H1s (sections, not a title) → include H1
     many = nz.parse_headings("# One\n\nx\n\n# Two\n\ny\n\n# Three\n\nz\n")
-    assert nz.effective_toc_depth(many) == (1, 2)
+    assert nz.effective_toc_depth(many) == (1, 1)
     assert nz.effective_toc_depth([]) == (2, 3)  # no headings → default
+
+
+def test_effective_toc_depth_never_starts_above_the_document_title():
+    """H1 is the title, not a Contents entry — a deeper span must not swallow it."""
+    heads = nz.parse_headings("# Title\n\n## A\n\n###### Deep\n")
+    lo, _hi = nz.effective_toc_depth(heads)
+    assert lo == 2
 
 
 def test_normalize_body_generates_contents_for_multi_h1_doc():

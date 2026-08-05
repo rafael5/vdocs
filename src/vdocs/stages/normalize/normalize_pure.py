@@ -884,19 +884,27 @@ def strip_existing_toc(body: str) -> str:
 def effective_toc_depth(
     headings: list[Heading], default: tuple[int, int] = DEFAULT_TOC_DEPTH
 ) -> tuple[int, int]:
-    """The TOC depth to actually use for a document (§6.7). A **lone** leading top-level heading is
-    the document title, so the navigable structure is the two levels below it (the ``H2–H3``
-    default). But when the shallowest level has **several** headings, those are sections, not a
-    title — include that level so multi-``H1`` docs (release notes, flat manuals) still get a
-    ``## Contents`` instead of an empty one. No headings → the default."""
+    """The TOC depth to actually use for a document (§6.7): from the top **section** level down to
+    the deepest heading the document actually uses.
+
+    A **lone** leading top-level heading is the document title, so the span starts below it; when
+    the shallowest level has **several** headings those are sections, not a title, and the span
+    includes them (multi-``H1`` release notes and flat manuals still get a ``## Contents``). No
+    headings → the default.
+
+    **It spans every level, not two** (human review, 2026-08-04). The source PDFs' printed tables of
+    contents list every level and ours listed two, so the Contents was silently truncated against
+    the document it describes: 704 of 846 headings missing on the FileMan Developer's Guide, 1,589
+    of 2,144 on the CPRS Technical Manual. The heading tree is the structure; showing a fixed slice
+    of it was a navigation loss, not a simplification."""
     levels = sorted({h.level for h in headings})
     if not levels:
         return default
     base = levels[0]
     base_count = sum(1 for h in headings if h.level == base)
     if base_count <= 1 and len(levels) > 1:  # a single title heading above deeper sections
-        return (base + 1, base + 2)
-    return (base, base + 1)
+        return (base + 1, max(levels))
+    return (base, max(levels))
 
 
 def build_toc(headings: list[Heading], toc_depth: tuple[int, int] = DEFAULT_TOC_DEPTH) -> str:
