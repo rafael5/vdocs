@@ -4,73 +4,69 @@ Proposal: [`vdocs-quality-vdl-observatory.md`](vdocs-quality-vdl-observatory.md)
 Tracker: [`vdocs-quality-vdl-observatory-tracker.md`](vdocs-quality-vdl-observatory-tracker.md) ·
 Prompts: [`prompts/`](prompts/)
 
-⛔ **Runs after `vdocs-quality-crawl-integrity`** (shared snapshot mechanism). Commit subjects
-`VO.1:` … `VO.5:`. House rules: TDD, `make check` green before commit, tick the tracker in the same
-commit.
+**Revised 2026-08-05 to match the adversarially-reviewed proposal.** The old "runs after
+crawl-integrity (shared snapshot mechanism)" premise is void — no snapshot mechanism was built
+there; VO.2 is greenfield. Commit subjects `VO.0:` … `VO.5:`. House rules: TDD, `make check` green
+before commit, tick the tracker in the same commit. **Each step stops at its DoD** (proposal
+Table 1) — new questions get written down, not pursued.
 
-## VO.1 — Measure what the inventory already tells us
+## VO.0 — Bank the current inventory (first; no design, no code)
 
-Before building anything, establish what the current single snapshot already contains and what it
-structurally cannot answer. Several signals are captured and unused: `app_status` (8,907 records),
-`cots_dependent` (404), `decommission_date` (115, spanning 2005–2022), `out_of_scope_reason`.
+Copy `inventory/bronze/catalog.raw.{json,csv}` and `inventory/gold/inventory.{json,csv}` to
+`$DATA_DIR/inventory/snapshots/2026-06-10/` (named for the source crawl per `stage_runs`), plus a
+one-paragraph `SNAPSHOT.md` naming that crawl. Verify each copy's sha256 equals its original.
 
-Produce: the distributions, the fields' fill rates, and an explicit list of the questions that need
-*more than one* snapshot to answer. That list is the specification for VO.3.
+**Done when:** checksums match and the directory exists — before any `vdocs fetch --all` or crawl.
 
-**No storage format is designed before this exists.**
+## VO.1 — (optional, demoted) fill-rate report
 
-## VO.2 — Keep every snapshot (do this early; it cannot be backdated)
+Only if VO.3's report turns out to need it. CI.0 already measured the essentials.
 
-Preserve each crawl's inventory as a dated, immutable record instead of overwriting it. Keep the
-structured inventory, not another copy of the document payloads — the inventory is small and the
-payloads are already content-addressed and write-once.
+## VO.2 — Snapshot on every successful crawl (bronze only)
 
-Design notes:
-- **Immutable and dated.** A snapshot is evidence; it is never rewritten, and the crawl that
-  produced it is identifiable.
-- **Cheap enough to always do.** If keeping a snapshot is expensive or optional, it will be skipped
-  exactly when the source is changing fastest.
-- Reuse the existing inventory medallion rather than inventing a parallel store.
+In `crawl.run()`, after the floor check passes and bronze is written, also write
+`snapshots/<crawl-date>/catalog.raw.json` — unless the canonical content hash (sha256 over sorted
+`(section, app_url, doc_url, status, …)` rows, a pure function) equals the newest existing
+snapshot's. Snapshots are never rewritten.
 
-*Tests first:* two crawls produce two retained snapshots; the earlier one is byte-identical after the
-later crawl; a re-run that finds nothing new does not fabricate a snapshot.
+*Tests first:* (a) two differing crawls → two snapshots; (b) the earlier snapshot byte-identical
+after the later crawl; (c) identical canonical content (including a page-reorder variant) → no new
+snapshot.
 
-## VO.3 — The timeline view
+## VO.3 — Delta between two snapshots, keyed on VDL numeric ids
 
-Counts and composition per crawl — by library section, by document type, by `app_status` — so "how
-fast is section X changing?" is a query. Driven by the question list from VO.1.
+Pure function: two `Catalog`s → per-section counts by `app_status` + doc-count deltas, keyed on
+`appid`/`secid` parsed from the URLs the crawl already stores — never on names or `app_code`. A CLI
+entry (`vdocs vdl-delta <a> <b>` or equivalent) prints the report.
 
-*Tests first:* fixture snapshots produce the expected deltas; a section that did not change reports
-zero rather than being absent.
+*Tests first:* renamed app with unchanged `appid` reports as a rename, not departure+arrival; an
+unchanged section reports **0**, not absent.
 
-## VO.4 — Lifecycle transitions as events
+## VO.4a — Mass-transition tripwire (with VO.3, same report)
 
-Surface the changes worth knowing: an application moving `active → archive → decommissioned`, a
-decommission date appearing, a `cots_dependent` flag being set. An event someone can be told about
-is more useful than a table someone must remember to query.
+`app_status` is a regex over a display suffix (`crawl_pure.py:24`). If >5% of apps change status in
+one delta, the report emits `SUSPECT-PARSER` and suppresses transition rows.
 
-Where the pipeline already has an alerting surface, use it rather than adding a second one.
+*Tests first:* cosmetic suffix change across all apps → one flag, zero transitions; one genuine
+transition → one row, no flag.
 
-*Tests first:* a status transition between two fixture snapshots emits exactly one event with both
-states named; an unchanged application emits none.
+*(VO.4b, optional, after VO.4a: per-transition rows — status change, decommission date arriving,
+`cots_dependent` set — as report rows only; no new channel.)*
 
-## VO.5 — Answer the archived-share question
+## VO.5 — Close the archive question
 
-**38.2% of the library (3,404 of 8,907 records) is marked `archive`, and nobody has established what
-VA means by it.** Determine it: sample archived records, compare the label against what the documents
-themselves say, and check whether the corresponding VistA code is still present (the `vista-meta`
-measured model can answer that side).
-
-The outcome is a written finding: what `archive` means operationally, and therefore how much of the
-corpus should be treated as historical rather than current. **If it cannot be established, say so
-explicitly and record what was tried** — an honest unknown is a result; a guess presented as a
-finding is not.
+Append to [`vo5-archive-meaning-findings.md`](vo5-archive-meaning-findings.md): composition stands
+as measured (2026-08-04); VA's **intent is unestablished and stays so** — a timeline starting 2026
+cannot explain labels applied 2005–2022. Tick the tracker ✅. No further intent work.
 
 ## Sequencing
 
-VO.1 → VO.2 (early, time-sensitive) → VO.3 → VO.4, with VO.5 runnable in parallel once VO.1 is done.
+VO.0 immediately → VO.2 → VO.3 + VO.4a. VO.5 is a paragraph, any time. VO.1/VO.4b/VO.3b only after
+Table 1 is fully ✅, and only on demand.
 
 ## Out of scope
 
-Changing what is fetched or admitted (that is `crawl-integrity`), inferring VA's intent behind a
-label, and backfilling history that was never recorded.
+Everything in proposal Table 3: gold-layer timelines, name-keyed identity, event channels,
+backfill, intent inference, storage engineering. Fetch/admission changes remain
+`crawl-integrity`'s (the VO.6–VO.9 completeness workstream was a recorded, operator-signed
+exception).

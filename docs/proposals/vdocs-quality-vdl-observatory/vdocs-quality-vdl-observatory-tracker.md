@@ -1,13 +1,17 @@
 # vdocs-quality-vdl-observatory — tracker
 
+*(Revised 2026-08-05 to the adversarially-reviewed proposal — DoD per row = proposal Table 1.)*
+
 | Step | What lands | Status | Commit / notes |
 |------|-----------|--------|----------------|
-| VO.1 | **Measure first** — what the current inventory already tells us (labels, dates, commercial-dependency flags) and what it cannot | ☐ | |
-| VO.2 | Every crawl's inventory preserved as a dated, immutable record — **time-sensitive** | ☐ | |
-| VO.3 | Timeline view: counts and composition per crawl, by section, document type and status | ☐ | |
-| VO.4 | Lifecycle transitions surfaced as events (status change, decommission date, commercial-dependency flag) | ☐ | |
-| VO.5 | The archived-share question answered with evidence — or declared unestablished, with why | 🟡 | **Composition answered ahead of the effort** (operator hypothesis, measured 2026-08-04): [`vo5-archive-meaning-findings.md`](vo5-archive-meaning-findings.md). **36% of the archive share is VBA benefits forms, not documentation**; of the genuine 2,170, **69.6% are older/duplicate copies** (72.2% older, 25.7% same version, 2.1% newer) and the rest are release-pinned documents. ⚠️ **But archive is NOT redundant in our corpus** — `consolidate` already folds the duplicates, and **0 of the 55 surviving archive documents have an active twin**. VA's *intent* stays unestablished; that needs VO.2–VO.4 |
-| VO ✓ | Two consecutive crawls comparable without re-crawling; transitions visible; `archive` meaning recorded | ☐ | |
+| VO.0 | **Bank the current inventory now** — dated copy of bronze+gold to `inventory/snapshots/2026-06-10/`, sha256-verified, **before** the +174 fetch or any crawl | ☐ | |
+| VO.2 | Immutable dated snapshot on every successful crawl — **bronze only**, deduped by canonical content hash (sorted rows) | ☐ | |
+| VO.3 | Delta between two snapshots — per-section counts by status, **keyed on `appid`/`secid`**, never parsed names | ☐ | |
+| VO.4a | Mass-transition tripwire: >5% of apps changing status in one delta → `SUSPECT-PARSER`, transitions suppressed (`app_status` is a display-suffix regex) | ☐ | |
+| VO.1 | *(optional, demoted)* fill-rate report of unused fields — only if VO.3 needs it; CI.0 covered the essentials | ☐ | |
+| VO.4b | *(optional)* transition rows in the delta report (status, decommission date, `cots_dependent`) — report rows, **no new channel** | ☐ | |
+| VO.5 | The archived-share question answered with evidence — **closes as composition-answered / intent-unestablished** (proposal Table 1: append the explicit "intent unestablished, and why" paragraph to the findings, then ✅ — no further intent work) | 🟡 | **Composition answered ahead of the effort** (operator hypothesis, measured 2026-08-04): [`vo5-archive-meaning-findings.md`](vo5-archive-meaning-findings.md). **36% of the archive share is VBA benefits forms, not documentation**; of the genuine 2,170, **69.6% are older/duplicate copies** (72.2% older, 25.7% same version, 2.1% newer) and the rest are release-pinned documents. ⚠️ **But archive is NOT redundant in our corpus** — `consolidate` already folds the duplicates, and **0 of the 55 surviving archive documents have an active twin**. VA's *intent* stays unestablished; that needs VO.2–VO.4 |
+| VO ✓ | VO.0, VO.2, VO.3, VO.4a and VO.5 all ✅ (proposal Table 1 DoDs) — optional rows not required | ☐ | |
 
 ### Completeness workstream (VO.6–VO.9) — separate from the timeline above
 
@@ -41,10 +45,10 @@ Proposal: [`vdocs-quality-vdl-observatory.md`](vdocs-quality-vdl-observatory.md)
 Plan: [`vdocs-quality-vdl-observatory-implementation-plan.md`](vdocs-quality-vdl-observatory-implementation-plan.md) ·
 Prompts: [`prompts/`](prompts/)
 
-⛔ **Runs after [`vdocs-quality-crawl-integrity`](../vdocs-quality-crawl-integrity/)** — it shares that
-effort's snapshot mechanism and retention rule.
-⏳ **VO.2 is time-sensitive:** every crawl that overwrites its predecessor is a data point
-permanently lost. It cannot be backdated.
+⚠️ **Sequencing premise corrected (2026-08-05):** crawl-integrity closed **without** building a
+snapshot mechanism — there is nothing to share; VO.2 is greenfield.
+⏳ **VO.0 is the time-sensitive step:** the only held crawl (2026-06-10) is overwritten by the next
+explicit crawl, and the pending +174 `vdocs fetch --all` + rebuild makes one likely. Bank it first.
 
 ## Baseline (production inventory, 2026-08-03 — 8,907 records)
 
