@@ -68,10 +68,15 @@ def test_noise_domains():
 
 def test_system_types_full_coverage_and_cots():
     reg = _load()
-    assert len(reg.system_type) == 196  # the 196-app map (spec §7)
+    # 196 at spec §7; 197 since 2026-08-05, when the VDL published a new application (RMPV,
+    # Prosthetics 4-Sight II) and its own Technical Manual established it as KIDS-installed.
+    # This count is a drift tripwire: a new application must be classified deliberately, because
+    # an unclassified one is silently treated as not-VistA and excluded from the corpus.
+    assert len(reg.system_type) == 197
     assert reg.system_type["CPRS"] == "VistA + GUI"
     assert reg.system_type["MD"] == "VistA + COTS"
     assert reg.system_type["JLV"] == "Web client"
+    assert reg.system_type["RMPV"] == "VistA"
     assert set(reg.cots_dependency) == {"MD", "YS", "ROI", "CPT", "DRG", "PREM"}
 
 

@@ -12,6 +12,18 @@ documentation from ADT to Scheduling. ⚠️ **A brand-new active VistA applicat
 ruling needed** (scope = `crawl-integrity`). Admitted targets 1,218 → 1,209 (26 arrived, 35
 departed; 14 of the departures are already fetched, so CI.2 retention applies).
 
+🔎 **Both follow-ups investigated:** [`vo-document-identity-and-rmpv.md`](vo-document-identity-and-rmpv.md).
+**(1) `doc_id` has no single authority** — the app component is not a property of the document: it
+churns on re-filing (35 ids) and *splits one document into up to 5 ids* when VA cross-lists a
+multi-package guide (42 slugs). Recommended three-layer model — document = `doc_slug` (app-free),
+payload = `sha256`, version family = `anchor_key` — with two cheap measurements to run first.
+**Not built:** `doc_id` is the join key across `state.db`, `index.db`, `knowledge.db` and the read
+contract, so it is a contract change, not a refactor. **(2) RMPV IS VistA and is now classified** —
+its own TM says "includes Kernel Installation and Distribution System (KIDS) software", patch
+`RMPV*1*6`, 18 M routines, Kernel+FileMan required, ICR #6540 → Prosthetics file #668. One registry
+line (`RMPV: VistA`); targets 1,209 → **1,212**, unclassified warning gone. ⚠️ vista-meta has 0 RMPV
+routines but its extract predates the docs — documented ≠ measured, not reconciled.
+
 | Step | What lands | Status | Commit / notes |
 |------|-----------|--------|----------------|
 | VO.0 | **Bank the current inventory now** — dated copy of bronze+gold to `inventory/snapshots/2026-06-10/`, sha256-verified, **before** the +174 fetch or any crawl | ✅ 2026-08-05 | `$DATA_DIR/inventory/snapshots/2026-06-10/` — `bronze/catalog.raw.{json,csv}` + `gold/inventory.{json,csv}`, **all 4 sha256-verified against their originals**, `SHA256SUMS` + `SNAPSHOT.md` recording provenance. The zero point of the timeline: crawl `2026-06-10T03:18:38Z`→`03:36:12Z` (`stage_runs`), 5 sections · 396 applications · 8,907 documents. ⚠️ The gold copy is the **2026-07-04 catalog run** over that same crawl — the layers are dated differently on purpose |

@@ -94,6 +94,13 @@ system_type:
   PXRM: VistA
   SD: VistA
   RMPR: VistA
+  # Prosthetics 4-Sight II — arrived on the VDL between the 2026-06-10 and 2026-08-05 crawls.
+  # VistA by the KIDS rule, from its own RMPV*1*6 Technical Manual: "This VistA software includes
+  # Kernel Installation and Distribution System (KIDS) software"; patch RMPV*1*6; 18 M routines in
+  # the RMPV namespace; requires Kernel + VA FileMan on a VistA facility server; ICR #6540 to
+  # Prosthetics file #668 and ICR #2980 to Consults. It also ships an InterSystems IRIS
+  # ObjectScript XML (the REST side) — a hybrid, but the KIDS half is what decides it.
+  RMPV: VistA
   AMT: VistA
   NUPA: VistA
   ACR: VistA
