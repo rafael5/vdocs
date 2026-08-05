@@ -2,6 +2,16 @@
 
 *(Revised 2026-08-05 to the adversarially-reviewed proposal — DoD per row = proposal Table 1.)*
 
+🔭 **The observatory is producing evidence.** First real delta:
+[`vo-first-delta-2026-08-05.md`](vo-first-delta-2026-08-05.md) — fresh crawl 2026-08-05 vs the
+banked 2026-06-10. VDL grew (8,907→8,983 listings, 396→398 applications), **0 departures, 0
+renames, 0 lifecycle transitions**; the churn beneath the net is mostly VA **re-filing** ISS
+documentation from ADT to Scheduling. ⚠️ **A brand-new active VistA application arrived
+(Prosthetics 4-Sight II, RMPV) and 0 of its 15 records are admitted** — it is in no registry, so
+`system_type=unclassified` excludes it while `vdocs completeness` still says COMPLETE. **Operator
+ruling needed** (scope = `crawl-integrity`). Admitted targets 1,218 → 1,209 (26 arrived, 35
+departed; 14 of the departures are already fetched, so CI.2 retention applies).
+
 | Step | What lands | Status | Commit / notes |
 |------|-----------|--------|----------------|
 | VO.0 | **Bank the current inventory now** — dated copy of bronze+gold to `inventory/snapshots/2026-06-10/`, sha256-verified, **before** the +174 fetch or any crawl | ✅ 2026-08-05 | `$DATA_DIR/inventory/snapshots/2026-06-10/` — `bronze/catalog.raw.{json,csv}` + `gold/inventory.{json,csv}`, **all 4 sha256-verified against their originals**, `SHA256SUMS` + `SNAPSHOT.md` recording provenance. The zero point of the timeline: crawl `2026-06-10T03:18:38Z`→`03:36:12Z` (`stage_runs`), 5 sections · 396 applications · 8,907 documents. ⚠️ The gold copy is the **2026-07-04 catalog run** over that same crawl — the layers are dated differently on purpose |
