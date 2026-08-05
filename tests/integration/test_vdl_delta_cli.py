@@ -99,6 +99,29 @@ def test_no_arguments_compares_the_two_newest_snapshots(tmp_path, monkeypatch):
     assert "active → archive" in res.output
 
 
+def test_a_directory_without_a_catalog_is_not_a_snapshot(tmp_path, monkeypatch):
+    """Only a directory holding a catalog is comparable — a stray one must not be offered.
+
+    The hand-banked first snapshot (VO.0) also carries `bronze/` and `gold/` subdirectories; a
+    reader that treats any directory as a snapshot would pick one of those and fail.
+    """
+    env = _seed(
+        tmp_path,
+        {
+            "2026-06-10": _catalog(_app(10, "Nursing")),
+            "2026-09-01": _catalog(_app(10, "Nursing", status="archive")),
+        },
+    )
+    (tmp_path / "lake" / "inventory" / "snapshots" / "scratch").mkdir()
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
+
+    res = runner.invoke(app, ["vdl-delta"])
+
+    assert res.exit_code == 0, res.output
+    assert "2026-06-10 → 2026-09-01" in res.output
+
+
 def test_one_snapshot_is_not_a_timeline_yet(tmp_path, monkeypatch):
     for k, v in _seed(tmp_path, {"2026-06-10": _catalog(_app(10, "Nursing"))}).items():
         monkeypatch.setenv(k, v)

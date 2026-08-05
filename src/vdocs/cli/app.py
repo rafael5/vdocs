@@ -154,8 +154,14 @@ def vdl_delta_cmd(
 
     cfg = Settings()
     root = cfg.inventory_snapshots
+    # a snapshot is a directory holding a catalog — not merely a directory. The hand-banked first
+    # snapshot carries `bronze/`/`gold/` subdirectories, and treating those as snapshots would
+    # pick one as "newest" and fail on the missing catalog.
     names = (
-        sorted((p.name for p in root.iterdir() if p.is_dir()), key=snapshot_order)
+        sorted(
+            (p.name for p in root.iterdir() if (p / "catalog.raw.json").is_file()),
+            key=snapshot_order,
+        )
         if root.exists()
         else []
     )

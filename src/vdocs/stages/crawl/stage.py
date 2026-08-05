@@ -147,8 +147,13 @@ def _keep_snapshot(root: Path, catalog: Catalog, payload: bytes, *, taken_at: st
     while a VDL that reverts to an earlier state still records that it did. Nothing already in
     ``root`` is ever rewritten: the name is chosen to be free.
     """
+    # a snapshot is a directory holding a catalog — a stray directory sorting last would be read
+    # as the newest, record no hash, and so defeat deduplication on every future crawl.
     existing = (
-        sorted((p.name for p in root.iterdir() if p.is_dir()), key=snapshot_order)
+        sorted(
+            (p.name for p in root.iterdir() if (p / "catalog.raw.json").is_file()),
+            key=snapshot_order,
+        )
         if root.exists()
         else []
     )

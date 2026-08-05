@@ -85,7 +85,10 @@ def test_a_crawl_that_found_the_same_thing_does_not_fabricate_a_snapshot(ctx) ->
     """Identity is canonical content, not bytes — a VDL page reorder is not history."""
     _crawl(ctx, [DOC_A, DOC_B])
     before = _snapshots(ctx)
+    # a stray directory must not be mistaken for the newest snapshot: it records no hash, so
+    # deduplication would silently stop working and every crawl would bank a duplicate
+    (ctx.cfg.inventory_snapshots / "scratch").mkdir()
 
     _crawl(ctx, [DOC_B, DOC_A])
 
-    assert _snapshots(ctx) == before
+    assert _snapshots(ctx) == [*before, "scratch"]
