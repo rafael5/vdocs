@@ -569,10 +569,12 @@ def test_validate_blocks_when_an_indexed_doc_never_converted(ctx):
     assert any(f["kind"] == ch.INDEXED_NOT_CONVERTED for f in report["chain_findings"])
 
 
-def test_validate_blocks_on_a_doc_the_gate_no_longer_admits(ctx):
+def test_validate_blocks_on_a_doc_the_gate_no_longer_admits(ctx, repo_registries):
     # audit R-10: a withdrawn/renamed document (or one a policy edit narrowed out) stays in the
     # corpus until something reconciles it. It is fully present downstream — fetched, indexed,
     # converted, normalized — and only the inventory disagrees, so no per-stage count can see it.
+    # Hermetic: the live registry's acknowledgements must not decide what "unacknowledged" means.
+    (repo_registries / "inventory" / "scope-changes.yaml").write_text("changes: []\n")
     _seed_bundle(ctx, "a", captures={"refs": "captured"})
     _seed_chain(ctx, ["a"], unadmitted=["stale"])  # writes the stale bundles…
     _bless(ctx, "normalize", TEXT_NORMALIZED, {"documents": 2, "refs_sidecars": 1})  # …then bless
@@ -585,6 +587,49 @@ def test_validate_blocks_on_a_doc_the_gate_no_longer_admits(ctx):
         f["kind"] == ch.FETCHED_NOT_ADMITTED and f["doc_id"] == "ADT:stale"
         for f in report["chain_findings"]
     )
+
+
+def test_an_acknowledged_departure_passes_and_stays_reported(ctx, tmp_path):
+    # fetch already passes a departure acknowledged in scope-changes.yaml (CI.4) and retains the
+    # document (CI.2); validate must agree rather than block on it forever — and keep naming it.
+    import shutil
+
+    reg = tmp_path / "registries"
+    shutil.copytree(ctx.cfg.registries, reg)
+    (reg / "inventory" / "scope-changes.yaml").write_text(
+        "changes:\n  - app_code: ADT\n    date: 2026-11-05\n    reason: test acknowledgement\n"
+    )
+    ctx.cfg.registries_dir = reg
+    _seed_bundle(ctx, "a", captures={"refs": "captured"})
+    _seed_chain(ctx, ["a"], unadmitted=["stale"])
+    _bless(ctx, "normalize", TEXT_NORMALIZED, {"documents": 2, "refs_sidecars": 1})
+    _seed_consolidated_ok(ctx)
+
+    (result,) = Orchestrator([ValidateStage()]).run(ctx)
+    assert result.status == "ok"
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    assert report["chain_findings"] == []
+    assert report["acknowledged_departures"] == ["ADT:stale"]
+
+
+def test_a_blocked_run_keeps_the_prior_count_baseline(ctx):
+    # The drop baseline is the prior report. A failed run that overwrote it would let a plain
+    # re-run pass the same drop unreviewed — on the live lake that would have shipped a pharmacy
+    # manual with every heading swallowed by a code fence. Only a green run advances it.
+    ctx.cfg.validation_report.parent.mkdir(parents=True, exist_ok=True)
+    ctx.cfg.validation_report.write_text(
+        json.dumps({"counts": {"documents": 60, "refs_sidecars": 60, "tables_sidecars": 55}})
+    )
+    for i in range(60):
+        _seed_bundle(ctx, f"d{i}", captures={"refs": "captured", "tables": "captured"})
+    _bless_normalize(ctx, {"documents": 60, "refs_sidecars": 60, "tables_sidecars": 40})
+
+    for _ in range(2):  # the alarm repeats; it does not clear itself
+        with pytest.raises(PostflightError):
+            Orchestrator([ValidateStage()]).run(ctx)
+    report = json.loads(ctx.cfg.validation_report.read_text())
+    assert report["counts"]["tables_sidecars"] == 55
+    assert report["observed_counts"]["tables_sidecars"] == 40
 
 
 def test_an_intact_chain_produces_no_chain_findings(ctx):

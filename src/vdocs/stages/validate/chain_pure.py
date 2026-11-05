@@ -66,17 +66,20 @@ def reconcile_chain(
     raw_index: set[str],
     converted: set[str],
     normalized: set[str],
+    acknowledged: set[str] | frozenset[str] = frozenset(),
 ) -> list[ChainFinding]:
     """Every broken link in the acquisition chain, one finding per ``doc_id`` (sorted).
 
     All five arguments are ``doc_id`` sets: the gate-admitted targets, the ``fetched``
     acquisitions, the ``raw/index.json`` keys, and the two silver bundle trees (mapped back to
     doc_ids through the index). An empty result means the chain is intact end-to-end — the
-    guarantee no single stage's counts can give.
+    guarantee no single stage's counts can give. ``acknowledged`` doc_ids left the admitted set
+    with a scope change a person acknowledged (CI.4) and are retained by design (CI.2), so they
+    are not a ``fetched-not-admitted`` break; the driver reports them separately.
     """
     broken: list[ChainFinding] = []
     for kind, missing in (
-        (FETCHED_NOT_ADMITTED, fetched - admitted),
+        (FETCHED_NOT_ADMITTED, fetched - admitted - acknowledged),
         (FETCHED_NOT_INDEXED, fetched - raw_index),
         (INDEXED_NOT_FETCHED, raw_index - fetched),
         (INDEXED_NOT_CONVERTED, raw_index - converted),

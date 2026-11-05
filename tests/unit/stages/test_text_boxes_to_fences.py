@@ -87,8 +87,26 @@ class TestLeftAlone:
     def test_a_box_containing_a_heading_is_untouched(self) -> None:
         self._unchanged('<table><tr><td><h3 id="x">Real Heading</h3></td></tr></table>')
 
+    def test_a_box_holding_a_heading_styled_paragraph_is_untouched(self) -> None:
+        """Pandoc writes a Word heading-styled paragraph as `<p class="heading">`, not `<h3>`.
+        Fenced, it became a code line that title-page standardization cut through, leaving the
+        rest of the pharmacy API manual inside an unclosed fence: 464 headings -> 0."""
+        self._unchanged(
+            '<table><tr><td><p id="revision-history" class="heading"><br />\n'
+            "<strong>Revision History</strong></p></td></tr></table>"
+        )
+
     def test_a_nested_table_is_untouched(self) -> None:
         self._unchanged("<table><tr><td><table><tr><td>x</td></tr></table></td></tr></table>")
+
+    def test_every_box_nested_in_a_table_cell_is_untouched(self) -> None:
+        """The non-greedy table match stops at the FIRST inner `</table>`, so the second box in a
+        cell looked top-level and was fenced inside its `<td>` — opening an unclosed fence that
+        swallowed the rest of the IFCAP technical manual (149 headings -> 61)."""
+        box = "<table><tr><th>DIC {DIQ}: PRCS(410,</th></tr></table>"
+        self._unchanged(
+            f"<table><tr><td>{box}</td><td></td></tr><tr><td>{box}</td><td></td></tr></table>"
+        )
 
     def test_an_empty_box_is_untouched(self) -> None:
         self._unchanged("<table><tr><td>  </td></tr></table>")

@@ -36,8 +36,10 @@ def html_rows(table_html: str) -> list[list[str]]:
 PAGE_NUMBER = r"[0-9ivxlcdm][0-9ivxlcdm.\-]*"  # int / roman / chapter-dash page number
 # A whole entry: title, dot leader, page. Matched as a unit — splitting on a page-number pattern
 # tears `2.1.1 Example.....2` apart, because a section number is itself a valid page match.
+# A two-dot run straight after a digit is a range (`[1..1]`, `1..30 days`), not a leader: read as
+# one, every segment-field row of an HL7 profile was a TOC entry.
 TOC_ENTRY_IN_TABLE_RE = re.compile(
-    r"\S[^|]*?\.{2,}[ \t]*" + PAGE_NUMBER + r"(?![\w.])", re.IGNORECASE
+    r"\S[^|]*?(?:\.{3,}|(?<!\d)\.{2})[ \t]*" + PAGE_NUMBER + r"(?![\w.])", re.IGNORECASE
 )
 
 

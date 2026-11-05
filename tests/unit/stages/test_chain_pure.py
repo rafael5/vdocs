@@ -80,3 +80,15 @@ def test_findings_are_deterministic_and_carry_a_readable_detail():
     assert all(f.detail for f in findings)
     # every fetched doc is reported individually — a count alone hides WHICH doc was lost
     assert {f.doc_id for f in findings if f.kind == cp.FETCHED_NOT_INDEXED} == HEALTHY["fetched"]
+
+
+def test_an_acknowledged_departure_is_not_a_finding():
+    # CI.2/CI.4: fetch retains a departed document and passes once a person acknowledges the
+    # scope change in scope-changes.yaml; the chain must not block on what fetch already accepted.
+    state = HEALTHY | {
+        "fetched": HEALTHY["fetched"] | {"LR:old_um"},
+        "raw_index": HEALTHY["raw_index"] | {"LR:old_um"},
+        "converted": HEALTHY["converted"] | {"LR:old_um"},
+        "normalized": HEALTHY["normalized"] | {"LR:old_um"},
+    }
+    assert cp.reconcile_chain(**state, acknowledged={"LR:old_um"}) == []

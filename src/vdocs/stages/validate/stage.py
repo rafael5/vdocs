@@ -23,7 +23,8 @@ already records but nothing read — the per-bundle ``capture.yaml`` typed captu
      *misdescribe* those parts — the ``is_latest`` member's ``body_sha256`` is checked against the
      bundle's own ``body.md`` (``stale-lineage``), so the designated replay source stays true.
 
-It always (re)writes ``reports/validation/verification.json`` (the findings + the count baseline)
+It always (re)writes ``reports/validation/verification.json`` (the findings + the count baseline,
+which only a green run advances)
 and sets its own ``ok`` via the deep gate. ``ALWAYS_RERUN`` — a gate re-checks every time. Pure
 logic lives in ``reconcile_pure``/``refs_pure``; this driver is thin I/O (reads the tree + state,
 writes the report).
@@ -119,7 +120,7 @@ class ValidateStage(Stage):
 
         # CHAIN GATE (Step 5, P1.2): join the five acquisition seams. Each stage counts only its
         # own work, so a document lost *between* stages was previously invisible everywhere.
-        chain_findings = _reconcile_chain(ctx)
+        chain_findings, acknowledged_departures = _reconcile_chain(ctx)
 
         # RETENTION GATE (Step 6, P3.3): the verdict `normalize` has scored since Phase 3 finally
         # decides what ships. Read off the GOLD anchor bundles — what actually ships — where
@@ -167,10 +168,17 @@ class ValidateStage(Stage):
             "blocking": self._blocking,
             "blocked_by": blocked_by,
             "documents": documents,
-            "counts": current_counts,  # the cross-run baseline for the next run's drop check
+            # the cross-run baseline for the next run's drop check — advanced only by a green
+            # run, so a blocked drop keeps blocking until it is fixed (or deliberately re-baselined
+            # by deleting this report) instead of clearing itself on a plain re-run
+            "counts": prior_counts
+            if self._blocking and prior_counts is not None
+            else current_counts,
+            "observed_counts": current_counts,
             "chain_findings": [
                 {"kind": f.kind, "doc_id": f.doc_id, "detail": f.detail} for f in chain_findings
             ],
+            "acknowledged_departures": acknowledged_departures,
             "reconcile_findings": [
                 {"kind": f.kind, "sidecar": f.sidecar, "detail": f.detail}
                 for f in reconcile_findings
@@ -237,18 +245,19 @@ def _bundle_doc_ids(root, by_bundle_path: dict[str, str]) -> set[str]:  # type: 
     }
 
 
-def _reconcile_chain(ctx: StageContext) -> list[ch.ChainFinding]:
+def _reconcile_chain(ctx: StageContext) -> tuple[list[ch.ChainFinding], list[str]]:
     """Build the five ``doc_id`` sets from the real artifacts and run the pure join (P1.2).
 
     Deliberately reads each set from a *different* source — the gate policy over the gold
     inventory, ``state.db:acquisitions``, the on-disk ``raw/index.json``, and the two silver
     trees — so the check is independent of any one producer's self-report (the audit's
-    "a self-consistency gate cannot see an omission" lesson)."""
+    "a self-consistency gate cannot see an omission" lesson). Also returns the departed doc_ids
+    whose application's scope change is acknowledged (CI.4) — passed, but still named."""
     import json
 
     from vdocs.models.catalog import EnrichedInventory
     from vdocs.stages.fetch import fetch_pure as fp
-    from vdocs.stages.fetch.policy import load_gate_policy
+    from vdocs.stages.fetch.policy import load_acknowledged_apps, load_gate_policy
 
     cfg = ctx.cfg
     records = EnrichedInventory.model_validate_json(
@@ -263,13 +272,19 @@ def _reconcile_chain(ctx: StageContext) -> list[ch.ChainFinding]:
     by_bundle_path = {
         kids.bundle_path(e["app_code"], e["doc_slug"]): did for did, e in index.items()
     }
-    return ch.reconcile_chain(
+    acked_apps = load_acknowledged_apps(cfg.registries)
+    acknowledged = {
+        did for did in fetched - admitted if index.get(did, {}).get("app_code") in acked_apps
+    }
+    findings = ch.reconcile_chain(
         admitted=admitted,
         fetched=fetched,
         raw_index=set(index),
         converted=_bundle_doc_ids(cfg.silver_converted, by_bundle_path),
         normalized=_bundle_doc_ids(cfg.silver_normalized, by_bundle_path),
+        acknowledged=acknowledged,
     )
+    return findings, sorted(acknowledged)
 
 
 def _load_signoffs(registries) -> frozenset[str]:  # type: ignore[no-untyped-def]

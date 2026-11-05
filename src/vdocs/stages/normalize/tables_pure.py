@@ -253,8 +253,27 @@ def html_tables_to_gfm(body: str) -> str:
 # line like `# DRUG QTY # REFS DAYS SUPPLY` currently reads as a markdown heading.
 _ONE_ROW_RE = re.compile(r"<tr\b", re.IGNORECASE)
 _LINE_BREAK_RE = re.compile(r"</p>\s*<p\b[^>]*>|<br\s*/?>", re.IGNORECASE)
-# block content a fence would misrepresent by flattening it into plain lines
-_BOX_BLOCK_RE = re.compile(r"<(?:h[1-6]|ul|ol|table)\b", re.IGNORECASE)
+# block content a fence would misrepresent by flattening it into plain lines — a Word
+# heading-styled paragraph arrives from Pandoc as `<p class="heading">`, not `<h3>`
+_BOX_BLOCK_RE = re.compile(
+    r"<(?:h[1-6]|ul|ol|table)\b|<p\b[^>]*\bclass=\"[^\"]*\bheading\b", re.IGNORECASE
+)
+_TABLE_TAG_RE = re.compile(r"<(/?)table\b", re.IGNORECASE)
+
+
+def _nested_table_starts(body: str) -> set[int]:
+    """Offsets of every ``<table>`` opened inside another table. ``TABLE_RE`` is not nesting-aware
+    (it stops at the first ``</table>``), so without this a box in a table cell looks top-level."""
+    nested: set[int] = set()
+    depth = 0
+    for m in _TABLE_TAG_RE.finditer(body):
+        if m.group(1):
+            depth = max(0, depth - 1)
+            continue
+        if depth:
+            nested.add(m.start())
+        depth += 1
+    return nested
 
 
 def _fence_for(text: str) -> str:
@@ -271,12 +290,16 @@ def text_boxes_to_code_fences(body: str) -> str:
     **whitespace is deliberately not collapsed** — column alignment is what a screen capture is
     made of, which is why this cannot reuse ``flatten_html``.
 
-    Left alone: anything that is not exactly one row and one cell, and any box holding a list,
-    heading or nested table — a fence would flatten those into text that merely looks like output.
+    Left alone: anything that is not exactly one row and one cell, any box holding a list,
+    heading or nested table — a fence would flatten those into text that merely looks like output —
+    and any box that itself sits inside a table cell, where a fence cannot close cleanly.
     Idempotent: the result contains no ``<table>``."""
+    nested = _nested_table_starts(body)
 
     def repl(m: re.Match[str]) -> str:
         html = m.group(0)
+        if m.start() in nested:
+            return html
         if len(_ONE_ROW_RE.findall(html)) != 1 or _BOX_BLOCK_RE.search(html[html.find(">") :]):
             return html
         cells = CELL_RE.findall(html)

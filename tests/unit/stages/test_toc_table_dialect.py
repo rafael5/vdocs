@@ -282,3 +282,17 @@ class TestTocIsNotADataTable:
         body, tables = extract_tables(f"## Fields\n\n| A | B | C |\n|---|---|---|\n{rows}\n")
         assert len(tables) == 1
         assert "extracted to CSV" in body
+
+    def test_an_hl7_cardinality_range_is_not_a_dot_leader(self) -> None:
+        """`[1..1]` is a range, not `title .. page`: read as a leader, every segment-field row of
+        an HL7 profile was a "TOC entry", and 143 real tables in three profiles stopped lifting."""
+        from vdocs.stages.normalize.tables_pure import extract_tables
+
+        header = "| Seq | Len | DT | Usage | Cardinality | TBL# | Item # | Element Name |"
+        rows = "\n".join(
+            f"| {i} | 20 | ST | R | [1..1] |  | 0000{i} | Field {i} |" for i in range(1, 6)
+        )
+        body, tables = extract_tables(f"## MSH Segment\n\n{header}\n|{'---|' * 8}\n{rows}\n")
+        assert len(tables) == 1
+        row = "| 1 | 1 | ST | R | [1..1] |  | 00001 | Field Separator |"
+        assert nz.split_toc_table_row(row) == []
