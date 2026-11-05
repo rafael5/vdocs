@@ -21,8 +21,20 @@ Lightweight backlog for this project. For longer-form planning, use `docs/`.
   counts what is admitted, not what is held, and `fetch` downloads only its current selection, so
   re-running does not close the gap. Decide whether admitted-but-not-held should count against the
   verdict, and whether the fetch selection should cover the admitted set.
+- **Write the identity-continuity proposal.** When VA re-files a document to another application
+  page its `doc_id` changes, because the app code is part of it, so gold and the inventory stop
+  joining; today that is 14 ISS release user guides re-filed from ADT to SD. The fix the 2026-08-05
+  identity audit left standing is to keep the id a document already had (precedent
+  `anchor-aliases.yaml`). It is a prerequisite of the inventory browser's web mode (decision D1 in
+  `docs/proposals/inventory-browser-proposal.md`, taken 2026-11-05).
 
 ## Later
+
+- **Library namespace names from the PACKAGE file.** The inventory browser proposal takes
+  namespace names from vista-meta's PACKAGE-file (#9.4) export, falling back to the same-code
+  application. Applying them to the Library would name DG, USR, BPS and PSGW for the first time,
+  change 15 names in substance and reword 32. The 15 want review on their own (inventory-browser
+  decision D4, taken 2026-11-05).
 
 - **A few revision tables still lose their dates.** After 9f9df51, 64 revision-date cells stay
   unnormalized. Most aren't dates (23 are `REDACTED`), but two real problems remain:
