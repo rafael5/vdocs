@@ -94,11 +94,13 @@ Neither `doc_id` nor the VDL URL is unique, so a row needs its own key. The inve
 no `doc_id` field; the id is derived by `kernel.ids.doc_id` (app code and slug), and the proposed
 rows derive it through that one function, never a second format string. No combination of fields
 distinguishes every row: (application page URL, section, file URL, patch id) separates 9,073 of
-the 9,080, and the remaining 7 are files the VDL lists twice on one page, identical in every field
-(the app *code* is not enough — one code can own two application pages). The row key is therefore
-a hash of those four fields plus an ordinal among identical rows, assigned in the canonical sorted
-order of §5, so it is stable under VA reordering a page and changes only when the listing itself
-does. The 1,334 repeated form links stay as rows, each with its disposition *not-vista:vba-form*;
+the 9,080. The 7 surplus rows come from 5 links listed more than once on one page: three files
+listed twice with every field identical, and one manual (`DVBA_UM`, DOCX and PDF) listed three
+times under three different titles and doc codes. The app *code* cannot stand in for the page URL:
+171 app codes appear on more than one application page (LR on 12). The row key is therefore a hash
+of those four fields plus an ordinal among the rows that share them, assigned by sorting those rows
+on their full canonical content (§5), so it is stable under VA reordering a page and changes only
+when the listing itself does. The 1,334 repeated form links stay as rows, each with its disposition *not-vista:vba-form*;
 collapsing them is decision D2.
 
 | Facet | Group | Where the value comes from |
