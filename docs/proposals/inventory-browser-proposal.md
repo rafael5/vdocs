@@ -41,7 +41,7 @@ mode; and the web mode is a separate go/no-go once the table has been used.
 ## 1. Why
 
 The inventory is only visible as two CLI totals. `vdocs inventory --status` counts 3,834 distinct
-VistA documents by fetch status; `vdocs completeness` counts all 9,080 catalog records by
+documents by fetch status (every non-noise `doc_id`, of any system type; 2,941 of them VistA); `vdocs completeness` counts all 9,080 catalog records by
 disposition. Neither lists records, neither filters, and neither connects a record to the gold
 document it became. Joining the inventory to `index.db` on `doc_id` showed two things neither
 command reports:
@@ -156,8 +156,9 @@ title page), which dates 2,018 inventory records through `doc_id`, PDF twins inc
 3,228 are not VistA and 3,834 are VistA records. The first draft called all 3,834 "never fetched";
 that is not quite so: about 100 of them are records of the 50 gold documents that carry no date at
 all, and the rest — 3,732 records, 1,861 distinct `doc_id`s — were never fetched. (The
-`inventory --status` total also happens to be 3,834; it counts a different thing, distinct VistA
-documents by fetch status, and the two must not be read as one number.)
+`inventory --status` total is also 3,834; it counts a different thing, distinct non-noise documents
+of any system type, and the two must not be read as one number. The undated figure was derived by
+subtraction; step 0 measures it directly to rule out a derivation error behind the coincidence.)
 
 The consequence is plain: the date facet covers about 22 % of rows. It is a gold-document attribute
 projected onto the inventory, and the Inventory mode says so where the facet sits. Dating the

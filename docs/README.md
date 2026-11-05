@@ -31,6 +31,8 @@ Documentation here is classified by **lifecycle state, not topic**:
 - **Proposed (2026-11-05), not started:** [`proposals/inventory-browser-proposal.md`](proposals/inventory-browser-proposal.md)
   — the whole VDL catalog (9,080 records) as an Inventory mode in vdocs-web, with Library facets
   plus gold / disposition / reason and each document's own last-updated date, carried in `index.db`.
+  All decisions taken 2026-11-05. Step 0 kickoff:
+  [`prompts/inventory-browser-step0-kickoff.md`](prompts/inventory-browser-step0-kickoff.md).
 - ~~**Active workstream:** SKL~~ — **the search-facing half is RULED AGAINST (2026-08-04)**, see
   [`proposals/vdocs-quality-synonym-layer/`](proposals/vdocs-quality-synonym-layer/) §10. S0–S3
   landed and the termbase + glossary projections are live and keep working; S4/S5 are **not** to be
