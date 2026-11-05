@@ -5,9 +5,9 @@
 > > Read `docs/prompts/inventory-browser-step1-kickoff.md` and execute it.
 
 **Repo: `vdocs`** (`~/projects/vdocs`). Read `CLAUDE.md`, then the proposal of record,
-[`docs/proposals/inventory-browser-proposal.md`](../proposals/inventory-browser-proposal.md): §3, §4,
+[`docs/proposals/inventory-browser-proposal.md`](../../proposals/inventory-browser-proposal.md): §3, §4,
 §5, §7 and §8 step 1 closely; §10 D1, D3 and D4 for the decisions this step carries out. Then read
-[`reports/inventory-browser-measurements.md`](../../reports/inventory-browser-measurements.md): it is
+[`reports/inventory-browser-measurements.md`](../../../reports/inventory-browser-measurements.md): it is
 step 0's measurement of the 2026-11-05 lake, and the numbers this step must reproduce come from it.
 Every decision in §10 was taken on 2026-11-05, and so were the four namespace names in §3; do not
 reopen them.

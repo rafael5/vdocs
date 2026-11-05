@@ -28,13 +28,17 @@ Documentation here is classified by **lifecycle state, not topic**:
 
 ## Current state (2026-07-04)
 
-- **Proposed (2026-11-05), step 0 landed:** [`proposals/inventory-browser-proposal.md`](proposals/inventory-browser-proposal.md)
+- **Proposed (2026-11-05), steps 0 and 1 landed:** [`proposals/inventory-browser-proposal.md`](proposals/inventory-browser-proposal.md)
   — the whole VDL catalog (9,080 records) as an Inventory mode in vdocs-web, with Library facets
   plus gold / disposition / reason and each document's own last-updated date, carried in `index.db`.
   All decisions taken 2026-11-05. Step 0 (2026-11-05) committed the measurements:
   `scripts/inventory_measurements.py` → [`../reports/inventory-browser-measurements.md`](../reports/inventory-browser-measurements.md)
   (kickoff in [`prompts/historical/`](prompts/historical/inventory-browser-step0-kickoff.md)). Step 1,
-  the producer, is next: [`prompts/inventory-browser-step1-kickoff.md`](prompts/inventory-browser-step1-kickoff.md).
+  the producer, landed 2026-11-05 (kickoff in
+  [`prompts/historical/`](prompts/historical/inventory-browser-step1-kickoff.md)): `index.db` carries
+  `v_inventory` (one row per listing, with disposition and reason), each document's
+  `last_updated`, read contract 1.7, and a doctor freshness check; the lake was rebuilt and every
+  step 0 figure held. Step 2 — using the view from `sqlite3` — decides the web mode (D5).
 - ~~**Active workstream:** SKL~~ — **the search-facing half is RULED AGAINST (2026-08-04)**, see
   [`proposals/vdocs-quality-synonym-layer/`](proposals/vdocs-quality-synonym-layer/) §10. S0–S3
   landed and the termbase + glossary projections are live and keep working; S4/S5 are **not** to be

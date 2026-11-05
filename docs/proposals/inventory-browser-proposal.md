@@ -1,7 +1,8 @@
 # Inventory browser — the whole VDL catalog in vdocs-web
 
 **Status: PROPOSED · 2026-11-05 · amended 2026-11-05 after adversarial review · all decisions
-taken 2026-11-05 · step 0 landed 2026-11-05** — nothing else built.
+taken 2026-11-05 · steps 0 and 1 landed 2026-11-05** — the producer is built (§8 step 1); the web
+mode is not.
 Producer: vdocs · consumer: vdocs-web · read contract 1.6 → 1.7 (additive). An interactive mockup
 over the real 2026-11-05 inventory lives in a private Claude artifact
 (<https://claude.ai/artifact/UP9W8LRkwXcyHVwhgTBVn5>); this file is the proposal of record. Every
@@ -145,8 +146,8 @@ case and punctuation for 37 of them; most of the other 57 differ by an abbreviat
 reading of that list in the report — a reading, not a measurement — finds 7 changed in substance
 (FH, GMRV, LA, MMRS, OR, QAC, SPN) and 39 reworded. On 2026-11-05 the operator chose the names for
 the four borderline cases: OR *Order Entry (CPRS)*, GMRV *Vitals*, LR *Lab* and MAG *VistA
-Imaging*. The names registry, which does not exist yet, will carry them as overrides applied after
-the vista-meta copy, so a re-copy keeps them. That leaves five substantive changes to review (FH,
+Imaging*. The names registry (`registries/inventory/namespace-names.yaml`, step 1) carries them as
+overrides applied after the vista-meta copy, so a re-copy keeps them. That leaves five substantive changes to review (FH,
 LA, MMRS, QAC, SPN). The Library keeps its current names in this change; those renames are their
 own small change (D4). The names registry's header records the vista-meta release and commit it
 was copied from.
@@ -295,23 +296,56 @@ one case the check catches is already visible as a pending stage in the next run
    `inventory --status` labels a PDF-only document *out_of_scope* whatever its fetch did, which is
    backlogged in `TODO.md`. The report was re-run at `722d2c2`. (The project's own lesson from the
    August audit: a measurement that cannot name what it read is not evidence.)
-1. **vdocs, the producer.** Tests first: a pure function from (records, policy, profile maps) to rows
-   whose disposition counts equal `completeness_report` on the same input, and whose profile tags
-   equal the gold documents' for records in gold; the row key is unique over the 2026-11-05
-   inventory fixture; the contract bump is checked by calling `lint_bump` with the committed 1.6
-   spec as the previous version — `lint_latest`, the `make contract-lint` gate, compares the two
-   highest *major* files and is a no-op while only `v1.json` exists, so on its own it cannot red on
-   a 1.6 → 1.7 edit; the doctor staleness check warns on a planted mismatch. Then implement,
-   `make check`, and re-run index on the shared lake only after confirming no operator run is live.
-   Measured cost of the rebuild this adds after every crawl: index 48.7 s, merge 31.6 s, relate,
-   manifest and doctor under 4 s together — about a minute and a half.
+1. **vdocs, the producer — landed 2026-11-05**, test first in seven commits, each with
+   `make check` green:
+   - `8e79641` — `classify()` returned its reason as a kind and a value beside the unchanged
+     string; the kinds are a closed set beside it, tested in both directions.
+   - `eb1e984` — the row key moved into `stages/index/inventory_pure.py`; the step 0 script
+     imports it.
+   - `e37a074` — `inventory_rows()` turned records into rows. Its tests: disposition and reason
+     counts equal `completeness_report()` on the same input, profile tags equal the ones `enrich`
+     bakes into gold, and row keys are unique over a fixture planting the identical listings and
+     `DVBA_UM`'s three titles and two doc codes.
+   - `0dc1087` — `registries/inventory/namespace-names.yaml`: the 173 PACKAGE-file names copied
+     verbatim from vista-meta `d0df56b`, its header carrying the command that regenerates the
+     copy, and the operator's four names as overrides.
+   - `db66581` — the index stage required the gold inventory and wrote `v_inventory`,
+     `v_documents.last_updated` and `last_updated_source`, the vocab kinds `disposition`,
+     `reason_kind`, `doc_type_family` (moved from vdocs-web's `TYPE_FAMILIES` into
+     `registries/inventory/doctype-families.yaml`) and `namespace`, and the inventory's record
+     count and content hash in `meta`. Read contract 1.7: `lint_latest` compares only the two
+     highest *major* files, so the bump was checked by `lint_bump` against a frozen copy of the 1.6
+     spec (`tests/fixtures/read-contract-v1.6.json`) and red-proved by the same additions without
+     the bump.
+   - `9f4f46f` — `vdocs doctor` WARNs when the stamped hash and `inventory.json` differ, proved
+     by a planted mismatch.
+   - `ee10e6f` — D1's stopgap (step 3).
+
+   Three calls were made in the step. Namespace names are published in `v_vocab` only, not as a
+   row column, so each name lives in one place. Doctor reads `inventory.json` optionally, as it
+   reads `knowledge.db`, so `vdocs doctor` still runs on a lake without one and WARNs that the
+   check was skipped. A listed re-filing that matches nothing in the index WARNs rather than
+   FAILs, so a subset lake stays GREEN.
+
+   `vdocs run --from index` rebuilt the lake on 2026-11-05 after a check found no operator run:
+   index 50.3 s, resolve 2.8 s, validate 32.1 s, merge 31.6 s, relate, manifest and doctor under
+   4 s together, all GREEN (`~/data/vdocs/reports/run-inventory-browser-step1-2026-11-05.log`).
+   Measured with `sqlite3` on the new view against the step 0 report at `722d2c2`, every figure
+   held: 9,080 rows and 9,080 distinct row keys; held 1,280, covered-by-other-format 2,916,
+   excluded 1,656 and not-vista 3,228, equal to `vdocs completeness`; 2,120 records with a gold
+   match on `doc_id` and 2,018 with a last-updated date; 990 gold documents dated, 856 from
+   Revision History and 134 from the title page. Also measured: no profile-tag difference on any
+   gold match; 216 held records with no gold document, 14 of them the labelled re-filings; 158 of
+   the 161 inventory namespaces named. `vdocs doctor`: GREEN, 22 pass, 0 warn, 0 fail.
 2. **Use the table.** With step 1 landed the operator has the whole §1 case through `sqlite3` on
    the new view. The go/no-go on the web mode (D5) is taken here, not before.
 3. **Identity continuity across re-filing (D1).** Its own short proposal, which does not exist yet:
    keep the id a document already had when VA moves it to another application page. It must land
-   before step 4. If the producer half lands first, the new view carries D1's stopgap (option C),
-   and the stopgap's exception list carries a testable expiry: a test that reds once the listed ids
-   resolve through the continuity mechanism.
+   before step 4. The producer half landed first, so the view carries D1's stopgap (option C,
+   `ee10e6f`): `registries/inventory/refiled.yaml` lists the 14 re-filed ISS guides and
+   `v_inventory.refiled_from` labels their 28 rows with the id gold holds; its expiry is
+   `vdocs doctor`'s *refiled exceptions* check, which FAILs once a listed id joins on `doc_id`
+   without the file. This step deletes the file.
 4. **vdocs-web, the consumer.** Update the vendored contract copy; tests for the MINOR check, the
    facet counts, routes and the missing-view path; then the Svelte mode with its unit tests;
    `make check`.
