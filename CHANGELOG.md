@@ -27,6 +27,19 @@ This file is for **what shipped**. For the *why* behind decisions
 
 ### Fixed
 
+- **Document dates (`official_date`) were wrong or missing in three ways**:
+  - a revision table with no normalizable date wrote `revision_newest: null`, which `consolidate`
+    read as the date `"None"`; the title-page fallback never ran (67 gold documents), and because
+    `"None"` sorts after every real date the VS GUI Technical Manual group served release 1.7.31.2
+    as current instead of 1.7.56.1;
+  - a revision dated after the run month (GMRC `consum` records `3018-03`) became the newest date —
+    `revision_newest` is now bounded by the run month (the row is kept as written);
+  - revision dates in common shapes stayed unnormalized (`07/24`, `12-22-2004`, `09/--/1997`,
+    `September 26, 2008`, `Apr 06`, `Sep-Nov 11` …), dating documents too early; on the
+    2026-11-05 lake the parser now changes the newest date of 82 of 858 documents (65 gain one).
+  `history.yaml` now supersedes a member whose facts were re-derived from an unchanged body (the
+  prior capture is demoted, never discarded), so the corrections reach existing lineage. `normalize`
+  (v3) and `consolidate` (v5) re-run on the next pipeline run.
 - **Doc-type policy reasons were cut at their first comma**: nine `reason:` values in
   `doctype-policy.yaml` (DIBR, POM, CFG, SG-SET, RS, RN, WF, SUP, APX) held an unquoted comma inside
   a YAML flow mapping, so each parsed as a truncated reason plus a stray key, and `vdocs gate`

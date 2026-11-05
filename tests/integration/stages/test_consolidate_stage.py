@@ -41,23 +41,33 @@ def _bless(ctx, stage, art):
 
 
 def _seed_member(
-    ctx, *, slug, patch_id, body, date, doc_type="IG", app="CPRS", pkg="OR", with_revisions=True
+    ctx,
+    *,
+    slug,
+    patch_id,
+    body,
+    date,
+    doc_type="IG",
+    app="CPRS",
+    pkg="OR",
+    with_revisions=True,
+    published="",
 ):
     """Write one normalized bundle (identity FM + body + an optional one-row revisions.yaml)."""
     sha = hashlib.sha256(f"{slug}-source".encode()).hexdigest()
-    text = frontmatter.emit(
-        {
-            "title": "Install Guide",
-            "doc_type": doc_type,
-            "app_code": app,
-            "pkg_ns": pkg,
-            "version": "3.0",
-            "patch_id": patch_id,
-            "source_sha256": sha,
-            "tool_ver": "0.1.0",
-        },
-        body,
-    )
+    fm = {
+        "title": "Install Guide",
+        "doc_type": doc_type,
+        "app_code": app,
+        "pkg_ns": pkg,
+        "version": "3.0",
+        "patch_id": patch_id,
+        "source_sha256": sha,
+        "tool_ver": "0.1.0",
+    }
+    if published:
+        fm["published"] = published  # the title-page date normalize lifts into identity FM
+    text = frontmatter.emit(fm, body)
     bundle = ctx.cfg.silver_normalized / app / slug
     cas.atomic_write(bundle / "body.md", text.encode())
     if with_revisions:
@@ -204,6 +214,31 @@ def test_consolidate_supersedes_a_re_normalized_member(ctx):
     # the member nobody re-processed is untouched — no spurious supersede
     assert "superseded" not in hist["members"][0]
     assert hist["members"][0]["patch_id"] == "OR*3*190"
+
+
+def test_a_null_revision_date_falls_back_to_the_title_page_date(ctx):
+    # Real case (67 gold docs, 2026-11-05): normalize writes `revision_newest: null` when a parsed
+    # revision table has no normalizable date. Read through str() that null became the date "None",
+    # which is truthy, so the title-page fallback never ran.
+    _seed_member(
+        ctx,
+        slug="vs_gui_tm",
+        patch_id="",
+        body="# TM\n\nbody\n",
+        date=None,
+        doc_type="TM",
+        app="SD",
+        pkg="SD",
+        published="2015-04",
+    )
+    _seed_assets(ctx)
+    _bless(ctx, "normalize", TEXT_NORMALIZED)
+
+    (result,) = Orchestrator([ConsolidateStage()]).run(ctx)
+    assert result.status == "ok"
+    (hist_path,) = (ctx.cfg.gold_consolidated / "SD").glob("*/history.yaml")
+    (member,) = yaml.safe_load(hist_path.read_text())["members"]
+    assert member["official_date"] == "2015-04"
 
 
 def test_consolidate_member_without_revisions_sidecar(ctx):

@@ -2,7 +2,8 @@
 
 Hypothesis-generated version groups exercise two load-bearing properties: ``order_members`` is a
 total, deterministic order, and ``merge_history`` is genuinely **append-only + idempotent** — a
-fold of the same membership rewrites nothing, and folding a superset only ever appends.
+fold of the same membership rewrites nothing, and folding a superset appends new members while a
+re-derived member takes its fresh facts with the prior capture demoted, never discarded.
 """
 
 from __future__ import annotations
@@ -96,14 +97,20 @@ def test_merge_history_is_append_only(base_members, extra_members):
     fresh = cp.build_history("A:B:C", cp.order_members(list(by_id.values())))
     merged = cp.merge_history(existing, fresh)
 
-    def _facts(e):  # the captured facts, minus the derived is_latest pointer
-        return {k: v for k, v in e.items() if k != "is_latest"}
+    def _facts(e):  # the captured facts, minus the derived pointer and the demotion list
+        return {k: v for k, v in e.items() if k not in ("is_latest", "superseded")}
 
-    # every previously-captured member survives with facts untouched (a late-arriving OLDER
-    # patch may re-order the lineage, so match by doc_id, not position)
-    merged_facts = {e["doc_id"]: _facts(e) for e in merged["members"]}
+    # every previously-captured member survives, and nothing it captured is discarded: its facts
+    # are either still its facts (nothing re-derived them) or — when an extra with the same doc_id
+    # carries different facts, i.e. the member was re-derived — demoted onto `superseded` while the
+    # record takes the fresh facts (P5.1). Match by doc_id: a late-arriving OLDER patch may
+    # re-order the lineage.
+    merged_by_id = {e["doc_id"]: e for e in merged["members"]}
+    fresh_facts = {e["doc_id"]: _facts(e) for e in fresh["members"]}
     for e in existing["members"]:
-        assert merged_facts[e["doc_id"]] == _facts(e)
+        entry = merged_by_id[e["doc_id"]]
+        assert _facts(entry) == fresh_facts[e["doc_id"]]  # describes the current derivation
+        assert _facts(e) in [_facts(entry), *entry.get("superseded", [])]  # prior capture kept
     # lineage stays oldest → newest by the canonical key
     keys = [cp._entry_sort_key(e) for e in merged["members"]]
     assert keys == sorted(keys)

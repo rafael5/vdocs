@@ -43,6 +43,15 @@ _MONTH_NUM = {
     )
 }
 
+# Public handles on the same month vocabulary, for a caller that parses its own date shapes
+# (normalize's revision-table cells) without copying the alternation or the month table (§9.2).
+MONTH_NAME = _MONTH
+
+
+def month_number(name: str) -> int:
+    """1–12 for a month name or abbreviation that :data:`MONTH_NAME` matched (``"Sept"`` → 9)."""
+    return _MONTH_NUM[name[:3].lower()]
+
 
 def safe_component(name: str) -> str:
     """Filesystem-safe path component: non-[A-Za-z0-9._-] runs → '_', trimmed (e.g. AR/WS→AR_WS).

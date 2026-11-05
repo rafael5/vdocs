@@ -732,6 +732,17 @@ then replaced by a **standardized block** built from frontmatter (`title`, `vers
 corpus and no provenance is lost. **Gate:** title-page removal is blocked until `published` is
 captured.
 
+**Revision dates → the document's last-updated date.** `official_date` is the newest *normalized*
+revision date, else `published`. So every revision-cell shape the corpus uses must normalize to
+`YYYY-MM` — an unparsed newest row silently dates a document too early. Besides `Month YYYY`,
+`revision_pure._norm_date` reads `MM/YY` (the commonest unparsed shape on 2026-11-05: 748 rows, read
+as month/year — the first part is always 1–12 and the second runs 00–25 and 95–98), `M/D/YY(YY)` with
+blank or doubled day separators, hyphenated forms, `Month D, YYYY`, `Mon YY`, and spans (dated by
+their end). A revision cannot postdate the run that reads it, so `revision_sidecar` takes the run
+month as `not_after` and leaves later dates out of `revision_newest` (GMRC `consum` records
+`3018-03`); the row itself is kept as written. A null `revision_newest` stays empty, so the
+`published` fallback applies.
+
 **Typed capture-attempt records (`capture.yaml`) — absence is a verdict, not a missing file.**
 Conditional sidecar emission (a sidecar is written *iff* its structure was present and captured) is
 correct, but a *missing* sidecar is **ambiguous**: "nothing to capture" and "a detector silently
@@ -829,13 +840,17 @@ Append-only is not the same as *frozen*, and the difference is the P5.1 fix. A m
 **re-processed under its own `doc_id`** — a registry fix or converter upgrade changes its normalized
 body with no new patch. Keeping that member's captured facts would leave the replay source
 describing a body the bundle no longer holds (measured 2026-08-01: **615 of 615** gold anchors
-carried a latest-member `body_sha256` that disagreed with their `body.md`). So on a changed
-`body_sha256` `merge_history` **adopts the fresh facts and appends the prior fact-dict to that
-entry's `superseded` list** — oldest first, flat (the demoted dict drops the derived `is_latest` and
-its own `superseded`, which would nest exponentially). Nothing is discarded: the demoted capture
-rides on in the entry, and its body is still in the retained-body CAS by construction (write-once).
-An unchanged member is untouched, so an identical re-run stays a byte-for-byte no-op — a lineage
-record that grew on every run would be its own kind of lie. `validate` Step 4 gates the resulting
+carried a latest-member `body_sha256` that disagreed with their `body.md`). The same holds for facts
+re-derived from an **unchanged** body by a fixed parser: on 2026-11-05, 67 members carried the
+date `"None"` (a null `revision_newest` read through `str()`), and because it sorts after every real
+date one group marked the wrong version current. So whenever a member's fresh facts differ from its
+captured ones — a changed `body_sha256` or a re-derived `official_date`/`revisions` —
+`merge_history` **adopts the fresh facts and appends the prior fact-dict to that entry's
+`superseded` list** — oldest first, flat (the demoted dict drops the derived `is_latest` and its own
+`superseded`, which would nest exponentially). Nothing is discarded: the demoted capture rides on in
+the entry, and its body is still in the retained-body CAS by construction (write-once). A member
+whose facts are unchanged is untouched, so an identical re-run stays a byte-for-byte no-op — a
+lineage record that grew on every run would be its own kind of lie. `validate` Step 4 gates the resulting
 invariant (§8): the `is_latest` member's `body_sha256` **is** `sha256(body.md)`.
 
 **Concrete layout (the `consolidated` artifact).** `consolidate` reconstructs each member's

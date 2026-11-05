@@ -48,7 +48,9 @@ class NormalizeStage(Stage):
     # v2 (P3.2): every bundle's `capture.yaml` gains a typed `retention` block, and the legacy-TOC
     # capture now records the anchorless paper dialect (P3.1) — both change the produced sidecar
     # shape, so the bump re-runs normalize and cascades to its consumers.
-    contract_ver = 2
+    # v3: revisions.yaml normalizes every measured revision-date shape (MM/YY, M-D-YY, Month D YYYY,
+    # spans …) and bounds revision_newest by the run month — the dates change, so re-run.
+    contract_ver = 3
 
     def __init__(self) -> None:
         self._errors = 0  # per-document failures isolated this run (R6 — see doc_error_gate)
@@ -78,6 +80,8 @@ class NormalizeStage(Stage):
 
         enriched_root = ctx.cfg.silver_enriched
         normalized_root = ctx.cfg.silver_normalized
+        # a revision cannot postdate this run: the run month bounds revision_newest (§6.4)
+        not_after = ctx.clock()[:7]
         n_docs = n_revision = n_tables = n_refs = n_boiler = n_template = 0
         n_published = n_titlepage = n_titleimg = n_flags = n_toc = 0
         n_capture = n_absent_unexpected = n_low_retention = 0
@@ -194,7 +198,9 @@ class NormalizeStage(Stage):
                     cas.atomic_write(
                         normalized_root / rel / "revisions.yaml",
                         yaml.safe_dump(
-                            rev.revision_sidecar(revisions), sort_keys=False, allow_unicode=True
+                            rev.revision_sidecar(revisions, not_after=not_after),
+                            sort_keys=False,
+                            allow_unicode=True,
                         ).encode("utf-8"),
                     )
                     n_revision += 1

@@ -29,16 +29,38 @@ from vdocs.kernel.table import (
     strip_md_links,
 )
 from vdocs.kernel.text import (
+    MONTH_NAME,
     TAG_RE,  # the single shared HTML-tag matcher (§9.2)
-    month_year_iso,
+    month_number,
 )
 
 _HREF_RE = re.compile(r'href="(#[^"]+)"')
 _WS_RE = re.compile(r"\s+")
 _BLOCK_END_RE = re.compile(r"</(?:li|p|ul|ol)>", re.IGNORECASE)
 _INT_RE = re.compile(r"\d+")
-_MMYYYY_RE = re.compile(r"^(\d{1,2})/(\d{4})$")
-_MDY_RE = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{2,4})$")
+_ISO_MONTH_RE = re.compile(r"\d{4}-\d{2}")
+# Revision-table date shapes (§6.4). Each yields a month and a 2- or 4-digit year; a day, where
+# present, is dropped (the sidecar's grain is the month). On the 2026-11-05 lake, 1,258 of 9,653
+# revision rows used a shape the month-name-only parser left unnormalized.
+_NUMERIC_DATE_RES = (
+    # 3/2024 · 07/24 · 03-2019 · 01/ 2023 — the 2-digit form is month/YEAR: across 748 rows the
+    # first part is always 1–12 and the second runs 00–25 and 95–98, which no day-of-month does
+    re.compile(r"^(?P<m>\d{1,2})\s*[/-]\s*(?P<y>\d{4}|\d{2})$"),
+    # 3/15/24 · 09/--/1997 (day left blank) · 09//13/2022 · 8//2009 (doubled separator)
+    re.compile(r"^(?P<m>\d{1,2})/+(?:\d{1,2}|--)?/+(?P<y>\d{4}|\d{2})$"),
+    # 12-22-2004 · 09-5-2014 · 10-30-09
+    re.compile(r"^(?P<m>\d{1,2})-\d{1,2}-(?P<y>\d{4}|\d{2})$"),
+)
+# A month name (not inside a longer word) then a year, optionally with a day between: "Feb 2018",
+# "September 26, 2008", "December 18,2008", "August2014", "1September 2009", "Apr 06", "7-Jul-11".
+# A 2-digit number straight after the month is read as the year — the corpus forms ("Apr 06",
+# "November 07") are years, and a cell holding only a month and a day is not a revision date.
+_MONTH_DATE_RE = re.compile(
+    rf"(?<![A-Za-z])(?P<mon>{MONTH_NAME})\.?(?![A-Za-z])(?:\s*\d{{1,2}}\s*,)?[\s,-]*"
+    r"(?P<y>\d{4}|\d{2})(?!\d)",
+    re.IGNORECASE,
+)
+_SPAN_RE = re.compile(r"\s+to\s+", re.IGNORECASE)
 # The descriptive filler *around* the revision table — dead text that carries no unique fact
 # (§6.6). Broadened to the real corpus variants: "the following table displays the revision
 # history…", "<u>Table 1</u> displays the revision history…", "this table lists the history for
@@ -72,23 +94,34 @@ def _flatten_change(cell_html: str) -> str:
     return "; ".join(p for p in parts if p)
 
 
-def _norm_date(text: str) -> str:
-    """Normalise a revision-table date cell to ``YYYY-MM``; otherwise pass through unchanged.
+def _iso_month(month: int, year: str) -> str | None:
+    """``YYYY-MM`` for a month 1–12 and a 2- or 4-digit year (``< 50`` → 20xx), else ``None``."""
+    if not 1 <= month <= 12:
+        return None
+    if len(year) == 2:
+        year = ("20" if int(year) < 50 else "19") + year
+    return f"{year}-{month:02d}"
 
-    Handles the numeric forms (``3/2024`` → ``2024-03``; ``3/15/24`` → ``2024-03``) and the
-    month-name forms the real VA tables overwhelmingly use (``Feb 2018`` / ``April 2015`` →
-    ``2018-02`` / ``2015-04``, via the shared ``kernel.month_year_iso``). Normalising the month-name
-    dates is what lets ``revision_sidecar`` compute ``revision_newest`` (and thus ``official_date``)
-    for the bulk of the corpus, not only the rare numeric-date docs."""
-    t = text.strip()
-    if (m := _MMYYYY_RE.match(t)) is not None:
-        return f"{m.group(2)}-{int(m.group(1)):02d}"
-    if (m := _MDY_RE.match(t)) is not None:
-        month, year = int(m.group(1)), m.group(3)
-        if len(year) == 2:
-            year = ("20" if int(year) < 50 else "19") + year
-        return f"{year}-{month:02d}"
-    return month_year_iso(t) or t
+
+def _norm_date(text: str) -> str:
+    """Normalise a revision-table date cell to ``YYYY-MM``; otherwise pass it through unchanged.
+
+    Handles the numeric shapes in :data:`_NUMERIC_DATE_RES` (``3/2024``, ``07/24``, ``3/15/24``,
+    ``09/--/1997``, ``12-22-2004`` …) and a month name followed by a year (``Feb 2018``,
+    ``September 26, 2008``, ``Apr 06`` …). A bold marker left in the cell is ignored, and a span
+    (``Sep-Nov 11``, ``01/02/2015 to 01/06/2015``) is dated by its end — the latest change it
+    records. Normalising every real shape is what lets ``revision_sidecar`` compute
+    ``revision_newest`` (and thus ``official_date``): an unparsed newest row dates a doc too
+    early."""
+    t = text.strip().strip("*").strip()
+    t = _SPAN_RE.split(t)[-1]
+    for rx in _NUMERIC_DATE_RES:
+        if (m := rx.match(t)) is not None and (iso := _iso_month(int(m["m"]), m["y"])):
+            return iso
+    named = list(_MONTH_DATE_RE.finditer(t))
+    if named and (iso := _iso_month(month_number(named[-1]["mon"]), named[-1]["y"])):
+        return iso
+    return text.strip()
 
 
 def _refs(cell_html: str) -> list[str]:
@@ -326,11 +359,16 @@ def extract_revision_history(body: str) -> tuple[str, list[RevisionRecord], str 
     return body, records, flag
 
 
-def revision_sidecar(records: list[RevisionRecord]) -> dict:
+def revision_sidecar(records: list[RevisionRecord], *, not_after: str) -> dict:
     """The ``revisions.yaml`` mapping: a summary + this document's own ordered revision-history
     records (§6.4). Named for the per-document grain — the cross-version ``history.yaml`` *lineage*
-    (which folds each member's ``revisions.yaml``) is ``consolidate``'s artifact (§6.6)."""
-    dates = [r.date for r in records if re.fullmatch(r"\d{4}-\d{2}", r.date)]
+    (which folds each member's ``revisions.yaml``) is ``consolidate``'s artifact (§6.6).
+
+    ``not_after`` (``YYYY-MM``, the month of the run) bounds the summary dates: a revision cannot
+    postdate the run that reads it, so a later date is a typo (GMRC ``consum`` records ``3018-03``)
+    and is left out of ``revision_newest``/``revision_oldest``. The row itself is kept as
+    written."""
+    dates = [r.date for r in records if _ISO_MONTH_RE.fullmatch(r.date) and r.date <= not_after]
     return {
         "revision_count": len(records),
         "revision_newest": max(dates) if dates else None,

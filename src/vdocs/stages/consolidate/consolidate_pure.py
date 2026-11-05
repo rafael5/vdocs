@@ -134,24 +134,33 @@ def build_history(anchor_key: str, ordered: list[Member]) -> dict[str, Any]:
     return {"anchor_key": anchor_key, "member_count": len(members), "members": members}
 
 
+_NOT_FACTS = ("is_latest", "superseded")  # a derived pointer and the demotion list itself
+
+
+def _facts(entry: dict[str, Any]) -> dict[str, Any]:
+    return {k: v for k, v in entry.items() if k not in _NOT_FACTS}
+
+
 def _supersede(captured: dict[str, Any], fresh: dict[str, Any] | None) -> dict[str, Any]:
     """One captured entry folded against its fresh counterpart — the P5.1 supersede rule.
 
-    A member whose normalized body changed (registry fix, converter upgrade) is re-processed under
-    the *same* ``doc_id``; keeping the captured facts would leave ``history.yaml`` describing a body
-    that is no longer in the bundle (audit [S9]a). So on a changed ``body_sha256`` the fresh facts
-    are adopted and the prior fact-dict is appended to this entry's ``superseded`` list — nothing is
-    deleted, it is demoted with its capture intact (and its body is still in the ``_shared/history``
-    CAS by construction, since retention is write-once).
+    A member re-processed under the *same* ``doc_id`` can come back with different facts: a new
+    normalized body (registry fix, converter upgrade), or facts re-derived from an unchanged body
+    by a fixed parser (a revision date that now normalizes; the ``"None"`` date a null once became).
+    Keeping the captured facts would leave ``history.yaml`` describing the member wrongly — a body
+    no longer in the bundle (audit [S9]a), or a date that orders the wrong version as current. So
+    whenever the facts differ, the fresh facts are adopted and the prior fact-dict is appended to
+    this entry's ``superseded`` list — nothing is deleted, it is demoted with its capture intact
+    (and its body is still in the ``_shared/history`` CAS by construction, since retention is
+    write-once).
 
     The demoted dict carries the **captured facts only**: ``is_latest`` is a derived pointer, and a
     nested ``superseded`` would grow exponentially — the chain is kept flat, oldest first. A member
-    absent from ``fresh`` (nothing re-processed it this run) or one whose body is unchanged is
+    absent from ``fresh`` (nothing re-processed it this run) or one whose facts are unchanged is
     returned untouched, so an identical re-run stays byte-for-byte a no-op."""
-    if fresh is None or fresh["body_sha256"] == captured["body_sha256"]:
+    if fresh is None or _facts(fresh) == _facts(captured):
         return captured
-    prior = {k: v for k, v in captured.items() if k not in ("is_latest", "superseded")}
-    return {**fresh, "superseded": [*captured.get("superseded", []), prior]}
+    return {**fresh, "superseded": [*captured.get("superseded", []), _facts(captured)]}
 
 
 def merge_history(existing: dict[str, Any] | None, fresh: dict[str, Any]) -> dict[str, Any]:

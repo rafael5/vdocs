@@ -41,7 +41,10 @@ class ConsolidateStage(Stage):
     requires = [TEXT_NORMALIZED, ASSETS, REGISTRIES]  # REGISTRIES: it applies anchor-aliases.yaml
     produces = [CONSOLIDATED]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
-    contract_ver = 4  # v4: history.yaml supersedes a re-processed member's stale facts (P5.1)
+    # v4: history.yaml supersedes a re-processed member's stale facts (P5.1)
+    # v5: a null revision date stays empty (title-page fallback), and facts re-derived from an
+    # unchanged body supersede too — corrects the "None" dates and the current version they misled
+    contract_ver = 5
     # ^ v3: anchor-alias re-grouping (anchor-aliases.yaml)
     # ^ v2: carry the latest member's tables/*.csv sidecars into the bundle (rich-reading tables P1)
 
@@ -207,9 +210,11 @@ def _member_from(meta, doc_slug, raw, bodies, bundle_dir, anchor_aliases):  # ty
 
 def _fold_revisions(path):  # type: ignore[no-untyped-def]
     """The member's own ``revisions.yaml`` (§6.4) folded into the lineage: the revision entries +
-    the newest date (the order tiebreak). Absent sidecar → no entries, no date."""
+    the newest date (the order tiebreak). Absent sidecar → no entries, no date. A table with no
+    normalizable date writes ``revision_newest: null``, which must stay empty — read through
+    ``str()`` it became the truthy date ``"None"`` and the title-page fallback never ran."""
     data = kregistry.load_mapping(path, missing_ok=True)
-    return list(data.get("revisions") or []), str(data.get("revision_newest", ""))
+    return list(data.get("revisions") or []), str(data.get("revision_newest") or "")
 
 
 def _read_history(path):  # type: ignore[no-untyped-def]

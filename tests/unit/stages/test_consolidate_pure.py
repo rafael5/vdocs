@@ -271,6 +271,28 @@ def test_merge_history_adopts_fresh_facts_and_demotes_the_prior_capture():
     assert "is_latest" not in prior and "superseded" not in prior
 
 
+def test_merge_history_refreshes_a_date_re_derived_from_an_unchanged_body():
+    # Real case (SD VS GUI Technical Manual, 2026-11-05): a member was captured with the date
+    # "None" (a null revision date read through str()). "None" sorts after every real date, so it
+    # was marked current over a newer release. Fixing how the date is derived changes no body, but
+    # the lineage must still describe the member truthfully: the fresh date is adopted, the prior
+    # capture is demoted onto `superseded`, and is_latest is recomputed from the corrected facts.
+    a = _member(doc_slug="r1_7_56", official_date="2019-05", body_sha256="a1")
+    b = _member(doc_slug="r1_7_31", official_date="None", body_sha256="b1")
+    existing = cp.build_history("SD:SD:TM", cp.order_members([a, b]))
+    assert [e["doc_slug"] for e in existing["members"] if e["is_latest"]] == ["r1_7_31"]
+
+    b_fixed = _member(doc_slug="r1_7_31", official_date="2018-02", body_sha256="b1")  # same body
+    fresh = cp.build_history("SD:SD:TM", cp.order_members([a, b_fixed]))
+
+    merged = cp.merge_history(existing, fresh)
+    by_slug = {e["doc_slug"]: e for e in merged["members"]}
+    assert by_slug["r1_7_31"]["official_date"] == "2018-02"
+    assert [p["official_date"] for p in by_slug["r1_7_31"]["superseded"]] == ["None"]
+    assert by_slug["r1_7_56"]["is_latest"] is True and by_slug["r1_7_31"]["is_latest"] is False
+    assert "superseded" not in by_slug["r1_7_56"]  # its facts did not change
+
+
 def test_merge_history_unchanged_member_gains_no_superseded_key():
     a = _member(doc_slug="v1", patch_id="DG*5.3*1", body_sha256="b1")
     fresh = cp.build_history("CPRS:OR:RN", [a])

@@ -45,6 +45,45 @@ def test_norm_date():
     assert rev._norm_date("sometime soon") == "sometime soon"  # unrecognised passes through
 
 
+def test_norm_date_handles_the_forms_measured_in_the_corpus():
+    # Every form below was found unnormalized in the 2026-11-05 lake's revisions.yaml files
+    # (1,258 of 9,653 revision rows, 198 docs). An unparsed date drops out of revision_newest, so
+    # a doc whose newest row used one of these forms was dated too early.
+    cases = {
+        "07/24": "2024-07",  # MM/YY — 748 rows; first part is always 1–12, second 00–25 or 95–98
+        "6/02": "2002-06",
+        "11/97": "1997-11",
+        "09/--/1997": "1997-09",  # day left blank
+        "09//13/2022": "2022-09",  # doubled separator
+        "8//2009": "2009-08",
+        "01/ 2023": "2023-01",
+        "03-2019": "2019-03",
+        "12-22-2004": "2004-12",
+        "09-5-2014": "2014-09",
+        "10-30-09": "2009-10",
+        "**10-20-09**": "2009-10",  # markdown bold left in the cell
+        "September 26, 2008": "2008-09",
+        "October 1, 2008": "2008-10",
+        "December 18,2008": "2008-12",
+        "Apr 06": "2006-04",
+        "November 07": "2007-11",
+        "August2014": "2014-08",
+        "1September 2009": "2009-09",
+        "7-Jul-11": "2011-07",
+        # a span dates the revision by its end — the most recent change it records
+        "Sep-Nov 11": "2011-11",
+        "May-July 06": "2006-07",
+        "May- July 06": "2006-07",
+        "01/02/2015 to 01/06/2015": "2015-01",
+    }
+    for raw, iso in cases.items():
+        assert rev._norm_date(raw) == iso, raw
+    # not dates, or not resolvable to a month: passed through unchanged
+    not_dates = ("REDACTED", "(unknown)", "Updated for Release 1.5", "FH*5.5*8", "230", "2000")
+    for raw in (*not_dates, "13/24"):
+        assert rev._norm_date(raw) == raw, raw
+
+
 def test_parse_html_revision_table():
     found = rev.find_revision_table(_HTML)
     assert found is not None
@@ -245,10 +284,26 @@ def test_proximity_guard_rejects_date_description_table_without_revision_heading
 
 def test_revision_sidecar_summary_and_records():
     _, records, _ = rev.extract_revision_history(_HTML)
-    side = rev.revision_sidecar(records)
+    side = rev.revision_sidecar(records, not_after="2026-11")
     assert side["revision_count"] == 2
     assert side["revision_newest"] == "2024-03" and side["revision_oldest"] == "2020-01"
     assert side["revisions"][0]["change"] == "Updated install steps"
+
+
+def test_revision_sidecar_ignores_a_date_after_the_run_month():
+    # Real case: GMRC `consum` records a revision dated 3018-03 — a typo for an earlier year. A
+    # revision cannot postdate the run that reads it, so it must not become revision_newest (it
+    # would sort the doc above everything else). The row itself is kept as written.
+    records = [
+        rev.RevisionRecord(date="3018-03", version="", pages=[], change="typo", refs=[]),
+        rev.RevisionRecord(date="2026-11", version="", pages=[], change="this month", refs=[]),
+        rev.RevisionRecord(date="2016-11", version="", pages=[], change="real", refs=[]),
+    ]
+    side = rev.revision_sidecar(records, not_after="2026-11")
+    assert side["revision_newest"] == "2026-11"  # the run month itself is allowed
+    assert side["revision_oldest"] == "2016-11"
+    assert [r["date"] for r in side["revisions"]] == ["3018-03", "2026-11", "2016-11"]
+    assert rev.revision_sidecar(records[:1], not_after="2026-11")["revision_newest"] is None
 
 
 def test_old_gen_bookmark_span_revision_heading_is_captured():
