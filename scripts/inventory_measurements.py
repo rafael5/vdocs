@@ -51,6 +51,8 @@ from vdocs.models.stage import Acquisition
 from vdocs.orchestrator.state import StateStore
 from vdocs.stages.fetch.fetch_pure import GatePolicy, sole_survivors
 from vdocs.stages.fetch.policy import load_gate_policy
+from vdocs.stages.index.inventory_pure import ROW_KEY_FIELDS, row_keys
+from vdocs.stages.index.inventory_pure import canonical as _canonical
 from vdocs.stages.serve_inventory.completeness_pure import (
     classify,
     completeness_report,
@@ -65,8 +67,7 @@ DEFAULT_PACKAGE_TSV = (
     Path.home() / "projects" / "vista-meta" / "vista" / "export" / "code-model"
 ) / "package-namespace.tsv"
 
-# The four listing fields of the proposed row key (§3) and the gold columns this script reads.
-ROW_KEY_FIELDS = ("app_url", "section_name", "doc_url", "patch_id")
+# The gold columns this script reads.
 GOLD_COLUMNS = (
     "doc_id",
     "app_code",
@@ -187,25 +188,6 @@ def load_lake(data_dir: Path, registries: Path, package_tsv: Path) -> Lake:
 def is_vista(rec: EnrichedRecord, policy: GatePolicy) -> bool:
     """A genuine record the gate's ``app_in_scope`` admits (VistA system type, status allowed)."""
     return not rec.noise_type and policy.app_in_scope(rec)
-
-
-def _canonical(rec: EnrichedRecord) -> str:
-    return json.dumps(rec.model_dump(mode="json"), sort_keys=True, ensure_ascii=False)
-
-
-def row_keys(records: list[EnrichedRecord]) -> list[str]:
-    """The proposal's row key (§3): a hash of the four listing fields plus an ordinal among the
-    records that share them, assigned by sorting those records on their full canonical content —
-    so a key follows the listing's content, not the order VA's page happens to list it in."""
-    groups: dict[str, list[int]] = defaultdict(list)
-    for i, rec in enumerate(records):
-        fields = "\x1f".join(str(getattr(rec, f)) for f in ROW_KEY_FIELDS)
-        groups[hashlib.sha256(fields.encode("utf-8")).hexdigest()[:16]].append(i)
-    keys = [""] * len(records)
-    for base, idxs in groups.items():
-        for ordinal, i in enumerate(sorted(idxs, key=lambda j: _canonical(records[j]))):
-            keys[i] = f"{base}:{ordinal}"
-    return keys
 
 
 def fold_name(name: str) -> str:

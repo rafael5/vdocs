@@ -29,7 +29,6 @@ from scripts.inventory_measurements import (  # noqa: E402
     main,
     measure,
     measured,
-    row_keys,
 )
 
 PAGE_SD = "https://www.va.gov/vdl/application.asp?appid=1"
@@ -272,21 +271,6 @@ def test_refiled_slug_counts_once_as_gold_only_and_once_as_held_not_in_gold(
     assert m["s1.refiled_held_not_in_gold"] == 1
     # SD:iss_release_ug, the failed DGBT manual, and the Kernel TM and UM listings: held, no gold
     assert m["s1.held_not_in_gold"] == 6
-
-
-def test_identical_listings_get_distinct_keys_that_survive_reordering() -> None:
-    recs = _records()
-    keys = row_keys(recs)
-    assert len(set(keys)) == len(recs)
-    # the identical pair differs only by its ordinal
-    assert keys[3] != keys[4]
-    assert keys[3].rsplit(":", 1)[0] == keys[4].rsplit(":", 1)[0]
-    # reversing the page order changes no record's key: a key follows the listing's content
-    rev = list(reversed(recs))
-    by_content = {r.model_dump_json(): k for r, k in zip(rev, row_keys(rev), strict=True)}
-    assert sorted(row_keys(rev)) == sorted(keys)
-    assert by_content[recs[5].model_dump_json()] == keys[5]
-    assert by_content[recs[6].model_dump_json()] == keys[6]
 
 
 def test_a_document_is_dated_by_its_newest_revision_not_its_title_page(
