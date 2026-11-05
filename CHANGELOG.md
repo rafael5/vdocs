@@ -52,6 +52,9 @@ This file is for **what shipped**. For the *why* behind decisions
   `index.db`. SR is now "Surgery" in all three, as the VDL and the PACKAGE file (#9.4) name it.
   Registry tests reject two packages in different namespaces sharing a name, and two applications
   sharing an index-facing name unless package-master consolidates one into the other.
+- **`index` did not re-run when the registries it reads changed**: it takes application names,
+  vocabularies and entity rules from `registries/` but did not declare them as an input, so the
+  rebuild after the SR rename skipped it as "inputs unchanged". It now requires `registries`.
 - **doc-type classification**: titles using the bare abbreviation **"TM"** (e.g. *"SD PIMS Version
   5.3 TM ADDENDUM 941"*) are now classified as Technical Manual. Previously only the spelled-out
   "Technical Manual" matched, leaving such docs untyped → empty `anchor_key` → mis-collapsed in gold.

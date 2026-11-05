@@ -487,3 +487,31 @@ def test_index_quarantines_excluded_entity_types(ctx):
         conn.close()
     assert {"global", "routine"} <= types  # extraction ran on the same text
     assert options == ["XUMAINT"]  # vocab member ships; "PATH EXAMPLE" noise dropped
+
+
+def test_an_application_name_edit_reruns_index(tmp_path):
+    # index names applications from registries/inventory/app-profiles.yaml and product-names.yaml
+    # (and reads the vocab, entity and entity-quality registries) but declared none of them. After
+    # SR (Surgery) was renamed from "MailMan" in both, the 2026-11-05 rebuild skipped index as
+    # "inputs unchanged", and index.db kept labelling the 22 Surgery manuals "MailMan".
+    from vdocs.config import Settings
+    from vdocs.contracts.registry import REGISTRIES
+    from vdocs.orchestrator.stage import StageContext
+    from vdocs.orchestrator.state import StateStore
+
+    regs = tmp_path / "registries"
+    (regs / "inventory").mkdir(parents=True)
+    profiles = regs / "inventory" / "app-profiles.yaml"
+    profiles.write_text("profiles:\n  SR: {name: MailMan}\n")
+    cfg = Settings(data_dir=tmp_path / "lake", registries_dir=regs)
+    cfg.lake.mkdir(parents=True)
+    stage = IndexStage()
+    store = StateStore.open(cfg.state_db)
+    try:
+        ctx = StageContext(cfg=cfg, state=store)
+        assert REGISTRIES in stage.requires
+        before = stage._input_fps(ctx)
+        profiles.write_text("profiles:\n  SR: {name: Surgery}\n")
+        assert stage._input_fps(ctx)[REGISTRIES.key] != before[REGISTRIES.key]
+    finally:
+        store.close()

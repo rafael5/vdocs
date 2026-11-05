@@ -34,6 +34,7 @@ from vdocs.contracts.registry import (
     INDEX_DOCUMENTS,
     INDEX_ENTITIES,
     INDEX_SECTIONS,
+    REGISTRIES,
     TEXT_NORMALIZED,
 )
 from vdocs.kernel import csv as kcsv
@@ -148,7 +149,10 @@ _DOC_COLUMNS = (
 class IndexStage(Stage):
     name = "index"
     description = "build index.db: documents, sections (anchors), chunks+FTS5 (search), entities"
-    requires = [TEXT_NORMALIZED, CONSOLIDATED, DOC_META_STAGED]
+    # REGISTRIES: application names (app-profiles, product-names), the published vocabularies and
+    # the entity rules are read from the registry tree — undeclared, an SR rename left index.db on
+    # the old name because index skipped as "inputs unchanged"
+    requires = [TEXT_NORMALIZED, CONSOLIDATED, DOC_META_STAGED, REGISTRIES]
     produces = [INDEX_DOCUMENTS, INDEX_SECTIONS, INDEX_CHUNKS, INDEX_ENTITIES]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
     # v2 (L1.2): chunks_fts gained a `doc_title` column (the doc-defining-token search fix).
