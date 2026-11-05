@@ -38,7 +38,9 @@ Documentation here is classified by **lifecycle state, not topic**:
   [`prompts/historical/`](prompts/historical/inventory-browser-step1-kickoff.md)): `index.db` carries
   `v_inventory` (one row per listing, with disposition and reason), each document's
   `last_updated`, read contract 1.7, and a doctor freshness check; the lake was rebuilt and every
-  step 0 figure held. Step 2 — using the view from `sqlite3` — decides the web mode (D5).
+  step 0 figure held. Step 2 — a month of using the view from `sqlite3`, then the go/no-go on the
+  web mode (D5) — is next: [`prompts/inventory-browser-step2-kickoff.md`](prompts/inventory-browser-step2-kickoff.md),
+  to run on or after 2026-12-05.
 - ~~**Active workstream:** SKL~~ — **the search-facing half is RULED AGAINST (2026-08-04)**, see
   [`proposals/vdocs-quality-synonym-layer/`](proposals/vdocs-quality-synonym-layer/) §10. S0–S3
   landed and the termbase + glossary projections are live and keep working; S4/S5 are **not** to be
