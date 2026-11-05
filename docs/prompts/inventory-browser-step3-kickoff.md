@@ -6,10 +6,11 @@
 
 **Repo: `vdocs`** (`~/projects/vdocs`). Read `CLAUDE.md`, then the inventory browser proposal,
 [`docs/proposals/inventory-browser-proposal.md`](../proposals/inventory-browser-proposal.md): §8
-step 3 and §10 D1 and D5. D1 chose option A, and D5 said go to the web mode on 2026-11-05. Do
-not reopen either decision. Identity continuity must land before the web mode (step 4); otherwise
-the browser shows every re-filed document twice, once as *gold only* and once as *held but not in
-gold*.
+steps 3 and 4 and §10 D1. D1 chose option A, the cause fixed once; do not reopen it. On
+2026-11-05 the operator had the web mode (step 4) built first, on top of D1's stopgap, so the
+Inventory in vdocs-web now shows every re-filed document twice: its listings as *Not in gold* with
+a *re-filed* label, and its gold document under *In gold, not listed*. This step is what removes
+the doubling.
 
 This session writes a short proposal and nothing else: no code, no registry change, no run on the
 shared lake. The code comes in a later session, once the operator has taken the proposal's
@@ -67,8 +68,10 @@ recommendation. Twice already a cheap measurement collapsed a large plan here.
    none; confirm it, and check the read contract (`contracts/read/v1.json`).
 5. **Retiring the stopgap.** Deleting `refiled.yaml` is planned. `v_inventory.refiled_from` is a
    1.7 contract column, and removing a column is a MAJOR bump (`contracts/read/CHANGELOG.md`
-   header), while a column that is always empty describes nothing. Decide which happens, and
-   whether doctor's check goes with the file.
+   header), while a column that is always empty describes nothing. vdocs-web reads the column
+   (`internal/index/inventory.go`) and shows the *re-filed* label and the gold-only view's
+   "the VDL lists it as" note from it (`web/src/lib/Inventory.svelte`), so either choice is a
+   change there too. Decide which happens, and whether doctor's check goes with the file.
 6. **What the next fetch does with the 14**, and whether this change must land before the next
    `fetch --all`.
 
@@ -90,5 +93,5 @@ renames (D4). Dating never-fetched documents (D6). Any vdocs-web change.
 - The commit is pushed, and the private inventory browser page,
   <https://claude.ai/artifact/MivhwihatSqjoeVbgvXJyB>, is republished through its URL from the
   corrected file, naming the commit.
-- The next session is named: the build of identity continuity. The web mode's kickoff (step 4)
-  is written only after that build lands.
+- The next session is named: the build of identity continuity, with the vdocs-web change that
+  retires the *re-filed* label.

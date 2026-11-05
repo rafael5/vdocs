@@ -1,8 +1,9 @@
 # Inventory browser — the whole VDL catalog in vdocs-web
 
 **Status: PROPOSED · 2026-11-05 · amended 2026-11-05 after adversarial review · all decisions
-taken 2026-11-05 · steps 0 and 1 landed 2026-11-05 · web mode: go (D5, 2026-11-05)** — the
-producer is built (§8 step 1); the web mode is not, and waits on identity continuity (§8 step 3).
+taken 2026-11-05 · steps 0, 1, 2, 4 and 5 landed 2026-11-05** — the producer and the web mode are
+built (§8 steps 1 and 4); identity continuity (§8 step 3) is not, and the operator chose to build
+the web mode before it (D1).
 Producer: vdocs · consumer: vdocs-web · read contract 1.6 → 1.7 (additive). An interactive mockup
 over the real 2026-11-05 inventory lives in a private Claude artifact
 (<https://claude.ai/artifact/UP9W8LRkwXcyHVwhgTBVn5>); this file is the proposal of record. Every
@@ -23,8 +24,9 @@ inventory as an input and runs two functions it already depends on. The adversar
 and that three statements in the first draft did not hold as written. Those are corrected in place,
 as are the ten figures step 0 found had moved when it re-measured them. The
 calls that remained are recorded in §10 with their options, and all were decided on 2026-11-05 as
-recommended. The order is producer first; identity continuity across re-filing lands before the web
-mode; and the web mode was a separate go/no-go, which the operator took on 2026-11-05: go.
+recommended. The order was producer first, then a separate go/no-go on the web mode, which the
+operator took on 2026-11-05: go. The web mode was then built the same day, ahead of identity
+continuity across re-filing, at the operator's call (D1).
 
 ## Contents
 
@@ -345,16 +347,38 @@ one case the check catches is already visible as a pending stage in the next run
 3. **Identity continuity across re-filing (D1).** Its own short proposal, which does not exist yet;
    the next session writes it
    ([kickoff](../prompts/inventory-browser-step3-kickoff.md)):
-   keep the id a document already had when VA moves it to another application page. It must land
-   before step 4. The producer half landed first, so the view carries D1's stopgap (option C,
+   keep the id a document already had when VA moves it to another application page. D1 had it land
+   before step 4; on 2026-11-05 the operator chose the web mode first (D1), so until it lands the
+   Inventory shows the 14 re-filed documents twice, labelled. The view carries D1's stopgap (option C,
    `ee10e6f`): `registries/inventory/refiled.yaml` lists the 14 re-filed ISS guides and
    `v_inventory.refiled_from` labels their 28 rows with the id gold holds; its expiry is
    `vdocs doctor`'s *refiled exceptions* check, which FAILs once a listed id joins on `doc_id`
-   without the file. This step deletes the file.
-4. **vdocs-web, the consumer.** Update the vendored contract copy; tests for the MINOR check, the
-   facet counts, routes and the missing-view path; then the Svelte mode with its unit tests;
-   `make check`.
-5. **Docs last, in the past tense**: the read-contract changelog entry and both READMEs.
+   without the file. This step deletes the file, and decides what becomes of the `refiled_from`
+   column, which vdocs-web now reads.
+4. **vdocs-web, the consumer — landed 2026-11-05**, before step 3 at the operator's call (D1), test
+   first in three vdocs-web commits, each with `make check` green:
+   - `61d5887` — the vendored contract copy moved from 1.4 to 1.7, and `internal/index` gained the
+     inventory queries: facet counts with each facet's own selection relaxed, a sorted page of rows
+     with its total and disposition counts, one record with how many listings carry its file, and
+     the gold documents no listing carries. Gold status and the date are the join of `doc_id` to
+     `v_documents`, made in the query and never stored. `InventoryReady` refuses an index.db older
+     than 1.7, naming the version it needs and the fix.
+   - `a6cf503` — the routes `GET /api/inventory/facets`, `/rows`, `/record/{rowKey}` and
+     `/gold-only`. Each answers 409 with that message on an older index.db, so the missing view
+     never shows as an empty list; a query the client got wrong is a 400, a failed one a 500.
+   - `6e3d13a` — the Inventory mode beside the Library: the facets of §3, the results table, the
+     name search and month range, the disposition bar, the three one-click views, the record panel
+     and *Open in library*. The Type facet's families now come from `v_vocab` in both modes, and
+     the Svelte page's `TYPE_FAMILIES` list is gone; families order by count, *Other* last.
+
+   Against the rebuilt lake the served figures equal step 1's: 9,080 listings; held 1,280, covered by
+   another format 2,916, excluded 1,656, not VistA 3,228; 2,120 with a gold match (1,266 current,
+   854 earlier versions); 216 held but not in gold; 15 gold-only documents, 14 of them the labelled
+   re-filings; 2,018 dated listings. A 200-row page for a name search took 27 ms. One thing differs
+   from §2: *Open in library* is offered only for a current gold document, because the Library
+   reader shows only latest versions.
+5. **Docs — landed 2026-11-05**: vdocs-web's README and user guide (`4f703f1`) describe the
+   Inventory mode; the read-contract changelog entry landed with step 1.
 
 ## 9. Deliberately not building
 
@@ -395,6 +419,11 @@ but not in gold*.
 **Decided 2026-11-05: A**, as recommended, with C as the stopgap only if the producer half of this
 proposal lands first and the continuity change is not yet written; the stopgap's exception list
 then carries a testable expiry (§8 step 3). B is not worth a second mechanism.
+
+**Order changed 2026-11-05** by the operator: the web mode was built before identity continuity, on
+top of the stopgap, so that the Inventory could be used now. Until step 3 lands, each of the 14
+re-filed documents shows twice: its listings as *Not in gold* with a *re-filed* label, and its
+gold document under *In gold, not listed*, labelled with the id the VDL lists it under now.
 
 ### D2 — Repeated listings of the same file
 
