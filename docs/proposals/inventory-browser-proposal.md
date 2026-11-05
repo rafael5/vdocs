@@ -79,8 +79,8 @@ vdocs-web's current layout and theme, with an Inventory mode beside Library:
 - **Summary strip**: a disposition bar over the current selection, plus one-click views for
   *held but not in gold*, *in gold but not in the inventory*, and *unreachable + undecided*. The
   second view is a query over gold documents, not a filter over inventory rows (§3, *In gold*).
-  Re-filed documents appear in neither, because identity continuity across re-filing lands before
-  the web mode (D1).
+  The plan was that re-filed documents appear in neither, because identity continuity would land
+  first; the web mode was built before it (D1), so until it lands they appear in both, labelled.
 - **Record panel**: disposition with the reason's full explanation, gold status, the Library facet
   values, the record's fields, how many application pages list the same file (D2), and the VDL
   link. *Open in library* hands a gold document to the
