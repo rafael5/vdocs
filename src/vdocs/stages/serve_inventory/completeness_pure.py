@@ -50,6 +50,28 @@ CONVERTIBLE_FORMATS = frozenset({"docx", "pdf"})
 # genuinely new VistA application was dropped in full while the verdict still read COMPLETE.
 UNDECIDED_SYSTEM_TYPES = frozenset({"", "unclassified", "unknown"})
 
+# The six dispositions, and the closed set of reason kinds ``classify`` emits — the mechanism that
+# decided a record, its disqualifying value carried beside it in ``Disposition.value``. The kind is
+# what the published vocabulary explains (one sentence each, in
+# ``registries/inventory/dispositions.yaml``); the reason string above stays what it always was.
+DISPOSITIONS = frozenset(
+    {"held", "not-vista", "excluded", "covered-by-other-format", "unreachable", "undecided"}
+)
+REASON_KINDS = frozenset(
+    {
+        "doctype-kept",  # held: the doc-type policy keeps its type (the reason string is empty)
+        "noise",  # not-vista: value is the catalog's noise_type
+        "app-status",  # not-vista: value is the denied app_status
+        "system-type",  # not-vista: value is the system_type outside the allowed prefixes
+        "system-type-unclassified",  # undecided: value is the system_type as recorded
+        "format-duplicate",  # covered-by-other-format: value is the format
+        "doctype-omitted",  # excluded: value is the doc code
+        "sole-format",  # held: value is the format
+        "format-only",  # unreachable: value is the format
+        "sole-survivor",  # held: value is the omitted doc code it survives
+    }
+)
+
 
 @dataclass(frozen=True)
 class Disposition:
@@ -66,6 +88,8 @@ class Disposition:
 
     status: str
     reason: str
+    kind: str = ""  # one of REASON_KINDS
+    value: str = ""  # the value that decided it (a doc code, a format, a system type, …)
 
 
 def classify(
@@ -88,37 +112,65 @@ def classify(
     """
     if rec.noise_type:
         return Disposition(
-            "not-vista", NOISE_REASONS.get(rec.noise_type, f"not-vista:{rec.noise_type}")
+            "not-vista",
+            NOISE_REASONS.get(rec.noise_type, f"not-vista:{rec.noise_type}"),
+            "noise",
+            rec.noise_type,
         )
     if not policy.app_in_scope(rec):
         # name the disqualifying value, not just the fact — an operator needs to see *what* it was
         if rec.app_status in policy.denied_app_status:
-            return Disposition("not-vista", f"not-vista:app-status={rec.app_status}")
+            return Disposition(
+                "not-vista", f"not-vista:app-status={rec.app_status}", "app-status", rec.app_status
+            )
         if rec.system_type.strip().lower() in UNDECIDED_SYSTEM_TYPES:
             # an absence of classification, not a classification of absence
-            return Disposition("undecided", "undecided:system-type-unclassified")
-        return Disposition("not-vista", f"not-vista:system-type={rec.system_type or 'unknown'}")
+            return Disposition(
+                "undecided",
+                "undecided:system-type-unclassified",
+                "system-type-unclassified",
+                rec.system_type,
+            )
+        system_type = rec.system_type or "unknown"
+        return Disposition(
+            "not-vista", f"not-vista:system-type={system_type}", "system-type", system_type
+        )
 
     admitted = policy.doctype_kept(rec) or rec.anchor_key in sole_survivors
     if rec.out_of_scope_reason:  # a non-DOCX representation
         if (rec.anchor_key and rec.anchor_key in docx_anchors) or doc_id(rec) in docx_ids:
             # we hold the same document as DOCX and fetch that one — nothing is missing
             return Disposition(
-                "covered-by-other-format", f"format:{rec.out_of_scope_reason}-duplicate"
+                "covered-by-other-format",
+                f"format:{rec.out_of_scope_reason}-duplicate",
+                "format-duplicate",
+                rec.out_of_scope_reason,
             )
         if not admitted:
             # policy did not want it anyway — the format is not what is keeping it out, and
             # reporting it as a format problem would overstate the hole
-            return Disposition("excluded", f"doctype-omitted:{rec.doc_code}")
+            return _omitted(rec)
         if rec.doc_format in CONVERTIBLE_FORMATS:
-            return Disposition("held", "sole-format")  # VO.8 admits it and Docling reads it
-        return Disposition("unreachable", f"format:{rec.out_of_scope_reason}-only")
+            # VO.8 admits it and Docling reads it
+            return Disposition("held", "sole-format", "sole-format", rec.doc_format)
+        return Disposition(
+            "unreachable",
+            f"format:{rec.out_of_scope_reason}-only",
+            "format-only",
+            rec.out_of_scope_reason,
+        )
 
     if not policy.doctype_kept(rec):
         if rec.anchor_key in sole_survivors:
-            return Disposition("held", "sole-survivor")
-        return Disposition("excluded", f"doctype-omitted:{rec.doc_code}")
-    return Disposition("held", "")
+            return Disposition("held", "sole-survivor", "sole-survivor", rec.doc_code)
+        return _omitted(rec)
+    return Disposition("held", "", "doctype-kept", rec.doc_code)
+
+
+def _omitted(rec: EnrichedRecord) -> Disposition:
+    return Disposition(
+        "excluded", f"doctype-omitted:{rec.doc_code}", "doctype-omitted", rec.doc_code
+    )
 
 
 @dataclass(frozen=True)

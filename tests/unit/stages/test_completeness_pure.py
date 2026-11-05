@@ -14,6 +14,8 @@ completeness.
 from vdocs.models.catalog import EnrichedRecord
 from vdocs.stages.fetch.fetch_pure import GatePolicy
 from vdocs.stages.serve_inventory.completeness_pure import (
+    DISPOSITIONS,
+    REASON_KINDS,
     Disposition,
     classify,
     completeness_report,
@@ -43,7 +45,7 @@ class TestClassify:
     def test_held_when_the_gate_admits_it(self) -> None:
         assert classify(
             rec(), POLICY, docx_ids=set(), docx_anchors=set(), sole_survivors=set()
-        ) == Disposition("held", "")
+        ) == Disposition("held", "", "doctype-kept", "UM")
 
     def test_vba_form_is_named_not_vista(self) -> None:
         """The operator's ask: a benefits form should say why it is not fetched, not just that
@@ -55,7 +57,7 @@ class TestClassify:
             docx_anchors=set(),
             sole_survivors=set(),
         )
-        assert d == Disposition("not-vista", "not-vista:vba-form")
+        assert d == Disposition("not-vista", "not-vista:vba-form", "noise", "vba_form")
 
     def test_va_reference_is_named_not_vista(self) -> None:
         d = classify(
@@ -93,7 +95,12 @@ class TestClassify:
             docx_anchors=set(),
             sole_survivors=set(),
         )
-        assert d == Disposition("undecided", "undecided:system-type-unclassified")
+        assert d == Disposition(
+            "undecided",
+            "undecided:system-type-unclassified",
+            "system-type-unclassified",
+            "unclassified",
+        )
 
     def test_an_unmapped_application_is_also_undecided(self) -> None:
         """An empty system_type is the same absence, reached a different way."""
@@ -122,7 +129,9 @@ class TestClassify:
             docx_anchors={"XU:XU:UM"},
             sole_survivors=set(),
         )
-        assert d == Disposition("covered-by-other-format", "format:pdf-duplicate")
+        assert d == Disposition(
+            "covered-by-other-format", "format:pdf-duplicate", "format-duplicate", "pdf"
+        )
 
     def test_pdf_twin_with_no_anchor_key_is_paired_by_doc_id(self) -> None:
         """Measured 2026-11-05 (inventory browser step 0): three PDFs whose rows carry no anchor
@@ -135,7 +144,9 @@ class TestClassify:
             docx_anchors=set(),
             sole_survivors=set(),
         )
-        assert d == Disposition("covered-by-other-format", "format:pdf-duplicate")
+        assert d == Disposition(
+            "covered-by-other-format", "format:pdf-duplicate", "format-duplicate", "pdf"
+        )
 
     def test_pdf_with_no_docx_anywhere_is_held_via_docling(self) -> None:
         """VO.8 and VO.9 must agree: once the gate admits a PDF-only document and Docling can
@@ -143,7 +154,7 @@ class TestClassify:
         d = classify(
             rec(doc_format="pdf"), POLICY, docx_ids=set(), docx_anchors=set(), sole_survivors=set()
         )
-        assert d == Disposition("held", "sole-format")
+        assert d == Disposition("held", "sole-format", "sole-format", "pdf")
 
     def test_a_format_no_converter_reads_is_a_real_loss(self) -> None:
         """The definition's teeth: legacy `.doc` has no converter, so a document published only
@@ -151,20 +162,20 @@ class TestClassify:
         d = classify(
             rec(doc_format="doc"), POLICY, docx_ids=set(), docx_anchors=set(), sole_survivors=set()
         )
-        assert d == Disposition("unreachable", "format:doc-only")
+        assert d == Disposition("unreachable", "format:doc-only", "format-only", "doc")
 
     def test_omitted_doctype_names_the_code(self) -> None:
         d = classify(
             rec(doc_code="RN"), POLICY, docx_ids=set(), docx_anchors=set(), sole_survivors=set()
         )
-        assert d == Disposition("excluded", "doctype-omitted:RN")
+        assert d == Disposition("excluded", "doctype-omitted:RN", "doctype-omitted", "RN")
 
     def test_sole_survivor_overrides_the_doctype_omission(self) -> None:
         """VO.7 — the last surviving document of its kind for code still running in VistA is the
         historical record, not ephemera."""
         r = rec(doc_code="RN", app_status="archive", anchor_key="XU:XU:RN")
         d = classify(r, POLICY, docx_ids=set(), docx_anchors=set(), sole_survivors={"XU:XU:RN"})
-        assert d == Disposition("held", "sole-survivor")
+        assert d == Disposition("held", "sole-survivor", "sole-survivor", "RN")
 
     def test_noise_is_judged_before_scope(self) -> None:
         """A VBA form on a web-client app is a form first — the reason must be stable regardless
@@ -189,6 +200,70 @@ class TestClassify:
         ):
             d = classify(r, POLICY, docx_ids=set(), docx_anchors=set(), sole_survivors=set())
             assert d.status == "held" or d.reason, f"silent exclusion: {r.doc_code}"
+
+
+def _every_branch() -> list[Disposition]:
+    """One record down each of classify()'s return paths."""
+    none: set[str] = set()
+    return [
+        classify(r, POLICY, docx_ids=none, docx_anchors=anchors, sole_survivors=soles)
+        for r, anchors, soles in (
+            (rec(), none, none),
+            (rec(noise_type="va_ref"), none, none),
+            (rec(app_status="decommissioned"), none, none),
+            (rec(system_type=""), none, none),
+            (rec(system_type="Web client"), none, none),
+            (rec(doc_format="pdf"), {"XU:XU:UM"}, none),
+            (rec(doc_format="pdf", doc_code="RN"), none, none),
+            (rec(doc_format="pdf"), none, none),
+            (rec(doc_format="doc"), none, none),
+            (rec(doc_code="RN"), none, none),
+            (rec(doc_code="RN", anchor_key="XU:XU:RN"), none, {"XU:XU:RN"}),
+        )
+    ]
+
+
+class TestReasonKind:
+    """The reason as a structured kind plus value (inventory browser step 1). The string stays as
+    it was — the `completeness` CLI prints it — and the kind is what the published vocabulary
+    explains, one sentence per kind."""
+
+    def test_the_disqualifying_value_rides_beside_its_kind(self) -> None:
+        none: set[str] = set()
+        got = [
+            (d.kind, d.value)
+            for d in (
+                classify(rec(app_status="decommissioned"), POLICY, docx_ids=none,
+                         docx_anchors=none, sole_survivors=none),
+                classify(rec(system_type="Web client"), POLICY, docx_ids=none,
+                         docx_anchors=none, sole_survivors=none),
+                classify(rec(system_type=""), POLICY, docx_ids=none,
+                         docx_anchors=none, sole_survivors=none),
+                classify(rec(doc_format="pdf", doc_code="RN"), POLICY, docx_ids=none,
+                         docx_anchors=none, sole_survivors=none),
+            )
+        ]  # fmt: skip
+        assert got == [
+            ("app-status", "decommissioned"),
+            ("system-type", "Web client"),
+            ("system-type-unclassified", ""),
+            ("doctype-omitted", "RN"),
+        ]
+
+    def test_every_record_gets_a_kind_even_when_held_with_no_reason_string(self) -> None:
+        assert all(d.kind for d in _every_branch())
+
+    def test_the_kinds_classify_emits_are_exactly_the_closed_set(self) -> None:
+        """Both directions: no path emits a kind outside REASON_KINDS, and no kind in the set is
+        unreachable — a kind nothing emits would be an explanation describing nothing."""
+        assert {d.kind for d in _every_branch()} == REASON_KINDS
+
+    def test_each_kind_belongs_to_one_disposition(self) -> None:
+        by_kind: dict[str, set[str]] = {}
+        for d in _every_branch():
+            by_kind.setdefault(d.kind, set()).add(d.status)
+        assert all(len(statuses) == 1 for statuses in by_kind.values())
+        assert {s for ss in by_kind.values() for s in ss} == DISPOSITIONS
 
 
 class TestCompletenessReport:
