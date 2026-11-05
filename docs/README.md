@@ -34,7 +34,7 @@ Documentation here is classified by **lifecycle state, not topic**:
   All decisions taken 2026-11-05. Step 0 (2026-11-05) committed the measurements:
   `scripts/inventory_measurements.py` → [`../reports/inventory-browser-measurements.md`](../reports/inventory-browser-measurements.md)
   (kickoff in [`prompts/historical/`](prompts/historical/inventory-browser-step0-kickoff.md)). Step 1,
-  the producer, has no kickoff yet.
+  the producer, is next: [`prompts/inventory-browser-step1-kickoff.md`](prompts/inventory-browser-step1-kickoff.md).
 - ~~**Active workstream:** SKL~~ — **the search-facing half is RULED AGAINST (2026-08-04)**, see
   [`proposals/vdocs-quality-synonym-layer/`](proposals/vdocs-quality-synonym-layer/) §10. S0–S3
   landed and the termbase + glossary projections are live and keep working; S4/S5 are **not** to be
