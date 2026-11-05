@@ -3634,7 +3634,7 @@ profiles:
       match: namespace
     confidence: medium
   SR:
-    name: MailMan
+    name: Surgery
     purpose: The Surgery package is designed to be used by Surgeons, Surgical Residents, Anesthetists,
       Operating Room Nurses, and other surgical staff. The Surgery package is part of the patient information
       system that stores data on the Department of Veterans Affairs (VA) patients who have, or are about

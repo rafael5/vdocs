@@ -46,10 +46,12 @@ This file is for **what shipped**. For the *why* behind decisions
   printed them cut off. They are quoted now, and a test requires every entry to parse to exactly
   `tier`, `decision`, `label` and `reason`. No keep/omit decision changed.
 - **Surgery (SR) was labelled "MailMan"**: `package-master.yaml` gave SR the canonical name of XM,
-  so catalog enrichment set `app_name_full` to "MailMan" on all 68 Surgery records and the 22 gold
-  Surgery documents. SR is now "Surgery", as the VDL and the PACKAGE file (#9.4) name it. A registry
-  test rejects two packages in different namespaces sharing a name. The lake picks it up on the next
-  run from `catalog`.
+  so catalog enrichment set `app_name_full` to "MailMan" on all 68 Surgery records. The same error
+  sat in `app-profiles.yaml` (`name`) and `product-names.yaml` (`full`, plus "MailMan" among SR's
+  match terms), which the `index` stage reads, so the 22 gold Surgery documents stayed "MailMan" in
+  `index.db`. SR is now "Surgery" in all three, as the VDL and the PACKAGE file (#9.4) name it.
+  Registry tests reject two packages in different namespaces sharing a name, and two applications
+  sharing an index-facing name unless package-master consolidates one into the other.
 - **doc-type classification**: titles using the bare abbreviation **"TM"** (e.g. *"SD PIMS Version
   5.3 TM ADDENDUM 941"*) are now classified as Technical Manual. Previously only the spelled-out
   "Technical Manual" matched, leaving such docs untyped → empty `anchor_key` → mis-collapsed in gold.

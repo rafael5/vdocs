@@ -10,6 +10,8 @@ sanity-bounded.
 from __future__ import annotations
 
 from vdocs.config import Settings
+from vdocs.kernel import personas
+from vdocs.kernel import products as kproducts
 from vdocs.stages.catalog import registries as rg
 
 
@@ -170,6 +172,34 @@ def test_packages_in_different_namespaces_never_share_a_name():
             owners.setdefault(entry.canonical_name, set()).add(entry.pkg_ns)
     assert {name: sorted(ns) for name, ns in owners.items() if len(ns) > 1} == {}
     assert reg.packages["SR"].canonical_name == "Surgery"  # the VDL lists it as "Surgery (SR)"
+
+
+def test_no_two_applications_share_a_name_in_the_index_registries():
+    # The index stage names applications from app-profiles.yaml (`name`) and product-names.yaml
+    # (`full`), not package-master. Both also gave SR (Surgery) MailMan's name, so the gold library
+    # kept labelling the Surgery manuals "MailMan" after package-master was fixed. Two codes may
+    # share a name only when package-master consolidates one into the other (RUM → KMPR, …).
+    survivor = {key: entry.canonical_pkg for key, entry in _load().packages.items()}
+    registries = Settings().registries
+
+    def shared(names: dict[str, str]) -> dict[str, list[str]]:
+        owners: dict[str, set[str]] = {}
+        for app, name in names.items():
+            owners.setdefault(name, set()).add(survivor.get(app, app))
+        return {name: sorted(apps) for name, apps in owners.items() if len(apps) > 1}
+
+    profile_names = personas.app_names(registries)
+    product_names = {
+        app: entries[0]["full"]
+        for app, entries in kproducts.load_products(registries).items()
+        if entries and entries[0].get("full")
+    }
+    assert shared(profile_names) == {}
+    assert shared(product_names) == {}
+    assert profile_names["SR"] == product_names["SR"] == "Surgery"
+    # SR's product matcher must not claim MailMan's name for Surgery
+    sr_match = kproducts.load_products(registries)["SR"][0]["match"]
+    assert "MailMan" not in sr_match
 
 
 def test_alias_collision_with_package_key_raises():

@@ -245,8 +245,8 @@ products:
     - { abbr: SCIDO, full: Spinal Cord Injury and Disorders Outcomes, match: [Spinal Cord Injury and Disorders Outcomes, Spinal Cord Injury and Disorders Outcomes (SCIDO), SCIDO, SPN] }
   SQLI:  # SQL Interface
     - { abbr: SQLI, full: SQL Interface, match: [SQL Interface, Vendor, Site, SQLI] }
-  SR:  # MailMan
-    - { abbr: SR, full: MailMan, match: [MailMan, Surgery, Surgery Health Level 7 Interface Specifications, SR] }
+  SR:  # Surgery
+    - { abbr: SR, full: Surgery, match: [Surgery, Surgery Health Level 7 Interface Specifications, SR] }
   SRA:  # Surgery Risk Assessment
     - { abbr: SRA, full: Surgery Risk Assessment, match: [Surgery Risk Assessment, SRA] }
   TBI:  # Registry: Traumatic Brain Injury
