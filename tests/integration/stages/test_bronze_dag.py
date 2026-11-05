@@ -328,12 +328,19 @@ def _recrawl_relabelled(ctx, fetch_stage):
     ).run(ctx, force=True)
 
 
-def test_a_relabel_retains_the_doc_and_reds_unacknowledged(bronze_ctx):
+def test_a_relabel_retains_the_doc_and_reds_unacknowledged(bronze_ctx, tmp_path):
     # CI.2 + CI.4 together: VA relabelling the application DECOMMISSIONED removes it from the
     # admitted set — the fetched document is RETAINED in the index (deprecation does not remove
     # the code from VistA), and the run REDS because the scope change is unacknowledged. The
     # baseline file does not advance, so the alarm repeats until a human answers it.
+    # Hermetic: the live registry's acknowledgements must not decide what "unacknowledged" means.
+    import shutil
+
     ctx = bronze_ctx
+    reg = tmp_path / "registries"
+    shutil.copytree(ctx.cfg.registries, reg)
+    (reg / "inventory" / "scope-changes.yaml").write_text("changes: []\n")
+    ctx.cfg = ctx.cfg.model_copy(update={"registries_dir": reg})
     Orchestrator(_stages()).run(ctx, force=True)
     good_baseline = ctx.cfg.admitted_baseline.read_text()
 

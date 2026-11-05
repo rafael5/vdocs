@@ -19,4 +19,23 @@
 #     reason: ruled out of scope (integration middleware, not VistA M)
 # =========================================================================================
 
-changes: []
+changes:
+  - app_code: ADT
+    date: 2026-11-05
+    reason: >-
+      VA re-filed the 14 ISS release user guides from ADT (appid 55) to Scheduling (SD, appid 399,
+      archive); they re-enter the admitted set under SD ids. A re-file, not a removal.
+  - app_code: PRF
+    date: 2026-11-05
+    reason: >-
+      patient_record_flags_user_guide is still listed under PRF, but VA added a same-named file under
+      ADT ("PIMS Version 5.3 User Guide") and fetch keeps one target per doc_slug, so the ADT copy
+      now shadows the PRF one. A selection artefact, not an upstream removal.
+  - app_code: PSO
+    date: 2026-11-05
+    reason: >-
+      pso_7_tech_um moved to an archive app (appid 394) with only the PDF listed; no DOCX remains on
+      the VDL, so it no longer passes the DOCX-only rule.
+  - app_code: PSS
+    date: 2026-11-05
+    reason: pss_1_dosing_ord_ck_um_r0918 is no longer listed anywhere on the VDL (2026-11-05 crawl).
