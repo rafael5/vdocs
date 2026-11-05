@@ -124,6 +124,35 @@ def enum_coverage_check(field: str, undefined: Sequence[str]) -> Check:
     )
 
 
+def inventory_freshness_check(stamped: str | None, current: str | None) -> Check:
+    """Is ``v_inventory`` built from the ``inventory.json`` on disk? ``stamped`` is the hash the
+    index stage wrote into ``meta``, ``current`` the same hash over today's file. The index stage
+    requires the inventory, so the two differ only after a run that stopped before index. WARN,
+    never FAIL (inventory browser D3): the gold library is sound either way."""
+    name = "inventory freshness"
+    if current is None:
+        return Check(
+            name,
+            Health.WARN,
+            "skipped: no inventory/gold/inventory.json — run: vdocs serve-inventory",
+        )
+    if not stamped:
+        return Check(
+            name,
+            Health.WARN,
+            "index.db carries no inventory stamp (built before read contract 1.7) — "
+            "re-run: vdocs index",
+        )
+    if stamped != current:
+        return Check(
+            name,
+            Health.WARN,
+            "v_inventory was built from a different inventory.json than the current one — "
+            "re-run: vdocs index",
+        )
+    return Check(name, Health.PASS, "v_inventory matches inventory.json")
+
+
 def contract_check(
     emitted_views: dict[str, list[str]], stamped_version: str, spec: dict[str, Any]
 ) -> Check:
@@ -532,6 +561,7 @@ def diagnose_lake(cfg: Settings) -> DoctorReport:
     from vdocs.kernel import db, read_contract
     from vdocs.kernel.entity_quality import load_entity_quality
     from vdocs.stages.fetch.policy import load_gate_config
+    from vdocs.stages.index.inventory_pure import META_CONTENT_HASH
 
     kept = frozenset(r.code for r in load_gate_config(cfg.registries).kept)
     policy = load_doctor_policy(cfg.registries)
@@ -554,9 +584,18 @@ def diagnose_lake(cfg: Settings) -> DoctorReport:
         card = _json.loads(cfg.ai_manifest.read_text(encoding="utf-8"))
         published_usage = card.get("usage")
         published_query_recipe = card.get("query")
+    current_inventory: str | None = None
+    if cfg.gold_inventory_json.is_file():
+        from vdocs.models.catalog import EnrichedInventory
+        from vdocs.stages.index.inventory_pure import inventory_hash
+
+        records = EnrichedInventory.model_validate_json(
+            cfg.gold_inventory_json.read_text(encoding="utf-8")
+        ).records
+        current_inventory = inventory_hash(records)
     conn = db.connect(cfg.index_db, read_only=True)
     try:
-        return diagnose(
+        report = diagnose(
             conn,
             kept_doctypes=kept,
             policy=policy,
@@ -566,8 +605,21 @@ def diagnose_lake(cfg: Settings) -> DoctorReport:
             published_usage=published_usage,
             published_query_recipe=published_query_recipe,
         )
+        report.checks.append(
+            inventory_freshness_check(_meta(conn, META_CONTENT_HASH), current_inventory)
+        )
+        return report
     finally:
         conn.close()
+
+
+def _meta(conn: sqlite3.Connection, key: str) -> str | None:
+    """One ``meta`` value, or ``None`` when the key (or the table) is absent."""
+    try:
+        row = conn.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+    except sqlite3.OperationalError:
+        return None
+    return str(row[0]) if row else None
 
 
 # --- rendering ------------------------------------------------------------------------------------
@@ -600,6 +652,7 @@ __all__ = [
     "diagnose",
     "diagnose_lake",
     "integrity_check",
+    "inventory_freshness_check",
     "load_doctor_policy",
     "render_report",
 ]

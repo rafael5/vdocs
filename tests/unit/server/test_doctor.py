@@ -8,6 +8,7 @@ from vdocs.server.doctor import (
     Health,
     coverage_check,
     integrity_check,
+    inventory_freshness_check,
     load_doctor_policy,
 )
 
@@ -165,3 +166,28 @@ def test_policy_rejects_unknown_top_level_keys(tmp_path):
 
     with pytest.raises(ValueError, match="coverge"):
         load_doctor_policy(tmp_path)
+
+
+# --- inventory freshness (inventory browser step 1, D3: WARN, never RED) -------------------------
+
+
+def test_inventory_freshness_passes_when_the_stamp_matches():
+    c = inventory_freshness_check("abc", "abc")
+    assert c.health is Health.PASS and c.name == "inventory freshness"
+
+
+def test_a_different_inventory_warns_and_names_the_fix():
+    c = inventory_freshness_check("abc", "def")
+    assert c.health is Health.WARN
+    assert "vdocs index" in c.detail
+
+
+def test_an_unstamped_index_warns_rather_than_passing():
+    """An index.db built before read contract 1.7 has no stamp: not a match, so not a PASS."""
+    c = inventory_freshness_check(None, "def")
+    assert c.health is Health.WARN and "vdocs index" in c.detail
+
+
+def test_a_missing_inventory_says_it_was_skipped():
+    c = inventory_freshness_check("abc", None)
+    assert c.health is Health.WARN and "skipped" in c.detail

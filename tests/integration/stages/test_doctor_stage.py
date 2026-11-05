@@ -13,10 +13,16 @@ import json
 import pytest
 
 from vdocs.kernel import cas, db
+from vdocs.models.catalog import EnrichedInventory, EnrichedRecord
 from vdocs.orchestrator.engine import Orchestrator
 from vdocs.orchestrator.stage import PostflightError
 from vdocs.stages.doctor.stage import DoctorStage
+from vdocs.stages.index.inventory_pure import inventory_hash
 from vdocs.stages.index.stage import _SCHEMA
+
+_INVENTORY = [
+    EnrichedRecord(app_name_abbrev="ADT", doc_slug="um1", doc_code="UM", doc_format="docx")
+]
 
 _DOC_COLS = (
     "doc_key, doc_id, app_code, doc_type, section, pkg_ns, version, patch_id, anchor_key, "
@@ -52,6 +58,15 @@ def _seed(ctx, **doc_kwargs):
     conn.executescript(rc.view_ddl(spec))
     conn.execute(
         "INSERT INTO meta (key, value) VALUES ('read_schema_version', ?)", (rc.version(spec),)
+    )
+    # the inventory the table was built from, stamped as index stamps it
+    conn.execute(
+        "INSERT INTO meta (key, value) VALUES ('inventory_content_hash', ?)",
+        (inventory_hash(_INVENTORY),),
+    )
+    cas.atomic_write(
+        ctx.cfg.gold_inventory_json,
+        EnrichedInventory(records=_INVENTORY).model_dump_json().encode(),
     )
     conn.execute(
         "CREATE TABLE relations (src_type TEXT, src_id TEXT, rel TEXT, dst_type TEXT, "
@@ -127,3 +142,25 @@ def test_doctor_always_reruns(ctx):
     Orchestrator([DoctorStage()]).run(ctx)
     (second,) = Orchestrator([DoctorStage()]).run(ctx)
     assert second is not None and second.status == "ok"
+
+
+def test_a_stale_inventory_table_warns_and_names_the_fix(ctx):
+    """D3: the stamped hash no longer matches inventory.json (a run that stopped before index).
+    WARN, naming the fix — the gold library is sound either way, so the verdict stays GREEN."""
+    _seed(ctx)
+    (result,) = Orchestrator([DoctorStage()]).run(ctx)
+    checks = {c["name"]: c for c in json.loads(ctx.cfg.doctor_report.read_text())["checks"]}
+    assert checks["inventory freshness"]["health"] == "PASS"
+
+    # plant the mismatch: VA added a listing and serve-inventory re-ran, index did not
+    extra = EnrichedRecord(app_name_abbrev="ADT", doc_slug="um2", doc_code="UM", doc_format="docx")
+    cas.atomic_write(
+        ctx.cfg.gold_inventory_json,
+        EnrichedInventory(records=[*_INVENTORY, extra]).model_dump_json().encode(),
+    )
+    (result,) = Orchestrator([DoctorStage()]).run(ctx)
+    payload = json.loads(ctx.cfg.doctor_report.read_text())
+    checks = {c["name"]: c for c in payload["checks"]}
+    assert checks["inventory freshness"]["health"] == "WARN"
+    assert "vdocs index" in checks["inventory freshness"]["detail"]
+    assert payload["verdict"] == "GREEN" and result.status == "ok"
