@@ -1,9 +1,9 @@
 {
   "details": {
     "dispositions": {
-      "covered-by-other-format": 2913,
+      "covered-by-other-format": 2916,
       "excluded": 1656,
-      "held": 1283,
+      "held": 1280,
       "not-vista": 3228,
       "undecided": 0,
       "unreachable": 0
@@ -152,12 +152,6 @@
         "inventory_status": "not_acquired",
         "reason": "(kept DOCX)",
         "records": 52
-      },
-      {
-        "acquisition": "never-attempted",
-        "inventory_status": "not_acquired",
-        "reason": "sole-format",
-        "records": 3
       },
       {
         "acquisition": "bad_content",
@@ -2438,9 +2432,9 @@
       "out_of_scope": 44
     },
     "undated_vista_no_gold_by_disposition": {
-      "covered-by-other-format": 1857,
+      "covered-by-other-format": 1860,
       "excluded": 1656,
-      "held": 219
+      "held": 216
     },
     "undated_vista_no_gold_by_fetch": {
       "bad_content": 1,
@@ -2452,11 +2446,7 @@
       "not_acquired": 3690,
       "out_of_scope": 32
     },
-    "unpaired_pdf_twins": [
-      "PSO:pso_7_0_p817_um_6",
-      "RMPV:rmpv_1_6_admin_guide",
-      "SD:iss_faq_document"
-    ]
+    "unpaired_pdf_twins": []
   },
   "provenance": {
     "acquisitions": {
@@ -2487,7 +2477,7 @@
     "run_date": "2026-11-05",
     "vdocs": {
       "clean": true,
-      "commit": "12579496bdc8c9c92680f489a5e1fb2736b8a9dd"
+      "commit": "722d2c2b970cb94db75fed90a776eba17ca43d6d"
     },
     "vista_meta": {
       "commit": "d0df56bfdff7fb9d7fb2388f71876827c12c81eb",
@@ -2526,10 +2516,10 @@
         "proposal": 9080
       },
       {
-        "agrees": true,
+        "agrees": false,
         "id": "s1.held_not_in_gold",
         "label": "Records held with no gold document",
-        "measured": 219,
+        "measured": 216,
         "proposal": 219
       },
       {
@@ -2547,17 +2537,17 @@
         "proposal": 52
       },
       {
-        "agrees": true,
+        "agrees": false,
         "id": "s1.hng_pdf_sole_format_never_fetched",
         "label": "… PDF records held as the only format (`sole-format`), never fetched",
-        "measured": 9,
+        "measured": 6,
         "proposal": 9
       },
       {
         "agrees": null,
         "id": "s1.hng_pdf_twins_unpaired",
-        "label": "… … of which the PDF twin of a DOCX with the same `doc_id` (neither row has an anchor key, so `classify()` cannot pair them)",
-        "measured": 3,
+        "label": "… … of which the PDF twin of a DOCX with the same `doc_id` (none since `classify()` pairs by `doc_id` too)",
+        "measured": 0,
         "proposal": null
       },
       {
@@ -2582,10 +2572,10 @@
         "proposal": null
       },
       {
-        "agrees": true,
+        "agrees": false,
         "id": "s1.hng_largest_apps",
         "label": "… largest applications",
-        "measured": "SD 40, VBECS 27, CPRS 25, ROR 24, PSO 17",
+        "measured": "SD 39, VBECS 27, CPRS 25, ROR 24, PSO 16",
         "proposal": "SD 40, VBECS 27, CPRS 25, ROR 24, PSO 17"
       },
       {

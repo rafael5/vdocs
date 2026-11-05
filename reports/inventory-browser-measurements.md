@@ -13,7 +13,7 @@ Every figure in §1, §3 and §4 of [the inventory browser proposal](../docs/pro
 | `state.db` acquisitions | 1,045 rows, sha256 of (doc_id, status) `596fdef2db0df7927c86b4066206f8f6b59fd261dadf3ab8993e90e1879faa4e` |
 | `history.yaml` | 615 files, sha256 `329113edf959ac743edff0c729331b65567017733bd15c1c5d50bedc06545adf` |
 | Registries | `/home/rafael/projects/vdocs/registries`, sha256 `fd0e23ffef4fc94f5e0f293ba7eeb0815329c2952d298db114852bc941124a44` |
-| vdocs | commit `12579496bdc8c9c92680f489a5e1fb2736b8a9dd` (src, registries, scripts clean) |
+| vdocs | commit `722d2c2b970cb94db75fed90a776eba17ca43d6d` (src, registries, scripts clean) |
 | vista-meta | commit `d0df56bfdff7fb9d7fb2388f71876827c12c81eb`; `package-namespace.tsv` sha256 `40d561c29ea576c66ccd65a5e32e9e6646dc75a286701d172c8e0381a9735f17`, last changed in `f1e9d332aaaa4185c0eb74b9feb1f37a9d552229` |
 | Run date | 2026-11-05 |
 
@@ -25,15 +25,15 @@ Every figure in §1, §3 and §4 of [the inventory browser proposal](../docs/pro
 | … of which VistA (the gate's `app_in_scope`) | 2,941 | 2,886 | **differs** |
 | … of which on a VistA system type, decommissioned applications included (the first measurement's definition) | — | 2,941 |  |
 | `vdocs completeness` records | 9,080 | 9,080 | same |
-| Records held with no gold document | 219 | 219 | same |
+| Records held with no gold document | 219 | 216 | **differs** |
 | … archived sole survivors, never fetched | 152 | 152 | same |
 | … DOCX the policy keeps, never fetched | 52 | 52 | same |
-| … PDF records held as the only format (`sole-format`), never fetched | 9 | 9 | same |
-| … … of which the PDF twin of a DOCX with the same `doc_id` (neither row has an anchor key, so `classify()` cannot pair them) | — | 3 |  |
+| … PDF records held as the only format (`sole-format`), never fetched | 9 | 6 | **differs** |
+| … … of which the PDF twin of a DOCX with the same `doc_id` (none since `classify()` pairs by `doc_id` too) | — | 0 |  |
 | … fetch failed | 5 | 5 | same |
 | … rejected as bad content | 1 | 1 | same |
 | … fetched, yet not in gold | — | 0 |  |
-| … largest applications | SD 40, VBECS 27, CPRS 25, ROR 24, PSO 17 | SD 40, VBECS 27, CPRS 25, ROR 24, PSO 17 | same |
+| … largest applications | SD 40, VBECS 27, CPRS 25, ROR 24, PSO 17 | SD 39, VBECS 27, CPRS 25, ROR 24, PSO 16 | **differs** |
 | Gold documents whose `doc_id` no record carries | 15 | 15 | same |
 | … whose slug the inventory lists under another app code (re-filed) | 14 | 14 | same |
 | … whose slug is gone from the inventory | 1 | 1 | same |
@@ -127,7 +127,6 @@ Every figure in §1, §3 and §4 of [the inventory browser proposal](../docs/pro
 |---|---|---|---|
 | (kept DOCX) | failed | failed | 5 |
 | (kept DOCX) | not_acquired | never-attempted | 52 |
-| sole-format | not_acquired | never-attempted | 3 |
 | sole-format | out_of_scope | bad_content | 1 |
 | sole-format | out_of_scope | never-attempted | 6 |
 | sole-survivor | not_acquired | never-attempted | 152 |
@@ -314,12 +313,11 @@ Every Library namespace whose current name (the same-code application's) is not 
 
 | By disposition | Records |
 |---|---|
-| covered-by-other-format | 1,857 |
+| covered-by-other-format | 1,860 |
 | excluded | 1,656 |
-| held | 219 |
+| held | 216 |
 
 ## Notes
 
 - The undated VistA records (§4) and the `inventory --status` total (§1) are both 3,834, measured independently. They count different things — records, against distinct non-noise `doc_id`s of any system type — so the match is a coincidence.
 - `inventory_status` labels every PDF-only `doc_id` *out_of_scope* without reading its acquisition, although the gate admits sole-format PDFs and fetch attempts them: 1 held record(s) with acquisition *bad_content*. The acquisition column is the fetch outcome.
-- `classify()` holds a PDF as *sole-format* when its `anchor_key` is empty, even when a DOCX with the same `doc_id` exists, because `docx_anchor_keys` skips empty keys: `PSO:pso_7_0_p817_um_6`, `RMPV:rmpv_1_6_admin_guide`, `SD:iss_faq_document`.

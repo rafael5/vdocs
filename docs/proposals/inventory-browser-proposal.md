@@ -49,12 +49,12 @@ Neither lists records, neither filters, and neither connects a record to the gol
 became. Joining the inventory to `index.db` on `doc_id` showed two things neither
 command reports:
 
-- **219 records counted as held have no gold document**: 152 archived sole survivors, 52 DOCX the
-  policy keeps and 9 PDFs held as their document's only format were never fetched; 5 fetches failed
-  and 1 PDF was rejected as bad content (largest: SD 40, VBECS 27, CPRS 25, ROR 24, PSO 17). Three
-  of the 9 PDFs are not PDF-only: each is the twin of one of the 52 DOCX, held separately because
-  neither row has an anchor key for `classify()` to pair them by. The completeness verdict still
-  reads COMPLETE because it rules on what is admitted, not what is held (backlogged in `TODO.md`).
+- **216 records counted as held have no gold document**: 152 archived sole survivors, 52 DOCX the
+  policy keeps and 6 PDF-only documents were never fetched; 5 fetches failed and 1 PDF was rejected
+  as bad content (largest: SD 39, VBECS 27, CPRS 25, ROR 24, PSO 16). Step 0 first counted 219:
+  `classify()` also held three PDFs whose DOCX twins it could not pair, because neither row has an
+  anchor key; `722d2c2` pairs them by `doc_id`. The completeness verdict still reads COMPLETE
+  because it rules on what is admitted, not what is held (backlogged in `TODO.md`).
 - **15 gold documents have a `doc_id` no current inventory record carries.** This is not a
   catalog gap. 14 are the ISS release user guides VA re-filed from ADT to Scheduling: gold still
   knows them as `ADT:iss_release_…`, the inventory now lists the same slugs under SD, and the
@@ -166,8 +166,8 @@ title page), which dates 2,018 inventory records through `doc_id`, PDF twins inc
 7,062 records are *Undated*: they sort last and drop out while a month range is set. Of those,
 3,228 are not VistA and 3,834 are VistA records. The first draft called all 3,834 "never fetched";
 that is not so. 102 are records of the 50 gold documents that carry no date at all. The other
-3,732 records (1,861 distinct `doc_id`s) have no gold document: 1,857 are copies covered by another
-format, 1,656 have a doc type the policy omits, and 219 are the held records of §1. Of the 3,732,
+3,732 records (1,861 distinct `doc_id`s) have no gold document: 1,860 are copies covered by another
+format, 1,656 have a doc type the policy omits, and 216 are the held records of §1. Of the 3,732,
 3,721 were never fetched, 10 belong to fetches that failed and 1 to the PDF rejected as bad
 content. (The `inventory --status` total is also 3,834; it counts a different thing, distinct
 non-noise documents of any system type, and the two must not be read as one number. Step 0
@@ -286,10 +286,11 @@ one case the check catches is already visible as a pending stage in the next run
    moved and were corrected in place: the VistA share of the status total; the repeated links, their
    records and the number of form files among them; the namespace count, the name agreement and the
    namespaces the registries leave unnamed; the Library renames; the never-fetched count; and D6's
-   Word versions. It also found that `classify()` cannot pair a PDF with its DOCX twin when neither
-   has an anchor key, and that `inventory --status` labels a PDF-only document *out_of_scope*
-   whatever its fetch did; both are backlogged in `TODO.md`. (The project's own lesson from the August
-   audit: a measurement that cannot name what it read is not evidence.)
+   Word versions. It also found that `classify()` could not pair a PDF with its DOCX twin when
+   neither has an anchor key — fixed in `722d2c2`, which moved §1's 219 to 216 — and that
+   `inventory --status` labels a PDF-only document *out_of_scope* whatever its fetch did, which is
+   backlogged in `TODO.md`. The report was re-run at `722d2c2`. (The project's own lesson from the
+   August audit: a measurement that cannot name what it read is not evidence.)
 1. **vdocs, the producer.** Tests first: a pure function from (records, policy, profile maps) to rows
    whose disposition counts equal `completeness_report` on the same input, and whose profile tags
    equal the gold documents' for records in gold; the row key is unique over the 2026-11-05
@@ -439,6 +440,8 @@ the index stage.
 - `526c6d0` — nine `doctype-policy.yaml` reasons were cut at an unquoted comma.
 - `9f9df51` — the three document-date bugs in §4.
 - `a5b4363` — `index` did not re-run when the registries it reads change.
+- `722d2c2` — `classify()` held three PDFs as the only format beside a DOCX with the same `doc_id`,
+  because neither row has an anchor key (found by step 0).
 
 ## 12. References
 

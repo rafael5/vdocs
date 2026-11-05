@@ -15,19 +15,13 @@ Lightweight backlog for this project. For longer-form planning, use `docs/`.
   `registries` tree: declaring the tree would make `convert` redo its ~17-minute run after any
   registry edit. Test first: a registry edit must change the stage's input fingerprint. (Found
   2026-11-05; `fetch` checked and is already covered.)
-- **Completeness reads COMPLETE while 219 admitted records have no gold document.** Measured
+- **Completeness reads COMPLETE while 216 admitted records have no gold document.** Measured
   2026-11-05 (`reports/inventory-browser-measurements.md`): 152 archived sole survivors, 52 DOCX
-  the doc-type policy keeps and 9 PDFs held as their document's only format were never fetched;
-  5 fetches failed and 1 PDF was rejected as bad content. The verdict counts what is admitted, not
-  what is held, and `fetch` downloads only its current selection, so re-running does not close the
-  gap. Decide whether admitted-but-not-held should count against the verdict, and whether the fetch
-  selection should cover the admitted set.
-- **`classify()` holds a PDF and its DOCX twin separately when neither has an anchor key.**
-  `docx_anchor_keys` skips empty keys, so the PDF of `PSO:pso_7_0_p817_um_6`,
-  `RMPV:rmpv_1_6_admin_guide` and `SD:iss_faq_document` is held as *sole-format* instead of
-  *covered-by-other-format*, although a DOCX with the same `doc_id` is listed. Test first: a PDF
-  whose `doc_id` has a DOCX record is covered, anchor key or not. (Found by inventory-browser
-  step 0, 2026-11-05.)
+  the doc-type policy keeps and 6 PDF-only documents were never fetched; 5 fetches failed and 1 PDF
+  was rejected as bad content. The verdict counts what is admitted, not what is held, and `fetch`
+  downloads only its current selection, so re-running does not close the gap. Decide whether
+  admitted-but-not-held should count against the verdict, and whether the fetch selection should
+  cover the admitted set.
 - **`inventory --status` labels every PDF-only document *out_of_scope* without reading its
   acquisition.** The gate has admitted sole-format PDFs since VO.8 and `fetch` attempts them, but
   `serve_pure.inventory_status` still treats a `doc_id` with no DOCX row as never fetchable, so the
