@@ -41,8 +41,10 @@ Lightweight backlog for this project. For longer-form planning, use `docs/`.
   namespace names from vista-meta's PACKAGE-file (#9.4) export, falling back to the same-code
   application. Applying them to the Library would name DG, USR, BPS and PSGW for the first time and
   change 46 names; by a reading of the list in `reports/inventory-browser-measurements.md`, 7 in
-  substance (FH, GMRV, LA, MMRS, OR, QAC, SPN) and 39 in wording. The 7 want review on their own
-  (inventory-browser decision D4, taken 2026-11-05).
+  substance (FH, GMRV, LA, MMRS, OR, QAC, SPN) and 39 in wording. Four are decided (2026-11-05):
+  OR *Order Entry (CPRS)*, GMRV *Vitals*, LR *Lab*, MAG *VistA Imaging*, carried as overrides in the
+  names registry. FH, LA, MMRS, QAC and SPN want review on their own (inventory-browser decision D4,
+  taken 2026-11-05).
 
 - **A few revision tables still lose their dates.** After 9f9df51, 64 revision-date cells stay
   unnormalized. Most aren't dates (23 are `REDACTED`), but two real problems remain:

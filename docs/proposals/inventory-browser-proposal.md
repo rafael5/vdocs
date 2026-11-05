@@ -143,9 +143,13 @@ case and punctuation for 37 of them; most of the other 57 differ by an abbreviat
 "Pharmacy:"-style prefix (the report lists every pair). Applied to the Library this would name all
 96 namespaces instead of 92, name DG, USR, BPS and PSGW for the first time, and change 46 names. A
 reading of that list in the report — a reading, not a measurement — finds 7 changed in substance
-(FH, GMRV, LA, MMRS, OR, QAC, SPN) and 39 reworded. The Library keeps its current names in this
-change; those renames are their own small change (D4). The names registry's header records the
-vista-meta release and commit it was copied from.
+(FH, GMRV, LA, MMRS, OR, QAC, SPN) and 39 reworded. On 2026-11-05 the operator chose the names for
+the four borderline cases: OR *Order Entry (CPRS)*, GMRV *Vitals*, LR *Lab* and MAG *VistA
+Imaging*. The names registry, which does not exist yet, will carry them as overrides applied after
+the vista-meta copy, so a re-copy keeps them. That leaves five substantive changes to review (FH,
+LA, MMRS, QAC, SPN). The Library keeps its current names in this change; those renames are their
+own small change (D4). The names registry's header records the vista-meta release and commit it
+was copied from.
 
 ## 4. Dates — the document's own last update, never its VDL posting
 
