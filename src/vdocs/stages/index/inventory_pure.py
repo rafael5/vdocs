@@ -11,8 +11,17 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import defaultdict
+from dataclasses import astuple, dataclass, fields
 
+from vdocs.kernel import personas
+from vdocs.kernel.ids import doc_id
 from vdocs.models.catalog import EnrichedRecord
+from vdocs.stages.fetch.fetch_pure import GatePolicy, sole_survivors
+from vdocs.stages.serve_inventory.completeness_pure import (
+    classify,
+    docx_anchor_keys,
+    docx_doc_ids,
+)
 
 # The four listing fields of the row key: application page, VDL section, file URL, patch id.
 ROW_KEY_FIELDS = ("app_url", "section_name", "doc_url", "patch_id")
@@ -30,10 +39,88 @@ def row_keys(records: list[EnrichedRecord]) -> list[str]:
     when the listing itself does."""
     groups: dict[str, list[int]] = defaultdict(list)
     for i, rec in enumerate(records):
-        fields = "\x1f".join(str(getattr(rec, f)) for f in ROW_KEY_FIELDS)
-        groups[hashlib.sha256(fields.encode("utf-8")).hexdigest()[:16]].append(i)
+        listing = "\x1f".join(str(getattr(rec, f)) for f in ROW_KEY_FIELDS)
+        groups[hashlib.sha256(listing.encode("utf-8")).hexdigest()[:16]].append(i)
     keys = [""] * len(records)
     for base, idxs in groups.items():
         for ordinal, i in enumerate(sorted(idxs, key=lambda j: canonical(records[j]))):
             keys[i] = f"{base}:{ordinal}"
     return keys
+
+
+@dataclass(frozen=True)
+class InventoryRow:
+    """One VDL listing as ``v_inventory`` publishes it. Gold status is not a column: it is a
+    relation, found by joining ``doc_id`` to ``v_documents``."""
+
+    row_key: str
+    doc_id: str  # kernel.ids.doc_id — the join key to v_documents
+    app_code: str
+    app_name: str  # the VDL's own application name
+    section: str  # VDL section code (v_vocab kind 'section')
+    doc_type: str
+    title: str
+    file_name: str
+    format: str  # docx | pdf | doc
+    patch_id: str
+    app_status: str  # VA's lifecycle label (active | archive | decommissioned)
+    system_type: str
+    doc_url: str  # the file on the VDL
+    app_url: str  # the application page that lists it
+    app_user: str
+    doc_user: str
+    software_class: str
+    function_category: str
+    pkg_ns: str
+    disposition: str  # one of completeness_pure.DISPOSITIONS
+    reason: str  # the reason string `vdocs completeness` prints
+    reason_kind: str  # one of completeness_pure.REASON_KINDS
+    reason_value: str
+
+    def as_tuple(self) -> tuple[str, ...]:
+        return astuple(self)
+
+
+INVENTORY_COLUMNS: tuple[str, ...] = tuple(f.name for f in fields(InventoryRow))
+
+
+def inventory_rows(
+    records: list[EnrichedRecord], policy: GatePolicy, maps: personas.ProfileMaps
+) -> list[InventoryRow]:
+    """One row per record, in record order: the listing, its four profile tags (through the same
+    ``profile_tags`` that tags gold documents), and its disposition from ``classify`` with the same
+    inputs ``completeness_report`` gives it — so the rows' counts are the CLI's counts."""
+    soles = sole_survivors(records, policy)
+    anchors, ids = docx_anchor_keys(records), docx_doc_ids(records)
+    rows: list[InventoryRow] = []
+    for key, rec in zip(row_keys(records), records, strict=True):
+        d = classify(rec, policy, docx_ids=ids, docx_anchors=anchors, sole_survivors=soles)
+        tags = personas.profile_tags(rec.app_name_abbrev, rec.doc_code, maps)
+        rows.append(
+            InventoryRow(
+                row_key=key,
+                doc_id=doc_id(rec),
+                app_code=rec.app_name_abbrev,
+                app_name=rec.app_name_full,
+                section=rec.section_code,
+                doc_type=rec.doc_code,
+                title=rec.doc_title,
+                file_name=rec.doc_filename,
+                format=rec.doc_format,
+                patch_id=rec.patch_id,
+                app_status=rec.app_status,
+                system_type=rec.system_type,
+                doc_url=rec.doc_url,
+                app_url=rec.app_url,
+                app_user=tags.get("app_user", ""),
+                doc_user=tags.get("doc_user", ""),
+                software_class=tags.get("software_class", ""),
+                function_category=tags.get("function_category", ""),
+                pkg_ns=rec.pkg_ns,
+                disposition=d.status,
+                reason=d.reason,
+                reason_kind=d.kind,
+                reason_value=d.value,
+            )
+        )
+    return rows
