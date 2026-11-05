@@ -41,24 +41,24 @@ doctypes:
   FAQ:    {tier: A, decision: keep, label: Frequently Asked Questions,     reason: durable reference}
 
   # ---- Tier B — install/deploy/operational runbooks (OMIT): version-specific procedure ----
-  DIBR:   {tier: B, decision: omit, label: Deploy/Install/Back-Out/Rollback, reason: version-specific install runbook, not reference (largest after RN)}
+  DIBR:   {tier: B, decision: omit, label: Deploy/Install/Back-Out/Rollback, reason: "version-specific install runbook, not reference (largest after RN)"}
   IG:     {tier: B, decision: omit, label: Installation Guide,            reason: version-specific install procedure}
   IG-IMP: {tier: B, decision: omit, label: Implementation Guide,          reason: version-specific rollout procedure}
-  POM:    {tier: B, decision: omit, label: Production Operations Manual,   reason: site operations runbook, not reference}
-  CFG:    {tier: B, decision: omit, label: Setup and Configuration Guide,  reason: setup procedure, not reference}
-  SG-SET: {tier: B, decision: omit, label: Security Setup Guide,          reason: setup procedure (distinct from the SG security model, which is kept)}
-  RS:     {tier: B, decision: omit, label: Requirements Specification,    reason: pre-build, version/project-specific planning doc, not reference}
+  POM:    {tier: B, decision: omit, label: Production Operations Manual,   reason: "site operations runbook, not reference"}
+  CFG:    {tier: B, decision: omit, label: Setup and Configuration Guide,  reason: "setup procedure, not reference"}
+  SG-SET: {tier: B, decision: omit, label: Security Setup Guide,          reason: "setup procedure (distinct from the SG security model, which is kept)"}
+  RS:     {tier: B, decision: omit, label: Requirements Specification,    reason: "pre-build, version/project-specific planning doc, not reference"}
 
   # ---- Tier C — ephemeral version-delta / changelog (OMIT): describes a release, not the system ----
-  RN:     {tier: C, decision: omit, label: Release Notes,                 reason: ephemeral version-delta changelog (largest single type, 796 docs)}
+  RN:     {tier: C, decision: omit, label: Release Notes,                 reason: "ephemeral version-delta changelog (largest single type, 796 docs)"}
   CRU:    {tier: C, decision: omit, label: Clinical Reminder Update,      reason: version-specific content/data delta}
   VDD:    {tier: C, decision: omit, label: Version Description Document,   reason: pure version metadata}
   PDD:    {tier: C, decision: omit, label: Patch Description Document,     reason: per-patch changelog}
-  WF:     {tier: C, decision: omit, label: Workflow Guide,                reason: in practice patch-bound workflow-change notes (DVBA*/CAPRI), version-specific}
+  WF:     {tier: C, decision: omit, label: Workflow Guide,                reason: "in practice patch-bound workflow-change notes (DVBA*/CAPRI), version-specific"}
 
   # ---- Tier D — fragments / non-standalone (OMIT) ----
-  SUP:    {tier: D, decision: omit, label: Supplement,                    reason: addendum fragment, not standalone}
-  APX:    {tier: D, decision: omit, label: Appendix,                      reason: fragment, not standalone}
+  SUP:    {tier: D, decision: omit, label: Supplement,                    reason: "addendum fragment, not standalone"}
+  APX:    {tier: D, decision: omit, label: Appendix,                      reason: "fragment, not standalone"}
   DESC:   {tier: D, decision: omit, label: Description Document,          reason: marginal/stub}
   CVG:    {tier: D, decision: omit, label: Conversion Guide,             reason: one-off version-conversion procedure}
 

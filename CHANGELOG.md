@@ -27,6 +27,11 @@ This file is for **what shipped**. For the *why* behind decisions
 
 ### Fixed
 
+- **Doc-type policy reasons were cut at their first comma**: nine `reason:` values in
+  `doctype-policy.yaml` (DIBR, POM, CFG, SG-SET, RS, RN, WF, SUP, APX) held an unquoted comma inside
+  a YAML flow mapping, so each parsed as a truncated reason plus a stray key, and `vdocs gate`
+  printed them cut off. They are quoted now, and a test requires every entry to parse to exactly
+  `tier`, `decision`, `label` and `reason`. No keep/omit decision changed.
 - **Surgery (SR) was labelled "MailMan"**: `package-master.yaml` gave SR the canonical name of XM,
   so catalog enrichment set `app_name_full` to "MailMan" on all 68 Surgery records and the 22 gold
   Surgery documents. SR is now "Surgery", as the VDL and the PACKAGE file (#9.4) name it. A registry
