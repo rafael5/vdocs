@@ -55,6 +55,7 @@ from vdocs.stages.serve_inventory.completeness_pure import (
     classify,
     completeness_report,
     docx_anchor_keys,
+    docx_doc_ids,
 )
 from vdocs.stages.serve_inventory.serve_pure import inventory_status
 
@@ -300,8 +301,11 @@ class Joined:
 def join(lake: Lake) -> Joined:
     records, policy = lake.records, lake.policy
     soles = sole_survivors(records, policy)
-    anchors = docx_anchor_keys(records)
-    disp = [classify(r, policy, docx_anchors=anchors, sole_survivors=soles) for r in records]
+    anchors, docx_ids = docx_anchor_keys(records), docx_doc_ids(records)
+    disp = [
+        classify(r, policy, docx_ids=docx_ids, docx_anchors=anchors, sole_survivors=soles)
+        for r in records
+    ]
     members, _, _ = history_members(lake.histories)
     gold = {str(g["doc_id"]): g for g in lake.gold}
     dated = {}
@@ -399,8 +403,8 @@ def measure_s1(j: Joined) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         ),
         _fig(
             "s1.hng_pdf_twins_unpaired",
-            "… … of which the PDF twin of a DOCX with the same `doc_id` "
-            "(neither row has an anchor key, so `classify()` cannot pair them)",
+            "… … of which the PDF twin of a DOCX with the same `doc_id` (none since "
+            "`classify()` pairs by `doc_id` too)",
             sum(1 for i in hng if j.reason[i] == "sole-format" and j.ids[i] in unpaired),
         ),
         _fig("s1.hng_failed", "… fetch failed", count(None, "failed"), 5),
@@ -1066,10 +1070,8 @@ def _notes(result: dict[str, Any]) -> list[str]:
         )
     if det["unpaired_pdf_twins"]:
         notes.append(
-            "`classify()` holds a PDF as *sole-format* when its `anchor_key` is empty, even when a "
-            "DOCX with the same `doc_id` exists, because `docx_anchor_keys` skips empty keys: "
-            + ", ".join(f"`{d}`" for d in det["unpaired_pdf_twins"])
-            + "."
+            "`classify()` holds these PDFs as *sole-format* although a DOCX with the same "
+            "`doc_id` is listed: " + ", ".join(f"`{d}`" for d in det["unpaired_pdf_twins"]) + "."
         )
     return notes
 

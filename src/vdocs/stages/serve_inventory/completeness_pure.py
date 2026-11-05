@@ -24,6 +24,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass, field
 
+from vdocs.kernel.ids import doc_id
 from vdocs.models.catalog import EnrichedRecord
 from vdocs.stages.fetch.fetch_pure import GatePolicy
 
@@ -71,12 +72,15 @@ def classify(
     rec: EnrichedRecord,
     policy: GatePolicy,
     *,
+    docx_ids: set[str],
     docx_anchors: set[str],
     sole_survivors: set[str],
 ) -> Disposition:
     """One record's disposition. ``docx_anchors`` is every ``anchor_key`` for which a DOCX
-    representation exists somewhere in the library (so a PDF row can tell "duplicate" from "only
-    copy"); ``sole_survivors`` is the VO.7 set — archived documents nothing newer supersedes.
+    representation exists somewhere in the library, and ``docx_ids`` every ``doc_id`` with a DOCX
+    row, so a PDF row can tell "duplicate" from "only copy" — by its ``doc_id`` too, because a row
+    with no ``anchor_key`` cannot be paired by key (fetch never takes such a PDF; it takes the
+    DOCX). ``sole_survivors`` is the VO.7 set — archived documents nothing newer supersedes.
 
     Order matters and is deliberate: **noise first**, so a benefits form on a web-client
     application is reported as a form rather than as a scope miss. The reason a record carries
@@ -97,7 +101,7 @@ def classify(
 
     admitted = policy.doctype_kept(rec) or rec.anchor_key in sole_survivors
     if rec.out_of_scope_reason:  # a non-DOCX representation
-        if rec.anchor_key and rec.anchor_key in docx_anchors:
+        if (rec.anchor_key and rec.anchor_key in docx_anchors) or doc_id(rec) in docx_ids:
             # we hold the same document as DOCX and fetch that one — nothing is missing
             return Disposition(
                 "covered-by-other-format", f"format:{rec.out_of_scope_reason}-duplicate"
@@ -157,6 +161,12 @@ def docx_anchor_keys(records: list[EnrichedRecord]) -> set[str]:
     return {r.anchor_key for r in records if r.doc_format == "docx" and r.anchor_key}
 
 
+def docx_doc_ids(records: list[EnrichedRecord]) -> set[str]:
+    """Every ``doc_id`` with a DOCX row — the pairing a PDF falls back on when neither twin
+    carries an ``anchor_key``."""
+    return {doc_id(r) for r in records if r.doc_format == "docx"}
+
+
 def completeness_report(
     records: list[EnrichedRecord],
     policy: GatePolicy,
@@ -165,6 +175,7 @@ def completeness_report(
 ) -> CompletenessReport:
     """Partition the whole inventory by disposition and rule on completeness."""
     anchors = docx_anchor_keys(records)
+    ids = docx_doc_ids(records)
     soles = sole_survivors or set()
     counts: Counter[str] = Counter()
     reasons: Counter[str] = Counter()
@@ -172,7 +183,7 @@ def completeness_report(
     undecided: Counter[str] = Counter()
     undecided_apps: set[str] = set()
     for rec in records:
-        d = classify(rec, policy, docx_anchors=anchors, sole_survivors=soles)
+        d = classify(rec, policy, docx_ids=ids, docx_anchors=anchors, sole_survivors=soles)
         counts[d.status] += 1
         if d.status != "held":
             reasons[d.reason] += 1

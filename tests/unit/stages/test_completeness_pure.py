@@ -41,24 +41,40 @@ def rec(**kw) -> EnrichedRecord:
 
 class TestClassify:
     def test_held_when_the_gate_admits_it(self) -> None:
-        assert classify(rec(), POLICY, docx_anchors=set(), sole_survivors=set()) == Disposition(
-            "held", ""
-        )
+        assert classify(
+            rec(), POLICY, docx_ids=set(), docx_anchors=set(), sole_survivors=set()
+        ) == Disposition("held", "")
 
     def test_vba_form_is_named_not_vista(self) -> None:
         """The operator's ask: a benefits form should say why it is not fetched, not just that
         it is 'noise'."""
-        d = classify(rec(noise_type="vba_form"), POLICY, docx_anchors=set(), sole_survivors=set())
+        d = classify(
+            rec(noise_type="vba_form"),
+            POLICY,
+            docx_ids=set(),
+            docx_anchors=set(),
+            sole_survivors=set(),
+        )
         assert d == Disposition("not-vista", "not-vista:vba-form")
 
     def test_va_reference_is_named_not_vista(self) -> None:
-        d = classify(rec(noise_type="va_ref"), POLICY, docx_anchors=set(), sole_survivors=set())
+        d = classify(
+            rec(noise_type="va_ref"),
+            POLICY,
+            docx_ids=set(),
+            docx_anchors=set(),
+            sole_survivors=set(),
+        )
         assert d.reason == "not-vista:va-reference"
 
     def test_out_of_scope_system_type_names_the_value(self) -> None:
         """App-scope exclusions recorded nothing at all before this."""
         d = classify(
-            rec(system_type="Web client"), POLICY, docx_anchors=set(), sole_survivors=set()
+            rec(system_type="Web client"),
+            POLICY,
+            docx_ids=set(),
+            docx_anchors=set(),
+            sole_survivors=set(),
         )
         assert d.reason == "not-vista:system-type=Web client"
 
@@ -71,18 +87,28 @@ class TestClassify:
         corpus without anyone ruling on it.
         """
         d = classify(
-            rec(system_type="unclassified"), POLICY, docx_anchors=set(), sole_survivors=set()
+            rec(system_type="unclassified"),
+            POLICY,
+            docx_ids=set(),
+            docx_anchors=set(),
+            sole_survivors=set(),
         )
         assert d == Disposition("undecided", "undecided:system-type-unclassified")
 
     def test_an_unmapped_application_is_also_undecided(self) -> None:
         """An empty system_type is the same absence, reached a different way."""
-        d = classify(rec(system_type=""), POLICY, docx_anchors=set(), sole_survivors=set())
+        d = classify(
+            rec(system_type=""), POLICY, docx_ids=set(), docx_anchors=set(), sole_survivors=set()
+        )
         assert d.status == "undecided"
 
     def test_decommissioned_app_is_named(self) -> None:
         d = classify(
-            rec(app_status="decommissioned"), POLICY, docx_anchors=set(), sole_survivors=set()
+            rec(app_status="decommissioned"),
+            POLICY,
+            docx_ids=set(),
+            docx_anchors=set(),
+            sole_survivors=set(),
         )
         assert d.reason == "not-vista:app-status=decommissioned"
 
@@ -92,7 +118,21 @@ class TestClassify:
         d = classify(
             rec(doc_format="pdf"),
             POLICY,
+            docx_ids=set(),
             docx_anchors={"XU:XU:UM"},
+            sole_survivors=set(),
+        )
+        assert d == Disposition("covered-by-other-format", "format:pdf-duplicate")
+
+    def test_pdf_twin_with_no_anchor_key_is_paired_by_doc_id(self) -> None:
+        """Measured 2026-11-05 (inventory browser step 0): three PDFs whose rows carry no anchor
+        key were held as *sole-format* beside a DOCX with the same doc_id. fetch never takes a PDF
+        without an anchor key — it takes the DOCX — so "held" claimed a copy nobody downloads."""
+        d = classify(
+            rec(doc_format="pdf", anchor_key=""),
+            POLICY,
+            docx_ids={"XU:s"},
+            docx_anchors=set(),
             sole_survivors=set(),
         )
         assert d == Disposition("covered-by-other-format", "format:pdf-duplicate")
@@ -100,24 +140,30 @@ class TestClassify:
     def test_pdf_with_no_docx_anywhere_is_held_via_docling(self) -> None:
         """VO.8 and VO.9 must agree: once the gate admits a PDF-only document and Docling can
         read it, calling it "unreachable" would report a hole that no longer exists."""
-        d = classify(rec(doc_format="pdf"), POLICY, docx_anchors=set(), sole_survivors=set())
+        d = classify(
+            rec(doc_format="pdf"), POLICY, docx_ids=set(), docx_anchors=set(), sole_survivors=set()
+        )
         assert d == Disposition("held", "sole-format")
 
     def test_a_format_no_converter_reads_is_a_real_loss(self) -> None:
         """The definition's teeth: legacy `.doc` has no converter, so a document published only
         that way is genuinely missing — a limitation, not a decision."""
-        d = classify(rec(doc_format="doc"), POLICY, docx_anchors=set(), sole_survivors=set())
+        d = classify(
+            rec(doc_format="doc"), POLICY, docx_ids=set(), docx_anchors=set(), sole_survivors=set()
+        )
         assert d == Disposition("unreachable", "format:doc-only")
 
     def test_omitted_doctype_names_the_code(self) -> None:
-        d = classify(rec(doc_code="RN"), POLICY, docx_anchors=set(), sole_survivors=set())
+        d = classify(
+            rec(doc_code="RN"), POLICY, docx_ids=set(), docx_anchors=set(), sole_survivors=set()
+        )
         assert d == Disposition("excluded", "doctype-omitted:RN")
 
     def test_sole_survivor_overrides_the_doctype_omission(self) -> None:
         """VO.7 — the last surviving document of its kind for code still running in VistA is the
         historical record, not ephemera."""
         r = rec(doc_code="RN", app_status="archive", anchor_key="XU:XU:RN")
-        d = classify(r, POLICY, docx_anchors=set(), sole_survivors={"XU:XU:RN"})
+        d = classify(r, POLICY, docx_ids=set(), docx_anchors=set(), sole_survivors={"XU:XU:RN"})
         assert d == Disposition("held", "sole-survivor")
 
     def test_noise_is_judged_before_scope(self) -> None:
@@ -126,6 +172,7 @@ class TestClassify:
         d = classify(
             rec(noise_type="vba_form", system_type="Web client"),
             POLICY,
+            docx_ids=set(),
             docx_anchors=set(),
             sole_survivors=set(),
         )
@@ -140,7 +187,7 @@ class TestClassify:
             rec(doc_format="pdf"),
             rec(doc_code="RN"),
         ):
-            d = classify(r, POLICY, docx_anchors=set(), sole_survivors=set())
+            d = classify(r, POLICY, docx_ids=set(), docx_anchors=set(), sole_survivors=set())
             assert d.status == "held" or d.reason, f"silent exclusion: {r.doc_code}"
 
 
@@ -202,6 +249,10 @@ class TestCompletenessReport:
         report = completeness_report([rec(), rec(doc_slug="t", doc_format="pdf")], POLICY)
         assert report.complete is True
         assert report.covered_by_other_format == 1
+
+    def test_a_pdf_twin_with_no_anchor_key_is_covered_by_its_docx(self) -> None:
+        r = completeness_report([rec(anchor_key=""), rec(doc_format="pdf", anchor_key="")], POLICY)
+        assert (r.held, r.covered_by_other_format) == (1, 1)
 
     def test_noise_is_outside_the_library_and_does_not_count_against_it(self) -> None:
         report = completeness_report([rec(), rec(doc_slug="t", noise_type="vba_form")], POLICY)
