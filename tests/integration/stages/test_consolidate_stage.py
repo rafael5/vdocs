@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 
+import pytest
 import yaml
 
 from vdocs.contracts.registry import ASSETS, TEXT_NORMALIZED
@@ -426,3 +427,32 @@ def test_consolidate_prunes_stale_sidecar_within_a_kept_bundle(ctx):
         p.name: p.read_bytes() for p in anchor.iterdir() if p.is_file() and p.name != "bundle.yaml"
     }
     assert kbundle.verify_manifest(manifest, on_disk) == []  # bundle matches its manifest exactly
+
+
+@pytest.mark.parametrize("stage_name", ["catalog", "consolidate"])
+def test_an_anchor_alias_edit_reruns_the_stages_that_apply_it(tmp_path, stage_name):
+    # Both derivation sites apply registries/anchor-aliases.yaml (§9.2), so an alias edit must
+    # invalidate their input fingerprint. Catalog declared only catalog.raw: an alias added for
+    # the CPRS List Manager TM re-grouped gold while the inventory kept the old key, and doctor
+    # went RED on a version group with no is_latest anchor.
+    from vdocs.config import Settings
+    from vdocs.contracts.registry import REGISTRIES
+    from vdocs.orchestrator.stage import StageContext
+    from vdocs.orchestrator.state import StateStore
+    from vdocs.stages.catalog.stage import CatalogStage
+
+    regs = tmp_path / "registries"
+    regs.mkdir()
+    (regs / "anchor-aliases.yaml").write_text("aliases: {}\n")
+    cfg = Settings(data_dir=tmp_path / "lake", registries_dir=regs)
+    cfg.lake.mkdir(parents=True)
+    stage = {"catalog": CatalogStage, "consolidate": ConsolidateStage}[stage_name]()
+    store = StateStore.open(cfg.state_db)
+    try:
+        ctx = StageContext(cfg=cfg, state=store)
+        assert REGISTRIES in stage.requires
+        before = stage._input_fps(ctx)
+        (regs / "anchor-aliases.yaml").write_text('aliases:\n  "A:A:TM:x": "A:B:TM:x"\n')
+        assert stage._input_fps(ctx)[REGISTRIES.key] != before[REGISTRIES.key]
+    finally:
+        store.close()

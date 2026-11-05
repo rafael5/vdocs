@@ -23,7 +23,7 @@ from __future__ import annotations
 import structlog
 import yaml
 
-from vdocs.contracts.registry import ASSETS, CONSOLIDATED, TEXT_NORMALIZED
+from vdocs.contracts.registry import ASSETS, CONSOLIDATED, REGISTRIES, TEXT_NORMALIZED
 from vdocs.kernel import bundle, cas, frontmatter
 from vdocs.kernel import ids as kids
 from vdocs.kernel import registry as kregistry
@@ -38,7 +38,7 @@ log = structlog.get_logger(__name__)
 class ConsolidateStage(Stage):
     name = "consolidate"
     description = "collapse each version group to one anchor document + capture the lineage (§6.6)"
-    requires = [TEXT_NORMALIZED, ASSETS]
+    requires = [TEXT_NORMALIZED, ASSETS, REGISTRIES]  # REGISTRIES: it applies anchor-aliases.yaml
     produces = [CONSOLIDATED]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
     contract_ver = 4  # v4: history.yaml supersedes a re-processed member's stale facts (P5.1)

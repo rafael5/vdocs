@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 
-from vdocs.contracts.registry import CATALOG_ENRICHED, CATALOG_RAW
+from vdocs.contracts.registry import CATALOG_ENRICHED, CATALOG_RAW, REGISTRIES
 from vdocs.kernel import cas
 from vdocs.kernel import csv as kcsv
 from vdocs.models.catalog import ENRICHED_COLUMNS, Catalog, EnrichedInventory, EnrichedRecord
@@ -22,7 +22,9 @@ from vdocs.orchestrator.stage import Stage, StageContext
 class CatalogStage(Stage):
     name = "catalog"
     description = "enrich catalog.raw into the conformed inventory (identity, doc-type, noise)"
-    requires = [CATALOG_RAW]
+    # the curated vocabularies + anchor aliases it applies are inputs too: without them an alias
+    # edit left the inventory on the old version-group key while consolidate re-grouped gold
+    requires = [CATALOG_RAW, REGISTRIES]
     produces = [CATALOG_ENRICHED]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
     contract_ver = 2  # v2: anchor-alias re-grouping (anchor-aliases.yaml)
