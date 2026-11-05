@@ -24,7 +24,7 @@ and that three statements in the first draft did not hold as written. Those are 
 as are the ten figures step 0 found had moved when it re-measured them. The
 calls that remained are recorded in §10 with their options, and all were decided on 2026-11-05 as
 recommended. The order is producer first; identity continuity across re-filing lands before the web
-mode; and the web mode is a separate go/no-go once the table has been used.
+mode; and the web mode was a separate go/no-go, which the operator took on 2026-11-05: go.
 
 ## Contents
 
