@@ -670,3 +670,19 @@ def test_an_inventory_change_reruns_index(ctx):
     before = stage._input_fps(ctx)[GOLD_INVENTORY.key]
     _seed_inventory(ctx, _inventory_records()[:3])
     assert stage._input_fps(ctx)[GOLD_INVENTORY.key] != before
+
+
+def test_a_listed_refiling_is_labelled_in_v_inventory(ctx):
+    """registries/inventory/refiled.yaml (D1 option C) reaches the rows of the listed id."""
+    from vdocs.kernel.registry import load_refiled
+
+    inventory_id, gold_id = next(iter(load_refiled(ctx.cfg.registries).items()))
+    app, slug = inventory_id.split(":")
+    refiled = _inventory_records()[0].model_copy(update={"app_name_abbrev": app, "doc_slug": slug})
+    _seed(ctx)
+    _seed_inventory(ctx, [*_inventory_records(), refiled])
+    _bless(ctx, "serve-inventory", GOLD_INVENTORY)
+    Orchestrator([IndexStage()]).run(ctx, force=True)
+    assert _q(ctx, "SELECT doc_id, refiled_from FROM v_inventory WHERE refiled_from <> ''") == [
+        (inventory_id, gold_id)
+    ]

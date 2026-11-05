@@ -10,6 +10,7 @@ from vdocs.server.doctor import (
     integrity_check,
     inventory_freshness_check,
     load_doctor_policy,
+    refiled_exceptions_check,
 )
 
 
@@ -191,3 +192,39 @@ def test_an_unstamped_index_warns_rather_than_passing():
 def test_a_missing_inventory_says_it_was_skipped():
     c = inventory_freshness_check("abc", None)
     assert c.health is Health.WARN and "skipped" in c.detail
+
+
+# --- D1's stopgap: the re-filing exception list and its expiry ---------------------------------
+
+_LISTED = {"SD:iss_ug": "ADT:iss_ug"}
+
+
+def test_listed_refilings_that_still_need_the_file_pass():
+    c = refiled_exceptions_check(_LISTED, inventory_ids={"SD:iss_ug"}, gold_ids={"ADT:iss_ug"})
+    assert c.health is Health.PASS and c.name == "refiled exceptions"
+
+
+def test_the_stopgap_expires_red_once_gold_carries_the_inventory_id():
+    """The testable expiry: identity continuity landed and the id joins without the file."""
+    c = refiled_exceptions_check(
+        _LISTED, inventory_ids={"SD:iss_ug"}, gold_ids={"ADT:iss_ug", "SD:iss_ug"}
+    )
+    assert c.health is Health.FAIL
+    assert "SD:iss_ug" in c.detail and "refiled.yaml" in c.detail
+
+
+def test_the_stopgap_expires_red_once_the_inventory_carries_the_gold_id():
+    """The other way continuity can land: the inventory keeps the id the document already had."""
+    c = refiled_exceptions_check(_LISTED, inventory_ids={"ADT:iss_ug"}, gold_ids={"ADT:iss_ug"})
+    assert c.health is Health.FAIL
+
+
+def test_a_listed_refiling_that_matches_nothing_warns():
+    """A smaller lake (a dev subset) need not hold the document: say so, do not pass silently."""
+    c = refiled_exceptions_check(_LISTED, inventory_ids={"SD:iss_ug"}, gold_ids=set())
+    assert c.health is Health.WARN and "SD:iss_ug" in c.detail
+
+
+def test_no_exception_file_is_the_expired_state_and_passes_out_loud():
+    c = refiled_exceptions_check({}, inventory_ids=set(), gold_ids=set())
+    assert c.health is Health.PASS and "none listed" in c.detail

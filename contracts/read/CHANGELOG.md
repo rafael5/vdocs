@@ -16,7 +16,9 @@ Additive (backward-compatible) — the whole VDL inventory in `index.db` (invent
   listing's application, section, doc type, title, file, format, patch id, lifecycle label, system
   type and URLs, the four profile tags, the namespace, and the completeness `disposition` with its
   `reason` string, `reason_kind` and `reason_value`. Gold status is not stored: join `doc_id` to
-  `v_documents`.
+  `v_documents`. `refiled_from` labels the 14 ISS guides VA re-filed from ADT to SD with the id
+  gold still holds them under — a stopgap that `vdocs doctor` reds on once a listed id joins
+  without it (identity continuity).
 - **`v_documents.last_updated`** / **`last_updated_source`** — the document's own last update
   (`YYYY-MM`): its newest Revision History date, else its title-page date (`history.yaml`
   `official_date`), and which of the two it was. Never the VDL posting date.

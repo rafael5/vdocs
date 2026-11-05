@@ -544,6 +544,11 @@
           "type": "TEXT",
           "nullable": true,
           "desc": "the value that decided it: a doc code, format, system type, status or noise type"
+        },
+        "refiled_from": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "a stopgap label (decision D1, option C): for a document VA re-filed to another application page, the doc_id gold still holds it under (registries inventory/refiled.yaml); empty otherwise. A label, not a join key; it expires with identity continuity, and vdocs doctor reds when a listed id joins without it"
         }
       }
     }

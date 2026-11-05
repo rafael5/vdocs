@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import astuple, dataclass, fields
 
 from vdocs.kernel import personas
@@ -109,6 +110,9 @@ class InventoryRow:
     reason: str  # the reason string `vdocs completeness` prints
     reason_kind: str  # one of completeness_pure.REASON_KINDS
     reason_value: str
+    # D1's stopgap: the id gold still holds this re-filed document under (inventory/refiled.yaml),
+    # a label not a join; empty for every other row
+    refiled_from: str = ""
 
     def as_tuple(self) -> tuple[str, ...]:
         return astuple(self)
@@ -118,21 +122,28 @@ INVENTORY_COLUMNS: tuple[str, ...] = tuple(f.name for f in fields(InventoryRow))
 
 
 def inventory_rows(
-    records: list[EnrichedRecord], policy: GatePolicy, maps: personas.ProfileMaps
+    records: list[EnrichedRecord],
+    policy: GatePolicy,
+    maps: personas.ProfileMaps,
+    *,
+    refiled: Mapping[str, str] | None = None,
 ) -> list[InventoryRow]:
     """One row per record, in record order: the listing, its four profile tags (through the same
     ``profile_tags`` that tags gold documents), and its disposition from ``classify`` with the same
-    inputs ``completeness_report`` gives it — so the rows' counts are the CLI's counts."""
+    inputs ``completeness_report`` gives it — so the rows' counts are the CLI's counts.
+    ``refiled`` labels the rows of each listed re-filed document with its gold id (D1)."""
+    refiled = refiled or {}
     soles = sole_survivors(records, policy)
     anchors, ids = docx_anchor_keys(records), docx_doc_ids(records)
     rows: list[InventoryRow] = []
     for key, rec in zip(row_keys(records), records, strict=True):
         d = classify(rec, policy, docx_ids=ids, docx_anchors=anchors, sole_survivors=soles)
         tags = personas.profile_tags(rec.app_name_abbrev, rec.doc_code, maps)
+        did = doc_id(rec)
         rows.append(
             InventoryRow(
                 row_key=key,
-                doc_id=doc_id(rec),
+                doc_id=did,
                 app_code=rec.app_name_abbrev,
                 app_name=rec.app_name_full,
                 section=rec.section_code,
@@ -154,6 +165,7 @@ def inventory_rows(
                 reason=d.reason,
                 reason_kind=d.kind,
                 reason_value=d.value,
+                refiled_from=refiled.get(did, ""),
             )
         )
     return rows

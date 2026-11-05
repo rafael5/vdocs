@@ -153,6 +153,42 @@ def inventory_freshness_check(stamped: str | None, current: str | None) -> Check
     return Check(name, Health.PASS, "v_inventory matches inventory.json")
 
 
+def refiled_exceptions_check(
+    listed: dict[str, str], *, inventory_ids: set[str], gold_ids: set[str]
+) -> Check:
+    """The expiry of D1's stopgap (``inventory/refiled.yaml``: inventory id → the id gold still
+    holds a re-filed document under). FAIL once a listed pair joins on ``doc_id`` without the file
+    — gold carries the inventory id, or the inventory carries the gold id — because identity
+    continuity has landed and the label now describes something untrue. An entry that matches
+    nothing in this index (a subset lake) is WARN; no file is the expired state, PASS."""
+    name = "refiled exceptions"
+    if not listed:
+        return Check(name, Health.PASS, "none listed (registries/inventory/refiled.yaml)")
+    joined = sorted(i for i, g in listed.items() if i in gold_ids or g in inventory_ids)
+    if joined:
+        return Check(
+            name,
+            Health.FAIL,
+            f"{len(joined)} listed re-filing(s) now join on doc_id without the exception file — "
+            "the stopgap has expired: delete them from registries/inventory/refiled.yaml"
+            + _sample(joined),
+        )
+    unmatched = sorted(i for i, g in listed.items() if i not in inventory_ids or g not in gold_ids)
+    if unmatched:
+        return Check(
+            name,
+            Health.WARN,
+            f"{len(unmatched)} listed re-filing(s) match no inventory listing or no gold document "
+            "in this index" + _sample(unmatched),
+        )
+    return Check(
+        name,
+        Health.PASS,
+        f"{len(listed)} re-filed documents labelled in v_inventory (stopgap until identity "
+        "continuity)",
+    )
+
+
 def contract_check(
     emitted_views: dict[str, list[str]], stamped_version: str, spec: dict[str, Any]
 ) -> Check:
@@ -560,6 +596,7 @@ def diagnose_lake(cfg: Settings) -> DoctorReport:
     preflight edge; the CLI checks it explicitly to keep its "run vdocs index" remediation."""
     from vdocs.kernel import db, read_contract
     from vdocs.kernel.entity_quality import load_entity_quality
+    from vdocs.kernel.registry import load_refiled
     from vdocs.stages.fetch.policy import load_gate_config
     from vdocs.stages.index.inventory_pure import META_CONTENT_HASH
 
@@ -608,9 +645,25 @@ def diagnose_lake(cfg: Settings) -> DoctorReport:
         report.checks.append(
             inventory_freshness_check(_meta(conn, META_CONTENT_HASH), current_inventory)
         )
+        report.checks.append(_refiled_check(conn, load_refiled(cfg.registries)))
         return report
     finally:
         conn.close()
+
+
+def _refiled_check(conn: sqlite3.Connection, listed: dict[str, str]) -> Check:
+    """Run :func:`refiled_exceptions_check` over the built index's two id sets."""
+    try:
+        inventory_ids = {r[0] for r in conn.execute("SELECT DISTINCT doc_id FROM v_inventory")}
+    except sqlite3.OperationalError:
+        return Check(
+            "refiled exceptions",
+            Health.WARN,
+            "skipped: index.db has no v_inventory (built before read contract 1.7) — "
+            "re-run: vdocs index",
+        )
+    gold_ids = {r[0] for r in conn.execute("SELECT DISTINCT doc_id FROM v_documents")}
+    return refiled_exceptions_check(listed, inventory_ids=inventory_ids, gold_ids=gold_ids)
 
 
 def _meta(conn: sqlite3.Connection, key: str) -> str | None:
@@ -654,5 +707,6 @@ __all__ = [
     "integrity_check",
     "inventory_freshness_check",
     "load_doctor_policy",
+    "refiled_exceptions_check",
     "render_report",
 ]

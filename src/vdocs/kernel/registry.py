@@ -40,6 +40,14 @@ def load_entity_vocabularies(entities_dir: Path, entries: list) -> dict[str, fro
     return out
 
 
+def load_refiled(registries_dir: Path) -> dict[str, str]:
+    """D1's stopgap (``inventory/refiled.yaml``): inventory ``doc_id`` → the id gold still holds
+    a re-filed document under. Empty once the file is deleted — its expired state — so the
+    index stage labels nothing and the doctor check reports none listed."""
+    raw = load_mapping(registries_dir / "inventory" / "refiled.yaml", missing_ok=True)
+    return {str(k): str(v) for k, v in (raw.get("refiled") or {}).items()}
+
+
 def load_anchor_aliases(registries_dir: Path) -> dict[str, str]:
     """The curated computed→canonical anchor_key map (``anchor-aliases.yaml``;
     empty if absent) — consumed by every anchor_key derivation site."""

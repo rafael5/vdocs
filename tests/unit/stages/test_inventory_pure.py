@@ -242,6 +242,7 @@ class TestInventoryRows:
             "",
             "doctype-kept",
             "UM",
+            "",  # refiled_from: not a listed re-filing
         )
         assert INVENTORY_COLUMNS[0] == "row_key" and len(INVENTORY_COLUMNS) == len(row.as_tuple())
 
@@ -271,3 +272,14 @@ def test_namespaces_map_to_the_same_code_applications_name() -> None:
     ]
     recs = [r.model_copy(update={"app_name_full": f"{r.app_name_abbrev} app"}) for r in recs]
     assert same_code_app_names(recs) == {"PRCA": "PRCA app", "CAPRI": "CAPRI app", "XUSC": ""}
+
+
+def test_a_listed_refiling_is_labelled_on_every_row_of_its_document() -> None:
+    """D1's stopgap (option C): VA re-filed the document, gold still holds it under its old id,
+    and the row says so — it is labelled, not joined (no second identity mechanism)."""
+    recs, _ = _rows()
+    rows = inventory_rows(recs, POLICY, MAPS, refiled={"CAPRI:dvba_um": "OLDAPP:dvba_um"})
+    labelled = {r.refiled_from for r in rows if r.doc_id == "CAPRI:dvba_um"}
+    assert labelled == {"OLDAPP:dvba_um"}
+    assert all(r.refiled_from == "" for r in rows if r.doc_id != "CAPRI:dvba_um")
+    assert INVENTORY_COLUMNS[-1] == "refiled_from"

@@ -1,0 +1,36 @@
+# registries/inventory/refiled.yaml
+# =========================================================================================
+# STOPGAP with a testable expiry — inventory browser proposal, decision D1, option C.
+#
+# doc_id is app code + slug, so when VA moves a document to another application page the
+# inventory's id changes and gold's does not. These 14 ISS release user guides were re-filed
+# from ADT to Scheduling (SD): gold still holds them as ADT:…, the inventory lists the same
+# slugs under SD. Each entry maps the inventory id → the id gold holds the document under, and
+# v_inventory.refiled_from carries the gold id on that document's rows (DOCX and PDF) — a
+# label, not a join: no second identity mechanism.
+#
+# EXPIRY: identity continuity across re-filing (proposal §8 step 3) makes these ids join on
+# their own. `vdocs doctor`'s "refiled exceptions" check FAILs (GOLD LIBRARY RED) as soon as a
+# listed id joins without this file — in either direction — and names the entry to delete.
+# Delete the entries, and then this file, when it does. An entry that matches nothing in the
+# built index WARNs.
+#
+# Measured 2026-11-05 (reports/inventory-browser-measurements.md, "Gold documents no record
+# carries"). Not re-derived: a new re-filing is not added here — identity continuity fixes it.
+# =========================================================================================
+
+refiled:
+  "SD:iss_release_1_11_11_user_guide": "ADT:iss_release_1_11_11_user_guide"
+  "SD:iss_release_1_12_0_user_guide": "ADT:iss_release_1_12_0_user_guide"
+  "SD:iss_release_1_13_3_user_guide": "ADT:iss_release_1_13_3_user_guide"
+  "SD:iss_release_1_14_1_user_guide": "ADT:iss_release_1_14_1_user_guide"
+  "SD:iss_release_1_15_4_user_guide": "ADT:iss_release_1_15_4_user_guide"
+  "SD:iss_release_1_16_1_user_guide": "ADT:iss_release_1_16_1_user_guide"
+  "SD:iss_release_1_17_2_user_guide": "ADT:iss_release_1_17_2_user_guide"
+  "SD:iss_release_1_18_10_user_guide": "ADT:iss_release_1_18_10_user_guide"
+  "SD:iss_release_1_19_1_user_guide": "ADT:iss_release_1_19_1_user_guide"
+  "SD:iss_release_1_21_2_user_guide": "ADT:iss_release_1_21_2_user_guide"
+  "SD:iss_release_1_22_3_user_guide": "ADT:iss_release_1_22_3_user_guide"
+  "SD:iss_release_1_5_4_0_user_guide": "ADT:iss_release_1_5_4_0_user_guide"
+  "SD:iss_release_1_7_1_0_user_guide": "ADT:iss_release_1_7_1_0_user_guide"
+  "SD:iss_release_1_8_6_0_user_guide": "ADT:iss_release_1_8_6_0_user_guide"

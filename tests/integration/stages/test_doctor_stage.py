@@ -164,3 +164,21 @@ def test_a_stale_inventory_table_warns_and_names_the_fix(ctx):
     assert checks["inventory freshness"]["health"] == "WARN"
     assert "vdocs index" in checks["inventory freshness"]["detail"]
     assert payload["verdict"] == "GREEN" and result.status == "ok"
+
+
+def test_the_refiling_stopgap_reds_once_a_listed_id_joins_without_the_file(ctx):
+    """D1's testable expiry over the built index: plant a gold document carrying one of the
+    listed inventory ids, as identity continuity would, and the gate reds until the entry goes."""
+    from vdocs.kernel.registry import load_refiled
+
+    listed_inventory_id = next(iter(load_refiled(ctx.cfg.registries)))
+    _seed(ctx)
+    conn = db.connect(ctx.cfg.index_db)
+    _doc(conn, doc_key="SD/iss", doc_id=listed_inventory_id, anchor_key="SD:SD:UG:iss")
+    conn.commit()
+    conn.close()
+    with pytest.raises(PostflightError, match="RED"):
+        Orchestrator([DoctorStage()]).run(ctx)
+    checks = {c["name"]: c for c in json.loads(ctx.cfg.doctor_report.read_text())["checks"]}
+    assert checks["refiled exceptions"]["health"] == "FAIL"
+    assert listed_inventory_id in checks["refiled exceptions"]["detail"]

@@ -133,7 +133,8 @@ CREATE TABLE inventory (
   app_code TEXT, app_name TEXT, section TEXT, doc_type TEXT, title TEXT, file_name TEXT,
   format TEXT, patch_id TEXT, app_status TEXT, system_type TEXT, doc_url TEXT, app_url TEXT,
   app_user TEXT, doc_user TEXT, software_class TEXT, function_category TEXT, pkg_ns TEXT,
-  disposition TEXT NOT NULL, reason TEXT, reason_kind TEXT NOT NULL, reason_value TEXT
+  disposition TEXT NOT NULL, reason TEXT, reason_kind TEXT NOT NULL, reason_value TEXT,
+  refiled_from TEXT
 );
 CREATE INDEX idx_inventory_doc_id ON inventory(doc_id);
 CREATE TABLE entity_skl (
@@ -220,7 +221,10 @@ class IndexStage(Stage):
             cfg.gold_inventory_json.read_text(encoding="utf-8")
         ).records
         inventory = inv.inventory_rows(
-            records, load_gate_policy(cfg.registries), personas.load_profile_maps(cfg.registries)
+            records,
+            load_gate_policy(cfg.registries),
+            personas.load_profile_maps(cfg.registries),
+            refiled=kregistry.load_refiled(cfg.registries),  # D1's stopgap, expiry in doctor
         )
         # published facet vocabulary (P2), with the inventory's namespaces named (D4)
         vocab_rows = vocab.vocab_rows(cfg.registries, namespaces=inv.same_code_app_names(records))
