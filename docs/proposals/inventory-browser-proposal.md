@@ -1,12 +1,13 @@
 # Inventory browser — the whole VDL catalog in vdocs-web
 
 **Status: PROPOSED · 2026-11-05 · amended 2026-11-05 after adversarial review · all decisions
-taken 2026-11-05** — not built.
+taken 2026-11-05 · step 0 landed 2026-11-05** — nothing else built.
 Producer: vdocs · consumer: vdocs-web · read contract 1.6 → 1.7 (additive). An interactive mockup
 over the real 2026-11-05 inventory lives in a private Claude artifact
 (<https://claude.ai/artifact/UP9W8LRkwXcyHVwhgTBVn5>); this file is the proposal of record. Every
-number below was measured on the 2026-11-05 lake; the ad-hoc scripts that measured them were not
-committed, which step 0 of §8 corrects.
+number in §1, §3 and §4 was measured on the 2026-11-05 lake by `scripts/inventory_measurements.py`;
+[`reports/inventory-browser-measurements.md`](../../reports/inventory-browser-measurements.md)
+names what it read and gives each figure beside the value printed before step 0.
 
 ## Abstract
 
@@ -17,8 +18,9 @@ each document's own last-updated date, so vdocs-web can show the whole catalog b
 without a new file, download or binary. The producer half is small: the index stage gains the gold
 inventory as an input and runs two functions it already depends on. The adversarial review of
 2026-11-05 found that the join between inventory and gold breaks whenever VA re-files a document
-(all 14 "gold only" documents are one such re-filing), that an inventory row has no key, and that
-three statements in the first draft did not hold as written. Those are corrected in place. The
+(14 of the 15 "gold only" documents are one such re-filing), that an inventory row has no key,
+and that three statements in the first draft did not hold as written. Those are corrected in place,
+as are the ten figures step 0 found had moved when it re-measured them. The
 calls that remained are recorded in §10 with their options, and all were decided on 2026-11-05 as
 recommended. The order is producer first; identity continuity across re-filing lands before the web
 mode; and the web mode is a separate go/no-go once the table has been used.
@@ -41,14 +43,17 @@ mode; and the web mode is a separate go/no-go once the table has been used.
 ## 1. Why
 
 The inventory is only visible as two CLI totals. `vdocs inventory --status` counts 3,834 distinct
-documents by fetch status (every non-noise `doc_id`, of any system type; 2,941 of them VistA); `vdocs completeness` counts all 9,080 catalog records by
-disposition. Neither lists records, neither filters, and neither connects a record to the gold
-document it became. Joining the inventory to `index.db` on `doc_id` showed two things neither
+documents by fetch status (every non-noise `doc_id`, of any system type; 2,886 of them VistA as
+the gate defines it); `vdocs completeness` counts all 9,080 catalog records by disposition.
+Neither lists records, neither filters, and neither connects a record to the gold document it
+became. Joining the inventory to `index.db` on `doc_id` showed two things neither
 command reports:
 
 - **219 records counted as held have no gold document**: 152 archived sole survivors, 52 DOCX the
-  policy keeps and 9 PDF-only documents were never fetched; 5 fetches failed and 1 was rejected as
-  bad content (largest: SD 40, VBECS 27, CPRS 25, ROR 24, PSO 17). The completeness verdict still
+  policy keeps and 9 PDFs held as their document's only format were never fetched; 5 fetches failed
+  and 1 PDF was rejected as bad content (largest: SD 40, VBECS 27, CPRS 25, ROR 24, PSO 17). Three
+  of the 9 PDFs are not PDF-only: each is the twin of one of the 52 DOCX, held separately because
+  neither row has an anchor key for `classify()` to pair them by. The completeness verdict still
   reads COMPLETE because it rules on what is admitted, not what is held (backlogged in `TODO.md`).
 - **15 gold documents have a `doc_id` no current inventory record carries.** This is not a
   catalog gap. 14 are the ISS release user guides VA re-filed from ADT to Scheduling: gold still
@@ -91,7 +96,7 @@ It is not a document. Measured on 2026-11-05:
 | Records (listings) | 9,080 |
 | Distinct `doc_id` (app code + slug) | 5,032 |
 | Records sharing one `doc_id`, at most | 6 |
-| Records that repeat one of 18 benefits-form links listed on many app pages | 1,334 |
+| Records of the 9 links listed on 148 application pages each (8 benefits forms, a VA strategic plan) | 1,332 |
 | Records with a gold match on `doc_id` | 2,120 |
 
 Neither `doc_id` nor the VDL URL is unique, so a row needs its own key. The inventory record carries
@@ -100,12 +105,13 @@ rows derive it through that one function, never a second format string. No combi
 distinguishes every row: (application page URL, section, file URL, patch id) separates 9,073 of
 the 9,080. The 7 surplus rows come from 5 links listed more than once on one page: three files
 listed twice with every field identical, and one manual (`DVBA_UM`, DOCX and PDF) listed three
-times under three different titles and doc codes. The app *code* cannot stand in for the page URL:
-171 app codes appear on more than one application page (LR on 12). The row key is therefore a hash
+times under three different titles and two doc codes. The app *code* cannot stand in for the page
+URL: 171 app codes appear on more than one application page (LR on 12). The row key is therefore a hash
 of those four fields plus an ordinal among the rows that share them, assigned by sorting those rows
 on their full canonical content (§5), so it is stable under VA reordering a page and changes only
-when the listing itself does. The 1,334 repeated form links stay as rows, each with its disposition *not-vista:vba-form*;
-they are not collapsed (D2).
+when the listing itself does; over the 2026-11-05 inventory it gives 9,080 distinct keys. The
+1,332 records of the 9 repeated links stay as rows, each with its disposition (*not-vista:vba-form*
+for the 8 forms, *not-vista:va-reference* for the plan); they are not collapsed (D2).
 
 | Facet | Group | Where the value comes from |
 |---|---|---|
@@ -123,18 +129,23 @@ they are not collapsed (D2).
 
 For the 2,120 record-to-gold matches, the computed Domain, Audience, App user and Type agree with
 `index.db` every time; Namespace differs on 2 documents where the pipeline corrected it after the
-inventory. About 2,300 records have no profile — 2,298 of them are not VistA — and show as
+inventory (`CPRS:cprslmtm`, CPRS in the inventory and OR in gold; `POC:lab_poc_iug`, POC and LA).
+2,305 records have no application profile — 2,298 of them are not VistA — and show as
 *(no profile)* so every facet's counts add up.
 
-**Namespace names.** The PACKAGE file (#9.4), via vista-meta's measured export, names 102 of the 162
-inventory namespaces (6,710 records); 56 more (1,717 records) are really application codes — mostly
-web and commercial products such as WEBP and VBECS — and would take the application's name, flagged
-as such; 3 (XUSC, PREC, PREN — 92 records) have no name anywhere; 561 records have no namespace.
-Where both sources name a namespace they agree on 73 of 94. Applied to the Library this would name
-all 96 namespaces instead of 92, name DG, USR, BPS and PSGW for the first time, change 15 names in
-substance and reword 32. The Library keeps its current names in this change; those renames are
-their own small change (D4). The names registry's header records the vista-meta release and commit
-it was copied from.
+**Namespace names.** The PACKAGE file (#9.4), via vista-meta's measured export
+(`package-namespace.tsv`, vista-meta `f1e9d33`), names 102 of the 161 inventory namespaces (6,710
+records); 56 more (1,717 records) are really application codes — mostly web and commercial products
+such as WEBP and VBECS — and would take the application's name, flagged as such; 3 (XUSC, PREC,
+PREN — 92 records) have no name anywhere; 561 records have no namespace. 94 namespaces are named
+both by the PACKAGE file and by a same-code application, and the two names are equal after folding
+case and punctuation for 37 of them; most of the other 57 differ by an abbreviation or a
+"Pharmacy:"-style prefix (the report lists every pair). Applied to the Library this would name all
+96 namespaces instead of 92, name DG, USR, BPS and PSGW for the first time, and change 46 names. A
+reading of that list in the report — a reading, not a measurement — finds 7 changed in substance
+(FH, GMRV, LA, MMRS, OR, QAC, SPN) and 39 reworded. The Library keeps its current names in this
+change; those renames are their own small change (D4). The names registry's header records the
+vista-meta release and commit it was copied from.
 
 ## 4. Dates — the document's own last update, never its VDL posting
 
@@ -154,11 +165,13 @@ title page — a median of 14 years later. The RPC Broker TCP/IP Supplement (`xw
 title page), which dates 2,018 inventory records through `doc_id`, PDF twins included. The other
 7,062 records are *Undated*: they sort last and drop out while a month range is set. Of those,
 3,228 are not VistA and 3,834 are VistA records. The first draft called all 3,834 "never fetched";
-that is not quite so: about 100 of them are records of the 50 gold documents that carry no date at
-all, and the rest — 3,732 records, 1,861 distinct `doc_id`s — were never fetched. (The
-`inventory --status` total is also 3,834; it counts a different thing, distinct non-noise documents
-of any system type, and the two must not be read as one number. The undated figure was derived by
-subtraction; step 0 measures it directly to rule out a derivation error behind the coincidence.)
+that is not so. 102 are records of the 50 gold documents that carry no date at all. The other
+3,732 records (1,861 distinct `doc_id`s) have no gold document: 1,857 are copies covered by another
+format, 1,656 have a doc type the policy omits, and 219 are the held records of §1. Of the 3,732,
+3,721 were never fetched, 10 belong to fetches that failed and 1 to the PDF rejected as bad
+content. (The `inventory --status` total is also 3,834; it counts a different thing, distinct
+non-noise documents of any system type, and the two must not be read as one number. Step 0
+measured the undated figure directly rather than by subtraction: the match is a coincidence.)
 
 The consequence is plain: the date facet covers about 22 % of rows. It is a gold-document attribute
 projected onto the inventory, and the Inventory mode says so where the facet sits. Dating the
@@ -264,11 +277,19 @@ one case the check catches is already visible as a pending stage in the next run
 
 ## 8. Order of work
 
-0. **Commit the measurements.** The numbers in §1, §3 and §4 came from ad-hoc scripts. Step 0
-   recreates them as one committed script under `scripts/` whose output is a report under
-   `reports/`, so every figure in this proposal names what it read and can be re-run on a later
-   lake. (The project's own lesson from the August audit: a measurement that cannot name what it
-   read is not evidence.)
+0. **Commit the measurements — landed 2026-11-05.** The numbers in §1, §3 and §4 had come from
+   ad-hoc scripts. `scripts/inventory_measurements.py` re-derived every one of them through the
+   pipeline's own definitions and wrote
+   [`reports/inventory-browser-measurements.md`](../../reports/inventory-browser-measurements.md)
+   and its `.json`, which name what they read: the sha256 and record count of `inventory.json`,
+   `index.db`'s schema version and corpus hash, and the vdocs and vista-meta commits. Ten figures
+   moved and were corrected in place: the VistA share of the status total; the repeated links, their
+   records and the number of form files among them; the namespace count, the name agreement and the
+   namespaces the registries leave unnamed; the Library renames; the never-fetched count; and D6's
+   Word versions. It also found that `classify()` cannot pair a PDF with its DOCX twin when neither
+   has an anchor key, and that `inventory --status` labels a PDF-only document *out_of_scope*
+   whatever its fetch did; both are backlogged in `TODO.md`. (The project's own lesson from the August
+   audit: a measurement that cannot name what it read is not evidence.)
 1. **vdocs, the producer.** Tests first: a pure function from (records, policy, profile maps) to rows
    whose disposition counts equal `completeness_report` on the same input, and whose profile tags
    equal the gold documents' for records in gold; the row key is unique over the 2026-11-05
@@ -333,13 +354,13 @@ then carries a testable expiry (§8 step 3). B is not worth a second mechanism.
 
 ### D2 — Repeated listings of the same file
 
-**The problem.** 1,334 of 9,080 rows are the same 18 benefits-form links repeated on many
-application pages. They are honest records of what the VDL lists, and they dominate the
-*not-vista* bucket.
+**The problem.** 1,332 of 9,080 rows are the same 9 links repeated on 148 application pages
+each: 8 benefits forms and a VA strategic plan. They are honest records of what the VDL lists, and
+they dominate the *not-vista* bucket.
 
 | Option | For | Against |
 |---|---|---|
-| **A. Keep every row** | A record is a listing; the counts match `vdocs completeness` exactly | The not-vista facet reads as 1,184 forms when it is 18 files |
+| **A. Keep every row** | A record is a listing; the counts match `vdocs completeness` exactly | The not-vista facet reads as 1,184 forms when it is 8 files |
 | **B. Collapse repeated URLs to one row with a listing count** | Cleaner table | A row is no longer a listing; the counts stop matching the CLI, and the facet-count invariant in step 1 needs a second definition |
 
 **Decided 2026-11-05: A**, as recommended. The record panel shows a *listed on N pages* count
@@ -357,14 +378,15 @@ instead (§2).
 
 ### D4 — Namespace names in the Library
 
-**The problem.** The inventory needs namespace names (162 namespaces, 60 of them absent from the
-registries today). Applying the same source to the Library changes 15 shipped names in substance
-and rewords 32, and the source is a one-time copy of vista-meta's PACKAGE-file export.
+**The problem.** The inventory needs namespace names (161 namespaces, 64 of them with no
+same-code application name in the registries today). Applying the same source to the Library
+changes 46 shipped names — by a reading of the list, 7 in substance and 39 in wording — and the
+source is a one-time copy of vista-meta's PACKAGE-file export.
 
 | Option | For | Against |
 |---|---|---|
-| **A. Ship the names in this bump, both modes** | One vocabulary, one registry, no second step | A change to a shipped surface rides inside an inventory proposal; nobody has seen the 15 |
-| **B. Inventory only now; Library in its own small change** | The 15 are reviewed on their own; this proposal stays about the inventory | Two modes with two namespace labels for a while |
+| **A. Ship the names in this bump, both modes** | One vocabulary, one registry, no second step | A change to a shipped surface rides inside an inventory proposal; nobody has seen the 7 |
+| **B. Inventory only now; Library in its own small change** | The 7 are reviewed on their own; this proposal stays about the inventory | Two modes with two namespace labels for a while |
 
 **Decided 2026-11-05: B**, as recommended. The registry file's header records the vista-meta release and
 commit it was copied from (the Track D precedent is mutual pinning, not a bare copy), so the copy
@@ -382,14 +404,16 @@ before step 4: in a month of use, how often was the table opened, and for what.
 
 ### D6 — Dating the never-fetched documents
 
-**The problem.** 1,861 never-fetched VistA documents have no date; dating them would cover about
-64 % of the inventory instead of 22 %.
+**The problem.** 1,911 VistA documents (distinct `doc_id`s) have no date: 1,861 with no gold
+document, nearly all never fetched, and the 50 gold documents whose text carries none. Dating them
+all would cover about 64 % of the inventory instead of 22 %.
 
 *Measured:* va.gov ignores HTTP range requests (a 1 KB range returns the whole file), so nothing
 can be fetched by page. A Word file can still be cut short by closing the connection: its text is
 one ZIP entry ahead of the images, ending at a median 29 % of the file — 219 MB instead of
-1,863 MB across the 1,035 Word files vdocs holds. 1,903 of the 1,911 documents have a Word version,
-so the projected download is about 400 MB instead of about 3.4 GB. Word's own created/last-saved
+1,863 MB across the 1,035 Word files vdocs holds. 1,882 of the 1,911 documents have a Word version,
+so the projected download is about 400 MB instead of about 3.4 GB (projected when the count read
+1,903). Word's own created/last-saved
 metadata sits at the end of the file and records saving, not content change, so it is not worth
 the full download.
 
@@ -418,6 +442,9 @@ the index stage.
 
 ## 12. References
 
+- `scripts/inventory_measurements.py` and
+  [`reports/inventory-browser-measurements.md`](../../reports/inventory-browser-measurements.md)
+  (+ `.json`) — every figure in §1, §3 and §4, what it read, and the value printed before step 0.
 - [ADR-0001 — Read contract and drift prevention](../adr/0001-read-contract-and-drift-prevention.md);
   [read-contract changelog](../../contracts/read/CHANGELOG.md) (1.6 is the current version);
   `src/vdocs/kernel/read_contract.py` (`lint_bump`, `lint_latest`).

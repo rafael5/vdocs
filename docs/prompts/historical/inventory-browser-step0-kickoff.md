@@ -5,7 +5,7 @@
 > > Read `docs/prompts/inventory-browser-step0-kickoff.md` and execute it.
 
 **Repo: `vdocs`** (`~/projects/vdocs`). Read `CLAUDE.md`, then the proposal of record,
-[`docs/proposals/inventory-browser-proposal.md`](../proposals/inventory-browser-proposal.md): §1, §3,
+[`docs/proposals/inventory-browser-proposal.md`](../../proposals/inventory-browser-proposal.md): §1, §3,
 §4 and §8 step 0 closely, §10 for context. Every decision in §10 was taken on 2026-11-05; do not
 reopen them.
 

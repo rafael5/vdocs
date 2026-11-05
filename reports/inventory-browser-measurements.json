@@ -1,0 +1,3133 @@
+{
+  "details": {
+    "dispositions": {
+      "covered-by-other-format": 2913,
+      "excluded": 1656,
+      "held": 1283,
+      "not-vista": 3228,
+      "undecided": 0,
+      "unreachable": 0
+    },
+    "dup_links": [
+      {
+        "doc_codes": 2,
+        "doc_url": "https://www.va.gov/vdl/documents/Financial_Admin/CAPRI/DVBA_UM.docx",
+        "identical": false,
+        "listings": 3,
+        "titles": 3
+      },
+      {
+        "doc_codes": 2,
+        "doc_url": "https://www.va.gov/vdl/documents/Financial_Admin/CAPRI/DVBA_UM.pdf",
+        "identical": false,
+        "listings": 3,
+        "titles": 3
+      },
+      {
+        "doc_codes": 1,
+        "doc_url": "https://www.va.gov/vdl/documents/Financial_Admin/Accounts_Receivable_(AR)/prca_4_5_p455_dibr.docx",
+        "identical": true,
+        "listings": 2,
+        "titles": 1
+      },
+      {
+        "doc_codes": 1,
+        "doc_url": "https://www.va.gov/vdl/documents/Clinical/Scheduling_Archive/VSE_GUI_2_0_0_14_Action_Item_Install.docx",
+        "identical": true,
+        "listings": 2,
+        "titles": 1
+      },
+      {
+        "doc_codes": 1,
+        "doc_url": "https://www.va.gov/vdl/documents/Clinical/Scheduling_Archive/VSE_GUI_2_0_0_14_Action_Item_Install.pdf",
+        "identical": true,
+        "listings": 2,
+        "titles": 1
+      }
+    ],
+    "facet_without_value": {
+      "App user": 2323,
+      "Audience": 2285,
+      "Domain": 2305
+    },
+    "gold_only": [
+      {
+        "doc_id": "ADT:iss_release_1_11_11_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "ADT:iss_release_1_12_0_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "ADT:iss_release_1_13_3_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "ADT:iss_release_1_14_1_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "ADT:iss_release_1_15_4_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "ADT:iss_release_1_16_1_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "ADT:iss_release_1_17_2_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "ADT:iss_release_1_18_10_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "ADT:iss_release_1_19_1_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "ADT:iss_release_1_21_2_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "ADT:iss_release_1_22_3_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "ADT:iss_release_1_5_4_0_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "ADT:iss_release_1_7_1_0_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "ADT:iss_release_1_8_6_0_user_guide",
+        "listed_under": [
+          "SD"
+        ]
+      },
+      {
+        "doc_id": "PSS:pss_1_dosing_ord_ck_um_r0918",
+        "listed_under": []
+      }
+    ],
+    "held_not_in_gold_split": [
+      {
+        "acquisition": "failed",
+        "inventory_status": "failed",
+        "reason": "(kept DOCX)",
+        "records": 5
+      },
+      {
+        "acquisition": "never-attempted",
+        "inventory_status": "not_acquired",
+        "reason": "(kept DOCX)",
+        "records": 52
+      },
+      {
+        "acquisition": "never-attempted",
+        "inventory_status": "not_acquired",
+        "reason": "sole-format",
+        "records": 3
+      },
+      {
+        "acquisition": "bad_content",
+        "inventory_status": "out_of_scope",
+        "reason": "sole-format",
+        "records": 1
+      },
+      {
+        "acquisition": "never-attempted",
+        "inventory_status": "out_of_scope",
+        "reason": "sole-format",
+        "records": 6
+      },
+      {
+        "acquisition": "never-attempted",
+        "inventory_status": "not_acquired",
+        "reason": "sole-survivor",
+        "records": 152
+      }
+    ],
+    "multi_page_links": [
+      {
+        "doc_url": "http://www.benefits.va.gov/milwaukee/docs/SF1199A_Direct_Deposit_Sign_Up_Form.pdf",
+        "noise_type": "vba_form",
+        "pages": 148,
+        "records": 148
+      },
+      {
+        "doc_url": "http://www.vba.va.gov/pubs/forms/VBA-21-2680-ARE.pdf",
+        "noise_type": "vba_form",
+        "pages": 148,
+        "records": 148
+      },
+      {
+        "doc_url": "http://www.vba.va.gov/pubs/forms/VBA-21-4138-ARE.pdf",
+        "noise_type": "vba_form",
+        "pages": 148,
+        "records": 148
+      },
+      {
+        "doc_url": "http://www.vba.va.gov/pubs/forms/VBA-21-526-ARE.pdf",
+        "noise_type": "vba_form",
+        "pages": 148,
+        "records": 148
+      },
+      {
+        "doc_url": "http://www.vba.va.gov/pubs/forms/VBA-21-534-ARE.pdf",
+        "noise_type": "vba_form",
+        "pages": 148,
+        "records": 148
+      },
+      {
+        "doc_url": "http://www.vba.va.gov/pubs/forms/VBA-22-1990-ARE.pdf",
+        "noise_type": "vba_form",
+        "pages": 148,
+        "records": 148
+      },
+      {
+        "doc_url": "http://www.vba.va.gov/pubs/forms/VBA-22-1995-ARE.pdf",
+        "noise_type": "vba_form",
+        "pages": 148,
+        "records": 148
+      },
+      {
+        "doc_url": "http://www.vba.va.gov/pubs/forms/vba-24-0296-are.pdf",
+        "noise_type": "vba_form",
+        "pages": 148,
+        "records": 148
+      },
+      {
+        "doc_url": "https://www.va.gov/op3/docs/StrategicPlanning/VA2014-2020strategicPlan.pdf",
+        "noise_type": "va_ref",
+        "pages": 148,
+        "records": 148
+      }
+    ],
+    "namespace_differs": [
+      {
+        "doc_id": "CPRS:cprslmtm",
+        "gold": "OR",
+        "inventory": "CPRS",
+        "records": 2
+      },
+      {
+        "doc_id": "POC:lab_poc_iug",
+        "gold": "LA",
+        "inventory": "POC",
+        "records": 2
+      }
+    ],
+    "namespace_pairs_inventory": [
+      {
+        "application": "Quality Audiology and Speech Analysis and Reporting (QUASAR)",
+        "namespace": "ACKQ",
+        "package_file": "QUASAR"
+      },
+      {
+        "application": "Network Health Exchange (NHE)",
+        "namespace": "AFJX",
+        "package_file": "NETWORK HEALTH EXCHANGE"
+      },
+      {
+        "application": "Visual Impairment Service Team (VIST)",
+        "namespace": "ANRV",
+        "package_file": "VISUAL IMPAIRMENT SERVICE TEAM"
+      },
+      {
+        "application": "Incomplete Records Tracking (IRT)",
+        "namespace": "DGJ",
+        "package_file": "INCOMPLETE RECORDS TRACKING"
+      },
+      {
+        "application": "FileMan",
+        "namespace": "DI",
+        "package_file": "VA FILEMAN"
+      },
+      {
+        "application": "Automated Medical Information Exchange (AMIE)",
+        "namespace": "DVBA",
+        "package_file": "AUTOMATED MED INFO EXCHANGE"
+      },
+      {
+        "application": "Event Capture System (ECS)",
+        "namespace": "EC",
+        "package_file": "EVENT CAPTURE"
+      },
+      {
+        "application": "Decision Support System (DSS) Extracts",
+        "namespace": "ECX",
+        "package_file": "DSS EXTRACTS"
+      },
+      {
+        "application": "Engineering (AEMS / MERS)",
+        "namespace": "EN",
+        "package_file": "ENGINEERING"
+      },
+      {
+        "application": "Police and Security",
+        "namespace": "ES",
+        "package_file": "POLICE & SECURITY"
+      },
+      {
+        "application": "Enterprise Terminology Service",
+        "namespace": "ETS",
+        "package_file": "ENTERPRISE TERMINOLOGY SERVICES"
+      },
+      {
+        "application": "Nutrition and Food Service",
+        "namespace": "FH",
+        "package_file": "DIETETICS"
+      },
+      {
+        "application": "CPRS: Problem List",
+        "namespace": "GMPL",
+        "package_file": "PROBLEM LIST"
+      },
+      {
+        "application": "CPRS: Adverse Reaction Tracking (ART)",
+        "namespace": "GMRA",
+        "package_file": "ADVERSE REACTION TRACKING"
+      },
+      {
+        "application": "CPRS: Consult/Request Tracking",
+        "namespace": "GMRC",
+        "package_file": "CONSULT/REQUEST TRACKING"
+      },
+      {
+        "application": "Vitals/Measurements",
+        "namespace": "GMRV",
+        "package_file": "GEN. MED. REC. - VITALS"
+      },
+      {
+        "application": "CPRS: Health Summary",
+        "namespace": "GMTS",
+        "package_file": "HEALTH SUMMARY"
+      },
+      {
+        "application": "Automated Information Collection System (AICS)",
+        "namespace": "IBD",
+        "package_file": "AUTOMATED INFO COLLECTION SYS"
+      },
+      {
+        "application": "ICD-9-CM",
+        "namespace": "ICD",
+        "package_file": "DRG GROUPER"
+      },
+      {
+        "application": "Joint Longitudinal Viewer",
+        "namespace": "JLV",
+        "package_file": "JOINT LEGACY VIEWER"
+      },
+      {
+        "application": "Laboratory: Universal Interface",
+        "namespace": "LA",
+        "package_file": "AUTOMATED LAB INSTRUMENTS"
+      },
+      {
+        "application": "Laboratory",
+        "namespace": "LR",
+        "package_file": "LAB SERVICE"
+      },
+      {
+        "application": "VistA Imaging System",
+        "namespace": "MAG",
+        "package_file": "IMAGING"
+      },
+      {
+        "application": "Methicillin Resistant Staph Aureus (MRSA)",
+        "namespace": "MMRS",
+        "package_file": "MRSA INITIATIVE REPORTS"
+      },
+      {
+        "application": "Master Patient Index",
+        "namespace": "MPIF",
+        "package_file": "MASTER PATIENT INDEX VISTA"
+      },
+      {
+        "application": "Nationwide Health Information Network Adapter",
+        "namespace": "NHIN",
+        "package_file": "NATIONAL HEALTH INFORMATION NETWORK"
+      },
+      {
+        "application": "Patient Assessment Documentation Package (PADP)",
+        "namespace": "NUPA",
+        "package_file": "PATIENT ASSESSMENT DOCUMENTATION"
+      },
+      {
+        "application": "Nursing",
+        "namespace": "NUR",
+        "package_file": "NURSING SERVICE"
+      },
+      {
+        "application": "Registry: Oncology",
+        "namespace": "ONC",
+        "package_file": "ONCOLOGY"
+      },
+      {
+        "application": "Automated Safety Incident Surveillance Tracking System",
+        "namespace": "OOPS",
+        "package_file": "ASISTS"
+      },
+      {
+        "application": "Order Entry / CPRS",
+        "namespace": "OR",
+        "package_file": "ORDER ENTRY/RESULTS REPORTING"
+      },
+      {
+        "application": "Accounts Receivable (AR)",
+        "namespace": "PRCA",
+        "package_file": "ACCOUNTS RECEIVABLE"
+      },
+      {
+        "application": "Equipment / Turn-In Request",
+        "namespace": "PRCN",
+        "package_file": "EQUIPMENT/TURN-IN REQUIEST"
+      },
+      {
+        "application": "Pharmacy: Advanced Medication Platform",
+        "namespace": "PREA",
+        "package_file": "ADVANCED MEDICATION PLATFORM"
+      },
+      {
+        "application": "Personnel and Accounting Integrated Data (PAID)",
+        "namespace": "PRS",
+        "package_file": "PAID"
+      },
+      {
+        "application": "Pharmacy: Drug Accountability",
+        "namespace": "PSA",
+        "package_file": "DRUG ACCOUNTABILITY"
+      },
+      {
+        "application": "Pharmacy: Bar Code Medication Administration (BCMA)",
+        "namespace": "PSB",
+        "package_file": "BAR CODE MED ADMIN"
+      },
+      {
+        "application": "Pharmacy: Controlled Substances",
+        "namespace": "PSD",
+        "package_file": "CONTROLLED SUBSTANCES"
+      },
+      {
+        "application": "Pharmacy: Inpatient Medications",
+        "namespace": "PSJ",
+        "package_file": "INPATIENT MEDICATIONS"
+      },
+      {
+        "application": "Pharmacy: National Drug File (NDF)",
+        "namespace": "PSN",
+        "package_file": "NATIONAL DRUG FILE"
+      },
+      {
+        "application": "Pharmacy: Outpatient Pharmacy",
+        "namespace": "PSO",
+        "package_file": "OUTPATIENT PHARMACY"
+      },
+      {
+        "application": "Pharmacy: Consolidated Mail Outpatient Pharmacy",
+        "namespace": "PSX",
+        "package_file": "CMOP"
+      },
+      {
+        "application": "Patient Care Encounter (PCE)",
+        "namespace": "PX",
+        "package_file": "PCE PATIENT CARE ENCOUNTER"
+      },
+      {
+        "application": "Patient Advocate Tracking System (PATS)",
+        "namespace": "QAC",
+        "package_file": "PATIENT REPRESENTATIVE"
+      },
+      {
+        "application": "Registry: Clinical Case (CCR)",
+        "namespace": "ROR",
+        "package_file": "CLINICAL CASE REGISTRIES"
+      },
+      {
+        "application": "Spinal Cord Injury and Disorders Outcomes (SCIDO)",
+        "namespace": "SPN",
+        "package_file": "SPINAL CORD DYSFUNCTION"
+      },
+      {
+        "application": "CPRS: Text Integration Utility",
+        "namespace": "TIU",
+        "package_file": "TEXT INTEGRATION UTILITIES"
+      },
+      {
+        "application": "Patient Data Exchange (PDX)",
+        "namespace": "VAQ",
+        "package_file": "PATIENT DATA EXCHANGE"
+      },
+      {
+        "application": "VistA Data Extraction Framework",
+        "namespace": "VDEF",
+        "package_file": "VDEF"
+      },
+      {
+        "application": "VistA Integration Adapter (VIA)",
+        "namespace": "VIAB",
+        "package_file": "VISTA INTEGRATION ADAPTER"
+      },
+      {
+        "application": "VHA Point of Service (Kiosks)",
+        "namespace": "VPS",
+        "package_file": "VA POINT OF SERVICE"
+      },
+      {
+        "application": "Web VistA Remote Access Mgmt (WEBVRAM)",
+        "namespace": "WEBG",
+        "package_file": "WEBVRAM"
+      },
+      {
+        "application": "Wounded Ill and Injured Warriors",
+        "namespace": "WII",
+        "package_file": "WOUNDED INJURED & ILL WARRIORS"
+      },
+      {
+        "application": "Electronic Signature (ESig)",
+        "namespace": "XOBE",
+        "package_file": "ELECTRONIC SIGNATURE"
+      },
+      {
+        "application": "HealtheVet Web Services Client (HWSC)",
+        "namespace": "XOBW",
+        "package_file": "WEB SERVICES CLIENT"
+      },
+      {
+        "application": "Kernel Toolkit",
+        "namespace": "XT",
+        "package_file": "TOOLKIT"
+      },
+      {
+        "application": "Remote Procedure Call (RPC) Broker",
+        "namespace": "XWB",
+        "package_file": "RPC BROKER"
+      }
+    ],
+    "namespace_pairs_library": [
+      {
+        "library_today": "Quality Audiology and Speech Analysis and Reporting (QUASAR)",
+        "namespace": "ACKQ",
+        "package_file": "QUASAR"
+      },
+      {
+        "library_today": "Visual Impairment Service Team (VIST)",
+        "namespace": "ANRV",
+        "package_file": "VISUAL IMPAIRMENT SERVICE TEAM"
+      },
+      {
+        "library_today": "Incomplete Records Tracking (IRT)",
+        "namespace": "DGJ",
+        "package_file": "INCOMPLETE RECORDS TRACKING"
+      },
+      {
+        "library_today": "FileMan",
+        "namespace": "DI",
+        "package_file": "VA FILEMAN"
+      },
+      {
+        "library_today": "Automated Medical Information Exchange (AMIE)",
+        "namespace": "DVBA",
+        "package_file": "AUTOMATED MED INFO EXCHANGE"
+      },
+      {
+        "library_today": "Event Capture System (ECS)",
+        "namespace": "EC",
+        "package_file": "EVENT CAPTURE"
+      },
+      {
+        "library_today": "Decision Support System (DSS) Extracts",
+        "namespace": "ECX",
+        "package_file": "DSS EXTRACTS"
+      },
+      {
+        "library_today": "Engineering (AEMS / MERS)",
+        "namespace": "EN",
+        "package_file": "ENGINEERING"
+      },
+      {
+        "library_today": "Nutrition and Food Service",
+        "namespace": "FH",
+        "package_file": "DIETETICS"
+      },
+      {
+        "library_today": "CPRS: Problem List",
+        "namespace": "GMPL",
+        "package_file": "PROBLEM LIST"
+      },
+      {
+        "library_today": "CPRS: Adverse Reaction Tracking (ART)",
+        "namespace": "GMRA",
+        "package_file": "ADVERSE REACTION TRACKING"
+      },
+      {
+        "library_today": "CPRS: Consult/Request Tracking",
+        "namespace": "GMRC",
+        "package_file": "CONSULT/REQUEST TRACKING"
+      },
+      {
+        "library_today": "Vitals/Measurements",
+        "namespace": "GMRV",
+        "package_file": "GEN. MED. REC. - VITALS"
+      },
+      {
+        "library_today": "CPRS: Health Summary",
+        "namespace": "GMTS",
+        "package_file": "HEALTH SUMMARY"
+      },
+      {
+        "library_today": "Automated Information Collection System (AICS)",
+        "namespace": "IBD",
+        "package_file": "AUTOMATED INFO COLLECTION SYS"
+      },
+      {
+        "library_today": "Laboratory: Universal Interface",
+        "namespace": "LA",
+        "package_file": "AUTOMATED LAB INSTRUMENTS"
+      },
+      {
+        "library_today": "Laboratory",
+        "namespace": "LR",
+        "package_file": "LAB SERVICE"
+      },
+      {
+        "library_today": "VistA Imaging System",
+        "namespace": "MAG",
+        "package_file": "IMAGING"
+      },
+      {
+        "library_today": "Methicillin Resistant Staph Aureus (MRSA)",
+        "namespace": "MMRS",
+        "package_file": "MRSA INITIATIVE REPORTS"
+      },
+      {
+        "library_today": "Master Patient Index",
+        "namespace": "MPIF",
+        "package_file": "MASTER PATIENT INDEX VISTA"
+      },
+      {
+        "library_today": "Patient Assessment Documentation Package (PADP)",
+        "namespace": "NUPA",
+        "package_file": "PATIENT ASSESSMENT DOCUMENTATION"
+      },
+      {
+        "library_today": "Nursing",
+        "namespace": "NUR",
+        "package_file": "NURSING SERVICE"
+      },
+      {
+        "library_today": "Registry: Oncology",
+        "namespace": "ONC",
+        "package_file": "ONCOLOGY"
+      },
+      {
+        "library_today": "Automated Safety Incident Surveillance Tracking System",
+        "namespace": "OOPS",
+        "package_file": "ASISTS"
+      },
+      {
+        "library_today": "Order Entry / CPRS",
+        "namespace": "OR",
+        "package_file": "ORDER ENTRY/RESULTS REPORTING"
+      },
+      {
+        "library_today": "Accounts Receivable (AR)",
+        "namespace": "PRCA",
+        "package_file": "ACCOUNTS RECEIVABLE"
+      },
+      {
+        "library_today": "Equipment / Turn-In Request",
+        "namespace": "PRCN",
+        "package_file": "EQUIPMENT/TURN-IN REQUIEST"
+      },
+      {
+        "library_today": "Pharmacy: Advanced Medication Platform",
+        "namespace": "PREA",
+        "package_file": "ADVANCED MEDICATION PLATFORM"
+      },
+      {
+        "library_today": "Personnel and Accounting Integrated Data (PAID)",
+        "namespace": "PRS",
+        "package_file": "PAID"
+      },
+      {
+        "library_today": "Pharmacy: Drug Accountability",
+        "namespace": "PSA",
+        "package_file": "DRUG ACCOUNTABILITY"
+      },
+      {
+        "library_today": "Pharmacy: Bar Code Medication Administration (BCMA)",
+        "namespace": "PSB",
+        "package_file": "BAR CODE MED ADMIN"
+      },
+      {
+        "library_today": "Pharmacy: Controlled Substances",
+        "namespace": "PSD",
+        "package_file": "CONTROLLED SUBSTANCES"
+      },
+      {
+        "library_today": "Pharmacy: Inpatient Medications",
+        "namespace": "PSJ",
+        "package_file": "INPATIENT MEDICATIONS"
+      },
+      {
+        "library_today": "Pharmacy: National Drug File (NDF)",
+        "namespace": "PSN",
+        "package_file": "NATIONAL DRUG FILE"
+      },
+      {
+        "library_today": "Pharmacy: Outpatient Pharmacy",
+        "namespace": "PSO",
+        "package_file": "OUTPATIENT PHARMACY"
+      },
+      {
+        "library_today": "Pharmacy: Consolidated Mail Outpatient Pharmacy",
+        "namespace": "PSX",
+        "package_file": "CMOP"
+      },
+      {
+        "library_today": "Patient Care Encounter (PCE)",
+        "namespace": "PX",
+        "package_file": "PCE PATIENT CARE ENCOUNTER"
+      },
+      {
+        "library_today": "Patient Advocate Tracking System (PATS)",
+        "namespace": "QAC",
+        "package_file": "PATIENT REPRESENTATIVE"
+      },
+      {
+        "library_today": "Registry: Clinical Case (CCR)",
+        "namespace": "ROR",
+        "package_file": "CLINICAL CASE REGISTRIES"
+      },
+      {
+        "library_today": "Spinal Cord Injury and Disorders Outcomes (SCIDO)",
+        "namespace": "SPN",
+        "package_file": "SPINAL CORD DYSFUNCTION"
+      },
+      {
+        "library_today": "CPRS: Text Integration Utility",
+        "namespace": "TIU",
+        "package_file": "TEXT INTEGRATION UTILITIES"
+      },
+      {
+        "library_today": "Patient Data Exchange (PDX)",
+        "namespace": "VAQ",
+        "package_file": "PATIENT DATA EXCHANGE"
+      },
+      {
+        "library_today": "VistA Data Extraction Framework",
+        "namespace": "VDEF",
+        "package_file": "VDEF"
+      },
+      {
+        "library_today": "Wounded Ill and Injured Warriors",
+        "namespace": "WII",
+        "package_file": "WOUNDED INJURED & ILL WARRIORS"
+      },
+      {
+        "library_today": "Kernel Toolkit",
+        "namespace": "XT",
+        "package_file": "TOOLKIT"
+      },
+      {
+        "library_today": "Remote Procedure Call (RPC) Broker",
+        "namespace": "XWB",
+        "package_file": "RPC BROKER"
+      }
+    ],
+    "official_date_not_month": [],
+    "package_namespaces_with_several_names": [],
+    "revision_later_than_title": [
+      {
+        "doc_id": "ACKQ:ackq3_0p13_tm",
+        "newest_revision": "2007-07",
+        "title_page": "2005-11"
+      },
+      {
+        "doc_id": "ACKQ:ackq3_0tm",
+        "newest_revision": "2014-08",
+        "title_page": "2000-02"
+      },
+      {
+        "doc_id": "ACKQ:ackq3_0um",
+        "newest_revision": "2014-08",
+        "title_page": "2000-02"
+      },
+      {
+        "doc_id": "ADT:dg_reg_bc_um",
+        "newest_revision": "2025-11",
+        "title_page": "1997-08"
+      },
+      {
+        "doc_id": "AMT:am_oramtm",
+        "newest_revision": "2018-02",
+        "title_page": "2010-03"
+      },
+      {
+        "doc_id": "AMT:am_oramum",
+        "newest_revision": "2024-02",
+        "title_page": "2010-03"
+      },
+      {
+        "doc_id": "ANRV:anrv_5_1_2_um",
+        "newest_revision": "2022-11",
+        "title_page": "2022-08"
+      },
+      {
+        "doc_id": "ANRV:anrv_5_1_6_um",
+        "newest_revision": "2023-02",
+        "title_page": "2022-08"
+      },
+      {
+        "doc_id": "ANRV:br_5_1_user_manual",
+        "newest_revision": "2022-08",
+        "title_page": "1999-09"
+      },
+      {
+        "doc_id": "ANRV:vist_4_tm",
+        "newest_revision": "2003-03",
+        "title_page": "1998-06"
+      },
+      {
+        "doc_id": "ANRV:vist_4_um",
+        "newest_revision": "2004-09",
+        "title_page": "1998-06"
+      },
+      {
+        "doc_id": "AR/WS:wstech",
+        "newest_revision": "2018-04",
+        "title_page": "1994-01"
+      },
+      {
+        "doc_id": "AR/WS:wsuser",
+        "newest_revision": "2018-04",
+        "title_page": "1994-01"
+      },
+      {
+        "doc_id": "ASCD:ascd_px_10_p184_um",
+        "newest_revision": "2007-09",
+        "title_page": "1996-08"
+      },
+      {
+        "doc_id": "CPRS:cprslmum",
+        "newest_revision": "2021-12",
+        "title_page": "2005-03"
+      },
+      {
+        "doc_id": "CRHD:crhdum",
+        "newest_revision": "2017-03",
+        "title_page": "2008-06"
+      },
+      {
+        "doc_id": "DI:fm22_krn8_file_security",
+        "newest_revision": "2025-07",
+        "title_page": "2007-07"
+      },
+      {
+        "doc_id": "DI:fm22_tutorial",
+        "newest_revision": "2006-12",
+        "title_page": "2001-09"
+      },
+      {
+        "doc_id": "DI:scrn_tut",
+        "newest_revision": "2014-08",
+        "title_page": "1996-06"
+      },
+      {
+        "doc_id": "DVBA:rous",
+        "newest_revision": "2009-01",
+        "title_page": "1995-04"
+      },
+      {
+        "doc_id": "EN:eng_tm_en_7_100",
+        "newest_revision": "2017-08",
+        "title_page": "1993-08"
+      },
+      {
+        "doc_id": "EN:engt7_0",
+        "newest_revision": "2008-04",
+        "title_page": "1993-08"
+      },
+      {
+        "doc_id": "FB:arc_iug2",
+        "newest_revision": "2011-12",
+        "title_page": "2011-11"
+      },
+      {
+        "doc_id": "FB:fb_3_5_tm_r1217",
+        "newest_revision": "2018-01",
+        "title_page": "1995-01"
+      },
+      {
+        "doc_id": "FB:fee3_5_um_r1016",
+        "newest_revision": "2016-10",
+        "title_page": "1995-01"
+      },
+      {
+        "doc_id": "FH:fh5_5p8ag",
+        "newest_revision": "2007-09",
+        "title_page": "2005-02"
+      },
+      {
+        "doc_id": "FH:fh5_5p8um",
+        "newest_revision": "2007-09",
+        "title_page": "2005-02"
+      },
+      {
+        "doc_id": "GEN:gcs2sec",
+        "newest_revision": "2004-12",
+        "title_page": "1995-03"
+      },
+      {
+        "doc_id": "GEN:gcs2tech",
+        "newest_revision": "2026-03",
+        "title_page": "1995-03"
+      },
+      {
+        "doc_id": "GEN:gcs2user",
+        "newest_revision": "2025-12",
+        "title_page": "1992-08"
+      },
+      {
+        "doc_id": "GMPL:gmpl_2_0_49_tm",
+        "newest_revision": "2017-12",
+        "title_page": "1994-09"
+      },
+      {
+        "doc_id": "GMRV:vitl5_tm",
+        "newest_revision": "2009-09",
+        "title_page": "2002-10"
+      },
+      {
+        "doc_id": "GMRV:vitl5_um",
+        "newest_revision": "2009-09",
+        "title_page": "2002-10"
+      },
+      {
+        "doc_id": "GMTS:gmts_2_7_p133_um",
+        "newest_revision": "2020-12",
+        "title_page": "2020-03"
+      },
+      {
+        "doc_id": "HBPC:hbh1_tm",
+        "newest_revision": "2014-08",
+        "title_page": "2001-03"
+      },
+      {
+        "doc_id": "HBPC:hbh1_um",
+        "newest_revision": "2015-05",
+        "title_page": "2001-03"
+      },
+      {
+        "doc_id": "HBPC:hbh_sg",
+        "newest_revision": "2021-08",
+        "title_page": "1993-11"
+      },
+      {
+        "doc_id": "HBPC:hbh_tm",
+        "newest_revision": "2021-08",
+        "title_page": "2001-03"
+      },
+      {
+        "doc_id": "HBPC:hbh_um",
+        "newest_revision": "2021-08",
+        "title_page": "2001-03"
+      },
+      {
+        "doc_id": "HBPC:hbhc_sg",
+        "newest_revision": "2009-08",
+        "title_page": "1993-11"
+      },
+      {
+        "doc_id": "IB:ib_20_p433_sg_cp",
+        "newest_revision": "2011-05",
+        "title_page": "1994-03"
+      },
+      {
+        "doc_id": "IB:ib_2_0_ct_ug",
+        "newest_revision": "2025-04",
+        "title_page": "2016-09"
+      },
+      {
+        "doc_id": "IB:ib_2_0_edi_ug",
+        "newest_revision": "2026-04",
+        "title_page": "2005-08"
+      },
+      {
+        "doc_id": "IB:ib_2_0_eiv_iiu_tm",
+        "newest_revision": "2026-05",
+        "title_page": "2003-09"
+      },
+      {
+        "doc_id": "IB:ib_2_0_eiv_iiu_ug",
+        "newest_revision": "2026-05",
+        "title_page": "2003-09"
+      },
+      {
+        "doc_id": "IB:ib_2_0_p568_ct_ug",
+        "newest_revision": "2018-05",
+        "title_page": "2016-09"
+      },
+      {
+        "doc_id": "IBD:aics_3_0tm",
+        "newest_revision": "2014-04",
+        "title_page": "1997-04"
+      },
+      {
+        "doc_id": "IBD:aics_3_0um",
+        "newest_revision": "2014-04",
+        "title_page": "1997-04"
+      },
+      {
+        "doc_id": "IVMB:ivmb_2_p601_tm",
+        "newest_revision": "2002-03",
+        "title_page": "2001-11"
+      },
+      {
+        "doc_id": "KMPR:kmpr2_0tm",
+        "newest_revision": "2005-01",
+        "title_page": "2003-06"
+      },
+      {
+        "doc_id": "KMPR:kmpr2_0um",
+        "newest_revision": "2005-01",
+        "title_page": "2003-06"
+      },
+      {
+        "doc_id": "LEDI:lab_ledi_iv_um_update",
+        "newest_revision": "2018-06",
+        "title_page": "2013-08"
+      },
+      {
+        "doc_id": "LR:apump422",
+        "newest_revision": "2014-08",
+        "title_page": "1994-10"
+      },
+      {
+        "doc_id": "LR:lab_5_2_422_um",
+        "newest_revision": "2014-08",
+        "title_page": "2004-05"
+      },
+      {
+        "doc_id": "LR:lab_5_2_p422_ug",
+        "newest_revision": "2014-08",
+        "title_page": "2007-05"
+      },
+      {
+        "doc_id": "LR:lab_lr_5_2_422_ug",
+        "newest_revision": "2014-08",
+        "title_page": "2008-08"
+      },
+      {
+        "doc_id": "MC:mc_2_3tm",
+        "newest_revision": "2014-07",
+        "title_page": "1996-09"
+      },
+      {
+        "doc_id": "MC:mc_2_3um",
+        "newest_revision": "2014-07",
+        "title_page": "1996-09"
+      },
+      {
+        "doc_id": "MD:clinproc1_tm",
+        "newest_revision": "2018-12",
+        "title_page": "2004-04"
+      },
+      {
+        "doc_id": "MD:md_1_p12_tm",
+        "newest_revision": "2010-05",
+        "title_page": "2004-04"
+      },
+      {
+        "doc_id": "MD:md_1_p16_tm",
+        "newest_revision": "2010-05",
+        "title_page": "2004-04"
+      },
+      {
+        "doc_id": "MD:md_1_p23_tm",
+        "newest_revision": "2010-05",
+        "title_page": "2004-04"
+      },
+      {
+        "doc_id": "MD:md_1_p6_um",
+        "newest_revision": "2017-03",
+        "title_page": "2008-05"
+      },
+      {
+        "doc_id": "MD:md_1_um",
+        "newest_revision": "2014-08",
+        "title_page": "2008-05"
+      },
+      {
+        "doc_id": "MMRS:mrsa1_0_tm",
+        "newest_revision": "2010-07",
+        "title_page": "2010-01"
+      },
+      {
+        "doc_id": "MMRS:mrsa1_0_um",
+        "newest_revision": "2010-07",
+        "title_page": "2010-01"
+      },
+      {
+        "doc_id": "MPIF:mpif_1_0is",
+        "newest_revision": "2019-03",
+        "title_page": "1999-04"
+      },
+      {
+        "doc_id": "MPIF:rg1_0_pm",
+        "newest_revision": "2018-11",
+        "title_page": "1999-04"
+      },
+      {
+        "doc_id": "MPIF:rg1_0_tm",
+        "newest_revision": "2018-11",
+        "title_page": "1999-04"
+      },
+      {
+        "doc_id": "MPIF:rg1_0_um",
+        "newest_revision": "2018-11",
+        "title_page": "1999-04"
+      },
+      {
+        "doc_id": "MPIF:xt_73_p113_tm_r",
+        "newest_revision": "2009-11",
+        "title_page": "1998-04"
+      },
+      {
+        "doc_id": "MPIF:xt_73_p125_tm_r",
+        "newest_revision": "2010-12",
+        "title_page": "1998-04"
+      },
+      {
+        "doc_id": "MPIF:xt_73_um_r",
+        "newest_revision": "2015-01",
+        "title_page": "1998-04"
+      },
+      {
+        "doc_id": "ONC:onc_2_2_tm",
+        "newest_revision": "2025-09",
+        "title_page": "2014-06"
+      },
+      {
+        "doc_id": "ONC:onc_2_2_um",
+        "newest_revision": "2025-09",
+        "title_page": "2014-06"
+      },
+      {
+        "doc_id": "OOPS:oops2_0security_guide",
+        "newest_revision": "2008-09",
+        "title_page": "2002-06"
+      },
+      {
+        "doc_id": "OOPS:oops2_0tm",
+        "newest_revision": "2018-12",
+        "title_page": "2002-06"
+      },
+      {
+        "doc_id": "OOPS:oops2_0um",
+        "newest_revision": "2018-12",
+        "title_page": "2002-06"
+      },
+      {
+        "doc_id": "PCMM:pcmmmhtcug",
+        "newest_revision": "2012-12",
+        "title_page": "2012-01"
+      },
+      {
+        "doc_id": "PCMM:pcmmug",
+        "newest_revision": "2015-06",
+        "title_page": "1999-09"
+      },
+      {
+        "doc_id": "POC:lab_52_poc_hl7_spec",
+        "newest_revision": "2005-08",
+        "title_page": "2005-06"
+      },
+      {
+        "doc_id": "PRC:ifcp5_1requisition_clerk",
+        "newest_revision": "2011-10",
+        "title_page": "2000-10"
+      },
+      {
+        "doc_id": "PRC:ifcp5_1security_guide",
+        "newest_revision": "2014-04",
+        "title_page": "2000-10"
+      },
+      {
+        "doc_id": "PRC:ifcp5_1tech_manual",
+        "newest_revision": "2022-04",
+        "title_page": "2000-10"
+      },
+      {
+        "doc_id": "PRCA:icd_10_um_tp_4_5_281",
+        "newest_revision": "2014-09",
+        "title_page": "1995-03"
+      },
+      {
+        "doc_id": "PRCN:prcn_1_tm",
+        "newest_revision": "2004-12",
+        "title_page": "1996-06"
+      },
+      {
+        "doc_id": "PRCN:prcn_1_um",
+        "newest_revision": "2004-12",
+        "title_page": "1996-06"
+      },
+      {
+        "doc_id": "PRPF:pfop_clerks",
+        "newest_revision": "2018-08",
+        "title_page": "1989-02"
+      },
+      {
+        "doc_id": "PRPF:pfop_sup",
+        "newest_revision": "2018-08",
+        "title_page": "1989-02"
+      },
+      {
+        "doc_id": "PRPF:pfop_tech",
+        "newest_revision": "2006-03",
+        "title_page": "1989-02"
+      },
+      {
+        "doc_id": "PRS:paid_tm",
+        "newest_revision": "2018-03",
+        "title_page": "1995-08"
+      },
+      {
+        "doc_id": "PSA:psa_3_p85_um",
+        "newest_revision": "2024-05",
+        "title_page": "1997-10"
+      },
+      {
+        "doc_id": "PSA:psa_3_tm_r0509",
+        "newest_revision": "2009-05",
+        "title_page": "1997-10"
+      },
+      {
+        "doc_id": "PSA:psa_3_um",
+        "newest_revision": "2025-01",
+        "title_page": "1997-10"
+      },
+      {
+        "doc_id": "PSB:psb_3_0_p106_pharm_chui_um",
+        "newest_revision": "2021-07",
+        "title_page": "2004-02"
+      },
+      {
+        "doc_id": "PSB:psb_3_0_p131_tm",
+        "newest_revision": "2021-10",
+        "title_page": "2004-02"
+      },
+      {
+        "doc_id": "PSB:psb_3_man_um",
+        "newest_revision": "2023-08",
+        "title_page": "2004-02"
+      },
+      {
+        "doc_id": "PSB:psb_3_p2_chui_um_cp",
+        "newest_revision": "2008-03",
+        "title_page": "2004-02"
+      },
+      {
+        "doc_id": "PSB:psb_3_p2_tm_cp",
+        "newest_revision": "2008-03",
+        "title_page": "2004-02"
+      },
+      {
+        "doc_id": "PSB:psb_3_p32_tm_cp",
+        "newest_revision": "2007-09",
+        "title_page": "2004-02"
+      },
+      {
+        "doc_id": "PSB:psb_3_p42_man_um_cp",
+        "newest_revision": "2011-01",
+        "title_page": "2004-02"
+      },
+      {
+        "doc_id": "PSB:psb_3_p47_man_um_cp",
+        "newest_revision": "2009-10",
+        "title_page": "2004-02"
+      },
+      {
+        "doc_id": "PSB:psb_3_p58_man_um_cp",
+        "newest_revision": "2012-01",
+        "title_page": "2004-02"
+      },
+      {
+        "doc_id": "PSB:psb_3_p68_man_um_cp",
+        "newest_revision": "2012-09",
+        "title_page": "2004-02"
+      },
+      {
+        "doc_id": "PSB:psb_3_tm",
+        "newest_revision": "2023-08",
+        "title_page": "2004-02"
+      },
+      {
+        "doc_id": "PSB:psb_3_um_nurse_chui_r1216",
+        "newest_revision": "2016-11",
+        "title_page": "2004-02"
+      },
+      {
+        "doc_id": "PSD:psd_3_cssecuri_r0618",
+        "newest_revision": "2018-06",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_insp_um_r0618",
+        "newest_revision": "2018-06",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p64_tm_cp",
+        "newest_revision": "2008-08",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p69_insp_um_cp",
+        "newest_revision": "2010-05",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p69_tm_cp",
+        "newest_revision": "2010-05",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p69_um_supv_cp",
+        "newest_revision": "2010-05",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p71_cspharm_cp",
+        "newest_revision": "2011-04",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p71_cssecuri_cp",
+        "newest_revision": "2011-04",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p71_insp_um_cp",
+        "newest_revision": "2011-04",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p71_nurse_um_cp",
+        "newest_revision": "2011-04",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p71_tm_cp",
+        "newest_revision": "2011-04",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p71_um_supv_cp",
+        "newest_revision": "2011-04",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p73_tm_cp",
+        "newest_revision": "2013-05",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p73_um_supv_cp",
+        "newest_revision": "2013-05",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p76_cspharm_cp",
+        "newest_revision": "2013-05",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p76_cssecuri_cp",
+        "newest_revision": "2013-05",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p76_insp_um_cp",
+        "newest_revision": "2013-05",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p76_nurse_um_cp",
+        "newest_revision": "2013-05",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p76_tm_cp",
+        "newest_revision": "2013-05",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p76_um_supv_cp",
+        "newest_revision": "2013-05",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p89_tm",
+        "newest_revision": "2021-11",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_p89_um_supv",
+        "newest_revision": "2021-11",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_pharm_um",
+        "newest_revision": "2022-05",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_pharm_um_r1118",
+        "newest_revision": "2018-11",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_tm_r1118",
+        "newest_revision": "2018-11",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSD:psd_3_um_supv_r1118",
+        "newest_revision": "2018-11",
+        "title_page": "1997-03"
+      },
+      {
+        "doc_id": "PSJ:psj_5_0_319_supervisor_um",
+        "newest_revision": "2020-09",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_0_nurse_um",
+        "newest_revision": "2025-05",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_0_p319_tm",
+        "newest_revision": "2021-07",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_0_p364_nurse_um",
+        "newest_revision": "2021-07",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_0_p364_phar_um",
+        "newest_revision": "2021-07",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_0_p399_nurse_um",
+        "newest_revision": "2022-09",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_0_p399_phar_um",
+        "newest_revision": "2022-09",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_0_p399_tm",
+        "newest_revision": "2022-09",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_0_p447_nurse_um",
+        "newest_revision": "2025-08",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_0_p447_supr_um",
+        "newest_revision": "2025-08",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_0_p447_tm",
+        "newest_revision": "2025-08",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_0_supr_um",
+        "newest_revision": "2025-05",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_0_tm",
+        "newest_revision": "2025-03",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_226_tm_cp",
+        "newest_revision": "2011-02",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_nurse_um",
+        "newest_revision": "2025-05",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p113_nurse_cp",
+        "newest_revision": "2010-06",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p113_phar_cp",
+        "newest_revision": "2010-06",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p113_tm_cp",
+        "newest_revision": "2010-06",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p120_nurse_um_cp",
+        "newest_revision": "2007-05",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p120_phar_um_cp",
+        "newest_revision": "2007-05",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p120_supr_um_cp",
+        "newest_revision": "2007-05",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p134_nurse_um_cp",
+        "newest_revision": "2008-08",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p134_phar_um_cp",
+        "newest_revision": "2008-08",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p134_tm_cp",
+        "newest_revision": "2008-08",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p145_nurse_um_cp",
+        "newest_revision": "2007-07",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p145_phar_um_cp",
+        "newest_revision": "2007-07",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p175_p160_nurse_um_cp",
+        "newest_revision": "2007-10",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p175_p160_phar_um_cp",
+        "newest_revision": "2007-10",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p178_tm_cp",
+        "newest_revision": "2007-02",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p181_nurse_um_cp",
+        "newest_revision": "2011-04",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p181_phar_um_cp",
+        "newest_revision": "2011-04",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p181_tm_cp",
+        "newest_revision": "2011-04",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p196_nurse_um_cp",
+        "newest_revision": "2009-02",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p196_phar_um_cp",
+        "newest_revision": "2009-02",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p214_supr_um_cp",
+        "newest_revision": "2010-02",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p214_tm_cp",
+        "newest_revision": "2010-02",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p215_nurse_um_cp",
+        "newest_revision": "2009-07",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p215_phar_um_cp",
+        "newest_revision": "2009-07",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p222_nurse_um_cp",
+        "newest_revision": "2009-12",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p222_phar_um_cp",
+        "newest_revision": "2009-12",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p222_tm_cp",
+        "newest_revision": "2009-12",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p232_phar_um_cp",
+        "newest_revision": "2010-09",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p235_nurse_um_cp",
+        "newest_revision": "2011-09",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p235_phar_um_cp",
+        "newest_revision": "2011-09",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p243_phar_um_cp",
+        "newest_revision": "2011-07",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p254_nurse_um_cp",
+        "newest_revision": "2012-01",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p254_phar_um_cp",
+        "newest_revision": "2012-01",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p254_tm_cp",
+        "newest_revision": "2012-01",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p260_p268_nurse_um_cp",
+        "newest_revision": "2013-01",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p260_p268_phar_um_cp",
+        "newest_revision": "2013-01",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p260_p268_supr_um_cp",
+        "newest_revision": "2013-01",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p260_p268_tm_cp",
+        "newest_revision": "2013-01",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p267_nurse_um_cp",
+        "newest_revision": "2012-09",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p267_phar_um_cp",
+        "newest_revision": "2012-09",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p267_tm_cp",
+        "newest_revision": "2012-09",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p275_nurse_um_cp",
+        "newest_revision": "2013-04",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p275_phar_um_cp",
+        "newest_revision": "2013-04",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p275_tm_cp",
+        "newest_revision": "2013-04",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p279_nurse_um_cp",
+        "newest_revision": "2013-12",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p279_phar_um_cp",
+        "newest_revision": "2013-12",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p279_supr_um_cp",
+        "newest_revision": "2013-12",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p279_tm_cp",
+        "newest_revision": "2013-12",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_p284_tm_cp",
+        "newest_revision": "2012-12",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_supr_um",
+        "newest_revision": "2025-05",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSJ:psj_5_tm",
+        "newest_revision": "2025-03",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSN:psn_4_p108_tm_cp",
+        "newest_revision": "2010-05",
+        "title_page": "1998-10"
+      },
+      {
+        "doc_id": "PSN:psn_4_p169_tm_cp",
+        "newest_revision": "2009-02",
+        "title_page": "1998-10"
+      },
+      {
+        "doc_id": "PSN:psn_4_p576_tm_r",
+        "newest_revision": "2025-08",
+        "title_page": "1998-10"
+      },
+      {
+        "doc_id": "PSN:psn_4_p576_um_r",
+        "newest_revision": "2025-08",
+        "title_page": "1998-10"
+      },
+      {
+        "doc_id": "PSN:psn_4_tm",
+        "newest_revision": "2024-07",
+        "title_page": "1998-10"
+      },
+      {
+        "doc_id": "PSN:psn_4_tm_r",
+        "newest_revision": "2024-07",
+        "title_page": "1998-10"
+      },
+      {
+        "doc_id": "PSN:psn_4_tm_r0218",
+        "newest_revision": "2017-11",
+        "title_page": "1998-10"
+      },
+      {
+        "doc_id": "PSN:psn_4_um",
+        "newest_revision": "2024-07",
+        "title_page": "1998-10"
+      },
+      {
+        "doc_id": "PSN:psn_4_um_r",
+        "newest_revision": "2024-07",
+        "title_page": "1998-10"
+      },
+      {
+        "doc_id": "PSN:psn_4_um_r0218",
+        "newest_revision": "2017-12",
+        "title_page": "1998-10"
+      },
+      {
+        "doc_id": "PSO:pso_7_0_p532_um",
+        "newest_revision": "2019-02",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_0_p561_tm",
+        "newest_revision": "2021-09",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_0_p617_tm",
+        "newest_revision": "2021-11",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_0_p622_man_um",
+        "newest_revision": "2021-12",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_0_p622_pharm_um",
+        "newest_revision": "2021-09",
+        "title_page": "2007-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_0_p653_man_um",
+        "newest_revision": "2021-12",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_0_p653_pharm_um",
+        "newest_revision": "2021-12",
+        "title_page": "2007-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_0_p770_pharm_um_1",
+        "newest_revision": "2025-07",
+        "title_page": "2007-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_0_tech_um",
+        "newest_revision": "2021-07",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_0_tmsg",
+        "newest_revision": "2022-10",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_man_um",
+        "newest_revision": "2026-01",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_man_um_1",
+        "newest_revision": "2025-08",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_pharm_um",
+        "newest_revision": "2026-01",
+        "title_page": "2007-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_sup_um",
+        "newest_revision": "2023-04",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_tech_p737_um",
+        "newest_revision": "2025-08",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_tech_um",
+        "newest_revision": "2025-05",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_tech_um_1",
+        "newest_revision": "2025-05",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_tm",
+        "newest_revision": "2025-08",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSO:pso_7_tm_sg",
+        "newest_revision": "2025-08",
+        "title_page": "1997-12"
+      },
+      {
+        "doc_id": "PSS:pss_1_0_p187_tm",
+        "newest_revision": "2022-09",
+        "title_page": "2012-06"
+      },
+      {
+        "doc_id": "PSS:pss_1_0_p187_um",
+        "newest_revision": "2022-09",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_0_p247_tm",
+        "newest_revision": "2021-07",
+        "title_page": "2012-06"
+      },
+      {
+        "doc_id": "PSS:pss_1_0_p247_um",
+        "newest_revision": "2021-07",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_0_p252_tm",
+        "newest_revision": "2022-01",
+        "title_page": "2012-06"
+      },
+      {
+        "doc_id": "PSS:pss_1_0_p252_um",
+        "newest_revision": "2022-01",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_0_p254_tm",
+        "newest_revision": "2025-05",
+        "title_page": "2012-06"
+      },
+      {
+        "doc_id": "PSS:pss_1_0_p259_tm",
+        "newest_revision": "2024-03",
+        "title_page": "2012-06"
+      },
+      {
+        "doc_id": "PSS:pss_1_0_p259_um",
+        "newest_revision": "2024-03",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_0_p262_tm",
+        "newest_revision": "2025-08",
+        "title_page": "2012-06"
+      },
+      {
+        "doc_id": "PSS:pss_1_dosing_ord_ck_p262_um",
+        "newest_revision": "2025-08",
+        "title_page": "2014-03"
+      },
+      {
+        "doc_id": "PSS:pss_1_dosing_ord_ck_um",
+        "newest_revision": "2025-05",
+        "title_page": "2014-03"
+      },
+      {
+        "doc_id": "PSS:pss_1_dosing_ord_ck_um_r0918",
+        "newest_revision": "2018-09",
+        "title_page": "2014-03"
+      },
+      {
+        "doc_id": "PSS:pss_1_p129_tm_cp",
+        "newest_revision": "2009-02",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p131_um_cp",
+        "newest_revision": "2009-07",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p136_and_p117_tm_cp",
+        "newest_revision": "2011-04",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p136_and_p117_um_cp",
+        "newest_revision": "2011-04",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p137_um_cp",
+        "newest_revision": "2009-05",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p140_tm_cp",
+        "newest_revision": "2009-08",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p140_um_cp",
+        "newest_revision": "2009-08",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p141_tm_cp",
+        "newest_revision": "2009-10",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p141_um_cp",
+        "newest_revision": "2009-10",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p142_tm_cp",
+        "newest_revision": "2011-02",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p142_um_cp",
+        "newest_revision": "2011-02",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p143_um_cp",
+        "newest_revision": "2010-06",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p146_um_cp",
+        "newest_revision": "2012-06",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p147_tm_cp",
+        "newest_revision": "2010-02",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p147_um_cp",
+        "newest_revision": "2010-02",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p153_tm_cp",
+        "newest_revision": "2011-04",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p155_um_cp",
+        "newest_revision": "2011-04",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p156_um_cp",
+        "newest_revision": "2012-03",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p159_tm_cp",
+        "newest_revision": "2011-12",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p164_p169_tm_cp",
+        "newest_revision": "2013-01",
+        "title_page": "2012-06"
+      },
+      {
+        "doc_id": "PSS:pss_1_p164_p169_um_cp",
+        "newest_revision": "2013-01",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p172_tm_cp",
+        "newest_revision": "2013-12",
+        "title_page": "2012-06"
+      },
+      {
+        "doc_id": "PSS:pss_1_p172_um_cp",
+        "newest_revision": "2013-12",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p174_um_cp",
+        "newest_revision": "2013-11",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p262_um",
+        "newest_revision": "2025-08",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_p94_tm_cp",
+        "newest_revision": "2008-08",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSS:pss_1_um",
+        "newest_revision": "2025-05",
+        "title_page": "1997-09"
+      },
+      {
+        "doc_id": "PSU:aap_um",
+        "newest_revision": "2016-03",
+        "title_page": "2016-02"
+      },
+      {
+        "doc_id": "PSU:psu_4_p10_um_cp",
+        "newest_revision": "2006-12",
+        "title_page": "2005-06"
+      },
+      {
+        "doc_id": "PSU:psu_4_p12_um_cp",
+        "newest_revision": "2008-01",
+        "title_page": "2005-06"
+      },
+      {
+        "doc_id": "PSU:psu_4_p20_tm_cp",
+        "newest_revision": "2012-07",
+        "title_page": "2005-06"
+      },
+      {
+        "doc_id": "PSX:psx_2_0_p91_tm",
+        "newest_revision": "2021-09",
+        "title_page": "1997-04"
+      },
+      {
+        "doc_id": "PSX:psx_2_0_p91_um",
+        "newest_revision": "2021-09",
+        "title_page": "2016-08"
+      },
+      {
+        "doc_id": "PSX:psx_2_0_um",
+        "newest_revision": "2024-08",
+        "title_page": "2016-08"
+      },
+      {
+        "doc_id": "PSX:psx_2_p65_tm_cp",
+        "newest_revision": "2009-07",
+        "title_page": "1997-04"
+      },
+      {
+        "doc_id": "PSX:psx_2_p65_um_cp",
+        "newest_revision": "2009-07",
+        "title_page": "1997-04"
+      },
+      {
+        "doc_id": "PSX:psx_2_p68_um_cp",
+        "newest_revision": "2009-11",
+        "title_page": "1997-04"
+      },
+      {
+        "doc_id": "PSX:psx_2_p71_tm_cp",
+        "newest_revision": "2010-12",
+        "title_page": "1997-04"
+      },
+      {
+        "doc_id": "PSX:psx_2_p76_um_cp",
+        "newest_revision": "2014-10",
+        "title_page": "1997-04"
+      },
+      {
+        "doc_id": "PX:pxumappx",
+        "newest_revision": "2017-12",
+        "title_page": "1996-08"
+      },
+      {
+        "doc_id": "PXRM:pxrm_1_5_12_tm",
+        "newest_revision": "2012-05",
+        "title_page": "2004-10"
+      },
+      {
+        "doc_id": "QAC:pats_1_5_userguide",
+        "newest_revision": "2013-03",
+        "title_page": "2007-05"
+      },
+      {
+        "doc_id": "QAM:cmadpac",
+        "newest_revision": "2009-02",
+        "title_page": "1993-09"
+      },
+      {
+        "doc_id": "QAM:cmtm",
+        "newest_revision": "2009-02",
+        "title_page": "1993-09"
+      },
+      {
+        "doc_id": "QAM:cmum",
+        "newest_revision": "2009-02",
+        "title_page": "1993-09"
+      },
+      {
+        "doc_id": "QAO:ocadp",
+        "newest_revision": "2009-03",
+        "title_page": "1993-09"
+      },
+      {
+        "doc_id": "QAO:octm",
+        "newest_revision": "2009-03",
+        "title_page": "1993-09"
+      },
+      {
+        "doc_id": "QAO:ocum",
+        "newest_revision": "2016-06",
+        "title_page": "1993-09"
+      },
+      {
+        "doc_id": "QMIM:qmimtm",
+        "newest_revision": "2009-03",
+        "title_page": "1995-07"
+      },
+      {
+        "doc_id": "QMIM:qmimum",
+        "newest_revision": "2009-03",
+        "title_page": "1995-07"
+      },
+      {
+        "doc_id": "RA:ra5_0hl7",
+        "newest_revision": "2018-03",
+        "title_page": "2000-07"
+      },
+      {
+        "doc_id": "RA:ra5_0hl7is_vr",
+        "newest_revision": "2018-03",
+        "title_page": "1999-12"
+      },
+      {
+        "doc_id": "RMPR:rmpr3_o2um",
+        "newest_revision": "2014-08",
+        "title_page": "1999-09"
+      },
+      {
+        "doc_id": "RMPR:rmpr_3_182",
+        "newest_revision": "2017-08",
+        "title_page": "2003-11"
+      },
+      {
+        "doc_id": "RMPR:rmpr_3_182_pc_um",
+        "newest_revision": "2017-08",
+        "title_page": "2002-08"
+      },
+      {
+        "doc_id": "RMPR:rmpr_3_nppdum",
+        "newest_revision": "2014-08",
+        "title_page": "2004-09"
+      },
+      {
+        "doc_id": "RMPR:rmpr_3_tm",
+        "newest_revision": "2025-11",
+        "title_page": "2000-08"
+      },
+      {
+        "doc_id": "RMPR:rmpr_3_um",
+        "newest_revision": "2025-11",
+        "title_page": "2003-11"
+      },
+      {
+        "doc_id": "RT:rttech",
+        "newest_revision": "2009-03",
+        "title_page": "1991-11"
+      },
+      {
+        "doc_id": "RT:rtuser1",
+        "newest_revision": "2018-05",
+        "title_page": "1991-11"
+      },
+      {
+        "doc_id": "SD:vs_gui_release_1_7_35_0_technical_manual",
+        "newest_revision": "2023-01",
+        "title_page": "2022-12"
+      },
+      {
+        "doc_id": "SD:vs_gui_release_1_7_39_1_technical_manual",
+        "newest_revision": "2023-04",
+        "title_page": "2023-03"
+      },
+      {
+        "doc_id": "SD:vs_gui_release_1_7_60_0_tm",
+        "newest_revision": "2024-09",
+        "title_page": "2024-08"
+      },
+      {
+        "doc_id": "SQLI:sqli_sm",
+        "newest_revision": "2005-01",
+        "title_page": "1997-10"
+      },
+      {
+        "doc_id": "SQLI:sqli_vendor",
+        "newest_revision": "2005-01",
+        "title_page": "1997-10"
+      },
+      {
+        "doc_id": "SR:sr_3_p160_tm_cp",
+        "newest_revision": "2007-06",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_p160_um_cp",
+        "newest_revision": "2007-06",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_p166_tm_cp",
+        "newest_revision": "2008-04",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_p166_um_cp",
+        "newest_revision": "2008-04",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_p174_tm_cp",
+        "newest_revision": "2010-12",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_p174_um_cp",
+        "newest_revision": "2010-12",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_p175_tm_cp",
+        "newest_revision": "2011-09",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_p175_um_cp",
+        "newest_revision": "2011-09",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_p176_tm_cp",
+        "newest_revision": "2012-03",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_p176_um_cp",
+        "newest_revision": "2012-03",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_p177_tm_cp",
+        "newest_revision": "2014-07",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_p177_um_cp",
+        "newest_revision": "2014-07",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_p200_um",
+        "newest_revision": "2021-11",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_um",
+        "newest_revision": "2024-07",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "SR:sr_3_um_r1115",
+        "newest_revision": "2015-11",
+        "title_page": "1993-07"
+      },
+      {
+        "doc_id": "VAQ:pdx1_5tm",
+        "newest_revision": "2023-10",
+        "title_page": "1993-11"
+      },
+      {
+        "doc_id": "VDEF:vdef_1_0_technical_manual",
+        "newest_revision": "2013-04",
+        "title_page": "2004-12"
+      },
+      {
+        "doc_id": "XM:xm_8_0_getstartguide",
+        "newest_revision": "2006-09",
+        "title_page": "2002-08"
+      },
+      {
+        "doc_id": "XM:xm_8_0_netrefguide",
+        "newest_revision": "2006-09",
+        "title_page": "2002-08"
+      },
+      {
+        "doc_id": "XM:xm_8_0_techman",
+        "newest_revision": "2007-03",
+        "title_page": "2002-08"
+      },
+      {
+        "doc_id": "XM:xm_8_0_userguide",
+        "newest_revision": "2006-09",
+        "title_page": "2002-08"
+      },
+      {
+        "doc_id": "XQOR:xqortm",
+        "newest_revision": "2015-02",
+        "title_page": "1994-08"
+      },
+      {
+        "doc_id": "XU:krn8_0st",
+        "newest_revision": "2007-02",
+        "title_page": "1995-07"
+      },
+      {
+        "doc_id": "XWB:xwb1_1p44um",
+        "newest_revision": "2022-08",
+        "title_page": "2005-01"
+      },
+      {
+        "doc_id": "YS:mha_web_um",
+        "newest_revision": "2026-04",
+        "title_page": "2020-12"
+      },
+      {
+        "doc_id": "YS:ys_mha_tm",
+        "newest_revision": "2021-09",
+        "title_page": "2012-03"
+      },
+      {
+        "doc_id": "YS:ys_mha_um",
+        "newest_revision": "2020-03",
+        "title_page": "2012-04"
+      },
+      {
+        "doc_id": "ZSLOT:zslot_mg",
+        "newest_revision": "2005-01",
+        "title_page": "1996-03"
+      }
+    ],
+    "status_counts": {
+      "failed": 4,
+      "fetched": 1024,
+      "not_acquired": 2762,
+      "out_of_scope": 44
+    },
+    "undated_vista_no_gold_by_disposition": {
+      "covered-by-other-format": 1857,
+      "excluded": 1656,
+      "held": 219
+    },
+    "undated_vista_no_gold_by_fetch": {
+      "bad_content": 1,
+      "failed": 10,
+      "never-attempted": 3721
+    },
+    "undated_vista_no_gold_by_inventory_status": {
+      "failed": 10,
+      "not_acquired": 3690,
+      "out_of_scope": 32
+    },
+    "unpaired_pdf_twins": [
+      "PSO:pso_7_0_p817_um_6",
+      "RMPV:rmpv_1_6_admin_guide",
+      "SD:iss_faq_document"
+    ]
+  },
+  "provenance": {
+    "acquisitions": {
+      "rows": 1045,
+      "sha256": "596fdef2db0df7927c86b4066206f8f6b59fd261dadf3ab8993e90e1879faa4e"
+    },
+    "crawl_raw_json": {
+      "documents": 9080,
+      "sha256": "93139fcc7f3039fb4b92db23fd619a8fe96ccbc57ab5a4bc4f7ae9ce711d4f16"
+    },
+    "data_dir": "/home/rafael/data/vdocs",
+    "history_yaml": {
+      "files": 615,
+      "sha256": "329113edf959ac743edff0c729331b65567017733bd15c1c5d50bedc06545adf"
+    },
+    "index_db": {
+      "corpus_content_hash": "1bc0d78f3ae6c2eb0b69a29ee455ccaddb64d7aa00b79095dafeda3c28463517",
+      "read_schema_version": "1.6"
+    },
+    "inventory_json": {
+      "records": 9080,
+      "sha256": "d7078541298b511acec160e3d429b2d57eddee3eb954ea7e9e040dcb3343470e"
+    },
+    "registries": {
+      "path": "/home/rafael/projects/vdocs/registries",
+      "sha256": "fd0e23ffef4fc94f5e0f293ba7eeb0815329c2952d298db114852bc941124a44"
+    },
+    "run_date": "2026-11-05",
+    "vdocs": {
+      "clean": true,
+      "commit": "12579496bdc8c9c92680f489a5e1fb2736b8a9dd"
+    },
+    "vista_meta": {
+      "commit": "d0df56bfdff7fb9d7fb2388f71876827c12c81eb",
+      "tsv_last_commit": "f1e9d332aaaa4185c0eb74b9feb1f37a9d552229",
+      "tsv_sha256": "40d561c29ea576c66ccd65a5e32e9e6646dc75a286701d172c8e0381a9735f17"
+    }
+  },
+  "sections": {
+    "1": [
+      {
+        "agrees": true,
+        "id": "s1.status_total",
+        "label": "`vdocs inventory --status` total: distinct non-noise `doc_id`s, any system type",
+        "measured": 3834,
+        "proposal": 3834
+      },
+      {
+        "agrees": false,
+        "id": "s1.status_vista",
+        "label": "… of which VistA (the gate's `app_in_scope`)",
+        "measured": 2886,
+        "proposal": 2941
+      },
+      {
+        "agrees": null,
+        "id": "s1.status_vista_prefix_only",
+        "label": "… of which on a VistA system type, decommissioned applications included (the first measurement's definition)",
+        "measured": 2941,
+        "proposal": null
+      },
+      {
+        "agrees": true,
+        "id": "s1.completeness_total",
+        "label": "`vdocs completeness` records",
+        "measured": 9080,
+        "proposal": 9080
+      },
+      {
+        "agrees": true,
+        "id": "s1.held_not_in_gold",
+        "label": "Records held with no gold document",
+        "measured": 219,
+        "proposal": 219
+      },
+      {
+        "agrees": true,
+        "id": "s1.hng_sole_survivor_never_fetched",
+        "label": "… archived sole survivors, never fetched",
+        "measured": 152,
+        "proposal": 152
+      },
+      {
+        "agrees": true,
+        "id": "s1.hng_docx_kept_never_fetched",
+        "label": "… DOCX the policy keeps, never fetched",
+        "measured": 52,
+        "proposal": 52
+      },
+      {
+        "agrees": true,
+        "id": "s1.hng_pdf_sole_format_never_fetched",
+        "label": "… PDF records held as the only format (`sole-format`), never fetched",
+        "measured": 9,
+        "proposal": 9
+      },
+      {
+        "agrees": null,
+        "id": "s1.hng_pdf_twins_unpaired",
+        "label": "… … of which the PDF twin of a DOCX with the same `doc_id` (neither row has an anchor key, so `classify()` cannot pair them)",
+        "measured": 3,
+        "proposal": null
+      },
+      {
+        "agrees": true,
+        "id": "s1.hng_failed",
+        "label": "… fetch failed",
+        "measured": 5,
+        "proposal": 5
+      },
+      {
+        "agrees": true,
+        "id": "s1.hng_bad_content",
+        "label": "… rejected as bad content",
+        "measured": 1,
+        "proposal": 1
+      },
+      {
+        "agrees": null,
+        "id": "s1.hng_fetched",
+        "label": "… fetched, yet not in gold",
+        "measured": 0,
+        "proposal": null
+      },
+      {
+        "agrees": true,
+        "id": "s1.hng_largest_apps",
+        "label": "… largest applications",
+        "measured": "SD 40, VBECS 27, CPRS 25, ROR 24, PSO 17",
+        "proposal": "SD 40, VBECS 27, CPRS 25, ROR 24, PSO 17"
+      },
+      {
+        "agrees": true,
+        "id": "s1.gold_only",
+        "label": "Gold documents whose `doc_id` no record carries",
+        "measured": 15,
+        "proposal": 15
+      },
+      {
+        "agrees": true,
+        "id": "s1.gold_only_refiled",
+        "label": "… whose slug the inventory lists under another app code (re-filed)",
+        "measured": 14,
+        "proposal": 14
+      },
+      {
+        "agrees": true,
+        "id": "s1.gold_only_departed",
+        "label": "… whose slug is gone from the inventory",
+        "measured": 1,
+        "proposal": 1
+      },
+      {
+        "agrees": true,
+        "id": "s1.refiled_held_not_in_gold",
+        "label": "Records of the re-filed slugs, under the new app code, held but not in gold",
+        "measured": 14,
+        "proposal": 14
+      }
+    ],
+    "3": [
+      {
+        "agrees": true,
+        "id": "s3.records",
+        "label": "Records (listings)",
+        "measured": 9080,
+        "proposal": 9080
+      },
+      {
+        "agrees": true,
+        "id": "s3.distinct_doc_id",
+        "label": "Distinct `doc_id`",
+        "measured": 5032,
+        "proposal": 5032
+      },
+      {
+        "agrees": true,
+        "id": "s3.max_records_per_doc_id",
+        "label": "Records sharing one `doc_id`, at most",
+        "measured": 6,
+        "proposal": 6
+      },
+      {
+        "agrees": false,
+        "id": "s3.multi_page_links",
+        "label": "Links listed on more than one application page (the proposal: 18 benefits-form links)",
+        "measured": 9,
+        "proposal": 18
+      },
+      {
+        "agrees": false,
+        "id": "s3.multi_page_link_records",
+        "label": "… records listing them",
+        "measured": 1332,
+        "proposal": 1334
+      },
+      {
+        "agrees": null,
+        "id": "s3.repeated_links",
+        "label": "Links listed more than once anywhere",
+        "measured": 18,
+        "proposal": null
+      },
+      {
+        "agrees": null,
+        "id": "s3.repeated_link_surplus",
+        "label": "… listings beyond the first of each",
+        "measured": 1334,
+        "proposal": null
+      },
+      {
+        "agrees": true,
+        "id": "s3.vba_form_records",
+        "label": "Records classified `not-vista:vba-form` (restated in D2)",
+        "measured": 1184,
+        "proposal": 1184
+      },
+      {
+        "agrees": false,
+        "id": "s3.vba_form_files",
+        "label": "… distinct files (D2: 18)",
+        "measured": 8,
+        "proposal": 18
+      },
+      {
+        "agrees": true,
+        "id": "s3.gold_match_records",
+        "label": "Records with a gold match on `doc_id`",
+        "measured": 2120,
+        "proposal": 2120
+      },
+      {
+        "agrees": true,
+        "id": "s3.four_field_distinct",
+        "label": "Distinct (application page, section, file URL, patch id)",
+        "measured": 9073,
+        "proposal": 9073
+      },
+      {
+        "agrees": true,
+        "id": "s3.four_field_surplus",
+        "label": "… surplus records",
+        "measured": 7,
+        "proposal": 7
+      },
+      {
+        "agrees": true,
+        "id": "s3.dup_links",
+        "label": "… links listed more than once on one page",
+        "measured": 5,
+        "proposal": 5
+      },
+      {
+        "agrees": true,
+        "id": "s3.dup_links_identical",
+        "label": "… … with every field identical",
+        "measured": 3,
+        "proposal": 3
+      },
+      {
+        "agrees": true,
+        "id": "s3.app_codes_multi_page",
+        "label": "App codes on more than one application page",
+        "measured": 171,
+        "proposal": 171
+      },
+      {
+        "agrees": true,
+        "id": "s3.app_code_most_pages",
+        "label": "… the most pages",
+        "measured": "LR 12",
+        "proposal": "LR 12"
+      },
+      {
+        "agrees": null,
+        "id": "s3.row_keys_distinct",
+        "label": "Distinct row keys",
+        "measured": 9080,
+        "proposal": null
+      },
+      {
+        "agrees": true,
+        "id": "s3.mismatch_domain",
+        "label": "Gold-matched records whose computed Domain differs from `index.db`",
+        "measured": 0,
+        "proposal": 0
+      },
+      {
+        "agrees": true,
+        "id": "s3.mismatch_audience",
+        "label": "Gold-matched records whose computed Audience differs from `index.db`",
+        "measured": 0,
+        "proposal": 0
+      },
+      {
+        "agrees": true,
+        "id": "s3.mismatch_app_user",
+        "label": "Gold-matched records whose computed App user differs from `index.db`",
+        "measured": 0,
+        "proposal": 0
+      },
+      {
+        "agrees": true,
+        "id": "s3.mismatch_type",
+        "label": "Gold-matched records whose computed Type differs from `index.db`",
+        "measured": 0,
+        "proposal": 0
+      },
+      {
+        "agrees": true,
+        "id": "s3.namespace_differs",
+        "label": "… whose Namespace differs (documents)",
+        "measured": 2,
+        "proposal": 2
+      },
+      {
+        "agrees": true,
+        "id": "s3.no_profile_records",
+        "label": "Records with no application profile (no app user, software class or domain)",
+        "measured": 2305,
+        "proposal": 2300
+      },
+      {
+        "agrees": true,
+        "id": "s3.no_profile_not_vista",
+        "label": "… of which not VistA",
+        "measured": 2298,
+        "proposal": 2298
+      },
+      {
+        "agrees": false,
+        "id": "s3.namespaces",
+        "label": "Inventory namespaces (distinct non-empty `pkg_ns`)",
+        "measured": 161,
+        "proposal": 162
+      },
+      {
+        "agrees": true,
+        "id": "s3.ns_package_named",
+        "label": "… named by the PACKAGE file (#9.4)",
+        "measured": 102,
+        "proposal": 102
+      },
+      {
+        "agrees": true,
+        "id": "s3.ns_package_named_records",
+        "label": "… … records",
+        "measured": 6710,
+        "proposal": 6710
+      },
+      {
+        "agrees": true,
+        "id": "s3.ns_app_code",
+        "label": "… not in the PACKAGE file but an application code",
+        "measured": 56,
+        "proposal": 56
+      },
+      {
+        "agrees": true,
+        "id": "s3.ns_app_code_records",
+        "label": "… … records",
+        "measured": 1717,
+        "proposal": 1717
+      },
+      {
+        "agrees": true,
+        "id": "s3.ns_unnamed",
+        "label": "… named nowhere",
+        "measured": [
+          "PREC",
+          "PREN",
+          "XUSC"
+        ],
+        "proposal": [
+          "PREC",
+          "PREN",
+          "XUSC"
+        ]
+      },
+      {
+        "agrees": true,
+        "id": "s3.ns_unnamed_records",
+        "label": "… … records",
+        "measured": 92,
+        "proposal": 92
+      },
+      {
+        "agrees": true,
+        "id": "s3.no_namespace_records",
+        "label": "Records with no namespace",
+        "measured": 561,
+        "proposal": 561
+      },
+      {
+        "agrees": true,
+        "id": "s3.ns_both_named",
+        "label": "Namespaces named by both the PACKAGE file and a same-code application",
+        "measured": 94,
+        "proposal": 94
+      },
+      {
+        "agrees": false,
+        "id": "s3.ns_both_agree",
+        "label": "… whose two names are equal after folding case and punctuation",
+        "measured": 37,
+        "proposal": 73
+      },
+      {
+        "agrees": false,
+        "id": "s3.ns_registry_unnamed",
+        "label": "Inventory namespaces with no same-code application name in `app-profiles.yaml` (restated in D4)",
+        "measured": 64,
+        "proposal": 60
+      },
+      {
+        "agrees": true,
+        "id": "s3.library_namespaces",
+        "label": "Library namespaces (latest documents)",
+        "measured": 96,
+        "proposal": 96
+      },
+      {
+        "agrees": true,
+        "id": "s3.library_named_today",
+        "label": "… named today (same-code application)",
+        "measured": 92,
+        "proposal": 92
+      },
+      {
+        "agrees": true,
+        "id": "s3.library_named_after",
+        "label": "… named with the PACKAGE file first, else the same-code application",
+        "measured": 96,
+        "proposal": 96
+      },
+      {
+        "agrees": true,
+        "id": "s3.library_newly_named",
+        "label": "… named for the first time",
+        "measured": [
+          "BPS",
+          "DG",
+          "PSGW",
+          "USR"
+        ],
+        "proposal": [
+          "BPS",
+          "DG",
+          "PSGW",
+          "USR"
+        ]
+      },
+      {
+        "agrees": false,
+        "id": "s3.library_renamed",
+        "label": "… whose name would change (folded comparison; the proposal read 15 substantive + 32 reworded)",
+        "measured": 46,
+        "proposal": 47
+      }
+    ],
+    "4": [
+      {
+        "agrees": true,
+        "id": "s4.posting_dates",
+        "label": "Crawled links that carry a VDL posting date",
+        "measured": 28,
+        "proposal": 28
+      },
+      {
+        "agrees": true,
+        "id": "s4.crawled_links",
+        "label": "… of crawled links",
+        "measured": 9080,
+        "proposal": 9080
+      },
+      {
+        "agrees": true,
+        "id": "s4.gold_documents",
+        "label": "Gold documents (`v_documents`)",
+        "measured": 1040,
+        "proposal": 1040
+      },
+      {
+        "agrees": true,
+        "id": "s4.gold_dated",
+        "label": "… dated by `official_date`",
+        "measured": 990,
+        "proposal": 990
+      },
+      {
+        "agrees": true,
+        "id": "s4.dated_revision",
+        "label": "… … from Revision History",
+        "measured": 856,
+        "proposal": 856
+      },
+      {
+        "agrees": true,
+        "id": "s4.dated_title_page",
+        "label": "… … from the title page",
+        "measured": 134,
+        "proposal": 134
+      },
+      {
+        "agrees": true,
+        "id": "s4.gold_undated",
+        "label": "… carrying no date",
+        "measured": 50,
+        "proposal": 50
+      },
+      {
+        "agrees": null,
+        "id": "s4.gold_without_history",
+        "label": "… with no `history.yaml` member",
+        "measured": 0,
+        "proposal": null
+      },
+      {
+        "agrees": null,
+        "id": "s4.history_duplicate_ids",
+        "label": "`doc_id`s in more than one `history.yaml` member",
+        "measured": 0,
+        "proposal": null
+      },
+      {
+        "agrees": null,
+        "id": "s4.superseded_other_id",
+        "label": "`superseded` entries naming another `doc_id`",
+        "measured": 0,
+        "proposal": null
+      },
+      {
+        "agrees": true,
+        "id": "s4.revision_later_than_title",
+        "label": "Gold documents whose newest revision is later than the title page",
+        "measured": 332,
+        "proposal": 332
+      },
+      {
+        "agrees": true,
+        "id": "s4.median_years_later",
+        "label": "… median years later",
+        "measured": 14.1,
+        "proposal": 14
+      },
+      {
+        "agrees": true,
+        "id": "s4.example_title_page",
+        "label": "`xwb1_1p44um` title page",
+        "measured": "2005-01",
+        "proposal": "2005-01"
+      },
+      {
+        "agrees": true,
+        "id": "s4.example_newest_revision",
+        "label": "`xwb1_1p44um` newest revision",
+        "measured": "2022-08",
+        "proposal": "2022-08"
+      },
+      {
+        "agrees": true,
+        "id": "s4.records_dated",
+        "label": "Records dated through `doc_id`",
+        "measured": 2018,
+        "proposal": 2018
+      },
+      {
+        "agrees": null,
+        "id": "s4.records_dated_by_published",
+        "label": "Records a title-page date (`v_documents.published`) alone would date",
+        "measured": 1864,
+        "proposal": null
+      },
+      {
+        "agrees": true,
+        "id": "s4.records_undated",
+        "label": "Records undated",
+        "measured": 7062,
+        "proposal": 7062
+      },
+      {
+        "agrees": true,
+        "id": "s4.undated_not_vista",
+        "label": "… not VistA",
+        "measured": 3228,
+        "proposal": 3228
+      },
+      {
+        "agrees": true,
+        "id": "s4.undated_vista",
+        "label": "… VistA (measured directly)",
+        "measured": 3834,
+        "proposal": 3834
+      },
+      {
+        "agrees": true,
+        "id": "s4.undated_vista_with_gold",
+        "label": "… … records of gold documents that carry no date",
+        "measured": 102,
+        "proposal": 100
+      },
+      {
+        "agrees": true,
+        "id": "s4.undated_gold_docs",
+        "label": "… … … those gold documents",
+        "measured": 50,
+        "proposal": 50
+      },
+      {
+        "agrees": true,
+        "id": "s4.undated_vista_no_gold",
+        "label": "… … records with no gold document",
+        "measured": 3732,
+        "proposal": 3732
+      },
+      {
+        "agrees": false,
+        "id": "s4.no_gold_never_fetched",
+        "label": "… … … never fetched (no acquisition row)",
+        "measured": 3721,
+        "proposal": 3732
+      },
+      {
+        "agrees": true,
+        "id": "s4.undated_vista_no_gold_ids",
+        "label": "… … … distinct `doc_id`s",
+        "measured": 1861,
+        "proposal": 1861
+      },
+      {
+        "agrees": null,
+        "id": "s4.undated_vista_no_gold_slugs",
+        "label": "… … … distinct slugs",
+        "measured": 1809,
+        "proposal": null
+      },
+      {
+        "agrees": true,
+        "id": "s4.undated_vista_ids",
+        "label": "Distinct `doc_id`s among undated VistA records (D6's 1,911 documents)",
+        "measured": 1911,
+        "proposal": 1911
+      },
+      {
+        "agrees": false,
+        "id": "s4.undated_vista_ids_with_docx",
+        "label": "… with a DOCX record (D6: a Word version)",
+        "measured": 1882,
+        "proposal": 1903
+      },
+      {
+        "agrees": true,
+        "id": "s4.dated_share",
+        "label": "Share of records dated (%)",
+        "measured": 22.2,
+        "proposal": 22
+      },
+      {
+        "agrees": true,
+        "id": "s4.dated_share_all_vista",
+        "label": "Share dated if every undated VistA record were dated (%, D6)",
+        "measured": 64.4,
+        "proposal": 64
+      },
+      {
+        "agrees": true,
+        "id": "s4.undated_share",
+        "label": "Share of records undated (%, D6)",
+        "measured": 77.8,
+        "proposal": 78
+      }
+    ]
+  }
+}

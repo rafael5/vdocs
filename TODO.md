@@ -16,11 +16,24 @@ Lightweight backlog for this project. For longer-form planning, use `docs/`.
   registry edit. Test first: a registry edit must change the stage's input fingerprint. (Found
   2026-11-05; `fetch` checked and is already covered.)
 - **Completeness reads COMPLETE while 219 admitted records have no gold document.** Measured
-  2026-11-05: 152 archived sole survivors, 52 DOCX the doc-type policy keeps and 9 PDF-only
-  documents were never fetched; 5 fetches failed and 1 was rejected as bad content. The verdict
-  counts what is admitted, not what is held, and `fetch` downloads only its current selection, so
-  re-running does not close the gap. Decide whether admitted-but-not-held should count against the
-  verdict, and whether the fetch selection should cover the admitted set.
+  2026-11-05 (`reports/inventory-browser-measurements.md`): 152 archived sole survivors, 52 DOCX
+  the doc-type policy keeps and 9 PDFs held as their document's only format were never fetched;
+  5 fetches failed and 1 PDF was rejected as bad content. The verdict counts what is admitted, not
+  what is held, and `fetch` downloads only its current selection, so re-running does not close the
+  gap. Decide whether admitted-but-not-held should count against the verdict, and whether the fetch
+  selection should cover the admitted set.
+- **`classify()` holds a PDF and its DOCX twin separately when neither has an anchor key.**
+  `docx_anchor_keys` skips empty keys, so the PDF of `PSO:pso_7_0_p817_um_6`,
+  `RMPV:rmpv_1_6_admin_guide` and `SD:iss_faq_document` is held as *sole-format* instead of
+  *covered-by-other-format*, although a DOCX with the same `doc_id` is listed. Test first: a PDF
+  whose `doc_id` has a DOCX record is covered, anchor key or not. (Found by inventory-browser
+  step 0, 2026-11-05.)
+- **`inventory --status` labels every PDF-only document *out_of_scope* without reading its
+  acquisition.** The gate has admitted sole-format PDFs since VO.8 and `fetch` attempts them, but
+  `serve_pure.inventory_status` still treats a `doc_id` with no DOCX row as never fetchable, so the
+  one PDF rejected as bad content on 2026-11-05 shows as *out_of_scope*, not *bad_content* — and
+  `--status` is where §9 of the inventory browser proposal sends an operator to see why a fetch
+  failed. (Found by inventory-browser step 0, 2026-11-05.)
 - **Write the identity-continuity proposal.** When VA re-files a document to another application
   page its `doc_id` changes, because the app code is part of it, so gold and the inventory stop
   joining; today that is 14 ISS release user guides re-filed from ADT to SD. The fix the 2026-08-05
@@ -32,9 +45,10 @@ Lightweight backlog for this project. For longer-form planning, use `docs/`.
 
 - **Library namespace names from the PACKAGE file.** The inventory browser proposal takes
   namespace names from vista-meta's PACKAGE-file (#9.4) export, falling back to the same-code
-  application. Applying them to the Library would name DG, USR, BPS and PSGW for the first time,
-  change 15 names in substance and reword 32. The 15 want review on their own (inventory-browser
-  decision D4, taken 2026-11-05).
+  application. Applying them to the Library would name DG, USR, BPS and PSGW for the first time and
+  change 46 names; by a reading of the list in `reports/inventory-browser-measurements.md`, 7 in
+  substance (FH, GMRV, LA, MMRS, OR, QAC, SPN) and 39 in wording. The 7 want review on their own
+  (inventory-browser decision D4, taken 2026-11-05).
 
 - **A few revision tables still lose their dates.** After 9f9df51, 64 revision-date cells stay
   unnormalized. Most aren't dates (23 are `REDACTED`), but two real problems remain:
