@@ -487,7 +487,7 @@ the index stage.
   [`reports/inventory-browser-measurements.md`](../../reports/inventory-browser-measurements.md)
   (+ `.json`) — every figure in §1, §3 and §4, what it read, and the value printed before step 0.
 - [ADR-0001 — Read contract and drift prevention](../adr/0001-read-contract-and-drift-prevention.md);
-  [read-contract changelog](../../contracts/read/CHANGELOG.md) (1.6 is the current version);
+  [read-contract changelog](../../contracts/read/CHANGELOG.md) (1.7, step 1, is the current version);
   `src/vdocs/kernel/read_contract.py` (`lint_bump`, `lint_latest`).
 - [VO identity and classification audit, 2026-08-05](vdocs-quality-vdl-observatory/vo-identity-and-classification-audit.md)
   — the app code in every key; "identity continuity across re-filing" as the surviving fix;
@@ -498,7 +498,7 @@ the index stage.
 - `src/vdocs/kernel/personas.py` — `profile_tags()`; `src/vdocs/kernel/ids.py` — `doc_id()`.
 - `src/vdocs/stages/consolidate/consolidate_pure.py` — `official_date()`; the per-anchor
   `history.yaml` under `documents/gold/consolidated/`.
-- `src/vdocs/stages/index/stage.py` — inputs, `_latest_bundle_paths()` (the history walk),
+- `src/vdocs/stages/index/stage.py` — inputs, `_history()` (the history walk),
   the atomic build; `src/vdocs/contracts/registry.py` — `GOLD_INVENTORY`.
 - `src/vdocs/stages/crawl/snapshot_pure.py` — `canonical_hash()`.
 - vdocs-web: `internal/index/contract.go` (`CheckSchemaVersion`, MAJOR-only),
