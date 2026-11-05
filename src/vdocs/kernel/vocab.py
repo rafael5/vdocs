@@ -56,8 +56,32 @@ def vocab_rows(
     for code, body in (_load(inv / "personas.yaml").get("personas") or {}).items():
         rows.append(("persona", str(code), *_label_desc(code, body)))
 
+    # inventory dispositions and reason kinds — dispositions.yaml (the closed sets are in code,
+    # beside classify(); a test holds the two equal)
+    dispositions = _load(inv / "dispositions.yaml")
+    for code, body in (dispositions.get("dispositions") or {}).items():
+        rows.append(("disposition", str(code), *_label_desc(code, body)))
+    for code, body in (dispositions.get("reason_kinds") or {}).items():
+        rows.append(("reason_kind", str(code), *_label_desc(code, body)))
+
+    rows += doc_type_family_rows(_load(inv / "doctype-families.yaml"))
     rows += namespace_rows(_load(inv / "namespace-names.yaml"), namespaces or {})
     return sorted(rows)
+
+
+def doc_type_family_rows(families: dict) -> list[VocabRow]:
+    """One ``doc_type_family`` row per member doc type, labelled with its family; a type in no
+    family is "Other". A type listed in two families is refused — its family would depend on
+    which row a consumer happened to read."""
+    family_of: dict[str, str] = {}
+    for family, codes in (families.get("families") or {}).items():
+        for code in codes or []:
+            if str(code) in family_of:
+                raise ValueError(
+                    f"doc type {code} is in two families: {family_of[str(code)]}, {family}"
+                )
+            family_of[str(code)] = str(family)
+    return [("doc_type_family", code, family, "") for code, family in family_of.items()]
 
 
 def namespace_rows(names: dict, namespaces: Mapping[str, str]) -> list[VocabRow]:

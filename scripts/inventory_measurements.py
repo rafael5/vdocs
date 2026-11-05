@@ -51,6 +51,7 @@ from vdocs.models.stage import Acquisition
 from vdocs.orchestrator.state import StateStore
 from vdocs.stages.fetch.fetch_pure import GatePolicy, sole_survivors
 from vdocs.stages.fetch.policy import load_gate_policy
+from vdocs.stages.index.index_pure import last_updated
 from vdocs.stages.index.inventory_pure import ROW_KEY_FIELDS, row_keys
 from vdocs.stages.index.inventory_pure import canonical as _canonical
 from vdocs.stages.serve_inventory.completeness_pure import (
@@ -197,14 +198,9 @@ def fold_name(name: str) -> str:
 
 
 def date_source(member: dict[str, Any]) -> str:
-    """Where a ``history.yaml`` member's ``official_date`` came from: ``revision-history`` when it
-    is one of the member's revision dates (``official_date`` is the newest of them), else
-    ``title-page``; empty when the member carries no date."""
-    date = str(member.get("official_date") or "")
-    if not date:
-        return ""
-    revision_dates = {str(r.get("date") or "") for r in member.get("revisions") or []}
-    return "revision-history" if date in revision_dates else "title-page"
+    """Where a ``history.yaml`` member's ``official_date`` came from — the rule the index stage
+    publishes as ``v_documents.last_updated_source`` (``index_pure.last_updated``)."""
+    return last_updated(member)[1]
 
 
 def history_members(

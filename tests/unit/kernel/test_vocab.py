@@ -87,3 +87,55 @@ def test_every_override_names_a_namespace_the_copy_holds():
 
     names = load_mapping(Settings().registries / "inventory" / "namespace-names.yaml")
     assert set(names["overrides"]) <= set(names["package_file"])
+
+
+# --- dispositions and reason kinds (inventory browser step 1) ---------------------------------
+
+
+def _kind(kind: str) -> dict[str, tuple[str, str]]:
+    return {c: (lbl, desc) for k, c, lbl, desc in _rows() if k == kind}
+
+
+def test_the_published_dispositions_are_exactly_the_six_classify_uses():
+    from vdocs.stages.serve_inventory.completeness_pure import DISPOSITIONS
+
+    rows = _kind("disposition")
+    assert set(rows) == DISPOSITIONS
+    assert all(label and desc for label, desc in rows.values())
+
+
+def test_every_reason_kind_classify_emits_is_explained_in_one_sentence():
+    """Both directions: an unexplained kind would show an operator a bare code, and an
+    explanation for a kind classify() never emits would describe nothing."""
+    from vdocs.stages.serve_inventory.completeness_pure import REASON_KINDS
+
+    rows = _kind("reason_kind")
+    assert set(rows) == REASON_KINDS
+    for label, desc in rows.values():
+        assert label and desc.endswith(".") and desc.count(". ") == 0, desc
+
+
+# --- doc-type families (moved from vdocs-web's TYPE_FAMILIES) ---------------------------------
+
+
+def test_doc_type_families_publish_one_row_per_member_type():
+    rows = _kind("doc_type_family")
+    families: dict[str, list[str]] = {}
+    for code, (family, _) in sorted(rows.items()):
+        families.setdefault(family, []).append(code)
+    # the three families vdocs-web hardcodes; every other type is Other
+    assert families == {
+        "Manuals & Guides": sorted(["UM", "UG", "QRG", "TRG", "FAQ", "TG"]),
+        "Technical": sorted(["TM", "DG", "API", "INT", "REF"]),
+        "Admin & Security": sorted(["SG", "SM", "AG"]),
+    }
+
+
+def test_a_doc_type_in_two_families_is_refused(tmp_path):
+    import pytest
+
+    inv = tmp_path / "inventory"
+    inv.mkdir()
+    (inv / "doctype-families.yaml").write_text("families:\n  A: [UM]\n  B: [UM, TM]\n")
+    with pytest.raises(ValueError, match="UM"):
+        vocab.vocab_rows(tmp_path)

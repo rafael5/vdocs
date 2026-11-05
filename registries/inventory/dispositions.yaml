@@ -1,0 +1,63 @@
+# registries/inventory/dispositions.yaml
+# =========================================================================================
+# What became of each inventory record, and why — the explanations published as v_vocab rows
+# of kind `disposition` and `reason_kind`. The closed sets live in code, beside classify()
+# (stages/serve_inventory/completeness_pure.py: DISPOSITIONS, REASON_KINDS); a test reds when
+# this file and the code disagree in either direction.
+#
+# Each reason kind's explanation is one sentence, worded from the registry that produces the
+# decision. It is NOT a second grammar: the reason string `vdocs completeness` prints is built
+# in classify() and unchanged; v_inventory carries it beside the kind and its value.
+# =========================================================================================
+
+dispositions:
+  held:
+    label: Held
+    description: In the corpus, or admitted to it.
+  not-vista:
+    label: Not VistA
+    description: Outside the library's subject — a benefits form, a VA reference, or an application that is not VistA software.
+  excluded:
+    label: Excluded by policy
+    description: A genuine VistA document the doc-type policy decided not to keep.
+  covered-by-other-format:
+    label: Covered by another format
+    description: Not fetched, because the library holds the same document in another format.
+  unreachable:
+    label: Unreachable
+    description: A genuine VistA document published only in a format no converter reads — a real hole in the library.
+  undecided:
+    label: Undecided
+    description: Its application has never been classified, so nobody has ruled whether it is VistA.
+
+reason_kinds:
+  doctype-kept:
+    label: Doc type kept
+    description: Its doc type is one doctype-policy.yaml keeps, so the gate admits it; the value is the doc code.
+  noise:
+    label: Not a VistA document
+    description: The catalog classifies this link, shared across application pages, as a benefits form (noise-domains.yaml) or a page outside the VDL; the value is the noise type.
+  app-status:
+    label: Application status denied
+    description: Its application's VA lifecycle status is one scope-policy.yaml denies; the value is the status.
+  system-type:
+    label: Not VistA software
+    description: Its application's system type (system-types.yaml) starts with none of the prefixes scope-policy.yaml allows; the value is the system type.
+  system-type-unclassified:
+    label: Application unclassified
+    description: Its application has no system type in system-types.yaml, so it needs a ruling there; the value is the system type as recorded.
+  format-duplicate:
+    label: Copy of a held DOCX
+    description: The library holds the same document as DOCX (same anchor key or doc_id) and fetches that one; the value is this copy's format.
+  doctype-omitted:
+    label: Doc type omitted
+    description: Its doc type is one doctype-policy.yaml omits as version-bound; the value is the doc code.
+  sole-format:
+    label: Held in its only format
+    description: It exists in no DOCX version, its doc type is admitted, and Docling reads its format, so it is held as it is; the value is the format.
+  format-only:
+    label: Unreadable format
+    description: It exists only in a format no converter reads (the pipeline reads DOCX and PDF); the value is the format.
+  sole-survivor:
+    label: Archived sole survivor
+    description: doctype-policy.yaml omits its doc type, but it is an archived document no active record supersedes, so it is kept; the value is the omitted doc code.

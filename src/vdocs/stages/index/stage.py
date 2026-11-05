@@ -30,6 +30,7 @@ import structlog
 from vdocs.contracts.registry import (
     CONSOLIDATED,
     DOC_META_STAGED,
+    GOLD_INVENTORY,
     INDEX_CHUNKS,
     INDEX_DOCUMENTS,
     INDEX_ENTITIES,
@@ -50,11 +51,14 @@ from vdocs.kernel import (
 )
 from vdocs.kernel import products as kproducts
 from vdocs.kernel import registry as kregistry
+from vdocs.models.catalog import EnrichedInventory
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
 from vdocs.stages.enrich import enrich_pure as ep
+from vdocs.stages.fetch.policy import load_gate_policy
 from vdocs.stages.index import entities_pure as ent
 from vdocs.stages.index import index_pure as ip
+from vdocs.stages.index import inventory_pure as inv
 
 log = structlog.get_logger(__name__)
 
@@ -73,7 +77,8 @@ CREATE TABLE documents (
   image_count   INTEGER, image_bytes INTEGER,
   bundle_path   TEXT,
   app_status    TEXT, decommission_date TEXT, cots_dependent INTEGER,
-  out_of_scope_reason TEXT
+  out_of_scope_reason TEXT,
+  last_updated  TEXT, last_updated_source TEXT
 );
 CREATE TABLE doc_sections (
   section_id TEXT PRIMARY KEY,
@@ -121,6 +126,16 @@ CREATE TABLE vocab (
 -- views over them (the index.db schema owner) so the read-schema version is consistent even before
 -- the post-resolve `merge` stage populates them; `merge` fills them via replace_table_atomic. This
 -- keeps `index` free of any knowledge.db dependency (D-S3.3a) — they are inert scaffolding here.
+-- the gold inventory, one row per VDL listing (inventory browser step 1, read contract v1.7):
+-- the listing, its profile tags and its completeness disposition. Gold status is a join on doc_id.
+CREATE TABLE inventory (
+  row_key TEXT PRIMARY KEY, doc_id TEXT NOT NULL,
+  app_code TEXT, app_name TEXT, section TEXT, doc_type TEXT, title TEXT, file_name TEXT,
+  format TEXT, patch_id TEXT, app_status TEXT, system_type TEXT, doc_url TEXT, app_url TEXT,
+  app_user TEXT, doc_user TEXT, software_class TEXT, function_category TEXT, pkg_ns TEXT,
+  disposition TEXT NOT NULL, reason TEXT, reason_kind TEXT NOT NULL, reason_value TEXT
+);
+CREATE INDEX idx_inventory_doc_id ON inventory(doc_id);
 CREATE TABLE entity_skl (
   entity_id TEXT PRIMARY KEY, node_id TEXT NOT NULL,
   type TEXT, canonical TEXT, canonical_name TEXT
@@ -143,6 +158,7 @@ _DOC_COLUMNS = (
     "word_count", "section_count", "is_latest", "template_id", "source_sha256", "source_url",
     "published", "pub_year", "image_count", "image_bytes", "bundle_path",
     "app_status", "decommission_date", "cots_dependent", "out_of_scope_reason",
+    "last_updated", "last_updated_source",
 )  # fmt: skip
 
 
@@ -152,7 +168,9 @@ class IndexStage(Stage):
     # REGISTRIES: application names (app-profiles, product-names), the published vocabularies and
     # the entity rules are read from the registry tree — undeclared, an SR rename left index.db on
     # the old name because index skipped as "inputs unchanged"
-    requires = [TEXT_NORMALIZED, CONSOLIDATED, DOC_META_STAGED, REGISTRIES]
+    # GOLD_INVENTORY: the inventory rows (v_inventory) — so a crawl that changes inventory.json
+    # re-runs index, and the table goes stale only after a run that stops before it
+    requires = [TEXT_NORMALIZED, CONSOLIDATED, DOC_META_STAGED, REGISTRIES, GOLD_INVENTORY]
     produces = [INDEX_DOCUMENTS, INDEX_SECTIONS, INDEX_CHUNKS, INDEX_ENTITIES]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
     # v2 (L1.2): chunks_fts gained a `doc_title` column (the doc-defining-token search fix).
@@ -182,7 +200,12 @@ class IndexStage(Stage):
     # cots_dependent / out_of_scope_reason from doc_meta_staged (FM fallback), so a consumer can
     # badge a deprecated package's manual instead of losing it; read contract → v1.6 (additive
     # MINOR) — the CI.2 master-set retention's visibility half.
-    contract_ver = 16
+    # v17 (inventory browser step 1): index.db gained the `inventory` table (v_inventory) — one row
+    # per gold-inventory listing with its disposition — documents gained last_updated /
+    # last_updated_source from history.yaml, vocab gained dispositions, reason kinds, doc-type
+    # families and namespace names, and meta the inventory's count and content hash; read
+    # contract → v1.7 (additive MINOR).
+    contract_ver = 17
     # ^ v15: `searchable` is the retrieval predicate, not a `kind` alias (P6.1b)
     # ^ v14: vocab-validated option recognizer (un-quarantined)
 
@@ -191,10 +214,19 @@ class IndexStage(Stage):
         # the published read contract (ADR-0001): the SSOT the v_* views are generated from and
         # whose version is stamped into `meta` — so views can't drift from the spec.
         spec = read_contract.load(read_contract.contract_path(base=cfg.read_contract_dir))
-        vocab_rows = vocab.vocab_rows(cfg.registries)  # published facet vocabulary (P2)
+        # the gold inventory → one row per listing, with the same classify()/profile_tags() the
+        # completeness report and the gold documents use (inventory browser §5)
+        records = EnrichedInventory.model_validate_json(
+            cfg.gold_inventory_json.read_text(encoding="utf-8")
+        ).records
+        inventory = inv.inventory_rows(
+            records, load_gate_policy(cfg.registries), personas.load_profile_maps(cfg.registries)
+        )
+        # published facet vocabulary (P2), with the inventory's namespaces named (D4)
+        vocab_rows = vocab.vocab_rows(cfg.registries, namespaces=inv.same_code_app_names(records))
         staged_cols, staged_rows = _read_staged(cfg.index_db)
         by_path = {str(r["bundle_path"]): r for r in staged_rows}
-        latest_paths = _latest_bundle_paths(cfg.gold_consolidated)
+        latest_paths, dates = _history(cfg.gold_consolidated)
         app_name_map = personas.app_names(cfg.registries)  # app_code → name (title fallback)
         products = kproducts.load_products(cfg.registries)  # app_code → [product] (abbr titles)
         # D2.5: types quarantined by registries/entity-quality.yaml never compile —
@@ -257,6 +289,7 @@ class IndexStage(Stage):
                     image_count,
                     image_bytes,
                     bundle_path,
+                    dates.get(doc_id, ("", "")),
                 )
             )
             for seq, s in enumerate(secs):
@@ -359,8 +392,14 @@ class IndexStage(Stage):
                 vocab_rows,
             )
             conn.executemany(
+                f"INSERT INTO inventory ({', '.join(inv.INVENTORY_COLUMNS)}) "
+                f"VALUES ({', '.join('?' for _ in inv.INVENTORY_COLUMNS)})",
+                [r.as_tuple() for r in inventory],
+            )
+            conn.executemany(
                 "INSERT INTO meta (key, value) VALUES (?, ?)",
-                ip.meta_rows(documents, schema_version=read_contract.version(spec)),
+                ip.meta_rows(documents, schema_version=read_contract.version(spec))
+                + inv.meta_rows(records),
             )
 
         db.build_atomic(cfg.index_db, build)
@@ -372,6 +411,7 @@ class IndexStage(Stage):
                 "table_chunks": sum(1 for c in chunks if "#table-" in c[0]),
                 "entities": len(ent_count),
                 "mentions": len(mentions),
+                "inventory": len(inventory),
             }
         )
 
@@ -389,6 +429,7 @@ def _doc_row(  # type: ignore[no-untyped-def]
     image_count,
     image_bytes,
     bundle_path,
+    last_updated,
 ):
     """One `documents` row — inventory identity from the staged table, title/template/provenance
     from the bundle FM (the keys `doc_meta_staged` doesn't carry).
@@ -448,6 +489,8 @@ def _doc_row(  # type: ignore[no-untyped-def]
         int(staged.get("cots_dependent") or 0)
         or int(str(meta.get("cots_dependent", "")) == "true"),
         s("out_of_scope_reason") or str(meta.get("out_of_scope_reason", "")),
+        # the document's own last update + its source, from its history.yaml member (§4)
+        *last_updated,
     )
 
 
@@ -477,20 +520,24 @@ def _carry_staged(conn, cols, rows):  # type: ignore[no-untyped-def]
         )
 
 
-def _latest_bundle_paths(consolidated_root):  # type: ignore[no-untyped-def]
-    """Map each `is_latest` `doc_id` → its de-versioned gold anchor bundle relpath (`<app>/<slug>`).
+def _history(consolidated_root):  # type: ignore[no-untyped-def]
+    """One walk over the `history.yaml` files: each `is_latest` `doc_id` → its de-versioned gold
+    anchor bundle relpath (`<app>/<slug>`), and every member's `doc_id` → its last-updated date and
+    source (:func:`index_pure.last_updated`).
 
     The anchor's `history.yaml` sits at the bundle dir, so `hist_path.parent` IS that relpath.
     That dir carries the doc's gold sidecars (e.g. `tables/*.csv`); a consumer reads the relpath off
     `v_documents.bundle_path` to locate them without parsing the versioned `doc_key`."""
     latest: dict[str, str] = {}
-    for hist_path in consolidated_root.rglob("history.yaml"):
+    dates: dict[str, tuple[str, str]] = {}
+    for hist_path in sorted(consolidated_root.rglob("history.yaml")):
         rel = hist_path.parent.relative_to(consolidated_root).as_posix()
         data = kregistry.load_mapping(hist_path)
         for m in data.get("members") or []:
             if m.get("is_latest"):
                 latest[str(m["doc_id"])] = rel
-    return latest
+            dates.setdefault(str(m["doc_id"]), ip.last_updated(m))
+    return latest, dates
 
 
 def _toc_depth(refs_path):  # type: ignore[no-untyped-def]

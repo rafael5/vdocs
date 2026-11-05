@@ -48,6 +48,39 @@ def row_keys(records: list[EnrichedRecord]) -> list[str]:
     return keys
 
 
+def inventory_hash(records: list[EnrichedRecord]) -> str:
+    """The inventory's content identity, stamped into ``meta``: computed the way the crawl
+    snapshot's ``canonical_hash`` is — sorted canonical rows — so the order VA's pages list the
+    records in does not move it, and any change to an enriched record does."""
+    lines = sorted(canonical(r) for r in records)
+    return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
+
+
+# The meta keys that stamp which inventory the table was built from (doctor compares the hash).
+META_RECORD_COUNT = "inventory_record_count"
+META_CONTENT_HASH = "inventory_content_hash"
+
+
+def meta_rows(records: list[EnrichedRecord]) -> list[tuple[str, str]]:
+    """The inventory's ``meta`` rows: its record count and content hash."""
+    return [(META_RECORD_COUNT, str(len(records))), (META_CONTENT_HASH, inventory_hash(records))]
+
+
+def same_code_app_names(records: list[EnrichedRecord]) -> dict[str, str]:
+    """Every inventory namespace → the name of the application whose code is the same (the
+    first in sort order when VA spells it more than one way), or ``""`` when no application has
+    that code — the fallback a namespace takes when the PACKAGE file does not name it."""
+    apps: dict[str, set[str]] = defaultdict(set)
+    for r in records:
+        if r.app_name_full:
+            apps[r.app_name_abbrev].add(r.app_name_full)
+    return {
+        ns: min(apps[ns]) if apps.get(ns) else ""
+        for ns in sorted({r.pkg_ns for r in records})
+        if ns
+    }
+
+
 @dataclass(frozen=True)
 class InventoryRow:
     """One VDL listing as ``v_inventory`` publishes it. Gold status is not a column: it is a

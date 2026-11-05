@@ -8,6 +8,7 @@ codes. Uniqueness over the real inventory is checked on the lake after the rebui
 
 from __future__ import annotations
 
+import hashlib
 from collections import Counter
 
 from vdocs.kernel.ids import doc_id
@@ -18,8 +19,11 @@ from vdocs.stages.fetch.fetch_pure import GatePolicy, sole_survivors
 from vdocs.stages.index.inventory_pure import (
     INVENTORY_COLUMNS,
     InventoryRow,
+    canonical,
+    inventory_hash,
     inventory_rows,
     row_keys,
+    same_code_app_names,
 )
 from vdocs.stages.serve_inventory.completeness_pure import DISPOSITIONS, completeness_report
 
@@ -240,3 +244,30 @@ class TestInventoryRows:
             "UM",
         )
         assert INVENTORY_COLUMNS[0] == "row_key" and len(INVENTORY_COLUMNS) == len(row.as_tuple())
+
+
+class TestInventoryHash:
+    """Stamped into meta so doctor can tell when the table no longer matches inventory.json."""
+
+    def test_it_ignores_the_order_va_lists_the_records_in(self) -> None:
+        recs = mixed_inventory()
+        assert inventory_hash(recs) == inventory_hash(list(reversed(recs)))
+
+    def test_it_is_the_canonical_hash_of_the_sorted_canonical_records(self) -> None:
+        recs = inventory()
+        lines = sorted(canonical(r) for r in recs)
+        assert inventory_hash(recs) == hashlib.sha256("\n".join(lines).encode()).hexdigest()
+
+    def test_any_change_to_a_record_changes_it(self) -> None:
+        recs = inventory()
+        edited = [recs[0].model_copy(update={"doc_title": "renamed"}), *recs[1:]]
+        assert inventory_hash(edited) != inventory_hash(recs)
+
+
+def test_namespaces_map_to_the_same_code_applications_name() -> None:
+    recs = [
+        *inventory(),
+        _rec("XU", "xu_um", page=PAGE_XU, url="u").model_copy(update={"pkg_ns": "XUSC"}),
+    ]
+    recs = [r.model_copy(update={"app_name_full": f"{r.app_name_abbrev} app"}) for r in recs]
+    assert same_code_app_names(recs) == {"PRCA": "PRCA app", "CAPRI": "CAPRI app", "XUSC": ""}

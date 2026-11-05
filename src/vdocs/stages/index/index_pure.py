@@ -56,6 +56,19 @@ def meta_rows(documents: list[tuple], *, schema_version: str) -> list[tuple[str,
     ]
 
 
+def last_updated(member: dict) -> tuple[str, str]:
+    """A document's own last update and where it came from, from its ``history.yaml`` member:
+    ``official_date`` is the newest Revision History date when the document has one, else its
+    title-page date (``consolidate``), so the source is ``revision-history`` when the date is one
+    of the member's revision dates and ``title-page`` otherwise; ``("", "")`` when undated. Never
+    the VDL posting date (inventory browser proposal §4)."""
+    date = str(member.get("official_date") or "")
+    if not date:
+        return "", ""
+    revisions = {str(r.get("date") or "") for r in member.get("revisions") or []}
+    return date, "revision-history" if date in revisions else "title-page"
+
+
 # Oversized-leaf splitting (§14.6). Calibration targets (tune against the B3 golden set), not magic
 # constants: only a leaf body larger than OVERSIZED_CHUNK_CHARS is split; each window aims for
 # ~CHUNK_TARGET_CHARS, with a one-block overlap so a cross-boundary passage holds.

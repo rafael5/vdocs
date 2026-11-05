@@ -464,3 +464,27 @@ def test_meta_rows_carry_schema_version_and_fingerprint():
     assert rows["corpus_content_hash"] == ip.corpus_content_hash(_DOCS_A)
     with pytest.raises(TypeError):
         ip.meta_rows(_DOCS_A)  # type: ignore[call-arg]
+
+
+# --- the last-updated date (inventory browser step 1, proposal §4) -------------------------------
+
+
+def test_last_updated_is_the_newest_revision_when_official_date_is_one():
+    member = {
+        "official_date": "2022-08",
+        "revisions": [{"date": "2005-01"}, {"date": "2022-08"}],
+    }
+    assert ip.last_updated(member) == ("2022-08", "revision-history")
+
+
+def test_last_updated_falls_back_to_the_title_page():
+    """official_date is the newest revision date when there is one, else the title-page date —
+    so a date that is none of the revision dates came from the title page."""
+    member = {"official_date": "2005-01", "revisions": [{"date": "ACKQ*3.0*13 Removed …"}]}
+    assert ip.last_updated(member) == ("2005-01", "title-page")
+    assert ip.last_updated({"official_date": "2005-01"}) == ("2005-01", "title-page")
+
+
+def test_a_member_with_no_date_is_undated():
+    assert ip.last_updated({"official_date": "", "revisions": [{"date": ""}]}) == ("", "")
+    assert ip.last_updated({"official_date": None}) == ("", "")

@@ -1,0 +1,14 @@
+# registries/inventory/doctype-families.yaml
+# =========================================================================================
+# The Library's Type families: each opens into its doc-type codes. Published as v_vocab rows
+# of kind `doc_type_family`, one per member code (label = the family), so a consumer joins
+# v_documents.doc_type or v_inventory.doc_type to it; a code in no family is "Other".
+# Listed in display order. Moved from vdocs-web's web/src/routes/+page.svelte (TYPE_FAMILIES)
+# on 2026-11-05; vdocs-web keeps its copy until it reads these rows (inventory browser step 4).
+# A code may belong to one family only (vocab_rows refuses a second).
+# =========================================================================================
+
+families:
+  Manuals & Guides: [UM, UG, QRG, TRG, FAQ, TG]
+  Technical: [TM, DG, API, INT, REF]
+  Admin & Security: [SG, SM, AG]

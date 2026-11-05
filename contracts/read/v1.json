@@ -1,5 +1,5 @@
 {
-  "read_schema_version": "1.6",
+  "read_schema_version": "1.7",
   "description": "Published read contract for vdocs index.db (ADR-0001). Consumers (vdocs-tui, vdocs-web, MCP) bind ONLY to the v_* views + the named chunks_fts surface \u2014 never to physical tables. The pipeline may refactor physical tables freely behind these. Views are GENERATED from this spec (kernel.read_contract.view_ddl), so they cannot drift from it; `vdocs doctor` asserts the emitted DB matches.",
   "views": {
     "v_documents": {
@@ -180,6 +180,16 @@
           "type": "TEXT",
           "nullable": true,
           "desc": "the disqualifying source-format label the inventory carries for this representation (empty for the admitted DOCX; provenance only)"
+        },
+        "last_updated": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "the document's own last update (YYYY-MM): its newest Revision History date, else its title-page date (history.yaml official_date); empty when the text carries none. Never the VDL posting date"
+        },
+        "last_updated_source": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "where last_updated came from: revision-history | title-page (empty when undated)"
         }
       }
     },
@@ -415,6 +425,127 @@
           "desc": "SKL node id tagged on the chunk"
         }
       }
+    },
+    "v_inventory": {
+      "source": "inventory",
+      "description": "One row per VDL listing in the gold inventory (one link on one application page, as inventory.json holds it; not a document), as of the last `vdocs index` \u2014 meta.inventory_content_hash says which inventory. Gold status is not a column: join doc_id to v_documents (and the reverse join finds gold documents no listing carries). Definitions: v_vocab kinds disposition, reason_kind, namespace (pkg_ns full names, PACKAGE file #9.4 first) and doc_type_family.",
+      "columns": {
+        "row_key": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "the listing's own key (PRIMARY): a hash of application page, section, file URL and patch id, plus an ordinal among the listings sharing them assigned by their full content \u2014 stable under VA reordering a page"
+        },
+        "doc_id": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "inventory join key app_code:doc_slug (kernel.ids.doc_id); join to v_documents.doc_id for gold status. Not unique: a document's DOCX and PDF, and repeated listings, share it"
+        },
+        "app_code": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "application code of the page that lists it"
+        },
+        "app_name": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "the VDL's name for that application"
+        },
+        "section": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "VDL section code (v_vocab kind section)"
+        },
+        "doc_type": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "document type code (v_vocab kinds doc_type, doc_type_family)"
+        },
+        "title": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "the listing's title as the VDL shows it"
+        },
+        "file_name": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "the listed file's name"
+        },
+        "format": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "docx | pdf | doc"
+        },
+        "patch_id": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "patch id parsed from the listing"
+        },
+        "app_status": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "VA lifecycle label of the application (active | archive | decommissioned), as lifecycle_labels defines it on v_documents"
+        },
+        "system_type": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "the application's system type (registries system-types.yaml)"
+        },
+        "doc_url": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "the file on the VDL"
+        },
+        "app_url": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "the application page that lists it; the number of pages listing one doc_url is a count over this"
+        },
+        "app_user": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "persona operating the application (empty with no profile)"
+        },
+        "doc_user": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "persona reading this doc type (empty with no profile)"
+        },
+        "software_class": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "software class I/II/III (empty with no profile)"
+        },
+        "function_category": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "functional domain (empty with no profile)"
+        },
+        "pkg_ns": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "package namespace as the inventory records it (v_vocab kind namespace for its name)"
+        },
+        "disposition": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "held | not-vista | excluded | covered-by-other-format | unreachable | undecided \u2014 the completeness outcome; counts equal `vdocs completeness`"
+        },
+        "reason": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "the reason string `vdocs completeness` prints (empty for a held record whose doc type is kept)"
+        },
+        "reason_kind": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "the mechanism that decided it (v_vocab kind reason_kind explains each)"
+        },
+        "reason_value": {
+          "type": "TEXT",
+          "nullable": true,
+          "desc": "the value that decided it: a doc code, format, system type, status or noise type"
+        }
+      }
     }
   },
   "fts": {
@@ -461,6 +592,8 @@
     "product_facets",
     "vocab_table",
     "skl_entity_keying",
-    "lifecycle_labels"
+    "lifecycle_labels",
+    "inventory",
+    "last_updated"
   ]
 }

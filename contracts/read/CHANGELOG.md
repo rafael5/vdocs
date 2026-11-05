@@ -6,6 +6,29 @@ Semver for the **read** contract (`read_schema_version`), the consumer-facing in
 replacement additively, keep the old as an alias for one release, then remove + MAJOR bump. See
 [ADR-0001](../../docs/adr/0001-read-contract-and-drift-prevention.md).
 
+## v1.7 — 2026-11-05
+
+Additive (backward-compatible) — the whole VDL inventory in `index.db` (inventory browser step 1,
+`docs/proposals/inventory-browser-proposal.md`):
+
+- **`v_inventory`** — one row per listing in the gold inventory (`inventory.json`, 9,080 on
+  2026-11-05): a `row_key` of its own (neither `doc_id` nor the VDL URL is unique), `doc_id`, the
+  listing's application, section, doc type, title, file, format, patch id, lifecycle label, system
+  type and URLs, the four profile tags, the namespace, and the completeness `disposition` with its
+  `reason` string, `reason_kind` and `reason_value`. Gold status is not stored: join `doc_id` to
+  `v_documents`.
+- **`v_documents.last_updated`** / **`last_updated_source`** — the document's own last update
+  (`YYYY-MM`): its newest Revision History date, else its title-page date (`history.yaml`
+  `official_date`), and which of the two it was. Never the VDL posting date.
+- **`v_vocab`** gained the kinds `disposition`, `reason_kind` (one sentence per kind),
+  `doc_type_family` (one row per member type; a type in none is Other) and `namespace` (the
+  inventory's namespaces, PACKAGE file #9.4 name first, read by the Inventory mode only).
+- **`meta`** gained `inventory_record_count` and `inventory_content_hash` (order-independent,
+  over the enriched records); `vdocs doctor` compares the hash with the current `inventory.json`.
+- **capabilities `inventory`, `last_updated`.**
+
+(`index` `contract_ver` 16→17; `index` now requires the gold inventory.)
+
 ## v1.6 — 2026-08-03
 
 Additive (backward-compatible) — VA lifecycle labels on the document (vdocs-quality-crawl-integrity

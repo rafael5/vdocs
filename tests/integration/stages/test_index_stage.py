@@ -10,12 +10,19 @@ from __future__ import annotations
 
 import yaml
 
-from vdocs.contracts.registry import CONSOLIDATED, DOC_META_STAGED, TEXT_NORMALIZED
+from vdocs.contracts.registry import (
+    CONSOLIDATED,
+    DOC_META_STAGED,
+    GOLD_INVENTORY,
+    TEXT_NORMALIZED,
+)
 from vdocs.kernel import cas, db, frontmatter
+from vdocs.models.catalog import EnrichedInventory, EnrichedRecord
 from vdocs.models.stage import StageRun
 from vdocs.orchestrator.engine import Orchestrator
 from vdocs.stages.enrich.enrich_pure import STAGED_COLUMNS
 from vdocs.stages.enrich.stage import _write_staged
+from vdocs.stages.index.inventory_pure import inventory_hash, same_code_app_names
 from vdocs.stages.index.stage import IndexStage
 
 # two patches of one logical doc (CPRS:OR:IG); the v566 patch is the anchor (is_latest)
@@ -96,12 +103,24 @@ def _seed_staged(ctx, docs):
     _write_staged(ctx.cfg.index_db, rows)
 
 
+# history.yaml dates per doc_id: the anchor's newest revision is later than its title page; the
+# older patch carries only a title-page date
+_DATES = {
+    "CPRS:or_3_566_ig": {
+        "official_date": "2022-08",
+        "revisions": [{"date": "2015-09"}, {"date": "2022-08"}],
+    },
+    "CPRS:or_3_190_ig": {"official_date": "2004-03", "revisions": []},
+}
+
+
 def _seed_consolidated(ctx, latest_doc_id, all_doc_ids):
     hist = {
         "anchor_key": "CPRS:OR:IG",
         "member_count": len(all_doc_ids),
         "members": [
             {"doc_id": d, "doc_slug": d.split(":")[1], "is_latest": d == latest_doc_id}
+            | _DATES.get(d, {})
             for d in all_doc_ids
         ],
     }
@@ -111,15 +130,59 @@ def _seed_consolidated(ctx, latest_doc_id, all_doc_ids):
     )
 
 
+_PAGE = "https://www.va.gov/vdl/application.asp?appid=61"
+_FORM = "http://www.vba.va.gov/pubs/forms/VBA-21-526-ARE.pdf"
+
+
+def _inventory_records():
+    """The anchor as DOCX and PDF, an omitted release note, and a benefits form."""
+
+    def r(slug, fmt="docx", doc_code="IG", **kw):
+        return EnrichedRecord(
+            section_code="CLI",
+            section_name="Clinical",
+            app_name_full="Computerized Patient Record System",
+            app_name_abbrev="CPRS",
+            system_type="VistA",
+            pkg_ns="OR",
+            patch_id="OR*3.0*566",
+            anchor_key=f"CPRS:OR:{doc_code}:{slug}",
+            doc_code=doc_code,
+            doc_title=f"{slug} title",
+            doc_filename=f"{slug}.{fmt}",
+            doc_slug=slug,
+            doc_format=fmt,
+            app_url=_PAGE,
+            doc_url=kw.pop("url", f"https://www.va.gov/vdl/documents/Clinical/{slug}.{fmt}"),
+            **kw,
+        )
+
+    return [
+        r("or_3_566_ig", doc_code="TM"),  # a type the policy keeps (it omits IG)
+        r("or_3_566_ig", "pdf", doc_code="TM"),
+        r("or_3_600_rn", doc_code="RN"),
+        r("vba_21_526", "pdf", doc_code="", url=_FORM, noise_type="vba_form"),
+    ]
+
+
+def _seed_inventory(ctx, records):
+    cas.atomic_write(
+        ctx.cfg.gold_inventory_json,
+        EnrichedInventory(records=records).model_dump_json().encode(),
+    )
+
+
 def _seed(ctx):
     old = _seed_bundle(ctx, *_OLD)
     new = _seed_bundle(ctx, *_NEW)
     _seed_staged(ctx, [old, new])
     _seed_consolidated(ctx, latest_doc_id=new, all_doc_ids=[old, new])
+    _seed_inventory(ctx, _inventory_records())
     for stage, art in (
         ("normalize", TEXT_NORMALIZED),
         ("consolidate", CONSOLIDATED),
         ("enrich", DOC_META_STAGED),
+        ("serve-inventory", GOLD_INVENTORY),
     ):
         _bless(ctx, stage, art)
     return old, new
@@ -211,10 +274,12 @@ def test_index_denoises_title_preserving_source_and_app_name(ctx):
     _seed_bundle(ctx, "ACKQ", "quasar_um", "ACKQ*3*21", body, title=raw)
     _seed_staged(ctx, ["ACKQ:quasar_um"])
     _seed_consolidated(ctx, latest_doc_id="ACKQ:quasar_um", all_doc_ids=["ACKQ:quasar_um"])
+    _seed_inventory(ctx, _inventory_records())
     for stage, art in (
         ("normalize", TEXT_NORMALIZED),
         ("consolidate", CONSOLIDATED),
         ("enrich", DOC_META_STAGED),
+        ("serve-inventory", GOLD_INVENTORY),
     ):
         _bless(ctx, stage, art)
     (result,) = Orchestrator([IndexStage()]).run(ctx)
@@ -282,10 +347,12 @@ def test_index_handles_empty_staged_table(ctx):
     _seed_bundle(ctx, "ADT", "lone_doc", "ADT*1*1", "# Lone\n\n## S\n\nbody ^DPT\n")
     _seed_consolidated(ctx, latest_doc_id="ADT:lone_doc", all_doc_ids=["ADT:lone_doc"])
     _write_staged(ctx.cfg.index_db, [])  # enrich produced an empty staging table
+    _seed_inventory(ctx, _inventory_records())
     for stage, art in (
         ("normalize", TEXT_NORMALIZED),
         ("consolidate", CONSOLIDATED),
         ("enrich", DOC_META_STAGED),
+        ("serve-inventory", GOLD_INVENTORY),
     ):
         _bless(ctx, stage, art)
     (result,) = Orchestrator([IndexStage()]).run(ctx)
@@ -332,7 +399,7 @@ def test_index_stamps_read_contract_meta(ctx):
         meta = dict(conn.execute("SELECT key, value FROM meta").fetchall())
     finally:
         conn.close()
-    assert meta["read_schema_version"] == "1.6"
+    assert meta["read_schema_version"] == "1.7"
     assert meta["corpus_doc_count"] == "2"  # both version-group members are documents
     assert len(meta["corpus_content_hash"]) == 64  # sha256 hexdigest
 
@@ -384,7 +451,7 @@ def test_index_emits_read_contract_views_matching_the_spec(ctx):
         assert latest == 1
         # the read_schema_version stamped in meta is the spec's version (single source)
         ver = conn.execute("SELECT value FROM meta WHERE key = 'read_schema_version'").fetchone()[0]
-        assert ver == rc.version(spec) == "1.6"
+        assert ver == rc.version(spec) == "1.7"
     finally:
         conn.close()
 
@@ -397,7 +464,7 @@ def test_index_publishes_the_vocab_table(ctx):
     _seed(ctx)
     (result,) = Orchestrator([IndexStage()]).run(ctx)
     assert result.status == "ok"
-    want = kv.vocab_rows(ctx.cfg.registries)
+    want = kv.vocab_rows(ctx.cfg.registries, namespaces=same_code_app_names(_inventory_records()))
     conn = db.connect(ctx.cfg.index_db, read_only=True)
     try:
         got = conn.execute(
@@ -432,10 +499,12 @@ def test_index_records_per_doc_image_stats(ctx):
     )
     _seed_staged(ctx, [doc])
     _seed_consolidated(ctx, latest_doc_id=doc, all_doc_ids=[doc])
+    _seed_inventory(ctx, _inventory_records())
     for stage, art in (
         ("normalize", TEXT_NORMALIZED),
         ("consolidate", CONSOLIDATED),
         ("enrich", DOC_META_STAGED),
+        ("serve-inventory", GOLD_INVENTORY),
     ):
         _bless(ctx, stage, art)
 
@@ -515,3 +584,89 @@ def test_an_application_name_edit_reruns_index(tmp_path):
         assert stage._input_fps(ctx)[REGISTRIES.key] != before[REGISTRIES.key]
     finally:
         store.close()
+
+
+# --- the inventory (inventory browser step 1) ---------------------------------------------------
+
+
+def _q(ctx, sql):
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        return [tuple(r) for r in conn.execute(sql).fetchall()]
+    finally:
+        conn.close()
+
+
+def test_index_publishes_one_inventory_row_per_record(ctx):
+    _seed(ctx)
+    (result,) = Orchestrator([IndexStage()]).run(ctx)
+    assert result.status == "ok"
+    assert result.counts["inventory"] == 4
+    rows = _q(ctx, "SELECT doc_id, format, disposition, reason, reason_kind FROM v_inventory")
+    assert sorted(rows) == [
+        ("CPRS:or_3_566_ig", "docx", "held", "", "doctype-kept"),
+        ("CPRS:or_3_566_ig", "pdf", "covered-by-other-format", "format:pdf-duplicate",
+         "format-duplicate"),
+        ("CPRS:or_3_600_rn", "docx", "excluded", "doctype-omitted:RN", "doctype-omitted"),
+        ("CPRS:vba_21_526", "pdf", "not-vista", "not-vista:vba-form", "noise"),
+    ]  # fmt: skip
+    assert _q(ctx, "SELECT count(DISTINCT row_key) FROM v_inventory") == [(4,)]
+
+
+def test_gold_status_is_a_join_on_doc_id(ctx):
+    """Not stored: both formats of the anchor reach its gold document through doc_id, and the
+    release note and the form reach nothing."""
+    _seed(ctx)
+    Orchestrator([IndexStage()]).run(ctx)
+    joined = _q(
+        ctx,
+        "SELECT i.doc_id, i.format, d.is_latest FROM v_inventory i "
+        "LEFT JOIN v_documents d ON d.doc_id = i.doc_id ORDER BY i.doc_id, i.format",
+    )
+    assert joined == [
+        ("CPRS:or_3_566_ig", "docx", 1),
+        ("CPRS:or_3_566_ig", "pdf", 1),
+        ("CPRS:or_3_600_rn", "docx", None),
+        ("CPRS:vba_21_526", "pdf", None),
+    ]
+
+
+def test_index_stamps_the_inventory_count_and_content_hash(ctx):
+    _seed(ctx)
+    Orchestrator([IndexStage()]).run(ctx)
+    meta = dict(_q(ctx, "SELECT key, value FROM meta"))
+    assert meta["inventory_record_count"] == "4"
+    assert meta["inventory_content_hash"] == inventory_hash(_inventory_records())
+
+
+def test_v_documents_carries_the_documents_own_last_update_and_its_source(ctx):
+    old, new = _seed(ctx)
+    Orchestrator([IndexStage()]).run(ctx)
+    got = dict(
+        (d, (u, s))
+        for d, u, s in _q(ctx, "SELECT doc_id, last_updated, last_updated_source FROM v_documents")
+    )
+    assert got == {new: ("2022-08", "revision-history"), old: ("2004-03", "title-page")}
+
+
+def test_index_publishes_the_inventory_vocabularies(ctx):
+    _seed(ctx)
+    Orchestrator([IndexStage()]).run(ctx)
+    kinds = {k for (k,) in _q(ctx, "SELECT DISTINCT kind FROM v_vocab")}
+    assert {"disposition", "reason_kind", "doc_type_family", "namespace"} <= kinds
+    # only the inventory's own namespaces are named: OR, by the operator's override
+    assert _q(ctx, "SELECT code, label FROM v_vocab WHERE kind='namespace'") == [
+        ("OR", "Order Entry (CPRS)")
+    ]
+
+
+def test_an_inventory_change_reruns_index(ctx):
+    """The inventory is an index input, so a crawl that changes it re-runs index — and the table
+    can only go stale after a partial run that stops before index (proposal §7)."""
+    _seed(ctx)
+    Orchestrator([IndexStage()]).run(ctx)
+    stage = IndexStage()
+    assert GOLD_INVENTORY in stage.requires
+    before = stage._input_fps(ctx)[GOLD_INVENTORY.key]
+    _seed_inventory(ctx, _inventory_records()[:3])
+    assert stage._input_fps(ctx)[GOLD_INVENTORY.key] != before

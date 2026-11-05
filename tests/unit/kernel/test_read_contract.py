@@ -4,6 +4,8 @@ capability set."""
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from vdocs.kernel import read_contract as rc
 
 _SPEC = {
@@ -46,7 +48,7 @@ def test_version_and_capabilities_read_from_spec():
 def test_load_reads_the_real_v1_contract():
     # the shipped contract parses and declares the views consumers bind to
     spec = rc.load(rc.contract_path())
-    assert rc.version(spec) == "1.6"
+    assert rc.version(spec) == "1.7"
     cols = rc.view_columns(spec)
     expected = {"v_documents", "v_sections", "v_chunks", "v_entities", "v_entity_mentions"}
     assert expected <= set(cols) and "v_vocab" in cols
@@ -99,3 +101,30 @@ def test_column_type_change_is_breaking():
 def test_removing_a_capability_is_breaking():
     problems = rc.lint_bump(_BASE, _spec("1.2", [("doc_key", "TEXT"), ("title", "TEXT")], caps=()))
     assert problems and any("MAJOR" in p for p in problems)
+
+
+# --- 1.6 → 1.7: the inventory view (inventory browser step 1) ---------------------------------
+# lint_latest() compares the two highest MAJOR files and is a no-op while only v1.json exists, so
+# the MINOR bump is checked against a frozen copy of the 1.6 spec (git show 8e79641:…/v1.json).
+
+_V1_6 = Path(__file__).parents[2] / "fixtures" / "read-contract-v1.6.json"
+
+
+def test_the_inventory_bump_is_a_correctly_sized_minor():
+    prev, cur = rc.load(_V1_6), rc.load(rc.contract_path())
+    assert rc.version(prev) == "1.6" and rc.version(cur) == "1.7"
+    assert rc.lint_bump(prev, cur) == []
+
+
+def test_the_same_additions_without_the_bump_would_red():
+    cur = rc.load(rc.contract_path())
+    assert rc.lint_bump(rc.load(_V1_6), {**cur, "read_schema_version": "1.6"})
+
+
+def test_v_inventory_publishes_the_rows_columns_in_order():
+    from vdocs.stages.index.inventory_pure import INVENTORY_COLUMNS
+
+    spec = rc.load(rc.contract_path())
+    assert rc.view_columns(spec)["v_inventory"] == list(INVENTORY_COLUMNS)
+    assert {"inventory", "last_updated"} <= set(rc.capabilities(spec))
+    assert rc.view_columns(spec)["v_documents"][-2:] == ["last_updated", "last_updated_source"]
