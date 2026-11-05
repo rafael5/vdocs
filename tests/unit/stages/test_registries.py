@@ -159,6 +159,19 @@ def test_package_master_aliases_and_consolidations():
     assert reg.packages["CPRS"].pkg_ns == "OR"
 
 
+def test_packages_in_different_namespaces_never_share_a_name():
+    # Packages that own different M namespaces are different software, so they cannot share a
+    # display name. SR (Surgery) carried MailMan's name, and catalog enrichment copied it onto
+    # every Surgery record as app_name_full — in the inventory and the gold library alike.
+    reg = _load()
+    owners: dict[str, set[str]] = {}
+    for key, entry in reg.packages.items():
+        if entry.abbrev == key and entry.canonical_pkg == key:  # real packages, not aliases/merges
+            owners.setdefault(entry.canonical_name, set()).add(entry.pkg_ns)
+    assert {name: sorted(ns) for name, ns in owners.items() if len(ns) > 1} == {}
+    assert reg.packages["SR"].canonical_name == "Surgery"  # the VDL lists it as "Surgery (SR)"
+
+
 def test_alias_collision_with_package_key_raises():
     bad = "packages:\n  A: {canonical_name: X, aliases: [B]}\n  B: {canonical_name: Y}\n"
     import pytest

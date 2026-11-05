@@ -27,6 +27,11 @@ This file is for **what shipped**. For the *why* behind decisions
 
 ### Fixed
 
+- **Surgery (SR) was labelled "MailMan"**: `package-master.yaml` gave SR the canonical name of XM,
+  so catalog enrichment set `app_name_full` to "MailMan" on all 68 Surgery records and the 22 gold
+  Surgery documents. SR is now "Surgery", as the VDL and the PACKAGE file (#9.4) name it. A registry
+  test rejects two packages in different namespaces sharing a name. The lake picks it up on the next
+  run from `catalog`.
 - **doc-type classification**: titles using the bare abbreviation **"TM"** (e.g. *"SD PIMS Version
   5.3 TM ADDENDUM 941"*) are now classified as Technical Manual. Previously only the spelled-out
   "Technical Manual" matched, leaving such docs untyped → empty `anchor_key` → mis-collapsed in gold.

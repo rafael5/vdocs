@@ -923,10 +923,11 @@ packages:
     aliases: []
 
   SR:
-    canonical_name: "MailMan"
+    canonical_name: "Surgery"
     pkg_ns: "SR"
     canonical_pkg: "SR"
     aliases: []
+    notes: "VDL lists it as 'Surgery (SR)'; the PACKAGE file (#9.4) names namespace SR Surgery. Was mislabelled MailMan (XM's name) until 2026-11-05."
 
   SRA:
     canonical_name: "Surgery Risk Assessment"
