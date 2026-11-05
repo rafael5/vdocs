@@ -1,8 +1,8 @@
 # Inventory browser — the whole VDL catalog in vdocs-web
 
 **Status: PROPOSED · 2026-11-05 · amended 2026-11-05 after adversarial review · all decisions
-taken 2026-11-05 · steps 0 and 1 landed 2026-11-05** — the producer is built (§8 step 1); the web
-mode is not.
+taken 2026-11-05 · steps 0 and 1 landed 2026-11-05 · web mode: go (D5, 2026-11-05)** — the
+producer is built (§8 step 1); the web mode is not, and waits on identity continuity (§8 step 3).
 Producer: vdocs · consumer: vdocs-web · read contract 1.6 → 1.7 (additive). An interactive mockup
 over the real 2026-11-05 inventory lives in a private Claude artifact
 (<https://claude.ai/artifact/UP9W8LRkwXcyHVwhgTBVn5>); this file is the proposal of record. Every
@@ -337,9 +337,14 @@ one case the check catches is already visible as a pending stage in the next run
    Revision History and 134 from the title page. Also measured: no profile-tag difference on any
    gold match; 216 held records with no gold document, 14 of them the labelled re-filings; 158 of
    the 161 inventory namespaces named. `vdocs doctor`: GREEN, 22 pass, 0 warn, 0 fail.
-2. **Use the table.** With step 1 landed the operator has the whole §1 case through `sqlite3` on
-   the new view. The go/no-go on the web mode (D5) is taken here, not before.
-3. **Identity continuity across re-filing (D1).** Its own short proposal, which does not exist yet:
+2. **Use the table — closed 2026-11-05, go.** The plan was a month of use from `sqlite3`, then the
+   web mode's go/no-go (D5) on the counted use. The operator took the go on the day step 1 landed,
+   without the trial, because they want the web page. Nothing was measured; the go rests on the
+   operator's word (D5). The trial's kickoff was not run and is kept in
+   [`prompts/historical/`](../prompts/historical/inventory-browser-step2-kickoff.md).
+3. **Identity continuity across re-filing (D1).** Its own short proposal, which does not exist yet;
+   the next session writes it
+   ([kickoff](../prompts/inventory-browser-step3-kickoff.md)):
    keep the id a document already had when VA moves it to another application page. It must land
    before step 4. The producer half landed first, so the view carries D1's stopgap (option C,
    `ee10e6f`): `registries/inventory/refiled.yaml` lists the 14 re-filed ISS guides and
@@ -440,6 +445,10 @@ can be re-derived and its drift measured.
 
 **Decided 2026-11-05: B**, as recommended (written into §8). The question to answer at step 2,
 before step 4: in a month of use, how often was the table opened, and for what.
+
+**Go, taken 2026-11-05** by the operator, the day step 1 landed, without the month of use. No use
+was counted: the view was hours old. The operator's account is that they want the web page, and
+the go rests on that alone. Step 3 (identity continuity) is next and must land before step 4 (D1).
 
 ### D6 — Dating the never-fetched documents
 

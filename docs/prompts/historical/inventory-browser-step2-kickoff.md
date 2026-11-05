@@ -1,5 +1,8 @@
 # Kickoff — inventory browser, step 2: use the view, then decide the web mode
 
+> **Not run.** On 2026-11-05, the day step 1 landed, the operator took D5's go without
+> the month's trial (proposal §10 D5). Kept as the record of what was planned.
+
 > **To start the session**, on or after **2026-12-05** (a month after step 1 landed),
 > `cd ~/projects/vdocs` and say:
 >
@@ -8,7 +11,7 @@
 > Run it earlier only if the operator says the question is already answered.
 
 **Repo: `vdocs`** (`~/projects/vdocs`). Read `CLAUDE.md`, then the proposal of record,
-[`docs/proposals/inventory-browser-proposal.md`](../proposals/inventory-browser-proposal.md): §1
+[`docs/proposals/inventory-browser-proposal.md`](../../proposals/inventory-browser-proposal.md): §1
 (the case the view had to answer), §2 (what the web mode would add), §8 steps 1–4, and §10 D1 and
 D5. The `vdocs-corpus` skill's `v_inventory` section has the queries. Every decision in §10 was
 taken on 2026-11-05; do not reopen them. This step answers the question D5 left for it: *in a

@@ -28,7 +28,7 @@ Documentation here is classified by **lifecycle state, not topic**:
 
 ## Current state (2026-07-04)
 
-- **Proposed (2026-11-05), steps 0 and 1 landed:** [`proposals/inventory-browser-proposal.md`](proposals/inventory-browser-proposal.md)
+- **Proposed (2026-11-05), steps 0 and 1 landed, web mode go:** [`proposals/inventory-browser-proposal.md`](proposals/inventory-browser-proposal.md)
   — the whole VDL catalog (9,080 records) as an Inventory mode in vdocs-web, with Library facets
   plus gold / disposition / reason and each document's own last-updated date, carried in `index.db`.
   All decisions taken 2026-11-05. Step 0 (2026-11-05) committed the measurements:
@@ -38,9 +38,11 @@ Documentation here is classified by **lifecycle state, not topic**:
   [`prompts/historical/`](prompts/historical/inventory-browser-step1-kickoff.md)): `index.db` carries
   `v_inventory` (one row per listing, with disposition and reason), each document's
   `last_updated`, read contract 1.7, and a doctor freshness check; the lake was rebuilt and every
-  step 0 figure held. Step 2 — a month of using the view from `sqlite3`, then the go/no-go on the
-  web mode (D5) — is next: [`prompts/inventory-browser-step2-kickoff.md`](prompts/inventory-browser-step2-kickoff.md),
-  to run on or after 2026-12-05.
+  step 0 figure held. Step 2 closed the same day: the operator took the web mode's go (D5)
+  without the planned month of use (its unrun kickoff is in
+  [`prompts/historical/`](prompts/historical/inventory-browser-step2-kickoff.md)). Step 3 — a short
+  proposal for identity continuity across re-filing, which must land before the web mode — is
+  next: [`prompts/inventory-browser-step3-kickoff.md`](prompts/inventory-browser-step3-kickoff.md).
 - ~~**Active workstream:** SKL~~ — **the search-facing half is RULED AGAINST (2026-08-04)**, see
   [`proposals/vdocs-quality-synonym-layer/`](proposals/vdocs-quality-synonym-layer/) §10. S0–S3
   landed and the termbase + glossary projections are live and keep working; S4/S5 are **not** to be
