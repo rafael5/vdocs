@@ -28,18 +28,19 @@ Documentation here is classified by **lifecycle state, not topic**:
 
 ## Current state (2026-07-04)
 
-- **Proposed (2026-11-06), decisions taken, nothing built:** [`proposals/keyword-search-four-fixes.md`](proposals/keyword-search-four-fixes.md)
+- **Proposed (2026-11-06), decisions taken, nothing built:** [`proposals/keyword-search-five-fixes.md`](proposals/keyword-search-five-fixes.md)
   — good-enough keyword search: the web console sorts by relevance (right manual on page 1 for
   12 → 22 of 24 keyword searches), one query reader obeys quotes, AND/OR/NOT and identifiers in
   every front door, a synonym list whose core is plain-English package names ("blood bank" finds
-  VBECS; 91 → 242 of 242 drafted names find their application on page 1), and keyword-form test
-  questions. Measurements: `scripts/mcp_review/{contract,fixes,package_names}.py` →
-  `../reports/mcp-review-{contract,fixes,package-names}.json`.
+  VBECS; 91 → 242 of 242 drafted names find their application on page 1), keyword-form test
+  questions, and search-box suggestions. Summary cards searched first, pseudo-relevance feedback
+  and a link-count prior were measured and rejected. Measurements: `scripts/mcp_review/` →
+  `../reports/mcp-review-*.json`.
 - **Proposed (2026-11-06), for review, nothing built:** [`proposals/vdocs-mcp-interface-design.md`](proposals/vdocs-mcp-interface-design.md)
   — the MCP server and the other machine front doors (Go CLI, vdocs-web API) measured against the
   code and against a machine-consumer metric set: nine drifted claims, identifier and paraphrase
   weak spots, no way to read a cited passage, and fourteen ranked recommendations. Its
-  search-syntax and vocabulary parts (R9, R10, R12, R14) are superseded by the four-fixes proposal
+  search-syntax and vocabulary parts (R9, R10, R12, R14) are superseded by the five-fixes proposal
   above. Measurements: `scripts/mcp_review/` → `../reports/mcp-review-*.json`.
 - **Proposed (2026-11-05); producer and web mode built, identity continuity next:** [`proposals/inventory-browser-proposal.md`](proposals/inventory-browser-proposal.md)
   — the whole VDL catalog (9,080 records) as an Inventory mode in vdocs-web, with Library facets

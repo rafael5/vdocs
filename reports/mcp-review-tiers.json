@@ -1,0 +1,458 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "rrf_k": 60,
+ "latest_documents": 614,
+ "results": {
+  "web_keywords": {
+   "base": {
+    "n": 24,
+    "top10": 22,
+    "first": 17,
+    "mrr": 0.81
+   },
+   "card_rrf": {
+    "n": 24,
+    "top10": 21,
+    "first": 16,
+    "mrr": 0.752
+   },
+   "card_rrf_union": {
+    "n": 24,
+    "top10": 21,
+    "first": 16,
+    "mrr": 0.752
+   },
+   "card_tier": {
+    "n": 24,
+    "top10": 21,
+    "first": 14,
+    "mrr": 0.71
+   },
+   "prf_alone": {
+    "n": 24,
+    "top10": 22,
+    "first": 17,
+    "mrr": 0.81
+   },
+   "prf_rrf": {
+    "n": 24,
+    "top10": 22,
+    "first": 17,
+    "mrr": 0.81
+   },
+   "links_0.1": {
+    "n": 24,
+    "top10": 23,
+    "first": 17,
+    "mrr": 0.818
+   },
+   "links_0.3": {
+    "n": 24,
+    "top10": 23,
+    "first": 16,
+    "mrr": 0.784
+   }
+  },
+  "mcp_keywords": {
+   "base": {
+    "n": 24,
+    "top10": 20,
+    "first": 12,
+    "mrr": 0.581
+   },
+   "card_rrf": {
+    "n": 24,
+    "top10": 18,
+    "first": 11,
+    "mrr": 0.531
+   },
+   "prf_alone": {
+    "n": 24,
+    "top10": 14,
+    "first": 8,
+    "mrr": 0.411
+   },
+   "prf_rrf": {
+    "n": 24,
+    "top10": 17,
+    "first": 4,
+    "mrr": 0.346
+   },
+   "links_0.1": {
+    "n": 24,
+    "top10": 20,
+    "first": 11,
+    "mrr": 0.553
+   },
+   "links_0.3": {
+    "n": 24,
+    "top10": 20,
+    "first": 9,
+    "mrr": 0.515
+   }
+  },
+  "web_sentences": {
+   "base": {
+    "n": 24,
+    "top10": 22,
+    "first": 20,
+    "mrr": 0.875
+   },
+   "card_rrf": {
+    "n": 24,
+    "top10": 21,
+    "first": 18,
+    "mrr": 0.814
+   },
+   "card_rrf_union": {
+    "n": 24,
+    "top10": 21,
+    "first": 18,
+    "mrr": 0.814
+   },
+   "card_tier": {
+    "n": 24,
+    "top10": 20,
+    "first": 13,
+    "mrr": 0.648
+   },
+   "prf_alone": {
+    "n": 24,
+    "top10": 21,
+    "first": 11,
+    "mrr": 0.623
+   },
+   "prf_rrf": {
+    "n": 24,
+    "top10": 22,
+    "first": 15,
+    "mrr": 0.75
+   },
+   "links_0.1": {
+    "n": 24,
+    "top10": 22,
+    "first": 19,
+    "mrr": 0.854
+   },
+   "links_0.3": {
+    "n": 24,
+    "top10": 22,
+    "first": 18,
+    "mrr": 0.803
+   }
+  },
+  "mcp_sentences": {
+   "base": {
+    "n": 24,
+    "top10": 23,
+    "first": 17,
+    "mrr": 0.783
+   },
+   "card_rrf": {
+    "n": 24,
+    "top10": 22,
+    "first": 13,
+    "mrr": 0.658
+   },
+   "prf_alone": {
+    "n": 24,
+    "top10": 18,
+    "first": 10,
+    "mrr": 0.527
+   },
+   "prf_rrf": {
+    "n": 24,
+    "top10": 22,
+    "first": 5,
+    "mrr": 0.419
+   },
+   "links_0.1": {
+    "n": 24,
+    "top10": 23,
+    "first": 16,
+    "mrr": 0.762
+   },
+   "links_0.3": {
+    "n": 24,
+    "top10": 23,
+    "first": 14,
+    "mrr": 0.704
+   }
+  },
+  "web_plain_names_table_off_cards_without_plain_names": {
+   "base": {
+    "n": 238,
+    "top10": 190,
+    "first": 107,
+    "mrr": 0.577
+   },
+   "card_rrf": {
+    "n": 238,
+    "top10": 196,
+    "first": 143,
+    "mrr": 0.685
+   },
+   "card_rrf_union": {
+    "n": 238,
+    "top10": 198,
+    "first": 143,
+    "mrr": 0.687
+   },
+   "card_tier": {
+    "n": 238,
+    "top10": 198,
+    "first": 144,
+    "mrr": 0.681
+   },
+   "prf_alone": {
+    "n": 238,
+    "top10": 190,
+    "first": 107,
+    "mrr": 0.576
+   },
+   "prf_rrf": {
+    "n": 238,
+    "top10": 191,
+    "first": 107,
+    "mrr": 0.577
+   },
+   "links_0.1": {
+    "n": 238,
+    "top10": 193,
+    "first": 113,
+    "mrr": 0.59
+   },
+   "links_0.3": {
+    "n": 238,
+    "top10": 195,
+    "first": 104,
+    "mrr": 0.567
+   }
+  }
+ },
+ "web_sentence_fallback_fired": "15/24",
+ "judged_questions_that_moved": {
+  "mcp_keywords_prf_alone": [
+   "kids-install-build: 11\u2192None",
+   "rpc-broker-client-call: 7\u2192None",
+   "mailman-decnet-transmission: 1\u21924",
+   "radiology-cancel-exam: 7\u2192None",
+   "tiu-unsigned-notes: 1\u21923",
+   "hl7-security-keys: 1\u2192None",
+   "fileman-import-host-file: 7\u2192None",
+   "fileman-blddialog-icr-number: 4\u21921",
+   "quasar-package-wide-variables: 1\u2192None",
+   "hl7-table-0136-values: 1\u21924",
+   "kids-backup-transport-global: 10\u2192None",
+   "hl7-start-tcpip-link: 1\u21925",
+   "fileman-finder-api: 4\u21921"
+  ],
+  "mcp_keywords_prf_rrf": [
+   "kids-install-build: 11\u219214",
+   "rpc-broker-client-call: 7\u219212",
+   "mailman-decnet-transmission: 1\u21924",
+   "radiology-cancel-exam: 7\u219213",
+   "pharmacy-release-signed-order: 1\u21923",
+   "tiu-unsigned-notes: 1\u21926",
+   "cprs-enter-immunization: 3\u21926",
+   "hl7-security-keys: 1\u21928",
+   "fileman-import-host-file: 7\u21926",
+   "fileman-input-transform-definition: 1\u21923",
+   "fileman-blddialog-icr-number: 4\u21921",
+   "quasar-package-wide-variables: 1\u21923",
+   "hl7-table-0136-values: 1\u21928",
+   "kids-backup-transport-global: 10\u219214",
+   "hl7-start-tcpip-link: 1\u21922",
+   "fileman-file-access-security: 1\u21922",
+   "fileman-finder-api: 4\u21921",
+   "taskman-monitor: 1\u21922"
+  ],
+  "mcp_keywords_links_0.1": [
+   "kids-install-build: 11\u219215",
+   "rpc-broker-client-call: 7\u21926",
+   "radiology-cancel-exam: 7\u21928",
+   "fileman-file-access-security: 1\u21923"
+  ],
+  "mcp_keywords_links_0.3": [
+   "kids-install-build: 11\u2192None",
+   "rpc-broker-client-call: 7\u21926",
+   "radiology-cancel-exam: 7\u21928",
+   "fileman-file-200-new-person: None\u219214",
+   "fileman-import-host-file: 7\u21928",
+   "fileman-input-transform-definition: 1\u21922",
+   "kids-backup-transport-global: 10\u21925",
+   "fileman-file-access-security: 1\u21923",
+   "taskman-monitor: 1\u21922"
+  ],
+  "mcp_sentences_prf_rrf": [
+   "kids-install-build: 1\u21923",
+   "rpc-broker-client-call: 1\u21922",
+   "mailman-decnet-transmission: 3\u21925",
+   "radiology-cancel-exam: 1\u21923",
+   "pharmacy-release-signed-order: 1\u21923",
+   "tiu-unsigned-notes: 1\u21929",
+   "vpr-allergy-data: 1\u21923",
+   "cprs-enter-immunization: 3\u21924",
+   "hl7-security-keys: 1\u219210",
+   "fileman-file-200-new-person: 4\u21925",
+   "fileman-import-host-file: 1\u21922",
+   "fileman-blddialog-icr-number: 5\u21921",
+   "quasar-package-wide-variables: 1\u21924",
+   "hl7-table-0136-values: 1\u21925",
+   "hl7-start-tcpip-link: 1\u21922",
+   "vista-signon-credentials: 1\u2192None",
+   "taskman-monitor: 1\u21924"
+  ],
+  "web_keywords_links_0.1": [
+   "fileman-add-field: 22\u219223",
+   "fileman-file-200-new-person: 3\u21922",
+   "vista-signon-credentials: 17\u219210"
+  ],
+  "web_keywords_links_0.3": [
+   "fileman-add-field: 22\u219223",
+   "fileman-file-200-new-person: 3\u21921",
+   "fileman-import-host-file: 2\u21923",
+   "fileman-input-transform-definition: 1\u21924",
+   "hl7-table-0136-values: 1\u21922",
+   "vista-signon-credentials: 17\u21925"
+  ],
+  "web_sentences_links_0.3": [
+   "fileman-add-field: 1\u21922",
+   "tiu-unsigned-notes: 2\u21921",
+   "hl7-security-keys: 1\u21924",
+   "fileman-file-200-new-person: 2\u21921",
+   "fileman-input-transform-definition: 1\u21923",
+   "quasar-package-wide-variables: 1\u21925"
+  ],
+  "web_keywords_card_rrf": [
+   "rpc-broker-client-call: 2\u21921",
+   "tiu-unsigned-notes: 2\u21921",
+   "cprs-enter-immunization: 1\u21922",
+   "fileman-file-200-new-person: 3\u219213",
+   "fileman-import-host-file: 2\u21923",
+   "hl7-start-tcpip-link: 1\u21923",
+   "vista-signon-credentials: 17\u219218",
+   "taskman-monitor: 1\u21925"
+  ],
+  "web_keywords_card_rrf_union": [
+   "rpc-broker-client-call: 2\u21921",
+   "tiu-unsigned-notes: 2\u21921",
+   "cprs-enter-immunization: 1\u21922",
+   "fileman-file-200-new-person: 3\u219213",
+   "fileman-import-host-file: 2\u21923",
+   "hl7-start-tcpip-link: 1\u21923",
+   "vista-signon-credentials: 17\u219218",
+   "taskman-monitor: 1\u21925"
+  ],
+  "web_keywords_card_tier": [
+   "rpc-broker-client-call: 2\u21921",
+   "radiology-cancel-exam: 1\u21922",
+   "cprs-enter-immunization: 1\u21922",
+   "fileman-file-200-new-person: 3\u219213",
+   "fileman-import-host-file: 2\u21923",
+   "hl7-start-tcpip-link: 1\u21923",
+   "vista-signon-credentials: 17\u219218",
+   "taskman-monitor: 1\u21925"
+  ],
+  "mcp_keywords_card_rrf": [
+   "rpc-broker-client-call: 7\u21925",
+   "radiology-cancel-exam: 7\u21925",
+   "cprs-enter-immunization: 3\u21924",
+   "vbecs-accept-order: 1\u21924",
+   "fileman-blddialog-icr-number: 4\u21929",
+   "kids-backup-transport-global: 10\u2192None",
+   "fileman-finder-api: 4\u2192None"
+  ],
+  "mcp_sentences_prf_alone": [
+   "rpc-broker-client-call: 1\u21925",
+   "mailman-decnet-transmission: 3\u21924",
+   "tiu-unsigned-notes: 1\u2192None",
+   "lab-file60-audit: 1\u21922",
+   "vbecs-accept-order: 3\u21922",
+   "hl7-security-keys: 1\u2192None",
+   "fileman-file-200-new-person: 4\u219211",
+   "fileman-blddialog-icr-number: 5\u21921",
+   "quasar-package-wide-variables: 1\u2192None",
+   "hl7-table-0136-values: 1\u21923",
+   "kids-backup-transport-global: 3\u21924",
+   "hl7-start-tcpip-link: 1\u21925",
+   "vista-signon-credentials: 1\u2192None"
+  ],
+  "mcp_sentences_card_rrf": [
+   "mailman-decnet-transmission: 3\u21922",
+   "cprs-enter-immunization: 3\u21927",
+   "fileman-file-200-new-person: 4\u21923",
+   "hl7-table-0136-values: 1\u21923",
+   "vista-signon-credentials: 1\u2192None",
+   "fileman-finder-api: 1\u21928",
+   "taskman-monitor: 1\u21922"
+  ],
+  "web_sentences_card_tier": [
+   "vpr-allergy-data: 1\u21923",
+   "hl7-security-keys: 1\u21923",
+   "fileman-blddialog-icr-number: 1\u219212",
+   "hl7-start-tcpip-link: 1\u21923",
+   "vista-signon-credentials: 1\u2192369",
+   "fileman-finder-api: 1\u21923",
+   "taskman-monitor: 1\u21927"
+  ],
+  "web_sentences_prf_alone": [
+   "vpr-allergy-data: 1\u21924",
+   "vbecs-accept-order: 1\u21922",
+   "hl7-security-keys: 1\u219231",
+   "fileman-blddialog-icr-number: 1\u21924",
+   "quasar-package-wide-variables: 1\u21924",
+   "kids-backup-transport-global: 1\u21923",
+   "hl7-start-tcpip-link: 1\u21923",
+   "vista-signon-credentials: 1\u21922",
+   "taskman-monitor: 1\u21922"
+  ],
+  "web_sentences_prf_rrf": [
+   "vpr-allergy-data: 1\u21923",
+   "hl7-security-keys: 1\u21926",
+   "fileman-blddialog-icr-number: 1\u21922",
+   "quasar-package-wide-variables: 1\u21922",
+   "kids-backup-transport-global: 1\u21922"
+  ],
+  "web_sentences_links_0.1": [
+   "hl7-security-keys: 1\u21922"
+  ],
+  "mcp_sentences_links_0.3": [
+   "hl7-security-keys: 1\u21923",
+   "fileman-file-200-new-person: 4\u21921",
+   "fileman-input-transform-definition: 1\u21922",
+   "quasar-package-wide-variables: 1\u21925",
+   "hl7-table-0136-values: 1\u21923"
+  ],
+  "mcp_sentences_links_0.1": [
+   "hl7-table-0136-values: 1\u21922"
+  ],
+  "web_sentences_card_rrf": [
+   "vista-signon-credentials: 1\u219225",
+   "taskman-monitor: 1\u21922"
+  ],
+  "web_sentences_card_rrf_union": [
+   "vista-signon-credentials: 1\u219225",
+   "taskman-monitor: 1\u21922"
+  ]
+ },
+ "ms_per_query": {
+  "card_search": 0.1,
+  "web_sentence_base": 104.1,
+  "web_sentence_prf": 327.3
+ },
+ "example_card": {
+  "title": "VBECS \u2014 User Guide",
+  "names": "VBECS ; VistA Blood Establishment Computer Software ; blood bank ; blood transfusion ; blood products",
+  "purpose": "The main purpose of VBECS is to automate the daily processing of blood inventory and patient transfusions in a hospital transfusion service. VBECS facilitates o",
+  "headings": "Introduction ; Limitations and Restrictions ; VBECS does not support:DR 5105 ; Freeware Disclaimer ; Related Manuals and Materials ; Orientation ; How This User Guide Is Organized ; Security ; Applica",
+  "intro": "VistA Blood Establishment Computer Software (VBECS) is an improved Blood Bank application that facilitates ongoing compliance with Food and Drug Administration ",
+  "keywords": "vbecs strong transfusion abo unit blood antigen roles reagent limitations"
+ }
+}

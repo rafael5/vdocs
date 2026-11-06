@@ -1,15 +1,14 @@
-# Good-enough keyword search — four small fixes
+# Good-enough keyword search — five small fixes
 
 **Status: PROPOSED · 2026-11-06 · decisions D1–D3 taken 2026-11-06 as recommended · amended
-2026-11-06: plain-English package names made a core part of fix 3, at the operator's direction ·
-nothing built.** Consumer: vdocs-web (fixes 1–3). Producer and
-MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
-**Evidence:** every number comes from `scripts/mcp_review/contract.py`,
-`scripts/mcp_review/fixes.py` and `scripts/mcp_review/package_names.py`, recorded with provenance in
-`reports/mcp-review-contract.json`, `reports/mcp-review-fixes.json` and
-`reports/mcp-review-package-names.json`. Corpus: `~/data/vdocs/index.db`, 1,040 documents (615 latest),
-57,804 chunks, `corpus_content_hash 5b118189…`. The query readers and synonym lists in those scripts are
-measurement prototypes, not production code.
+2026-11-06: plain-English package names made a core part of fix 3, and search-box suggestions
+added as fix 5, both at the operator's direction · nothing built.** Consumer: vdocs-web (fixes 1–3
+and 5). Producer and MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
+**Evidence:** every number comes from a script in `scripts/mcp_review/` (`contract.py`, `fixes.py`,
+`package_names.py`, `ranking.py`, `tiers.py`, `suggest.py`), recorded with provenance in the
+matching `reports/mcp-review-<name>.json`. Corpus: `~/data/vdocs/index.db`, 1,040 documents (615 latest),
+57,804 chunks, `corpus_content_hash 5b118189…`. The query readers, synonym lists, cards and suggestion
+list in those scripts are measurement prototypes, not production code.
 **Supersedes** the search-syntax and vocabulary parts of
 [`vdocs-mcp-interface-design.md`](vdocs-mcp-interface-design.md): its recommendations R9, R10,
 R12 and R14, and its framing of reworded questions as the largest loss.
@@ -27,11 +26,17 @@ were ruled out on 2026-06-08. Measured against that contract, every front door f
 - A plain-English name for a package ("blood bank", "email", "warfarin") puts that package's
   manuals on the web console's first page for 91 of 242 such names.
 
-Four small fixes close this:
+Five small fixes close this:
 1. Sort the web console by relevance.
 2. One query reader that obeys quotes, operators and identifiers.
 3. A synonym list whose core is plain-English package names: "blood bank" finds VBECS.
 4. Keyword-form test questions to judge "good enough".
+5. Suggestions in the web console's search box, so a searcher sees the manuals' own words while
+   typing.
+
+Three further "smart" methods were measured and are not proposed: searching a generated summary
+card per manual first, pseudo-relevance feedback, and a link-count prior. Each made the right
+manual's position worse on the judged questions (§6).
 
 None needs a new service, model or dependency. The largest changes about 40 lines of query
 handling in each front door.
@@ -40,7 +45,7 @@ handling in each front door.
 
 1. [The contract](#1-the-contract)
 2. [What is wrong today](#2-what-is-wrong-today)
-3. [The four fixes](#3-the-four-fixes)
+3. [The five fixes](#3-the-five-fixes)
 4. [Good enough: targets](#4-good-enough-targets)
 5. [Order of work](#5-order-of-work)
 6. [Deliberately not building](#6-deliberately-not-building)
@@ -94,7 +99,7 @@ The misses are names the manuals don't use: "email" (MailMan), "warfarin" (Antic
 Management Tool), "means test" (Health Eligibility Center), "concussion" (Traumatic Brain Injury
 registry).
 
-## 3. The four fixes
+## 3. The five fixes
 
 ### Fix 1: the web console orders results by relevance
 
@@ -219,6 +224,38 @@ capability, complete for every application, not an extra grown one question at a
 - The syntax rules are checked by fix 2's shared cases, not by judged questions: a phrase either
   appears in a result or it does not.
 
+### Fix 5: suggestions in the web console's search box
+
+The operator added this on 2026-11-06 regardless of any measured gain. Suggestions show a
+non-technical searcher the words the manuals use before they search. They change what people type,
+not how results are ranked, so the judged questions cannot score them.
+
+- **What is offered** as the person types, from two characters, at most 8. Each typed word must be
+  the start of a word in the suggestion, ignoring case.
+  - First, up to 3 **packages**: package names, codes, product names and fix 3's plain-English
+    names, each showing what it stands for. "blood b" offers "Blood Bank → Laboratory (LR); VistA
+    Blood Establishment Computer Software (VBECS)". "email" offers "email → MailMan (XM)". "taskm"
+    offers "TaskMan" and "background jobs → TaskMan".
+  - Then **headings** from the latest manuals, those used by the most documents first. "cancel
+    ord" offers "Accept Orders: Cancel a Pending Order", "Canceling Lab Orders" and "Cancelling
+    Orders".
+- **Choosing one** puts its words in the box and runs the search. A package name goes in as typed,
+  and fix 3 expands it. A heading goes in as a quoted phrase, so it finds that heading's sections and
+  shows the person the phrase syntax.
+- **Source:** vdocs-web builds the list when it starts, from index.db. Package names, codes and
+  products come from the documents, headings from the latest documents' sections, and
+  plain-English names from fix 3's synonym table. The read contract needs nothing beyond fix 3,
+  because vdocs-web already reads the documents and sections views.
+- **Size and speed** (`reports/mcp-review-suggest.json`): 549 package entries and 30,506 distinct
+  headings, after removing leading numbers and markdown marks. Scanning the whole list took 34 ms
+  per keystroke in the Python prototype, so no special index is needed at this size. Some headings
+  stay noisy, such as a routine's first line; they are shown as the manuals have them.
+- **Change:** an in-memory list and one small request in vdocs-web's API, which does not exist yet,
+  plus a drop-down under the search box. It is built after fix 3 so that plain-English names are in
+  from the start.
+- **Check:** vdocs-web's tests confirm that every package name and plain-English name is offered
+  once its first word is typed, and that choosing a heading searches for it as a phrase.
+
 ## 4. Good enough: targets
 
 | Measure | Today | Prototype | Target |
@@ -238,6 +275,7 @@ capability, complete for every application, not an extra grown one question at a
 | Plain-English package name: its sections in the MCP top 10 | 186 / 242 | 242 / 242 | every name in the edited list |
 | Judged questions and identifier checks, synonym table on vs off | — | identical | no loss |
 | Each plain-English question in the key | not yet judged | — | right manual on page 1 |
+| Search-box suggestions, time per keystroke | none | 34 ms (Python, full scan) | under 50 ms |
 
 ## 5. Order of work
 
@@ -252,6 +290,7 @@ Each step: write the test first, then build, then run `make check`, measure agai
 4. **Fix 3, straight after fix 2:** the producer writes the synonym table (contract 1.8), and every
    reader applies it. The package names are complete for every application in the first release.
    Other hand-written terms are added one judged question at a time.
+5. **Fix 5:** search-box suggestions in vdocs-web, reading the synonym table from step 4.
 
 ## 6. Deliberately not building
 
@@ -268,6 +307,32 @@ Each step: write the test first, then build, then run `make check`, measure agai
   as neutral or worse.
 - **Column-weight tuning for the web console.** Plain relevance matched the weighted version.
 - **An any-word default in the web console.** It would make the facet counts meaningless.
+- **A summary card per manual, searched first or blended in** (`reports/mcp-review-tiers.json`).
+  - The card was generated, not hand-written. It held the manual's title, package names,
+    plain-English names, document type, Monograph purpose, top two heading levels, the first 80
+    words of its introduction, and its 10 most distinctive words.
+  - Listing the manuals whose card matches first, then the rest, put the right manual first for 14
+    of 24 keyword questions instead of 17. One sentence question fell from 1st to 369th.
+  - Blending the card into the ranking was also worse (by reciprocal-rank fusion, which merges two
+    orderings by position). First place fell from 17 to 16 for keywords and from 20 to 18 for
+    sentences. The MCP was worse on both.
+  - The card does help a query that names a package: first place for 107 → 143 of 238 names, with
+    synonyms off. Fix 3 already puts every package name on page 1.
+  - The cause: a card says what a whole manual is about, while the questions ask for a task inside
+    one. "NEW PERSON file" moved the right manual from 3rd to 13th, behind manuals about the file in
+    general.
+  - Hand-written abstracts fall with it.
+- **Pseudo-relevance feedback.** This adds the top results' shared distinctive words and searches
+  again. It was worse everywhere.
+  - Web console, when the any-word fallback fires (15 of 24 sentences): first place 20 → 11, or
+    20 → 15 when merged with the first search.
+  - MCP keyword questions in the top 10: 20 → 14.
+  - The added words come from the largest manuals and pull results off topic. A fallback search
+    also took three times as long (104 → 327 ms).
+- **A link-count prior.** index.db's 29,593 document-to-document links join documents that mention
+  the same significant entity; they are not citations. As a mild weight it moved one keyword
+  question onto page 1, and cost one first place among sentences and one in each MCP set. A
+  stronger weight was worse. The effect is too small and too unstable to build.
 
 ## 7. Decisions
 
@@ -275,7 +340,7 @@ All three were taken by the operator on 2026-11-06, as recommended.
 
 **Operator direction, 2026-11-06.** Translating plain-English package names into the VistA package
 name and namespace is a core capability of keyword search (fix 3). The operator edits the drafts in
-Appendix B, as with D3.
+Appendix B, as with D3. Search-box suggestions (fix 5) are in scope regardless of measured gain.
 
 - **D1. The MCP's default for bare words.** Recommended: any word, ranked. With it, full-sentence
   questions still reach the top 10 for 23 of 24, and keyword questions are unchanged at 20 of 24.
@@ -300,7 +365,10 @@ Appendix B, as with D3.
 - SQLite FTS5 query syntax (phrases, AND/OR/NOT, bm25): <https://www.sqlite.org/fts5.html>.
 - `scripts/mcp_review/contract.py` → `reports/mcp-review-contract.json`;
   `scripts/mcp_review/fixes.py` → `reports/mcp-review-fixes.json`;
-  `scripts/mcp_review/package_names.py` → `reports/mcp-review-package-names.json`. Re-run from the repo root with
+  `scripts/mcp_review/package_names.py` → `reports/mcp-review-package-names.json`;
+  `scripts/mcp_review/ranking.py`, `tiers.py` and `suggest.py` → `reports/mcp-review-ranking.json`,
+  `reports/mcp-review-tiers.json` and `reports/mcp-review-suggest.json`. Re-run from the repo root
+  with
   `.venv/bin/python scripts/mcp_review/<name>.py > reports/mcp-review-<name>.json`.
 
 ## Appendix A: keyword forms of the judged questions

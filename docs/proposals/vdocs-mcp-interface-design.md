@@ -4,7 +4,7 @@
 **Partly superseded (2026-11-06, same day):** search is a keyword, exact-phrase and AND/OR/NOT
 tool, not a natural-language one. The paraphrase framing below, which calls reworded questions the
 largest loss, is withdrawn. R9, R10, R12 and R14 are replaced by
-[`keyword-search-four-fixes.md`](keyword-search-four-fixes.md). The rest stays open here.
+[`keyword-search-five-fixes.md`](keyword-search-five-fixes.md). The rest stays open here.
 **Corpus measured:** `~/data/vdocs/index.db` · 1,040 documents (615 latest) · 57,804 chunks ·
 `corpus_content_hash 5b118189…` · read contract 1.7 (the lake after the 2026-11-05 PXRM refresh).
 **Evidence:** every number below comes from `scripts/mcp_review/*.py` and is recorded, with

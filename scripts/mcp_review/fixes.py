@@ -1,4 +1,4 @@
-"""Measurements behind docs/proposals/keyword-search-four-fixes.md.
+"""Measurements behind docs/proposals/keyword-search-five-fixes.md.
 
 Everything here is a MEASUREMENT PROTOTYPE, not production code: the query reader and the synonym
 seed below exist only to size the proposal's fixes before anything is built.

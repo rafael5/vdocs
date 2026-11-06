@@ -1,0 +1,108 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "entries": {
+  "package_entries": 549,
+  "heading_entries": 30506,
+  "headings_in_2_or_more_documents": 5376
+ },
+ "ms_per_keystroke_python_linear_scan": 40.4,
+ "examples": {
+  "bl": [
+   "Blood Bank → Laboratory (LR); VistA Blood Establishment Computer Software (VBECS)",
+   "blind rehabilitation → Visual Impairment Service Team (ANRV)",
+   "blood pressure → Vitals/Measurements (GMRV)",
+   "Blood Bank Clearance",
+   "Blank View",
+   "BLOOD BANK SOFTWARE REFERENCES",
+   "Blank MFH Worksheet Report (80)",
+   "Blind Rehabilitation Experience"
+  ],
+  "blood b": [
+   "Blood Bank → Laboratory (LR); VistA Blood Establishment Computer Software (VBECS)",
+   "VBECS → VistA Blood Establishment Computer Software (VBECS)",
+   "VistA Blood Establishment Computer Software (VBECS)",
+   "Blood Bank Clearance",
+   "BLOOD BANK SOFTWARE REFERENCES",
+   "Blood Bank",
+   "Blood Bank CRTs",
+   "Blood Bank Data"
+  ],
+  "email": [
+   "email → MailMan (XM)",
+   "Email Address for Emergency Messages",
+   "Email Messages",
+   "Email Post Office",
+   "Emails",
+   "Changing User List for Get Invalid ROI Credentials Email Notifications",
+   "Log Collector Automatic Emails",
+   "Check Email"
+  ],
+  "warf": [
+   "warfarin → Anticoagulation Management Tool (AMT)"
+  ],
+  "cancel ord": [
+   "Accept Orders: Cancel a Pending Order",
+   "Accept Orders: Cancel a Pending Order UC61",
+   "CA Cancel Additional Order [FHOMRAC]",
+   "Cancel an Incomplete Delivery Order",
+   "Cancel an Incomplete PC Order",
+   "Cancel the Order",
+   "Canceling Lab Orders",
+   "Cancelling Orders"
+  ],
+  "taskm": [
+   "TaskMan (Kernel)",
+   "background jobs → TaskMan (Kernel)",
+   "scheduled tasks → TaskMan (Kernel)",
+   "TaskMan Multi-Threaded Listener",
+   "TaskMan scheduled install verify of data file",
+   "TaskMan-Scheduled Options",
+   "TASKMAN Option",
+   "TASKMAN SITE PARAMETERS (#14.7) File"
+  ],
+  "new pers": [
+   "NEW PERSON File (#200)",
+   "NEW PERSON File for Standalone VA FileMan",
+   "NEW PERSON File—Audit Fields",
+   "NEW PERSON file (#200) New Entries",
+   "New Person Class Codes",
+   "ADD NEW PERSON FOR UNAUTHORIZED CLAIM",
+   "$$LOOKUP^XUSER(): New Person File Lookup",
+   "$$PROVIDER^XUSER(): Providers in New Person File"
+  ],
+  "input tr": [
+   "INPUT Transform",
+   "INPUT Transform (Syntax)",
+   "INPUT Transforms and the Verify Fields Option",
+   "Provides input transform lookup functionality for fields that store NDC codes.",
+   "[HBHC MFH TRAINING INPUT]",
+   "GMRYUT5 ;HIRMFO/YH-UTILITIES FOR IV INPUT/OUTPUT TRANSFORM ;5/13/96"
+  ],
+  "allerg": [
+   "allergies → Adverse Reaction Tracking (GMRA)",
+   "drug allergies → Adverse Reaction Tracking (GMRA)",
+   "Allergy Order Checks",
+   "Allergies",
+   "Allergies File List",
+   "Allergies and ADRs Tab",
+   "Allergies and ADRs – Accordion View",
+   "Allergy and ADRs - Query Editor"
+  ],
+  "progress no": [
+   "progress notes → Text Integration Utility (TIU)",
+   "Progress Notes",
+   "Progress Notes Print Options",
+   "Progress Notes Tab",
+   "Progress Notes – Expanded View",
+   "Progress Notes – Query Editor",
+   "Progress Note Headers",
+   "Progress Note Headers (PN)"
+  ]
+ }
+}
