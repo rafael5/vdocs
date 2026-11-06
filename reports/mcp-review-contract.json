@@ -1,0 +1,52 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "sections_indexed": 46617,
+ "phrase": {
+  "n": 60,
+  "mcp_top10_containing_phrase": 0.627,
+  "mcp_identical_with_and_without_quotes": 1.0,
+  "web_top10_containing_phrase": 0.625,
+  "native_fts5_phrase_median_sections": 74.5,
+  "examples": [
+   "staff entry",
+   "pv1 patient",
+   "err segment",
+   "visit display",
+   "release control",
+   "encounter information"
+  ]
+ },
+ "and": {
+  "n": 60,
+  "mcp_top10_with_all_words": 0.982,
+  "mcp_top10_with_all_words_when_AND_typed": 0.982,
+  "web_top10_with_all_words": 1.0
+ },
+ "not": {
+  "n": 59,
+  "mcp_top10_containing_excluded_word": 0.988,
+  "web_top10_containing_excluded_word": 1.0,
+  "web_results_all_contain_the_word_not": 1.0,
+  "native_fts5_NOT_leak": 0.088,
+  "native_note": "FTS5 NOT excludes per passage; checking per section counts the other passages of a section that do contain the word, so the native figure is not 0"
+ },
+ "or": {
+  "n": 60,
+  "web_sections_found_as_share_of_true_union": 0.039,
+  "mcp_top10_with_either_word": 1.0,
+  "docfreq_of_word_or_pct": 49.9,
+  "docfreq_of_word_not_pct": 34.8,
+  "docfreq_of_word_and_pct": 72.0
+ },
+ "patch_id_quoted_top5_contains_literal": {
+  "n": 150,
+  "mcp": 0.507,
+  "web": 0.9
+ }
+}

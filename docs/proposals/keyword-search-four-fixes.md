@@ -1,0 +1,274 @@
+# Good-enough keyword search — four small fixes
+
+**Status: PROPOSED · 2026-11-06 · nothing built.** Consumer: vdocs-web (fixes 1–3). Producer and
+MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
+**Evidence:** every number comes from `scripts/mcp_review/contract.py` and
+`scripts/mcp_review/fixes.py`, recorded with provenance in `reports/mcp-review-contract.json` and
+`reports/mcp-review-fixes.json`. Corpus: `~/data/vdocs/index.db`, 1,040 documents (615 latest),
+57,804 chunks, `corpus_content_hash 5b118189…`. The query reader and synonym seed in `fixes.py` are
+measurement prototypes, not production code.
+**Supersedes** the search-syntax and vocabulary parts of
+[`vdocs-mcp-interface-design.md`](vdocs-mcp-interface-design.md): its recommendations R9, R10,
+R12 and R14, and its framing of reworded questions as the largest loss.
+
+## Abstract
+
+vdocs search is meant for keywords, exact phrases in quotes and simple AND/OR/NOT, with results
+ranked by relevance. It is not meant for natural-language understanding or semantic search; vectors
+were ruled out on 2026-06-08. Measured against that contract, every front door falls short:
+- Quotes do nothing: only 63% of results contain the quoted phrase.
+- NOT does the opposite: 99–100% of results contain the excluded word.
+- The web console treats OR as a word to find, so it returns 4% of what it should.
+- The web console lists results alphabetically. The right manual reaches the first page for only
+  12 of 24 keyword searches; in relevance order it reaches the first page for 22.
+
+Four small fixes close this:
+1. Sort the web console by relevance.
+2. One query reader that obeys quotes, operators and identifiers.
+3. A small synonym list.
+4. Keyword-form test questions to judge "good enough".
+
+None needs a new service, model or dependency. The largest changes about 40 lines of query
+handling in each front door.
+
+## Contents
+
+1. [The contract](#1-the-contract)
+2. [What is wrong today](#2-what-is-wrong-today)
+3. [The four fixes](#3-the-four-fixes)
+4. [Good enough: targets](#4-good-enough-targets)
+5. [Order of work](#5-order-of-work)
+6. [Deliberately not building](#6-deliberately-not-building)
+7. [Decisions](#7-decisions)
+8. [References](#8-references)
+9. [Appendix A: keyword forms of the judged questions](#appendix-a-keyword-forms-of-the-judged-questions)
+
+## 1. The contract
+
+A person, or an agent, types keywords. Text in double quotes must appear as typed. AND, OR and NOT
+combine terms. VistA identifiers typed exactly (a patch id, a file number, a routine reference) are
+found. Results come back best first. A small synonym list may add the technical name for a plain
+term, or the reverse, so a non-technical searcher still finds the manual. That is the whole
+contract.
+
+## 2. What is wrong today
+
+**Syntax.** Each row is 60 queries built from the manuals' own section headings
+(`reports/mcp-review-contract.json`):
+
+| What is typed | Web console | MCP | Contract |
+|---|---|---|---|
+| A quoted two-word phrase | 63% of the top 10 contain it | 63%; results identical with or without the quotes | 100% |
+| `a NOT b` | 100% contain *b*, and every result must also contain the word "not" | 99% contain *b* | 0% |
+| `a OR b` | 4% of the true result set, because the word "or" must appear | correct | every section with either word |
+| Two bare words | all words required | either word, but 98% of the top 10 have both | both are acceptable |
+| A patch id in quotes, top 5 | 90% (it keeps the whole field as one phrase) | 51% (it splits the id and drops single digits) | ≈ 100% |
+
+A phrase search had plenty to return: a median of 74 sections contain each test phrase. Typed
+operator words are also very common ordinary words, so treating them as search terms adds noise.
+"and" appears in 72% of sections, "or" in 50% and "not" in 35%.
+
+**Ranking in the web console.** The 24 judged questions were rewritten as the keywords a person would
+type (Appendix A). Results are counted at document level, because that is what the web console
+lists (`reports/mcp-review-fixes.json`):
+
+| Same matches, ordered by | Right manual on page 1 | Right manual first |
+|---|---|---|
+| Title, A→Z (today) | 12 / 24 | 4 / 24 |
+| Relevance | 22 / 24 | 17 / 24 |
+
+No keyword search returned zero results. The web console's empty pages come from full sentences:
+requiring every word of "How do I load and install a KIDS distribution build?" leaves nothing.
+
+## 3. The four fixes
+
+### Fix 1: the web console orders results by relevance
+
+- When the search box has text, order matching documents by their best passage's relevance
+  score. Keep title order when there is no search text (pure facet browsing).
+- Use FTS5's plain relevance score. The MCP's tuned column weights gave the same result here
+  (MRR 0.810 vs 0.806, same page-1 and first-place counts), so no weights need copying into Go.
+- When no document contains all the words, show the documents that contain any of them, best
+  first, under one line saying so. On keyword searches this never happened (0 of 24). For full
+  sentences it lifts the right manual onto page 1 from 5 of 24 to 23 of 24.
+  - The facet counts then describe that wider set, about 500 documents.
+  - Requiring every word stays the default because it keeps the facets meaningful: a median of 16
+    matching documents, against 496 of 615 when any word will do.
+- Cost: the relevance-ordered query took 1 ms for a keyword search and 125 ms for the largest
+  any-word fallback, against 69–76 ms for today's title order on the same input.
+- Change: one SQL query in vdocs-web's candidate listing, plus a notice line in the UI. No
+  contract change.
+
+### Fix 2: one query reader, the same rules in every front door
+
+The rules:
+- Text in double quotes is an exact phrase. A quote left open runs to the end of the query.
+- AND, OR and NOT **in capitals** are operators. In lower case they are ordinary words.
+  - A leading or trailing NOT is dropped.
+  - NOT excludes per passage, the unit the index stores, and the search hint says so.
+- A word containing `* ^ # . $ % /` stays whole, as one phrase of its parts with single characters
+  kept. DG\*5.3\*1029, #50.7, $$GET1^DIQ and TCP/IP each match as written.
+- Bare words with no operator between them are joined by the front door's default: all words in
+  the web console, any word in the MCP (decision D1).
+- Single-character bare words are dropped, as today.
+- Malformed input never produces an error. It degrades to plain words.
+
+Measured on the prototype (top 5, MCP-style section results):
+- Patch ids found: 124 → 216 of 256.
+- `file #N`: 17 → 25 of 30.
+- `FileMan file #N`: 15 → 23 of 30.
+- Keyword questions: 20 of 24 in the top 10 either way.
+- Full-sentence questions with the any-word default: 23 of 24, unchanged.
+
+Agreement: the rules are about 40 lines in each language.
+- Disagreement between the front doors is how they diverged today: AND in the web console, OR in
+  the MCP, no expansion in the Go CLI.
+- A short list of query → expected-match cases, kept beside the read contract in vdocs, would be
+  copied into vdocs-web the same way the contract is, and both test suites would run every case.
+  This list does not exist yet.
+
+The MCP's tool description and orientation each gain one line stating the syntax, and the web
+search box gets a one-line hint. Those descriptions are how people and agents learn the syntax.
+
+### Fix 3: a small synonym list
+
+- **One table of term ↔ alternative pairs in `index.db`** (it does not exist yet), written by the
+  producer from two sources:
+  - **Generated, no curation:** application codes, namespaces and product abbreviations ↔ their
+    names, from columns `documents` already carries. That gives 307 pairs for 109 applications,
+    plus today's one expansion (file 200 → NEW PERSON), which moves here so there is a single
+    mechanism.
+  - **Hand-written:** plain-English ↔ technical entries for routines, files and terms, in one
+    registry file (it does not exist yet). An entry goes in only together with a judged query it
+    fixes (fix 4).
+- **At query time** (both front doors), a word or phrase that matches a key gets its alternative
+  added as an OR'd phrase.
+  - A code expands only when typed in capitals, because many short codes are also ordinary words
+    (AR, EN, MD, ART, LAB).
+  - Capital AND, OR and NOT are always operators. The Order Entry application, whose code is OR,
+    is found by its name or by CPRS.
+- **Measured value of the generated half: small.** Searching by code found the application's own
+  documents in the top 10 for 101 of 109 applications; with the seed, 108 of 109. Searching by name
+  already finds 109 of 109, because the index folds each application's name into its documents'
+  titles. The plain-English value lies in the hand-written half. That half is unmeasured until fix
+  4 adds plain-English questions, so it starts empty.
+- **Contract:** read contract 1.8 adds the table. vdocs-web's vendored contract copy gains it.
+
+### Fix 4: keyword-form test questions
+
+- Each of the 24 judged questions gains its keyword form. The drafts are in Appendix A, written by
+  the reviewer, who knew the answers; decision D3 asks the operator to edit them.
+- Add about six plain-English questions of the kind a non-technical searcher types, judged the same
+  way. These are what the hand-written synonyms must fix. The shape is "user accounts" (the
+  manuals say NEW PERSON) or "background jobs" (TaskMan). These two examples are illustrations,
+  not judged entries.
+- Keep the identifier probes in `scripts/mcp_review/fixes.py` (256 patch ids, 30 file numbers) as
+  the identifier check.
+- The syntax rules are checked by fix 2's shared cases, not by judged questions: a phrase either
+  appears in a result or it does not.
+
+## 4. Good enough: targets
+
+| Measure | Today | Prototype | Target |
+|---|---|---|---|
+| Web: right manual on page 1, keyword questions | 12 / 24 | 22 / 24 | ≥ 22 / 24 |
+| Web: right manual first, keyword questions | 4 / 24 | 17 / 24 | ≥ 17 / 24 |
+| Web: right manual on page 1, full sentences | 5 / 24 | 23 / 24 | ≥ 22 / 24 |
+| Quoted phrase present in every result | 63% | by construction | 100% |
+| Excluded word absent (per passage) | 0–1% of results | by construction | 100% |
+| Web `a OR b`: share of true result set | 4% | by construction | 100% |
+| Patch id in top 5 | 124 / 256 | 216 / 256 | ≥ 216 / 256 |
+| `file #N` in top 5 | 17 / 30 | 25 / 30 | ≥ 25 / 30 |
+| MCP keyword questions, top 10 | 20 / 24 | 20 / 24 | no loss |
+| MCP full sentences, top 10 | 23 / 24 | 23 / 24 | no loss |
+| Application found by its code, top 10 | 101 / 109 | 108 / 109 | ≥ 108 / 109 |
+| Each plain-English question in the key | not yet judged | — | right manual on page 1 |
+
+## 5. Order of work
+
+Each step: write the test first, then build, then run `make check`, measure against §4, commit.
+
+1. **Fix 4:** the operator edits the keyword forms and supplies or approves the plain-English
+   questions. The golden harness grades the keyword form alongside the question.
+2. **Fix 1:** relevance order and the any-word fallback in vdocs-web. This is the largest visible
+   gain and needs no contract change.
+3. **Fix 2:** the reader in vdocs-web and the MCP (and the Go CLI, decision D2), with the shared
+   cases.
+4. **Fix 3:** the producer writes the synonym table (contract 1.8), and both readers apply it.
+   Hand-written entries are added one judged question at a time.
+
+## 6. Deliberately not building
+
+- **Vectors, embeddings or any semantic layer.** Ruled out 2026-06-08.
+- **Opening a result at its best-matching passage.** That passage was a judged answer for only 13
+  of 24 questions, a coin flip. The document opens as it does today.
+- **The old 696-entry acronym list.** It was built on 2026-06-08 and switched off after it made
+  results worse.
+- **A synonym approval workflow, entity resolution or automatic synonym mining.** The synonym-layer
+  ruling of 2026-08-04 stands: hand entries are added one judged question at a time.
+- **Stemming, stopword lists, prefix matching, per-document caps.** All were measured on 2026-11-06
+  as neutral or worse.
+- **Column-weight tuning for the web console.** Plain relevance matched the weighted version.
+- **An any-word default in the web console.** It would make the facet counts meaningless.
+
+## 7. Decisions
+
+- **D1. The MCP's default for bare words.** Recommended: any word, ranked. With it, full-sentence
+  questions still reach the top 10 for 23 of 24, and keyword questions are unchanged at 20 of 24.
+  The alternative, all words, drops full sentences to 2 of 24, with 18 returning nothing, and
+  agents often send sentences.
+- **D2. Whether the Go CLI (vdocs-cli) is in scope.** Recommended: yes, same reader, same shared
+  cases. It is a port of the MCP engine, and leaving it out keeps a third set of rules alive. The
+  alternative is to stop presenting it as an agent path.
+- **D3. Who writes the keyword wording of the test questions.** Recommended: the operator edits
+  the reviewer's drafts (Appendix A), because the drafts were written by someone who knew the
+  answers.
+
+## 8. References
+
+- [`vdocs-mcp-interface-design.md`](vdocs-mcp-interface-design.md): the wider machine-interface
+  review. Its section-text tool, honest filter errors, stale figures and response size remain open
+  there.
+- [`vdocs-quality-synonym-layer/`](vdocs-quality-synonym-layer/): the 2026-08-04 ruling against a
+  curated synonym queue.
+- [`offline-lexical-search-plan.md`](offline-lexical-search-plan.md): the 2026-06-08 direction
+  reset (lexical-first, no vectors).
+- SQLite FTS5 query syntax (phrases, AND/OR/NOT, bm25): <https://www.sqlite.org/fts5.html>.
+- `scripts/mcp_review/contract.py` → `reports/mcp-review-contract.json`;
+  `scripts/mcp_review/fixes.py` → `reports/mcp-review-fixes.json`. Re-run from the repo root with
+  `.venv/bin/python scripts/mcp_review/<name>.py > reports/mcp-review-<name>.json`.
+
+## Appendix A: keyword forms of the judged questions
+
+These are reviewer drafts, for the operator to edit (D3).
+
+| Judged question | Keyword form |
+|---|---|
+| kids-install-build | KIDS install build |
+| pharmacy-api-dispense | pharmacy API dispense |
+| fileman-add-field | add field data dictionary |
+| rpc-broker-client-call | RPC Broker client call |
+| mailman-decnet-transmission | DECnet transmission script |
+| radiology-cancel-exam | cancel radiology exam |
+| pharmacy-release-signed-order | release digitally signed order |
+| tiu-unsigned-notes | unsigned progress notes |
+| vpr-allergy-data | VPR allergy |
+| lab-file60-audit | audit laboratory test file |
+| cprs-enter-immunization | enter immunization CPRS |
+| vbecs-accept-order | VBECS accept order |
+| hl7-security-keys | HL7 security keys |
+| fileman-file-200-new-person | NEW PERSON file |
+| fileman-import-host-file | import host file |
+| fileman-input-transform-definition | "input transform" |
+| fileman-blddialog-icr-number | BLD^DIALOG ICR |
+| quasar-package-wide-variables | QUASAR package wide variables |
+| hl7-table-0136-values | HL7 table 0136 |
+| kids-backup-transport-global | backup "transport global" |
+| hl7-start-tcpip-link | start TCP/IP logical link |
+| fileman-file-access-security | file access security |
+| vista-signon-credentials | sign on access code verify code |
+| fileman-finder-api | FIND^DIC finder |
+| taskman-monitor | monitor TaskMan |
+
+The golden key holds 25 questions, 24 of them judged. `pharmacy-api-dispense` has no judged
+answers yet, so its keyword form is not counted.

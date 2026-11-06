@@ -1,0 +1,128 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "judged_questions": 24,
+ "web_keyword_queries": {
+  "title_order": {
+   "n": 24,
+   "top10": 12,
+   "first": 4,
+   "mrr": 0.311
+  },
+  "relevance_weighted": {
+   "n": 24,
+   "top10": 22,
+   "first": 17,
+   "mrr": 0.806
+  },
+  "relevance_plain_bm25": {
+   "n": 24,
+   "top10": 22,
+   "first": 17,
+   "mrr": 0.81
+  },
+  "relevance_with_reader": {
+   "n": 24,
+   "top10": 22,
+   "first": 17,
+   "mrr": 0.799
+  }
+ },
+ "web_best_passage_is_a_judged_section": "13/24",
+ "web_keyword_median_documents_matched": {
+  "all_words": 16.0,
+  "any_word": 496.0,
+  "latest_documents": 615
+ },
+ "web_sentence_questions": {
+  "all_words": {
+   "n": 24,
+   "top10": 5,
+   "first": 4,
+   "mrr": 0.181
+  },
+  "all_then_any_if_empty": {
+   "n": 24,
+   "top10": 23,
+   "first": 22,
+   "mrr": 0.931
+  },
+  "any_word": {
+   "n": 24,
+   "top10": 24,
+   "first": 24,
+   "mrr": 1.0
+  }
+ },
+ "web_fallback_would_fire": {
+  "sentences": 18,
+  "keywords": 0
+ },
+ "section_level": {
+  "keywords_today": {
+   "n": 24,
+   "top10": 20,
+   "first": 13,
+   "mrr": 0.626,
+   "zero_results": 0
+  },
+  "keywords_reader_all_words": {
+   "n": 24,
+   "top10": 20,
+   "first": 13,
+   "mrr": 0.613,
+   "zero_results": 0
+  },
+  "keywords_reader_any_word": {
+   "n": 24,
+   "top10": 20,
+   "first": 12,
+   "mrr": 0.581,
+   "zero_results": 0
+  },
+  "sentence_today": {
+   "n": 24,
+   "top10": 23,
+   "first": 17,
+   "mrr": 0.788,
+   "zero_results": 0
+  },
+  "sentence_reader_all_words": {
+   "n": 24,
+   "top10": 2,
+   "first": 1,
+   "mrr": 0.056,
+   "zero_results": 18
+  },
+  "sentence_reader_any_word": {
+   "n": 24,
+   "top10": 23,
+   "first": 17,
+   "mrr": 0.779,
+   "zero_results": 0
+  }
+ },
+ "identifiers_found_in_top5": {
+  "patch_id_today": "124/256",
+  "patch_id_reader": "216/256",
+  "file_number_short_today": "17/30",
+  "file_number_short_reader": "25/30",
+  "file_number_long_today": "15/30",
+  "file_number_long_reader": "23/30"
+ },
+ "application_synonym_seed": {
+  "applications": 109,
+  "generated_pairs": 307,
+  "application_found_in_top10": {
+   "by_code_today": "101/109",
+   "by_code_with_seed": "108/109",
+   "by_name_today": "109/109",
+   "by_name_with_seed": "109/109"
+  }
+ }
+}
