@@ -5,8 +5,8 @@
 2026-11-06: plain-English package names made a core part of fix 3, and search-box suggestions
 added as fix 5, both at the operator's direction · fix 1 built in vdocs-web 2026-11-06
 (`926e320`) · Appendices A and B approved by the operator unchanged 2026-11-06 · Appendix C
-drafted for approval · fix 2 built in vdocs (MCP and `vdocs ask`, `9bfc552`), vdocs-web and the Go
-CLI next · fixes 3–5 not built.** Consumer: vdocs-web (fixes 1–3
+drafted for approval · fix 2 built in vdocs (MCP and `vdocs ask`, `9bfc552`) and vdocs-web
+(`9448e4f`), the Go CLI next · fixes 3–5 not built.** Consumer: vdocs-web (fixes 1–3
 and 5). Producer and MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
 **Evidence:** every number comes from a script in `scripts/mcp_review/` (`contract.py`, `fixes.py`,
 `package_names.py`, `ranking.py`, `tiers.py`, `suggest.py`), recorded with provenance in the
@@ -160,8 +160,8 @@ documents together with a flag saying whether the any-word fallback produced the
 
 ### Fix 2: one query reader, the same rules in every front door
 
-**Built in vdocs 2026-11-06** (`9bfc552`), for the MCP search tool and `vdocs ask`. vdocs-web and
-the Go CLI are next.
+**Built 2026-11-06** in vdocs (`9bfc552`), for the MCP search tool and `vdocs ask`, and in vdocs-web
+(`9448e4f`). The Go CLI is next.
 - The rules and 32 cases are in `contracts/query/v1.json`; vdocs's tests run every case and check
   each expected expression is valid FTS5.
 - The MCP tool description, the MCP orientation and `vdocs ask --help` state the syntax in one
@@ -172,6 +172,11 @@ the Go CLI are next.
 - Measured on the real index.db: keyword questions keep 20 of 24 in the MCP top 10; patch ids in
   the top 5 go from 124 to 216 of 256, and `file #N` from 17 to 25 of 30, as the prototype
   predicted.
+- In vdocs-web, `internal/index/query.go` runs the vendored copy of the cases. The search box
+  shows the syntax as its placeholder and on hover. Search text that makes no term (a lone letter,
+  punctuation) counts as no search. On the live API the keyword questions keep 24 of 24 on page 1
+  (20 first), and `allergies OR vitals` returns the full union of 128 documents, against 4% of it
+  before.
 
 The rules:
 - Text in double quotes is an exact phrase. A quote left open runs to the end of the query.
@@ -346,7 +351,7 @@ Each step: write the test first, then build, then run `make check`, measure agai
 2. **Fix 1 (built 2026-11-06, vdocs-web `926e320`):** relevance order and the any-word fallback
    in vdocs-web. This is the largest visible gain and needs no contract change.
 3. **Fix 2:** the reader in vdocs-web, the MCP and the Go CLI (D2), with the shared cases. The MCP
-   and `vdocs ask` part is built (`9bfc552`).
+   and `vdocs ask` part is built (`9bfc552`), and so is vdocs-web (`9448e4f`).
 4. **Fix 3, straight after fix 2:** the producer writes the synonym table (contract 1.8), and every
    reader applies it. The package names are complete for every application in the first release.
    Other hand-written terms are added one judged question at a time.
