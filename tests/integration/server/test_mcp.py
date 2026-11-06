@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 
 from vdocs.kernel import db
-from vdocs.server import mcp
+from vdocs.server import mcp, search
 
 
 def _build(index_db):
@@ -375,3 +375,23 @@ def test_cli_serve_mcp_without_index_db_exits_cleanly(tmp_path):
     result = CliRunner().invoke(app, ["serve-mcp"], input="", env={"DATA_DIR": str(tmp_path)})
     assert result.exit_code == 1
     assert "no index.db" in result.output
+
+
+def test_search_notes_when_it_fell_back_to_any_keyword(tmp_path):
+    # fix 2: no passage holds both words, so the passages holding either come back, flagged
+    out = json.loads(
+        _text(_call(_handler(tmp_path), "search", {"query": "tokens zzzznomatchzzzz"}))
+    )
+    assert out["hits"] and out["note"] == search.ANY_WORD_NOTE
+    assert "warning" not in out
+
+
+def test_search_with_every_keyword_present_carries_no_note(tmp_path):
+    out = json.loads(_text(_call(_handler(tmp_path), "search", {"query": "KAAJEE tokens"})))
+    assert out["hits"] and "note" not in out
+
+
+def test_search_description_and_orientation_state_the_keyword_syntax(tmp_path):
+    desc = {t["name"]: t["description"] for t in mcp.TOOLS}["search"]
+    assert search.QUERY_SYNTAX in desc
+    assert search.QUERY_SYNTAX in _text(_call(_handler(tmp_path), "orientation", {}))

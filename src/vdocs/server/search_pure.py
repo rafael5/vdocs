@@ -1,8 +1,9 @@
 """Pure helpers for the lexical search slice (§14.7) — no I/O, just query shaping.
 
-The load-bearing piece is `fts_match_query`: free user text → a **safe** FTS5 MATCH expression.
-Quoting every token keeps a stray term (e.g. a bare `OR`, `*`, or `:`) from being parsed as an FTS5
-operator/column-filter, and OR-joining favours recall (bm25 still ranks multi-term hits highest).
+The load-bearing piece is `read_query`: typed keywords → a **safe** FTS5 MATCH expression, by the
+rules in `contracts/query/v1.json` (keyword-search proposal, fix 2), which every front door shares.
+Every term is emitted as a double-quoted phrase, so stray punctuation (`*`, `:`, `^`) is never read
+as FTS5 syntax; only AND, OR and NOT typed in capitals are operators.
 
 `bm25_weights`/`bm25_expr` build the **field-weighted** ranking expression (L1.1): a doc-defining
 token in a heading should outrank the same token buried in prose, so `title`/`section_path` carry
@@ -13,7 +14,7 @@ more weight than `body`. The column order here is the single source of truth and
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, NamedTuple
 
 _TOKEN = re.compile(r"[A-Za-z0-9_]+")
 
@@ -33,28 +34,6 @@ FTS_COLUMNS: tuple[str, ...] = (
 FTS_WEIGHTS: dict[str, float] = {
     "doc_title": 2.5, "title": 2.0, "section_path": 1.5, "body": 1.0,
 }  # fmt: skip
-
-
-def acronym_phrase_clauses(tokens: list[str], expansions: dict[str, str]) -> list[str]:
-    """For any token whose upper-case form is a known acronym (≥3 chars, L1.3), the expansion as a
-    single **quoted phrase** FTS5 clause (e.g. `"healthevet web services client"`). A *phrase* —
-    not loose OR-tokens — is the load-bearing choice: it matches only the exact spelled-out
-    sequence, adding precise signal without injecting common words ("Kernel", "System", "Web") that
-    dilute the rare-acronym match and drown a `doc_title` win. De-duped, order-preserving."""
-    clauses: list[str] = []
-    seen: set[str] = set()
-    for t in tokens:
-        if len(t) < 3:
-            continue
-        exp = expansions.get(t.upper())
-        if not exp:
-            continue
-        words = _TOKEN.findall(exp)
-        phrase = " ".join(words).lower()  # FTS5 is case-insensitive; lower-case is deterministic
-        if len(words) >= 2 and phrase not in seen:
-            clauses.append(f'"{phrase}"')
-            seen.add(phrase)
-    return clauses
 
 
 def skl_expansion_map(entities: list[tuple[str, str]]) -> dict[str, str]:
@@ -79,18 +58,70 @@ def skl_expansion_map(entities: list[tuple[str, str]]) -> dict[str, str]:
     return out
 
 
-def fts_match_query(text: str, expansions: dict[str, str] | None = None) -> str:
-    """A safe FTS5 MATCH string from free text: alnum tokens (length ≥ 2), each double-quoted,
-    OR-joined. Returns `""` when no usable token remains (the caller treats that as no results).
+# --- fix 2: one query reader (contracts/query/v1.json) --------------------------------------------
+_RUN = re.compile(r"[^\W_]+")  # letter-and-digit runs; FTS5's unicode61 index splits the same way
+_ID_CHARS = frozenset("*^#.$%/")  # a word holding one of these keeps a lone single character
+_OPERATORS = frozenset({"AND", "OR", "NOT"})
 
-    When `expansions` is given (acronym → expansion), each query acronym also contributes the
-    spelled-out form as one **precise phrase clause** (L1.3); omitting it preserves the
-    bare-tokenisation contract."""
-    tokens = [t for t in _TOKEN.findall(text or "") if len(t) >= 2]
-    clauses = [f'"{t}"' for t in tokens]
-    if expansions:
-        clauses += acronym_phrase_clauses(tokens, expansions)
-    return " OR ".join(clauses)
+
+class QueryMatch(NamedTuple):
+    """The two MATCH expressions for one query: `all` is searched first; `any` is the fallback,
+    searched only when `all` matches nothing, and is `""` when there is no fallback."""
+
+    all: str
+    any: str
+
+
+def read_query(text: str, expansions: dict[str, str] | None = None) -> QueryMatch:
+    """Typed keywords → FTS5 MATCH expressions, by the shared rules in `contracts/query/v1.json`.
+
+    Quoted text is one exact phrase (an open quote runs to the end); AND, OR and NOT in capitals
+    are operators; every other word becomes one phrase of its letter-and-digit runs, so an
+    identifier like DG*5.3*1029 stays whole. Bare terms are joined by AND. `any` OR-joins the
+    terms, and exists only when no operator was typed and there are at least two terms.
+
+    `expansions` (upper-case token → name) is today's SKL expansion (file 200 → NEW PERSON): an
+    unquoted single-run term of three or more characters that is a key gains its name as an OR'd
+    phrase, `("200" OR "new person")`. Fix 3's synonym table will replace it."""
+    terms: list[str] = []
+    joins: list[str] = []
+    typed_operator = False
+    pending = "AND"
+    for i, piece in enumerate((text or "").split('"')):
+        quoted = i % 2 == 1
+        for word in [piece] if quoted else piece.split():
+            if not quoted and word in _OPERATORS:
+                pending, typed_operator = word, True
+                continue
+            term = _term(word, quoted, expansions or {})
+            if term is None:
+                continue
+            if terms:
+                joins.append(pending)
+            terms.append(term)
+            pending = "AND"
+    if not terms:
+        return QueryMatch("", "")
+    all_ = terms[0] + "".join(f" {op} {t}" for op, t in zip(joins, terms[1:], strict=True))
+    any_ = " OR ".join(terms) if not typed_operator and len(terms) >= 2 else ""
+    return QueryMatch(all_, any_)
+
+
+def _term(word: str, quoted: bool, expansions: dict[str, str]) -> str | None:
+    """One word or quoted piece as a quoted FTS5 phrase, or None when it is skipped."""
+    runs = _RUN.findall(word)
+    if not runs:
+        return None
+    lone = len(runs) == 1 and len(runs[0]) == 1
+    if not quoted and lone and not _ID_CHARS & set(word):
+        return None  # a single-character bare word (I, a) carries no signal
+    phrase = " ".join(runs)
+    clause = f'"{phrase}"'
+    if not quoted and len(runs) == 1 and len(phrase) >= 3:
+        name = _RUN.findall(expansions.get(phrase.upper(), ""))
+        if len(name) >= 2:
+            clause = f'({clause} OR "{" ".join(name).lower()}")'
+    return clause
 
 
 def bm25_weights(

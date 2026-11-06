@@ -18,6 +18,7 @@ from vdocs.orchestrator.engine import Orchestrator, StageFailed
 from vdocs.orchestrator.report import RunReporter
 from vdocs.orchestrator.stage import PostflightError, Stage, StageContext
 from vdocs.orchestrator.state import StateStore
+from vdocs.server.search import QUERY_SYNTAX
 from vdocs.stages.catalog.stage import CatalogStage
 from vdocs.stages.consolidate.stage import ConsolidateStage
 from vdocs.stages.convert.stage import ConvertStage
@@ -541,7 +542,9 @@ def manifest(force: bool = typer.Option(False, "--force", "-f")) -> None:
 @app.command()
 @_guarded
 def ask(
-    query: str = typer.Argument(..., help="a natural-language question about VistA / the corpus"),
+    query: str = typer.Argument(
+        ..., help=f"keywords to search for, not a sentence. {QUERY_SYNTAX}"
+    ),
     k: int | None = typer.Option(
         None,
         "--k",
@@ -570,19 +573,23 @@ def ask(
     # explicit --k wins on either surface.
     if k is None:
         k = search.ASSISTANT_DEFAULT_K if json_out else search.HUMAN_DISPLAY_K
-    hits = search.lexical_search(
+    res = search.keyword_search(
         cfg.index_db, query, k=k, app=list(apps) or None, doc_type=list(doc_types) or None
     )
+    hits = res.hits
     if json_out:
         # the SAME envelope the MCP `search` tool returns (P6.3) — one shape, one rule, whichever
         # front door the agent came through
-        typer.echo(json.dumps(search.search_envelope(hits), indent=2, ensure_ascii=False))
+        envelope = search.search_envelope(hits, res.any_word)
+        typer.echo(json.dumps(envelope, indent=2, ensure_ascii=False))
         return
     if not hits:
         # never "no matches in the gold corpus" — that is the sentence that licenses a false
         # "not documented", and it is exactly what the MCP surface is forbidden to say (R-11)
         typer.echo(search.NO_MATCH_WARNING)
         return
+    if res.any_word:
+        typer.echo(search.ANY_WORD_NOTE)  # said only when no passage held every keyword (fix 2)
     for i, h in enumerate(hits, 1):
         typer.echo(f"{i}. [{h['score']}] {h['doc_title']} — §{h['section_title']}")
         typer.echo(f"   {h['uri']}")

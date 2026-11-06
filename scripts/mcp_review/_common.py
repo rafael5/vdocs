@@ -4,10 +4,31 @@ Every report carries `provenance` (index_db, documents, chunks, corpus_content_h
 reports/README.md rule: a measurement that cannot name the corpus it read is not evidence.
 """
 
+import re
 import sqlite3
 from pathlib import Path
 
 DB = Path.home() / "data/vdocs/index.db"
+
+_TOKEN = re.compile(r"[A-Za-z0-9_]+")
+
+
+def pre_fix2_match(text: str, expansions: dict[str, str] | None = None) -> str:
+    """The MCP's MATCH builder as it was on 2026-11-06, before fix 2 replaced it with
+    `search_pure.read_query`: alphanumeric tokens of two or more characters, each quoted, OR-joined,
+    plus each SKL expansion as an extra OR'd phrase. Frozen here so the review scripts that built
+    their what-if variants on top of it still run. Note: `search.lexical_search` itself now uses
+    fix 2, so a re-run no longer reproduces the recorded "today" figures in reports/."""
+    tokens = [t for t in _TOKEN.findall(text or "") if len(t) >= 2]
+    clauses = [f'"{t}"' for t in tokens]
+    seen: set[str] = set()
+    for t in tokens:
+        words = _TOKEN.findall((expansions or {}).get(t.upper(), "")) if len(t) >= 3 else []
+        phrase = " ".join(words).lower()
+        if len(words) >= 2 and phrase not in seen:
+            clauses.append(f'"{phrase}"')
+            seen.add(phrase)
+    return " OR ".join(clauses)
 
 
 def provenance() -> dict:

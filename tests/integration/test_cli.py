@@ -740,6 +740,22 @@ def test_ask_no_match_reports_clearly(tmp_path):
     assert "retrieval" in out and "body.md" in out and "tables" in out
 
 
+def test_ask_says_when_it_fell_back_to_any_keyword(tmp_path):
+    # fix 2: no passage holds both words; the human display says so above the hits, and the JSON
+    # envelope carries the same note the MCP tool does
+    from vdocs.server import search as search_mod
+
+    _seed_index_for_ask(tmp_path)
+    shown = runner.invoke(app, ["ask", "broker zzzznomatch"], env={"DATA_DIR": str(tmp_path)})
+    assert shown.exit_code == 0
+    assert search_mod.ANY_WORD_NOTE in shown.stdout
+    assert "KAAJEE DIBR" in shown.stdout
+    as_json = runner.invoke(
+        app, ["ask", "broker zzzznomatch", "--json"], env={"DATA_DIR": str(tmp_path)}
+    )
+    assert json.loads(as_json.stdout)["note"] == search_mod.ANY_WORD_NOTE
+
+
 def test_ask_json_no_match_carries_the_same_warning_as_mcp(tmp_path):
     from vdocs.server import search as search_mod
 

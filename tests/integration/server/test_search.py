@@ -124,3 +124,55 @@ def test_lexical_search_uses_skl_expansion_by_default(tmp_path):
     # default (None) → SKL expansion on → "200" expands to "new person" → the chunk is retrievable
     on = search.lexical_search(index_db, "200", k=5)
     assert any(h["section_id"] == "DI/fm/np" for h in on)
+
+
+# --- fix 2 (keyword-search proposal): every keyword must appear; any-word fallback, flagged -------
+def _ids(hits):
+    return sorted(h["section_id"] for h in hits)
+
+
+def test_keyword_search_requires_every_keyword(tmp_path):
+    index_db = tmp_path / "index.db"
+    _build(index_db)
+    res = search.keyword_search(index_db, "KAAJEE broker", k=5, expansions={})
+    assert _ids(res.hits) == ["KAAJEE/dibr/intro"]  # the CPRS passage has no "broker"
+    assert res.any_word is False
+
+
+def test_keyword_search_falls_back_to_any_keyword_and_says_so(tmp_path):
+    index_db = tmp_path / "index.db"
+    _build(index_db)
+    # "tokens" is only in the CPRS passage and "broker" only in the KAAJEE one
+    res = search.keyword_search(index_db, "tokens broker", k=5, expansions={})
+    assert _ids(res.hits) == ["CPRS/or_um/auth", "KAAJEE/dibr/intro"]
+    assert res.any_word is True
+
+
+def test_a_typed_operator_turns_the_fallback_off(tmp_path):
+    index_db = tmp_path / "index.db"
+    _build(index_db)
+    res = search.keyword_search(index_db, "tokens AND broker", k=5, expansions={})
+    assert res.hits == [] and res.any_word is False
+
+
+def test_not_excludes_a_keyword(tmp_path):
+    index_db = tmp_path / "index.db"
+    _build(index_db)
+    hits = search.lexical_search(index_db, "KAAJEE NOT broker", k=5, expansions={})
+    assert _ids(hits) == ["CPRS/or_um/auth"]
+
+
+def test_a_quoted_phrase_must_appear_as_typed(tmp_path):
+    index_db = tmp_path / "index.db"
+    _build(index_db)
+    assert _ids(search.lexical_search(index_db, '"single sign-on"', k=5, expansions={})) == [
+        "CPRS/or_um/auth"
+    ]
+    assert search.lexical_search(index_db, '"sign-on single"', k=5, expansions={}) == []
+
+
+def test_the_envelope_notes_the_fallback_only_when_it_ran():
+    assert "note" not in search.search_envelope([{"section_id": "x"}])
+    noted = search.search_envelope([{"section_id": "x"}], any_word=True)
+    assert noted["note"] == search.ANY_WORD_NOTE
+    assert "warning" not in noted

@@ -12,7 +12,7 @@ from __future__ import annotations
 import sqlite3
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from vdocs.kernel import db
 from vdocs.server import ids
@@ -91,6 +91,17 @@ NOT_INDEXED_RULE = (
 )
 NO_MATCH_WARNING = f"NO INDEXED MATCH — this is not evidence of absence. {NOT_INDEXED_RULE}"
 
+# --- the keyword syntax every front door shares (keyword-search proposal, fix 2) -----------------
+# One sentence, stated by the MCP tool description, the MCP orientation and `vdocs ask --help`, so
+# people and agents learn the syntax from the surface they are using. The rules themselves live in
+# contracts/query/v1.json and search_pure.read_query.
+QUERY_SYNTAX = (
+    'Search syntax: keywords, all of which must appear; "an exact phrase" in double quotes; OR '
+    "between alternatives; NOT before a word to exclude it; AND, OR and NOT count only in capitals."
+)
+# Said only when it happened: no indexed passage held every keyword, so the hits hold any of them.
+ANY_WORD_NOTE = "No indexed passage holds every keyword, so these hits hold any of them."
+
 # --- how many results each kind of caller gets by default (RR.1) ---------------------------------
 # Two callers, opposite trade-offs, so two constants — and they live HERE, with the rule above, for
 # the same reason: the MCP `search` tool and `vdocs ask --json` both import this module, so a
@@ -111,8 +122,9 @@ _OVERFETCH = 3
 HUMAN_DISPLAY_K = 8
 
 
-def search_envelope(hits: list[dict[str, Any]]) -> dict[str, Any]:
-    """The shared result envelope: ``{hits, hit_count}`` — plus ``warning`` **only** when empty.
+def search_envelope(hits: list[dict[str, Any]], any_word: bool = False) -> dict[str, Any]:
+    """The shared result envelope: ``{hits, hit_count}`` — plus ``warning`` **only** when empty,
+    and ``note`` **only** when the any-word fallback produced the hits.
 
     A warning attached to every response trains clients to skip it, so it rides exactly the case it
     is about. Shared as a *builder*, not just a string, so the three surfaces cannot drift in shape
@@ -120,10 +132,19 @@ def search_envelope(hits: list[dict[str, Any]]) -> dict[str, Any]:
     out: dict[str, Any] = {"hits": hits, "hit_count": len(hits)}
     if not hits:
         out["warning"] = NO_MATCH_WARNING
+    elif any_word:
+        out["note"] = ANY_WORD_NOTE
     return out
 
 
-def lexical_search(
+class KeywordResult(NamedTuple):
+    """Ranked hits, and whether the any-word fallback produced them."""
+
+    hits: list[dict[str, Any]]
+    any_word: bool
+
+
+def keyword_search(
     index_db: Path,
     query: str,
     *,
@@ -132,13 +153,17 @@ def lexical_search(
     doc_type: list[str] | None = None,
     expansions: dict[str, str] | None = None,
     weights: dict[str, float] | None = None,
-) -> list[dict[str, Any]]:
-    """Rank `is_latest` chunks against `query` by BM25 and return up to `k` pre-cited hits.
+) -> KeywordResult:
+    """Rank `is_latest` chunks against the keywords in `query` by BM25; up to `k` pre-cited hits.
+
+    The query is read by `search_pure.read_query` (contracts/query/v1.json): every bare keyword
+    must appear, quoted text is an exact phrase, and AND, OR and NOT in capitals are operators.
+    When no passage holds every keyword and none was joined by a typed operator, the passages
+    holding any of them are returned instead, with `any_word` set (keyword-search proposal, fix 2).
 
     `app`/`doc_type` are optional structured pre-filters (applied as a WHERE clause *before*
-    ranking, §14.2). Returns `[]` for an empty/no-usable-token query. Each hit:
-    `{score, section_id, doc_key, doc_id, doc_title, section_title, app_code, doc_type, snippet,
-    uri, body_path}` (`score` = −bm25, so higher is more relevant).
+    ranking, §14.2). Each hit: `{score, section_id, doc_key, doc_id, doc_title, section_title,
+    app_code, doc_type, snippet, uri, body_path}` (`score` = −bm25, so higher is more relevant).
 
     `expansions` (token → name phrase) is the query-expansion map. **Default (None) → the
     SKL-grounded `skl_expansions(index_db)`** (S3.4): a number/identifier query expands to the
@@ -152,9 +177,42 @@ def lexical_search(
     engine instead of reproducing it. Production callers leave it None."""
     if expansions is None:
         expansions = skl_expansions(str(index_db))
-    match = sp.fts_match_query(query, expansions)
-    if not match:
-        return []
+    match = sp.read_query(query, expansions)
+    if not match.all:
+        return KeywordResult([], False)
+    hits = _ranked(index_db, match.all, k, app, doc_type, weights)
+    if hits or not match.any:
+        return KeywordResult(hits, False)
+    hits = _ranked(index_db, match.any, k, app, doc_type, weights)
+    return KeywordResult(hits, bool(hits))
+
+
+def lexical_search(
+    index_db: Path,
+    query: str,
+    *,
+    k: int = 10,
+    app: list[str] | None = None,
+    doc_type: list[str] | None = None,
+    expansions: dict[str, str] | None = None,
+    weights: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
+    """`keyword_search`'s hits alone, for callers that do not report the fallback (the golden
+    harness and the measurement scripts). Returns `[]` for an empty/no-usable-term query."""
+    return keyword_search(
+        index_db, query, k=k, app=app, doc_type=doc_type, expansions=expansions, weights=weights
+    ).hits
+
+
+def _ranked(
+    index_db: Path,
+    match: str,
+    k: int,
+    app: list[str] | None,
+    doc_type: list[str] | None,
+    weights: dict[str, float] | None,
+) -> list[dict[str, Any]]:
+    """One FTS5 MATCH, pre-filtered, ranked by bm25, restating parents demoted, as hits."""
     select = (
         _SELECT
         if weights is None

@@ -111,7 +111,7 @@ def faceted_search(
             return {"candidate_docs": 0, "hits": []}
         ph = ", ".join("?" for _ in doc_keys)
         if query:
-            match = sp.fts_match_query(query)
+            match = sp.read_query(query).all
             if not match:
                 return {"candidate_docs": len(doc_keys), "hits": []}
             rows = conn.execute(

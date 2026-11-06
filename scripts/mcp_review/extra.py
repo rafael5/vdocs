@@ -30,7 +30,7 @@ def raw(match, k=15):
     return [S._hit(r) for r in S.sp.demote_restating_parents(rows)[:k]]
 
 
-from _common import provenance  # noqa: E402
+from _common import pre_fix2_match, provenance  # noqa: E402
 
 out: dict = {"provenance": provenance()}
 # ---- C': FileMan file numbers with the number kept as an adjacent-token phrase -------------
@@ -46,7 +46,7 @@ for num, name in FILES.items():
         return name.lower() in t.lower() and bool(pat.search(t))
 
     q = f"FileMan file #{num}"
-    base = S.sp.fts_match_query(q, S.skl_expansions(str(DB)))
+    base = pre_fix2_match(q, S.skl_expansions(str(DB)))
     numtoks = " ".join(re.findall(r"\d+", num))
     hp = raw(f'{base} OR "file {numtoks}"')
     res[grp + "_phrase_succ@5"].append(int(any(about(h) for h in hp[:5])))

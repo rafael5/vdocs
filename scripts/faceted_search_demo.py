@@ -114,7 +114,7 @@ def faceted_search(
             return {"trail": trail, "candidate_docs": 0, "hits": []}
         ph = ",".join("?" * len(doc_keys))
         if query:
-            match = sp.fts_match_query(query)
+            match = sp.read_query(query).all
             rows = conn.execute(
                 f"SELECT f.section_id, f.doc_key, d.title AS doc_title, "
                 f"snippet(chunks_fts,{sp.FTS_COLUMNS.index('body')},'[',']',' … ',12) AS snip, "

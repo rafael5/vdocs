@@ -64,7 +64,7 @@ TOOLS = [
             "Lexical FTS5 search over the gold corpus (the `vdocs ask` engine): ranked, "
             "pre-cited hits (section_id, doc/section titles, snippet, vdocs:// URI, gold "
             "body_path). Optional structured pre-filters: app (app codes), doc_type (doc codes). "
-            f"ZERO HITS IS NOT ABSENCE — {TOOL_RULE}"
+            f"{search.QUERY_SYNTAX} ZERO HITS IS NOT ABSENCE — {TOOL_RULE}"
         ),
         "inputSchema": {
             "type": "object",
@@ -153,7 +153,7 @@ class Handler:
         k = args.get("k", DEFAULT_K)
         if not isinstance(k, int) or not 1 <= k <= 50:
             raise ToolError("k must be 1..50")
-        hits = search.lexical_search(
+        res = search.keyword_search(
             self.index_db,
             args.get("query", ""),
             k=k,
@@ -161,8 +161,8 @@ class Handler:
             doc_type=args.get("doc_type") or None,
         )
         # A bare `[]` reads as "nothing exists" — the shared envelope says what zero hits actually
-        # mean, in the same words `vdocs ask` uses (P6.3).
-        return _dumps(search.search_envelope(hits))
+        # mean, in the same words `vdocs ask` uses (P6.3), and notes an any-word fallback (fix 2).
+        return _dumps(search.search_envelope(res.hits, res.any_word))
 
     def _lookup_doc(self, key: str) -> dict[str, Any] | None:
         cur = self.con.execute("SELECT * FROM documents WHERE doc_key = ?", (key,))
@@ -303,6 +303,7 @@ class Handler:
             "Citation contract — cite every claim with its stable section anchor:\n"
             "  vdocs://section/<section_id>  (+ the gold body_path)\n"
             "(`search` and `lookup` return these ready-made).\n\n"
+            f"`search` takes keywords, not sentences. {search.QUERY_SYNTAX}\n\n"
             "THREE SOURCES — the index is only the first. Nothing matching the index is NOT "
             "nothing in the corpus:\n"
             "  1. `search`/`lookup` — indexed text; covers ~89% of the 52,128 live sections.\n"

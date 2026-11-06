@@ -17,7 +17,7 @@ from pathlib import Path
 from vdocs.server import search as S
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _common import FILES, PARA, provenance  # noqa: E402
+from _common import FILES, PARA, pre_fix2_match, provenance  # noqa: E402
 
 LAKE = Path.home() / "data/vdocs"
 DB = LAKE / "index.db"
@@ -87,7 +87,7 @@ for ref in apis:
                          lambda h: h["section_id"] in target))  # fmt: skip
     # what-if: an M-reference-aware query adds the ref as one adjacent-token PHRASE clause
     toks = re.findall(r"[A-Za-z0-9]+", ref)
-    base = S.sp.fts_match_query(ref, S.skl_expansions(str(DB)))
+    base = pre_fix2_match(ref, S.skl_expansions(str(DB)))
     ra_phrase.append(rank_of(raw(f'{base} OR "{" ".join(toks)}"'),
                              lambda h: h["section_id"] in target))  # fmt: skip
 out["A_api_known_item"] = {

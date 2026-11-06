@@ -19,7 +19,7 @@ from pathlib import Path
 from vdocs.server import search as S
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _common import FILES  # noqa: E402
+from _common import FILES, pre_fix2_match  # noqa: E402
 from surfaces import LAB, metrics, paired  # noqa: E402
 
 DB = Path.home() / "data/vdocs/index.db"
@@ -65,7 +65,7 @@ V2 = "v2" in sys.argv
 
 
 def idaware(q: str, k: int = 15):
-    base = S.sp.fts_match_query(q, S.skl_expansions(str(DB)))
+    base = pre_fix2_match(q, S.skl_expansions(str(DB)))
     extra = id_phrases_v2(q) if V2 else id_phrases(q)
     match = " OR ".join([base] + [f'"{p}"' for p in extra]) if base else ""
     if not match:

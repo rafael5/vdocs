@@ -24,6 +24,7 @@ from vdocs.server import search as S
 from vdocs.server import search_pure as sp
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _common import pre_fix2_match  # noqa: E402
 
 LAKE = Path.home() / "data/vdocs"
 DB = LAKE / "index.db"
@@ -143,7 +144,7 @@ def toks(q):
 
 
 def match_or(ts, exp=True):
-    return sp.fts_match_query(" ".join(ts), S.skl_expansions(str(DB)) if exp else None)
+    return pre_fix2_match(" ".join(ts), S.skl_expansions(str(DB)) if exp else None)
 
 
 def v_stop(q, k=K):
