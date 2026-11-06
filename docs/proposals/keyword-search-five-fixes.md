@@ -5,7 +5,8 @@
 2026-11-06: plain-English package names made a core part of fix 3, and search-box suggestions
 added as fix 5, both at the operator's direction · fix 1 built in vdocs-web 2026-11-06
 (`926e320`) · Appendices A and B approved by the operator unchanged 2026-11-06 · Appendix C
-drafted for approval · fixes 2–5 not built.** Consumer: vdocs-web (fixes 1–3
+drafted for approval · fix 2 built in vdocs (MCP and `vdocs ask`, `9bfc552`), vdocs-web and the Go
+CLI next · fixes 3–5 not built.** Consumer: vdocs-web (fixes 1–3
 and 5). Producer and MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
 **Evidence:** every number comes from a script in `scripts/mcp_review/` (`contract.py`, `fixes.py`,
 `package_names.py`, `ranking.py`, `tiers.py`, `suggest.py`), recorded with provenance in the
@@ -159,6 +160,19 @@ documents together with a flag saying whether the any-word fallback produced the
 
 ### Fix 2: one query reader, the same rules in every front door
 
+**Built in vdocs 2026-11-06** (`9bfc552`), for the MCP search tool and `vdocs ask`. vdocs-web and
+the Go CLI are next.
+- The rules and 32 cases are in `contracts/query/v1.json`; vdocs's tests run every case and check
+  each expected expression is valid FTS5.
+- The MCP tool description, the MCP orientation and `vdocs ask --help` state the syntax in one
+  line. When the any-word fallback runs, the MCP response and `vdocs ask --json` carry a note, and
+  the terminal display prints it.
+- Today's SKL expansion (file 200 → NEW PERSON) now attaches to its own term, until fix 3 moves it
+  into the synonym table.
+- Measured on the real index.db: keyword questions keep 20 of 24 in the MCP top 10; patch ids in
+  the top 5 go from 124 to 216 of 256, and `file #N` from 17 to 25 of 30, as the prototype
+  predicted.
+
 The rules:
 - Text in double quotes is an exact phrase. A quote left open runs to the end of the query.
 - AND, OR and NOT **in capitals** are operators. In lower case they are ordinary words.
@@ -184,9 +198,9 @@ Measured on the prototype (top 5, MCP-style section results):
 Agreement: the rules are about 40 lines in each language.
 - Disagreement between the front doors is how they diverged today: AND in the web console, OR in
   the MCP, no expansion in the Go CLI.
-- A short list of query → expected-match cases, kept beside the read contract in vdocs, would be
-  copied into vdocs-web the same way the contract is, and both test suites would run every case.
-  This list does not exist yet.
+- The list of query → expected-match cases is `contracts/query/v1.json`, beside the read
+  contract. vdocs-web and vdocs-cli copy it by hand, the way vdocs-web copies the read contract,
+  and run every case.
 
 The MCP's tool description and orientation each gain one line stating the syntax, and the web
 search box gets a one-line hint. Those descriptions are how people and agents learn the syntax.
@@ -331,7 +345,8 @@ Each step: write the test first, then build, then run `make check`, measure agai
    plain-English keyword searches in Appendix C. The golden harness grades the keyword forms.
 2. **Fix 1 (built 2026-11-06, vdocs-web `926e320`):** relevance order and the any-word fallback
    in vdocs-web. This is the largest visible gain and needs no contract change.
-3. **Fix 2:** the reader in vdocs-web, the MCP and the Go CLI (D2), with the shared cases.
+3. **Fix 2:** the reader in vdocs-web, the MCP and the Go CLI (D2), with the shared cases. The MCP
+   and `vdocs ask` part is built (`9bfc552`).
 4. **Fix 3, straight after fix 2:** the producer writes the synonym table (contract 1.8), and every
    reader applies it. The package names are complete for every application in the first release.
    Other hand-written terms are added one judged question at a time.
