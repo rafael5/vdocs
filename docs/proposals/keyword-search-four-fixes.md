@@ -1,6 +1,7 @@
 # Good-enough keyword search — four small fixes
 
-**Status: PROPOSED · 2026-11-06 · nothing built.** Consumer: vdocs-web (fixes 1–3). Producer and
+**Status: PROPOSED · 2026-11-06 · decisions D1–D3 taken 2026-11-06 as recommended · nothing
+built.** Consumer: vdocs-web (fixes 1–3). Producer and
 MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
 **Evidence:** every number comes from `scripts/mcp_review/contract.py` and
 `scripts/mcp_review/fixes.py`, recorded with provenance in `reports/mcp-review-contract.json` and
@@ -109,7 +110,7 @@ The rules:
 - A word containing `* ^ # . $ % /` stays whole, as one phrase of its parts with single characters
   kept. DG\*5.3\*1029, #50.7, $$GET1^DIQ and TCP/IP each match as written.
 - Bare words with no operator between them are joined by the front door's default: all words in
-  the web console, any word in the MCP (decision D1).
+  the web console, any word in the MCP (D1, decided).
 - Single-character bare words are dropped, as today.
 - Malformed input never produces an error. It degrades to plain words.
 
@@ -157,7 +158,7 @@ search box gets a one-line hint. Those descriptions are how people and agents le
 ### Fix 4: keyword-form test questions
 
 - Each of the 24 judged questions gains its keyword form. The drafts are in Appendix A, written by
-  the reviewer, who knew the answers; decision D3 asks the operator to edit them.
+  the reviewer, who knew the answers; the operator edits them (D3, decided).
 - Add about six plain-English questions of the kind a non-technical searcher types, judged the same
   way. These are what the hand-written synonyms must fix. The shape is "user accounts" (the
   manuals say NEW PERSON) or "background jobs" (TaskMan). These two examples are illustrations,
@@ -192,8 +193,7 @@ Each step: write the test first, then build, then run `make check`, measure agai
    questions. The golden harness grades the keyword form alongside the question.
 2. **Fix 1:** relevance order and the any-word fallback in vdocs-web. This is the largest visible
    gain and needs no contract change.
-3. **Fix 2:** the reader in vdocs-web and the MCP (and the Go CLI, decision D2), with the shared
-   cases.
+3. **Fix 2:** the reader in vdocs-web, the MCP and the Go CLI (D2), with the shared cases.
 4. **Fix 3:** the producer writes the synonym table (contract 1.8), and both readers apply it.
    Hand-written entries are added one judged question at a time.
 
@@ -213,16 +213,18 @@ Each step: write the test first, then build, then run `make check`, measure agai
 
 ## 7. Decisions
 
+All three were taken by the operator on 2026-11-06, as recommended.
+
 - **D1. The MCP's default for bare words.** Recommended: any word, ranked. With it, full-sentence
   questions still reach the top 10 for 23 of 24, and keyword questions are unchanged at 20 of 24.
   The alternative, all words, drops full sentences to 2 of 24, with 18 returning nothing, and
-  agents often send sentences.
+  agents often send sentences. **Decided: any word, ranked.**
 - **D2. Whether the Go CLI (vdocs-cli) is in scope.** Recommended: yes, same reader, same shared
   cases. It is a port of the MCP engine, and leaving it out keeps a third set of rules alive. The
-  alternative is to stop presenting it as an agent path.
+  alternative is to stop presenting it as an agent path. **Decided: in scope.**
 - **D3. Who writes the keyword wording of the test questions.** Recommended: the operator edits
   the reviewer's drafts (Appendix A), because the drafts were written by someone who knew the
-  answers.
+  answers. **Decided: the operator edits them.**
 
 ## 8. References
 

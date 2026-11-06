@@ -28,7 +28,7 @@ Documentation here is classified by **lifecycle state, not topic**:
 
 ## Current state (2026-07-04)
 
-- **Proposed (2026-11-06), nothing built:** [`proposals/keyword-search-four-fixes.md`](proposals/keyword-search-four-fixes.md)
+- **Proposed (2026-11-06), decisions taken, nothing built:** [`proposals/keyword-search-four-fixes.md`](proposals/keyword-search-four-fixes.md)
   — good-enough keyword search: the web console sorts by relevance (right manual on page 1 for
   12 → 22 of 24 keyword searches), one query reader obeys quotes, AND/OR/NOT and identifiers in
   every front door, a small synonym list, and keyword-form test questions. Measurements:
