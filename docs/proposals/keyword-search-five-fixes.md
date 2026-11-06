@@ -3,7 +3,8 @@
 **Status: PROPOSED · 2026-11-06 · decisions D1–D3 taken 2026-11-06 as recommended · amended
 2026-11-06: plain-English package names made a core part of fix 3, and search-box suggestions
 added as fix 5, both at the operator's direction · fix 1 built in vdocs-web 2026-11-06
-(`926e320`); fixes 2–5 not built.** Consumer: vdocs-web (fixes 1–3
+(`926e320`) · Appendices A and B approved by the operator unchanged 2026-11-06 · fixes 2–5 not
+built.** Consumer: vdocs-web (fixes 1–3
 and 5). Producer and MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
 **Evidence:** every number comes from a script in `scripts/mcp_review/` (`contract.py`, `fixes.py`,
 `package_names.py`, `ranking.py`, `tiers.py`, `suggest.py`), recorded with provenance in the
@@ -202,7 +203,7 @@ capability, complete for every application, not an extra grown one question at a
     own get entries of their own: TaskMan ("background jobs") and KIDS ("patches").
     - The names are written once, for all 109 applications, in one registry file with one entry per
       application. That file does not exist yet.
-    - The operator edits the reviewer's drafts in Appendix B, the same arrangement as D3.
+    - The operator approved the reviewer's drafts in Appendix B unchanged on 2026-11-06.
   - **Generated, no curation:** application codes, namespaces and product abbreviations ↔ their
     names (307 pairs for 109 applications), plus today's one expansion (file 200 → NEW PERSON),
     which moves here so there is a single mechanism. Searching by code already finds the
@@ -252,7 +253,7 @@ capability, complete for every application, not an extra grown one question at a
 ### Fix 4: keyword-form test questions
 
 - Each of the 24 judged questions gains its keyword form. The drafts are in Appendix A, written by
-  the reviewer, who knew the answers; the operator edits them (D3, decided).
+  the reviewer, who knew the answers; the operator approved them unchanged on 2026-11-06 (D3).
 - Add about six plain-English questions of the kind a non-technical searcher types, judged the same
   way. These are what the hand-written synonyms must fix. The shape is "user accounts" (the
   manuals say NEW PERSON) or "background jobs" (TaskMan). These two examples are illustrations,
@@ -319,9 +320,10 @@ not how results are ranked, so the judged questions cannot score them.
 
 Each step: write the test first, then build, then run `make check`, measure against §4, commit.
 
-1. **Fix 4 and Appendix B:** the operator edits the keyword forms, supplies or approves the
-   plain-English questions, and edits the plain-English package names. The golden harness grades
-   the keyword form alongside the question.
+1. **Fix 4 and Appendix B:** the keyword forms (Appendix A) and the plain-English package names
+   (Appendix B) were approved unchanged on 2026-11-06. Still to come: the operator supplies or
+   approves the six or so plain-English questions. The golden harness grades the keyword form
+   alongside the question.
 2. **Fix 1 (built 2026-11-06, vdocs-web `926e320`):** relevance order and the any-word fallback
    in vdocs-web. This is the largest visible gain and needs no contract change.
 3. **Fix 2:** the reader in vdocs-web, the MCP and the Go CLI (D2), with the shared cases.
@@ -377,8 +379,8 @@ Each step: write the test first, then build, then run `make check`, measure agai
 All three were taken by the operator on 2026-11-06, as recommended.
 
 **Operator direction, 2026-11-06.** Translating plain-English package names into the VistA package
-name and namespace is a core capability of keyword search (fix 3). The operator edits the drafts in
-Appendix B, as with D3. Search-box suggestions (fix 5) are in scope regardless of measured gain.
+name and namespace is a core capability of keyword search (fix 3). The operator approved the drafts
+in Appendix B unchanged on 2026-11-06. Search-box suggestions (fix 5) are in scope regardless of measured gain.
 
 - **D1. The MCP's default for bare words.** Recommended: any word, ranked. With it, full-sentence
   questions still reach the top 10 for 23 of 24, and keyword questions are unchanged at 20 of 24.
@@ -389,7 +391,8 @@ Appendix B, as with D3. Search-box suggestions (fix 5) are in scope regardless o
   alternative is to stop presenting it as an agent path. **Decided: in scope.**
 - **D3. Who writes the keyword wording of the test questions.** Recommended: the operator edits
   the reviewer's drafts (Appendix A), because the drafts were written by someone who knew the
-  answers. **Decided: the operator edits them.**
+  answers. **Decided: the operator edits them.** The operator approved them unchanged on
+  2026-11-06.
 
 ## 8. References
 
@@ -411,7 +414,7 @@ Appendix B, as with D3. Search-box suggestions (fix 5) are in scope regardless o
 
 ## Appendix A: keyword forms of the judged questions
 
-These are reviewer drafts, for the operator to edit (D3).
+Reviewer drafts, approved by the operator unchanged on 2026-11-06 (D3).
 
 | Judged question | Keyword form |
 |---|---|
@@ -446,8 +449,8 @@ answers yet, so its keyword form is not counted.
 
 ## Appendix B: plain-English package names
 
-These are reviewer drafts, for the operator to edit, as with Appendix A. Each row is one application
-in the latest corpus.
+Reviewer drafts, approved by the operator unchanged on 2026-11-06. Each row is one application in
+the latest corpus.
 - The package name, code and namespaces come from data the producer already holds. They are what
   each plain-English name expands to.
 - The plain-English names were written by hand from each application's own name and its Monograph
