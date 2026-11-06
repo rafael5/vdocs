@@ -29,8 +29,8 @@ Documentation here is classified by **lifecycle state, not topic**:
 ## Current state (2026-07-04)
 
 - **Proposed (2026-11-06), decisions taken, nothing built:** [`proposals/keyword-search-five-fixes.md`](proposals/keyword-search-five-fixes.md)
-  — good-enough keyword search: the web console sorts by relevance (right manual on page 1 for
-  12 → 22 of 24 keyword searches), one query reader obeys quotes, AND/OR/NOT and identifiers in
+  — good-enough keyword search: the web console sorts by relevance, scoring each manual by its
+  three best passages (right manual on page 1 for 12 → 24 of 24 keyword searches), one query reader obeys quotes, AND/OR/NOT and identifiers in
   every front door, a synonym list whose core is plain-English package names ("blood bank" finds
   VBECS; 91 → 242 of 242 drafted names find their application on page 1), keyword-form test
   questions, and search-box suggestions. Summary cards searched first, pseudo-relevance feedback

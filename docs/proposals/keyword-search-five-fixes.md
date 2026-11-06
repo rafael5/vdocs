@@ -27,7 +27,7 @@ were ruled out on 2026-06-08. Measured against that contract, every front door f
   manuals on the web console's first page for 91 of 242 such names.
 
 Five small fixes close this:
-1. Sort the web console by relevance.
+1. Sort the web console by relevance, scoring each manual by its three best passages.
 2. One query reader that obeys quotes, operators and identifiers.
 3. A synonym list whose core is plain-English package names: "blood bank" finds VBECS.
 4. Keyword-form test questions to judge "good enough".
@@ -103,8 +103,30 @@ registry).
 
 ### Fix 1: the web console orders results by relevance
 
-- When the search box has text, order matching documents by their best passage's relevance
-  score. Keep title order when there is no search text (pure facet browsing).
+- When the search box has text, order matching documents by relevance. Keep title order when
+  there is no search text (pure facet browsing).
+- A document's score comes from its three best-matching passages, weighted 1, ½ and ¼. A manual
+  that covers the topic in several places then ranks above one that mentions it once, and a short
+  manual with one strong passage still holds its place. The operator chose this on 2026-11-06.
+  - Measured against ordering by the single best passage, on top of fixes 2 and 3
+    (`reports/mcp-review-ranking.json`, variant `passages_decay`):
+
+    | | Best passage only | Three passages, 1, ½, ¼ |
+    |---|---|---|
+    | Keyword questions: right manual on page 1 | 22 / 24 | 24 / 24 |
+    | Keyword questions: right manual first | 17 / 24 | 19 / 24 |
+    | Full sentences: right manual first | 20 / 24 | 21 / 24 |
+    | 238 plain-English package names, synonyms off: right application on page 1 | 189 | 195 |
+    | Same: right application first | 107 | 120 |
+
+  - Adding the three passages at equal weight did slightly better on first place (20 of 24) but
+    pushed the HL7 Package Security Guide, the exact answer to "HL7 security keys", from 1st to
+    16th, because the guide has only one matching passage. With the 1, ½, ¼ weights it is 10th,
+    still on page 1.
+  - The weights were chosen after seeing that loss, so they are tuned on these 24 questions. The
+    238 package names, which played no part in choosing them, improve as well.
+  - The any-word fallback keeps the best-passage score: summing passages that each hold one common
+    word favours long manuals, and on full sentences it lost ground.
 - Use FTS5's plain relevance score. The MCP's tuned column weights gave the same result here
   (MRR 0.810 vs 0.806, same page-1 and first-place counts), so no weights need copying into Go.
 - When no document contains all the words, show the documents that contain any of them, best
@@ -115,8 +137,9 @@ registry).
     matching documents, against 496 of 615 when any word will do.
 - Cost: the relevance-ordered query took 1 ms for a keyword search and 125 ms for the largest
   any-word fallback, against 69–76 ms for today's title order on the same input.
-- Change: one SQL query in vdocs-web's candidate listing, plus a notice line in the UI. No
-  contract change.
+- Change: one SQL query in vdocs-web's candidate listing, plus a notice line in the UI. The
+  three-passage score is computed from that same query's rows (each document's passage scores,
+  sorted, the best three weighted), so it adds no query. No contract change.
 
 ### Fix 2: one query reader, the same rules in every front door
 
@@ -260,8 +283,8 @@ not how results are ranked, so the judged questions cannot score them.
 
 | Measure | Today | Prototype | Target |
 |---|---|---|---|
-| Web: right manual on page 1, keyword questions | 12 / 24 | 22 / 24 | ≥ 22 / 24 |
-| Web: right manual first, keyword questions | 4 / 24 | 17 / 24 | ≥ 17 / 24 |
+| Web: right manual on page 1, keyword questions | 12 / 24 | 24 / 24 | ≥ 24 / 24 |
+| Web: right manual first, keyword questions | 4 / 24 | 19 / 24 | ≥ 19 / 24 |
 | Web: right manual on page 1, full sentences | 5 / 24 | 23 / 24 | ≥ 22 / 24 |
 | Quoted phrase present in every result | 63% | by construction | 100% |
 | Excluded word absent (per passage) | 0–1% of results | by construction | 100% |
