@@ -1,0 +1,211 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "draft": "reviewer drafts, operator to edit",
+ "coverage": {
+  "applications_in_latest_corpus": 109,
+  "applications_with_plain_names": 109,
+  "missing": [],
+  "plain_names": 242,
+  "table_keys": 242
+ },
+ "plain_name_finds_its_application_top10": {
+  "web_today_title_order": "91/242",
+  "web_relevance_no_synonyms": "193/242",
+  "web_relevance_with_synonyms": "242/242",
+  "mcp_today": "186/242",
+  "mcp_with_synonyms": "242/242"
+ },
+ "web_documents_matched_median": {
+  "no_synonyms": 37.0,
+  "with_synonyms": 61.0
+ },
+ "web_documents_matched_max": {
+  "no_synonyms": 384,
+  "with_synonyms": 458
+ },
+ "misses": {
+  "web_relevance_no_synonyms": [
+   "AMT: blood thinners",
+   "AMT: warfarin",
+   "AR/WS: restocking",
+   "ASCD: service connection",
+   "ASU: signing permissions",
+   "CPRS: electronic health record",
+   "CPRS: medical record",
+   "DGJ: chart deficiencies",
+   "EC: procedure counts",
+   "FFP: outstanding warrants",
+   "FIM: rehabilitation assessment",
+   "GMR: fluid balance",
+   "HBPC: home health",
+   "HL7: interfaces",
+   "IVMB: means test",
+   "KMPV: system monitoring",
+   "MC: EKG",
+   "MMRS: infection control",
+   "NCR: clozapine monitoring",
+   "NUPA: nursing assessments",
+   "OOPS: workplace accidents",
+   "OR: orders",
+   "OR: ordering",
+   "PAIT: appointment extract",
+   "PCMM: PACT",
+   "POC: bedside testing",
+   "POC: glucose meters",
+   "PREA: pharmacist medication profile",
+   "PREA: medication review",
+   "PRF: flagged patients",
+   "PSB: barcode",
+   "PSN: drug database",
+   "PSU: drug usage reports",
+   "PX: visits",
+   "PX: workload",
+   "QAO: quality review",
+   "QAP: questionnaires",
+   "QMIM: credentialing",
+   "RMDS: nursing home assessment",
+   "RMDS: minimum data set",
+   "RT: paper records",
+   "TBI: concussion",
+   "VALM: list screens",
+   "VAQ: patient record exchange",
+   "VAQ: other facility records",
+   "XM: email",
+   "XQOR: protocols",
+   "XT: developer utilities",
+   "XU: user accounts"
+  ],
+  "mcp_today": [
+   "AMT: blood thinners",
+   "AMT: warfarin",
+   "AR/WS: restocking",
+   "ASCD: service connection",
+   "ASU: signing permissions",
+   "CPRS: electronic health record",
+   "EC: procedure counts",
+   "FFP: outstanding warrants",
+   "FIM: rehabilitation assessment",
+   "GMR: fluid balance",
+   "GMRC: referrals",
+   "GMRV: pulse",
+   "GMTS: patient summary report",
+   "HBPC: home health",
+   "HL7: interfaces",
+   "HL7: interface messages",
+   "IVMB: means test",
+   "KMPV: system monitoring",
+   "MC: EKG",
+   "MD: medical devices",
+   "MMRS: infection control",
+   "NCR: clozapine monitoring",
+   "NUPA: nursing assessments",
+   "OR: orders",
+   "OR: ordering",
+   "PAIT: appointment extract",
+   "PCMM: PACT",
+   "POC: bedside testing",
+   "POC: glucose meters",
+   "PREA: pharmacist medication profile",
+   "PREA: medication review",
+   "PRF: flagged patients",
+   "PSB: barcode",
+   "PSN: drug database",
+   "PSN: drug classes",
+   "PSU: drug usage reports",
+   "PSX: mailed prescriptions",
+   "PX: visits",
+   "PX: workload",
+   "QAO: quality review",
+   "QAP: questionnaires",
+   "QMIM: credentialing",
+   "QMIM: incident reporting",
+   "RA: imaging exams",
+   "RMDS: nursing home assessment",
+   "RMDS: long-term care assessment",
+   "RMDS: minimum data set",
+   "RT: paper records",
+   "SRA: surgical outcomes",
+   "TBI: concussion",
+   "VALM: list screens",
+   "VAQ: other facility records",
+   "XQOR: protocols",
+   "XT: developer utilities",
+   "XU: user accounts",
+   "XU: software installation"
+  ]
+ },
+ "regression_judged_questions": {
+  "web_keywords_off": {
+   "n": 24,
+   "top10": 22,
+   "first": 17,
+   "mrr": 0.81
+  },
+  "mcp_keywords_off": {
+   "n": 24,
+   "top10": 20,
+   "first": 12,
+   "mrr": 0.581
+  },
+  "web_keywords_on": {
+   "n": 24,
+   "top10": 22,
+   "first": 17,
+   "mrr": 0.81
+  },
+  "mcp_keywords_on": {
+   "n": 24,
+   "top10": 20,
+   "first": 12,
+   "mrr": 0.581
+  },
+  "web_sentence_off": {
+   "n": 24,
+   "top10": 7,
+   "first": 5,
+   "mrr": 0.25
+  },
+  "mcp_sentence_off": {
+   "n": 24,
+   "top10": 23,
+   "first": 17,
+   "mrr": 0.783
+  },
+  "web_sentence_on": {
+   "n": 24,
+   "top10": 7,
+   "first": 5,
+   "mrr": 0.25
+  },
+  "mcp_sentence_on": {
+   "n": 24,
+   "top10": 23,
+   "first": 17,
+   "mrr": 0.783
+  }
+ },
+ "judged_queries_the_table_touches": [
+  "tiu-unsigned-notes (keywords)",
+  "tiu-unsigned-notes (sentence)",
+  "vbecs-accept-order (sentence)"
+ ],
+ "identifiers_found_in_top5": {
+  "patch_id_off": "216/256",
+  "patch_id_on": "216/256",
+  "file_number_off": "25/30",
+  "file_number_on": "25/30"
+ },
+ "examples": {
+  "blood bank": "(\"blood bank\" OR \"vista blood establishment computer software\" OR \"vbecs\")",
+  "blood bank ISBT": "(\"blood bank\" OR \"vista blood establishment computer software\" OR \"vbecs\") AND \"ISBT\"",
+  "\"blood bank\"": "\"blood bank\"",
+  "background jobs": "(\"background jobs\" OR \"taskman\")",
+  "email": "(\"email\" OR \"mailman\" OR \"xm\")"
+ }
+}

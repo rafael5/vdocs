@@ -31,8 +31,10 @@ Documentation here is classified by **lifecycle state, not topic**:
 - **Proposed (2026-11-06), decisions taken, nothing built:** [`proposals/keyword-search-four-fixes.md`](proposals/keyword-search-four-fixes.md)
   — good-enough keyword search: the web console sorts by relevance (right manual on page 1 for
   12 → 22 of 24 keyword searches), one query reader obeys quotes, AND/OR/NOT and identifiers in
-  every front door, a small synonym list, and keyword-form test questions. Measurements:
-  `scripts/mcp_review/{contract,fixes}.py` → `../reports/mcp-review-{contract,fixes}.json`.
+  every front door, a synonym list whose core is plain-English package names ("blood bank" finds
+  VBECS; 91 → 242 of 242 drafted names find their application on page 1), and keyword-form test
+  questions. Measurements: `scripts/mcp_review/{contract,fixes,package_names}.py` →
+  `../reports/mcp-review-{contract,fixes,package-names}.json`.
 - **Proposed (2026-11-06), for review, nothing built:** [`proposals/vdocs-mcp-interface-design.md`](proposals/vdocs-mcp-interface-design.md)
   — the MCP server and the other machine front doors (Go CLI, vdocs-web API) measured against the
   code and against a machine-consumer metric set: nine drifted claims, identifier and paraphrase

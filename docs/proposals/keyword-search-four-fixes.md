@@ -1,12 +1,14 @@
 # Good-enough keyword search — four small fixes
 
-**Status: PROPOSED · 2026-11-06 · decisions D1–D3 taken 2026-11-06 as recommended · nothing
-built.** Consumer: vdocs-web (fixes 1–3). Producer and
+**Status: PROPOSED · 2026-11-06 · decisions D1–D3 taken 2026-11-06 as recommended · amended
+2026-11-06: plain-English package names made a core part of fix 3, at the operator's direction ·
+nothing built.** Consumer: vdocs-web (fixes 1–3). Producer and
 MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
-**Evidence:** every number comes from `scripts/mcp_review/contract.py` and
-`scripts/mcp_review/fixes.py`, recorded with provenance in `reports/mcp-review-contract.json` and
-`reports/mcp-review-fixes.json`. Corpus: `~/data/vdocs/index.db`, 1,040 documents (615 latest),
-57,804 chunks, `corpus_content_hash 5b118189…`. The query reader and synonym seed in `fixes.py` are
+**Evidence:** every number comes from `scripts/mcp_review/contract.py`,
+`scripts/mcp_review/fixes.py` and `scripts/mcp_review/package_names.py`, recorded with provenance in
+`reports/mcp-review-contract.json`, `reports/mcp-review-fixes.json` and
+`reports/mcp-review-package-names.json`. Corpus: `~/data/vdocs/index.db`, 1,040 documents (615 latest),
+57,804 chunks, `corpus_content_hash 5b118189…`. The query readers and synonym lists in those scripts are
 measurement prototypes, not production code.
 **Supersedes** the search-syntax and vocabulary parts of
 [`vdocs-mcp-interface-design.md`](vdocs-mcp-interface-design.md): its recommendations R9, R10,
@@ -22,11 +24,13 @@ were ruled out on 2026-06-08. Measured against that contract, every front door f
 - The web console treats OR as a word to find, so it returns 4% of what it should.
 - The web console lists results alphabetically. The right manual reaches the first page for only
   12 of 24 keyword searches; in relevance order it reaches the first page for 22.
+- A plain-English name for a package ("blood bank", "email", "warfarin") puts that package's
+  manuals on the web console's first page for 91 of 242 such names.
 
 Four small fixes close this:
 1. Sort the web console by relevance.
 2. One query reader that obeys quotes, operators and identifiers.
-3. A small synonym list.
+3. A synonym list whose core is plain-English package names: "blood bank" finds VBECS.
 4. Keyword-form test questions to judge "good enough".
 
 None needs a new service, model or dependency. The largest changes about 40 lines of query
@@ -43,14 +47,16 @@ handling in each front door.
 7. [Decisions](#7-decisions)
 8. [References](#8-references)
 9. [Appendix A: keyword forms of the judged questions](#appendix-a-keyword-forms-of-the-judged-questions)
+10. [Appendix B: plain-English package names](#appendix-b-plain-english-package-names)
 
 ## 1. The contract
 
 A person, or an agent, types keywords. Text in double quotes must appear as typed. AND, OR and NOT
 combine terms. VistA identifiers typed exactly (a patch id, a file number, a routine reference) are
-found. Results come back best first. A small synonym list may add the technical name for a plain
-term, or the reverse, so a non-technical searcher still finds the manual. That is the whole
-contract.
+found. Results come back best first. A plain-English name for a package finds that package's
+manuals: "blood bank" finds VBECS, "email" finds MailMan. That translation is part of the core
+contract. Beyond package names, a small synonym list may add the technical name for a plain term,
+or the reverse, so a non-technical searcher still finds the manual. That is the whole contract.
 
 ## 2. What is wrong today
 
@@ -80,6 +86,13 @@ lists (`reports/mcp-review-fixes.json`):
 
 No keyword search returned zero results. The web console's empty pages come from full sentences:
 requiring every word of "How do I load and install a KIDS distribution build?" leaves nothing.
+
+**Package names.** For each of the 109 applications the reviewer drafted the plain-English names a
+non-technical searcher might type (Appendix B, 242 names). Today the web console puts a manual of
+that application on page 1 for 91 of them, and the MCP's top 10 holds one of its sections for 186.
+The misses are names the manuals don't use: "email" (MailMan), "warfarin" (Anticoagulation
+Management Tool), "means test" (Health Eligibility Center), "concussion" (Traumatic Brain Injury
+registry).
 
 ## 3. The four fixes
 
@@ -131,28 +144,66 @@ Agreement: the rules are about 40 lines in each language.
 The MCP's tool description and orientation each gain one line stating the syntax, and the web
 search box gets a one-line hint. Those descriptions are how people and agents learn the syntax.
 
-### Fix 3: a small synonym list
+### Fix 3: synonyms, with plain-English package names at the core
 
-- **One table of term ↔ alternative pairs in `index.db`** (it does not exist yet), written by the
-  producer from two sources:
+The operator set this on 2026-11-06: keyword search must translate the plain-English name of a
+package into its VistA package name and namespace, so "blood bank" finds VBECS. It is a core
+capability, complete for every application, not an extra grown one question at a time.
+
+- **One table of term → alternatives in `index.db`** (it does not exist yet), written by the
+  producer from three sources:
+  - **Plain-English package names (core).** Every application in the corpus gets the names a
+    non-technical searcher would type. Each name expands to that application's package name, code
+    and namespaces, which the producer already holds: the documents' application name, code and
+    namespace columns, and the package master registry. Two Kernel parts that people name on their
+    own get entries of their own: TaskMan ("background jobs") and KIDS ("patches").
+    - The names are written once, for all 109 applications, in one registry file with one entry per
+      application. That file does not exist yet.
+    - The operator edits the reviewer's drafts in Appendix B, the same arrangement as D3.
   - **Generated, no curation:** application codes, namespaces and product abbreviations ↔ their
-    names, from columns `documents` already carries. That gives 307 pairs for 109 applications,
-    plus today's one expansion (file 200 → NEW PERSON), which moves here so there is a single
-    mechanism.
-  - **Hand-written:** plain-English ↔ technical entries for routines, files and terms, in one
-    registry file (it does not exist yet). An entry goes in only together with a judged query it
-    fixes (fix 4).
-- **At query time** (both front doors), a word or phrase that matches a key gets its alternative
-  added as an OR'd phrase.
+    names (307 pairs for 109 applications), plus today's one expansion (file 200 → NEW PERSON),
+    which moves here so there is a single mechanism. Searching by code already finds the
+    application's documents for 101 of 109 applications; with these pairs, 108.
+  - **Other terms** (routines, files, concepts): hand-written, and an entry goes in only together
+    with a judged query it fixes (fix 4).
+- **At query time** (every front door), an unquoted word or phrase that matches a key gets its
+  alternatives added as OR'd phrases. "blood bank ISBT" becomes ("blood bank" OR "VistA Blood
+  Establishment Computer Software" OR "VBECS") AND "ISBT".
+  - Text in double quotes is never expanded. Quoting is how to search for exactly what was typed.
   - A code expands only when typed in capitals, because many short codes are also ordinary words
     (AR, EN, MD, ART, LAB).
-  - Capital AND, OR and NOT are always operators. The Order Entry application, whose code is OR,
-    is found by its name or by CPRS.
-- **Measured value of the generated half: small.** Searching by code found the application's own
-  documents in the top 10 for 101 of 109 applications; with the seed, 108 of 109. Searching by name
-  already finds 109 of 109, because the index folds each application's name into its documents'
-  titles. The plain-English value lies in the hand-written half. That half is unmeasured until fix
-  4 adds plain-English questions, so it starts empty.
+  - Capital AND, OR and NOT are always operators, and an operator word is never added as an
+    alternative. The Order Entry application, whose code is OR, is found by its name or by CPRS.
+- **A plain-English name must name a package, not a shared concept.**
+  - The first draft gave Kernel "security keys", "sign on" and "menus", and gave FileMan "data
+    dictionary". Every package's manuals use those words.
+  - Expanding them to one package pushed other packages' answers down. The HL7 security-keys
+    question fell from first to tenth in the web console and out of the MCP's top 15.
+  - With those four removed, all 24 judged questions score exactly as before. Such words belong
+    with the other terms, added only with a judged question.
+- **Measured** on the 242 drafted names (`reports/mcp-review-package-names.json`). "Found" means a
+  manual of that application is in the top 10:
+
+  | Package name typed in | Found |
+  |---|---|
+  | Web console today (title order) | 91 / 242 |
+  | Web console, relevance order (fix 1) | 193 / 242 |
+  | Web console, relevance order and package names | 242 / 242 |
+  | MCP today | 186 / 242 |
+  | MCP with package names | 242 / 242 |
+
+  - 242 of 242 is largely by construction, since each expansion names its application. What the
+    table buys is the 49 names whose manuals don't use the searcher's word. In relevance order,
+    "email" moves MailMan from 11th to 1st, "warfarin" moves the Anticoagulation Management Tool
+    from 23rd to 1st, and "concussion" goes from not found to the Traumatic Brain Injury registry
+    first.
+  - "blood bank" already finds a VBECS manual first in relevance order, because the VBECS manuals
+    say "blood bank". Today's title order puts the first VBECS manual 60th. The table makes the
+    link hold whatever wording the manuals use.
+  - Cost: the web console matches more documents, a median of 37 → 61 and at most 384 → 458, so
+    facet counts grow.
+  - No loss elsewhere: with the whole table on, the 24 judged questions (keywords and sentences,
+    web console and MCP) and the patch-id and file-number checks score exactly the same.
 - **Contract:** read contract 1.8 adds the table. vdocs-web's vendored contract copy gains it.
 
 ### Fix 4: keyword-form test questions
@@ -183,19 +234,24 @@ search box gets a one-line hint. Those descriptions are how people and agents le
 | MCP keyword questions, top 10 | 20 / 24 | 20 / 24 | no loss |
 | MCP full sentences, top 10 | 23 / 24 | 23 / 24 | no loss |
 | Application found by its code, top 10 | 101 / 109 | 108 / 109 | ≥ 108 / 109 |
+| Plain-English package name: its manuals on web page 1 | 91 / 242 | 242 / 242 | every name in the edited list |
+| Plain-English package name: its sections in the MCP top 10 | 186 / 242 | 242 / 242 | every name in the edited list |
+| Judged questions and identifier checks, synonym table on vs off | — | identical | no loss |
 | Each plain-English question in the key | not yet judged | — | right manual on page 1 |
 
 ## 5. Order of work
 
 Each step: write the test first, then build, then run `make check`, measure against §4, commit.
 
-1. **Fix 4:** the operator edits the keyword forms and supplies or approves the plain-English
-   questions. The golden harness grades the keyword form alongside the question.
+1. **Fix 4 and Appendix B:** the operator edits the keyword forms, supplies or approves the
+   plain-English questions, and edits the plain-English package names. The golden harness grades
+   the keyword form alongside the question.
 2. **Fix 1:** relevance order and the any-word fallback in vdocs-web. This is the largest visible
    gain and needs no contract change.
 3. **Fix 2:** the reader in vdocs-web, the MCP and the Go CLI (D2), with the shared cases.
-4. **Fix 3:** the producer writes the synonym table (contract 1.8), and both readers apply it.
-   Hand-written entries are added one judged question at a time.
+4. **Fix 3, straight after fix 2:** the producer writes the synonym table (contract 1.8), and every
+   reader applies it. The package names are complete for every application in the first release.
+   Other hand-written terms are added one judged question at a time.
 
 ## 6. Deliberately not building
 
@@ -205,7 +261,9 @@ Each step: write the test first, then build, then run `make check`, measure agai
 - **The old 696-entry acronym list.** It was built on 2026-06-08 and switched off after it made
   results worse.
 - **A synonym approval workflow, entity resolution or automatic synonym mining.** The synonym-layer
-  ruling of 2026-08-04 stands: hand entries are added one judged question at a time.
+  ruling of 2026-08-04 stands for terms: they are added one judged question at a time. Package
+  names are the exception the operator set on 2026-11-06. They are a bounded list, one entry per
+  application, written once and checked by the package-name measurement.
 - **Stemming, stopword lists, prefix matching, per-document caps.** All were measured on 2026-11-06
   as neutral or worse.
 - **Column-weight tuning for the web console.** Plain relevance matched the weighted version.
@@ -214,6 +272,10 @@ Each step: write the test first, then build, then run `make check`, measure agai
 ## 7. Decisions
 
 All three were taken by the operator on 2026-11-06, as recommended.
+
+**Operator direction, 2026-11-06.** Translating plain-English package names into the VistA package
+name and namespace is a core capability of keyword search (fix 3). The operator edits the drafts in
+Appendix B, as with D3.
 
 - **D1. The MCP's default for bare words.** Recommended: any word, ranked. With it, full-sentence
   questions still reach the top 10 for 23 of 24, and keyword questions are unchanged at 20 of 24.
@@ -237,7 +299,8 @@ All three were taken by the operator on 2026-11-06, as recommended.
   reset (lexical-first, no vectors).
 - SQLite FTS5 query syntax (phrases, AND/OR/NOT, bm25): <https://www.sqlite.org/fts5.html>.
 - `scripts/mcp_review/contract.py` → `reports/mcp-review-contract.json`;
-  `scripts/mcp_review/fixes.py` → `reports/mcp-review-fixes.json`. Re-run from the repo root with
+  `scripts/mcp_review/fixes.py` → `reports/mcp-review-fixes.json`;
+  `scripts/mcp_review/package_names.py` → `reports/mcp-review-package-names.json`. Re-run from the repo root with
   `.venv/bin/python scripts/mcp_review/<name>.py > reports/mcp-review-<name>.json`.
 
 ## Appendix A: keyword forms of the judged questions
@@ -274,3 +337,130 @@ These are reviewer drafts, for the operator to edit (D3).
 
 The golden key holds 25 questions, 24 of them judged. `pharmacy-api-dispense` has no judged
 answers yet, so its keyword form is not counted.
+
+## Appendix B: plain-English package names
+
+These are reviewer drafts, for the operator to edit, as with Appendix A. Each row is one application
+in the latest corpus.
+- The package name, code and namespaces come from data the producer already holds. They are what
+  each plain-English name expands to.
+- The plain-English names were written by hand from each application's own name and its Monograph
+  purpose (`registries/inventory/app-profiles.yaml`).
+- Where VistA's PACKAGE file gives a different namespace from the documents', the operator can add
+  it. For VBECS, the PACKAGE file says VBEC, but the manuals print VBEC in only 3 passages against
+  1,216 for VBECS.
+- Order Entry's code, OR, is left out because OR is an operator.
+
+| Application | Package name | Code and namespaces | Plain-English names (draft) |
+|---|---|---|---|
+| ACKQ | Quality Audiology and Speech Analysis and Reporting | ACKQ | audiology, speech pathology |
+| ACR | Ambulatory Care Reporting | ACR, SD | outpatient encounter reporting |
+| ADT | Admission Discharge Transfer | ADT, DG | admissions, discharges, bed control |
+| AMT | Anticoagulation Management Tool | AMT | blood thinners, warfarin, anticoagulation clinic |
+| ANRV | Visual Impairment Service Team | ANRV | blind rehabilitation, low vision |
+| AR/WS | Automatic Replenish / Ward Stock | AR/WS, PSGW | ward stock, restocking |
+| ASCD | Automated Service Connected Designation | ASCD | service connection, disability rating |
+| ASU | Authorization Subscription Utility | ASU, USR | signing permissions, cosignature |
+| CPRS | Computerized Patient Record System | CPRS | electronic health record, patient chart, medical record |
+| CRHD | Shift Handoff Tool | CRHD | shift change, handoff |
+| DGBT | Beneficiary Travel | DGBT | travel pay, mileage reimbursement |
+| DGJ | Incomplete Records Tracking | DGJ | incomplete records, chart deficiencies |
+| DI | FileMan | DI | database |
+| DVBA | Automated Medical Information Exchange | DVBA | disability exams, compensation and pension |
+| EC | Event Capture System | EC | workload capture, procedure counts |
+| ECME | Electronic Claims Management Engine | ECME, BPS | pharmacy claims, prescription insurance claims |
+| ECX | Decision Support System Extracts | ECX | cost accounting, managerial cost accounting |
+| EDIS | Emergency Department Integration Software | EDIS | emergency department, emergency room, tracking board |
+| EFR | Embedded Fragments | EFR | embedded fragments, shrapnel |
+| EN | Engineering | EN | equipment maintenance, work orders, biomedical engineering |
+| EPI | Emerging Pathogens Initiative | EPI | infectious disease reporting, disease surveillance |
+| FB | Fee Basis | FB | community care payments, non-VA care, fee for service |
+| FFP | Fugitive Felon Program | FFP | fugitive felons, outstanding warrants |
+| FH | Nutrition and Food Service | FH | dietetics, diet orders, meals |
+| FIM | Functional Independence Measurement | FIM | rehabilitation assessment, functional status |
+| GEN | Generic Code Sheet | GEN | code sheets |
+| GMPL | Problem List | GMPL | patient problems, diagnosis list |
+| GMR | Intake and Output | GMR | fluid intake, fluid balance |
+| GMRA | Adverse Reaction Tracking | GMRA | allergies, drug allergies, adverse drug reactions |
+| GMRC | Consult/Request Tracking | GMRC | consults, referrals |
+| GMRV | Vitals/Measurements | GMRV | vital signs, blood pressure, pulse |
+| GMTS | Health Summary | GMTS | patient summary report |
+| HBPC | Home Based Primary Care | HBPC | home care, home health |
+| HL7 | HL7 | HL7 | interfaces, interface messages |
+| IB | Integrated Billing | IB | billing, insurance billing, copayments |
+| IBD | Automated Information Collection System | IBD | encounter forms, scannable forms |
+| IVMB | Health Eligibility Center | IVMB | means test, income verification |
+| KMPD | Capacity Management Tools | KMPD | capacity planning |
+| KMPR | Resource Usage Monitor | KMPR | resource usage |
+| KMPS | Statistical Analysis of Global Growth | KMPS | database growth, global growth |
+| KMPV | VistA System Monitor | KMPV | system monitoring, performance metrics |
+| LA | Universal Interface | LA | lab instruments, instrument interface |
+| LEDI | Electronic Data Interchange | LEDI, LA | reference lab, send-out lab tests |
+| LR | Laboratory | LR, LA | lab, lab tests, lab results |
+| MAG | VistA Imaging System | MAG | medical images, scanned documents, image capture |
+| MC | Medicine | MC | cardiology, EKG, endoscopy |
+| MD | Clinical Procedures | MD | medical devices, device interface, dialysis |
+| MMRS | Methicillin Resistant Staph Aureus | MMRS | staph infection, infection control |
+| MPIF | Master Patient Index | MPIF | duplicate patients, patient identity, ICN |
+| NCR | National Clozapine Coordination | NCR | clozapine monitoring |
+| NUPA | Patient Assessment Documentation Package | NUPA | nursing assessments, nursing documentation |
+| NUR | Nursing | NUR | nurses, nursing staff |
+| ONC | Oncology | ONC | cancer registry, tumor registry |
+| OOPS | Automated Safety Incident Surveillance Tracking System | OOPS | employee injuries, workplace accidents |
+| OR | Order Entry / CPRS |  | orders, ordering |
+| PAIT | Patient Appointment Info. Transmission | PAIT | appointment extract |
+| PCMM | Primary Care Management Module | PCMM, SD | primary care teams, PACT, patient panels |
+| POC | Point of Care | POC, LA | point of care testing, bedside testing, glucose meters |
+| PRC | IFCAP | PRC | purchasing, procurement, purchase orders |
+| PRCA | Accounts Receivable | PRCA | patient debts, collections, patient bills |
+| PRCN | Equipment / Turn-In Request | PRCN | equipment requests, equipment turn-in |
+| PREA | Advanced Medication Platform | PREA | pharmacist medication profile, medication review |
+| PRF | Patient Record Flags | PRF, DG | behavioral flags, flagged patients |
+| PRPF | Integrated Patient Funds | PRPF | patient trust accounts, personal funds |
+| PRS | Personnel and Accounting Integrated Data | PRS | payroll, timekeeping, time and attendance |
+| PSA | Drug Accountability | PSA | drug inventory, pharmacy inventory |
+| PSB | Bar Code Medication Administration | PSB | bar code scanning, medication administration, barcode |
+| PSD | Controlled Substances | PSD | narcotics, controlled drugs |
+| PSJ | Inpatient Medications | PSJ | inpatient pharmacy, unit dose, IV medications |
+| PSN | National Drug File | PSN | drug file, drug database, drug classes |
+| PSO | Outpatient Pharmacy | PSO | prescriptions, refills |
+| PSS | Data Management | PSS | pharmacy setup, drug setup |
+| PSU | Benefits Management | PSU | drug usage reports, pharmacy benefits |
+| PSX | Consolidated Mail Outpatient Pharmacy | PSX | mail order pharmacy, mailed prescriptions |
+| PX | Patient Care Encounter | PX | encounters, visits, workload |
+| PXRM | Clinical Reminders | PXRM | reminders, preventive care reminders |
+| QAC | Patient Advocate Tracking System | QAC | patient complaints, compliments |
+| QAM | Clinical Monitoring System | QAM | quality monitoring |
+| QAO | Occurrence Screen | QAO | adverse event screening, quality review |
+| QAP | Survey Generator | QAP | surveys, questionnaires |
+| QMIM | Quality Management Integration Module | QMIM | credentialing, incident reporting |
+| RA | Radiology/Nuclear Medicine | RA | x-ray, imaging exams, radiology exams |
+| RMDS | RAI/MDS | RMDS | nursing home assessment, long-term care assessment, minimum data set |
+| RMPR | Prosthetics | RMPR | artificial limbs, wheelchairs, home oxygen |
+| ROEV | Military Eye Vision Injury | ROEV | eye injuries, vision injuries |
+| ROR | Clinical Case | ROR | HIV registry, hepatitis C registry, case registry |
+| RT | Record Tracking | RT | paper records, chart tracking, record room |
+| SD | Scheduling | SD | appointments, clinic schedules |
+| SPN | Spinal Cord Injury and Disorders Outcomes | SPN | spinal cord injury |
+| SQLI | SQL Interface | SQLI, DI | SQL, ODBC |
+| SR | Surgery | SR | operating room, surgical cases, anesthesia |
+| SRA | Surgery Risk Assessment | SRA | surgical outcomes, surgical quality |
+| TBI | Traumatic Brain Injury | TBI | brain injury, concussion |
+| TIU | Text Integration Utility | TIU | progress notes, clinical notes, discharge summaries |
+| VALM | List Manager | VALM | list screens |
+| VAQ | Patient Data Exchange | VAQ | patient record exchange, other facility records |
+| VBECS | VistA Blood Establishment Computer Software | VBECS | blood bank, blood transfusion, blood products |
+| VDEF | VistA Data Extraction Framework | VDEF | HL7 message extraction |
+| VPR | Virtual Patient Record | VPR | patient data extract |
+| WII | Wounded Ill and Injured Warriors | WII | wounded warriors, injured service members |
+| WV | Womens Health | WV | mammogram, pap smear, maternity |
+| XM | MailMan | XM | email, mail messages, mail groups |
+| XOBV | VistALink | XOBV | Java connector, J2EE |
+| XQOR | Kernel Unwinder | XQOR | protocol menus, protocols |
+| XT | Kernel Toolkit | XT | developer utilities, routine tools |
+| XU | Kernel | XU | user accounts |
+| XWB | Remote Procedure Call Broker | XWB | remote procedure calls, client server |
+| YS | Mental Health | YS | psychological tests, mental health assessments, crisis line |
+| ZSLOT | SlotMaster | ZSLOT | quick login |
+| XU (part) | TaskMan | TaskMan | background jobs, scheduled tasks |
+| XU (part) | Kernel Installation and Distribution System | KIDS, XPD | patches, software installation |
