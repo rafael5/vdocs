@@ -1,0 +1,64 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "status": "reviewer drafts, not yet approved",
+ "plain-change-password": {
+  "keywords": "change password",
+  "judged_sections": 5,
+  "not_present_latest_searchable": [],
+  "web_first_relevant_document_rank": 7,
+  "web_documents_matched": 39,
+  "web_fallback": false,
+  "mcp_first_relevant_section_rank_top15": null
+ },
+ "plain-create-user-account": {
+  "keywords": "create user account",
+  "judged_sections": 3,
+  "not_present_latest_searchable": [],
+  "web_first_relevant_document_rank": 28,
+  "web_documents_matched": 122,
+  "web_fallback": false,
+  "mcp_first_relevant_section_rank_top15": null
+ },
+ "plain-background-jobs": {
+  "keywords": "background jobs",
+  "judged_sections": 4,
+  "not_present_latest_searchable": [],
+  "web_first_relevant_document_rank": 4,
+  "web_documents_matched": 57,
+  "web_fallback": false,
+  "mcp_first_relevant_section_rank_top15": null
+ },
+ "plain-set-up-printer": {
+  "keywords": "set up printer",
+  "judged_sections": 3,
+  "not_present_latest_searchable": [],
+  "web_first_relevant_document_rank": 18,
+  "web_documents_matched": 125,
+  "web_fallback": false,
+  "mcp_first_relevant_section_rank_top15": null
+ },
+ "plain-enter-patient-allergies": {
+  "keywords": "enter patient allergies",
+  "judged_sections": 5,
+  "not_present_latest_searchable": [],
+  "web_first_relevant_document_rank": 1,
+  "web_documents_matched": 50,
+  "web_fallback": false,
+  "mcp_first_relevant_section_rank_top15": 4
+ },
+ "plain-send-email": {
+  "keywords": "send email",
+  "judged_sections": 4,
+  "not_present_latest_searchable": [],
+  "web_first_relevant_document_rank": 58,
+  "web_documents_matched": 64,
+  "web_fallback": false,
+  "mcp_first_relevant_section_rank_top15": null
+ }
+}

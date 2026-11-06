@@ -1,0 +1,30 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "any_word": {
+  "mcp_keyword_questions": {
+   "n": 24,
+   "top10": 20,
+   "first": 12,
+   "mrr": 0.581
+  },
+  "patch_id_top5": "216/256",
+  "file_number_top5": "25/30"
+ },
+ "all_words_then_any": {
+  "mcp_keyword_questions": {
+   "n": 24,
+   "top10": 20,
+   "first": 13,
+   "mrr": 0.613
+  },
+  "patch_id_top5": "216/256",
+  "file_number_top5": "25/30"
+ },
+ "fallback_fired_on_keyword_questions": 0
+}

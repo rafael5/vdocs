@@ -1,10 +1,11 @@
 # Good-enough keyword search — five small fixes
 
-**Status: PROPOSED · 2026-11-06 · decisions D1–D3 taken 2026-11-06 as recommended · amended
+**Status: PROPOSED · 2026-11-06 · decisions D1–D3 taken 2026-11-06 as recommended; D1 revised
+2026-11-06 when sentence search was dropped (keywords only) · amended
 2026-11-06: plain-English package names made a core part of fix 3, and search-box suggestions
 added as fix 5, both at the operator's direction · fix 1 built in vdocs-web 2026-11-06
-(`926e320`) · Appendices A and B approved by the operator unchanged 2026-11-06 · fixes 2–5 not
-built.** Consumer: vdocs-web (fixes 1–3
+(`926e320`) · Appendices A and B approved by the operator unchanged 2026-11-06 · Appendix C
+drafted for approval · fixes 2–5 not built.** Consumer: vdocs-web (fixes 1–3
 and 5). Producer and MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
 **Evidence:** every number comes from a script in `scripts/mcp_review/` (`contract.py`, `fixes.py`,
 `package_names.py`, `ranking.py`, `tiers.py`, `suggest.py`), recorded with provenance in the
@@ -19,7 +20,8 @@ R12 and R14, and its framing of reworded questions as the largest loss.
 
 vdocs search is meant for keywords, exact phrases in quotes and simple AND/OR/NOT, with results
 ranked by relevance. It is not meant for natural-language understanding or semantic search; vectors
-were ruled out on 2026-06-08. Measured against that contract, every front door falls short:
+were ruled out on 2026-06-08. Full sentences are not a supported way to search either: the operator
+dropped sentence search on 2026-11-06. Measured against that contract, every front door falls short:
 - Quotes do nothing: only 63% of results contain the quoted phrase.
 - NOT does the opposite: 99–100% of results contain the excluded word.
 - The web console treats OR as a word to find, so it returns 4% of what it should.
@@ -55,11 +57,12 @@ handling in each front door.
 8. [References](#8-references)
 9. [Appendix A: keyword forms of the judged questions](#appendix-a-keyword-forms-of-the-judged-questions)
 10. [Appendix B: plain-English package names](#appendix-b-plain-english-package-names)
+11. [Appendix C: plain-English keyword searches](#appendix-c-plain-english-keyword-searches)
 
 ## 1. The contract
 
-A person, or an agent, types keywords. Text in double quotes must appear as typed. AND, OR and NOT
-combine terms. VistA identifiers typed exactly (a patch id, a file number, a routine reference) are
+A person, or an agent, types keywords, not sentences. Text in double quotes must appear as typed.
+AND, OR and NOT combine terms. VistA identifiers typed exactly (a patch id, a file number, a routine reference) are
 found. Results come back best first. A plain-English name for a package finds that package's
 manuals: "blood bank" finds VBECS, "email" finds MailMan. That translation is part of the core
 contract. Beyond package names, a small synonym list may add the technical name for a plain term,
@@ -91,8 +94,7 @@ lists (`reports/mcp-review-fixes.json`):
 | Title, A→Z (today) | 12 / 24 | 4 / 24 |
 | Relevance | 22 / 24 | 17 / 24 |
 
-No keyword search returned zero results. The web console's empty pages come from full sentences:
-requiring every word of "How do I load and install a KIDS distribution build?" leaves nothing.
+No keyword search returned zero results.
 
 **Package names.** For each of the 109 applications the reviewer drafted the plain-English names a
 non-technical searcher might type (Appendix B, 242 names). Today the web console puts a manual of
@@ -108,14 +110,12 @@ registry).
 **Built 2026-11-06** in vdocs-web `926e320`, as described below. `/api/candidates` now returns the
 documents together with a flag saying whether the any-word fallback produced them.
 - Measured on the live API against the real index.db, with today's parser (fixes 2 and 3 not yet
-  built). An independent Python computation gave the same order and fallback on all 48 judged
-  queries.
+  built). An independent Python computation gave the same order and fallback on all 48 queries
+  tried: the 24 keyword forms and the 24 original question sentences.
   - Keywords: the right manual is on page 1 for 24 of 24 (12 before) and first for 20 of 24 (4
     before).
-  - Full sentences: the right manual is on page 1 for 23 of 24 (5 before) and first for 23. The
-    fallback fired on 18.
-- A request took a median of 22 ms. The slowest took 334 ms: a full sentence whose any-word
-  fallback matched nearly every passage.
+- A request took a median of 22 ms. The slowest took 334 ms: a long query whose any-word fallback
+  matched nearly every passage.
 
 - When the search box has text, order matching documents by relevance. Keep title order when
   there is no search text (pure facet browsing).
@@ -129,7 +129,6 @@ documents together with a flag saying whether the any-word fallback produced the
     |---|---|---|
     | Keyword questions: right manual on page 1 | 22 / 24 | 24 / 24 |
     | Keyword questions: right manual first | 17 / 24 | 19 / 24 |
-    | Full sentences: right manual first | 20 / 24 | 21 / 24 |
     | 238 plain-English package names, synonyms off: right application on page 1 | 189 | 195 |
     | Same: right application first | 107 | 120 |
 
@@ -140,12 +139,13 @@ documents together with a flag saying whether the any-word fallback produced the
   - The weights were chosen after seeing that loss, so they are tuned on these 24 questions. The
     238 package names, which played no part in choosing them, improve as well.
   - The any-word fallback keeps the best-passage score: summing passages that each hold one common
-    word favours long manuals, and on full sentences it lost ground.
+    word favours long manuals.
 - Use FTS5's plain relevance score. The MCP's tuned column weights gave the same result here
   (MRR 0.810 vs 0.806, same page-1 and first-place counts), so no weights need copying into Go.
 - When no document contains all the words, show the documents that contain any of them, best
-  first, under one line saying so. On keyword searches this never happened (0 of 24). For full
-  sentences it lifts the right manual onto page 1 from 5 of 24 to 23 of 24.
+  first, under one line saying so. It is the safety net for keywords that never meet in one
+  passage, such as "exam dosing"; on the 24 keyword questions it never fired. The operator kept it
+  on 2026-11-06 when sentence search was dropped.
   - Requiring every word stays the default because it keeps the list short: a median of 16
     matching documents, against 496 of 615 when any word will do.
   - Correction found while building: the web console's facet counts do not follow the search text
@@ -166,8 +166,10 @@ The rules:
   - NOT excludes per passage, the unit the index stores, and the search hint says so.
 - A word containing `* ^ # . $ % /` stays whole, as one phrase of its parts with single characters
   kept. DG\*5.3\*1029, #50.7, $$GET1^DIQ and TCP/IP each match as written.
-- Bare words with no operator between them are joined by the front door's default: all words in
-  the web console, any word in the MCP (D1, decided).
+- Bare words with no operator between them must all appear, in every front door (D1, revised
+  2026-11-06). When no passage holds them all, the front door returns the passages holding any of
+  them and says so: the web console with its notice line (fix 1), the MCP with a note in its
+  response, the Go CLI with a line before its results.
 - Single-character bare words are dropped, as today.
 - Malformed input never produces an error. It degrades to plain words.
 
@@ -175,8 +177,9 @@ Measured on the prototype (top 5, MCP-style section results):
 - Patch ids found: 124 → 216 of 256.
 - `file #N`: 17 → 25 of 30.
 - `FileMan file #N`: 15 → 23 of 30.
-- Keyword questions: 20 of 24 in the top 10 either way.
-- Full-sentence questions with the any-word default: 23 of 24, unchanged.
+- MCP keyword questions with all words and the fallback: 20 of 24 in the top 10, as with any
+  word, and first place 12 → 13. The fallback never fired. Patch ids and file numbers are the same
+  under both joins (`reports/mcp-review-all-words.json`).
 
 Agreement: the rules are about 40 lines in each language.
 - Disagreement between the front doors is how they diverged today: AND in the web console, OR in
@@ -246,18 +249,22 @@ capability, complete for every application, not an extra grown one question at a
     link hold whatever wording the manuals use.
   - Cost: the web console matches more documents, a median of 37 → 61 and at most 384 → 458, so
     facet counts grow.
-  - No loss elsewhere: with the whole table on, the 24 judged questions (keywords and sentences,
-    web console and MCP) and the patch-id and file-number checks score exactly the same.
+  - No loss elsewhere: with the whole table on, the 24 judged questions (web console and MCP)
+    and the patch-id and file-number checks score exactly the same.
 - **Contract:** read contract 1.8 adds the table. vdocs-web's vendored contract copy gains it.
 
 ### Fix 4: keyword-form test questions
 
 - Each of the 24 judged questions gains its keyword form. The drafts are in Appendix A, written by
   the reviewer, who knew the answers; the operator approved them unchanged on 2026-11-06 (D3).
-- Add about six plain-English questions of the kind a non-technical searcher types, judged the same
-  way. These are what the hand-written synonyms must fix. The shape is "user accounts" (the
-  manuals say NEW PERSON) or "background jobs" (TaskMan). These two examples are illustrations,
-  not judged entries.
+- Add six plain-English keyword searches of the kind a non-technical searcher types, judged the
+  same way: reviewer drafts with proposed answers in Appendix C, for the operator to approve.
+  Today the right manual reaches the web console's page 1 for 3 of the 6, and the MCP's top 15
+  for 1. They
+  test the words the manuals don't use ("change password" where the manuals say verify code), so
+  they are what fix 3's synonyms must fix.
+- The golden key's question sentences stay as descriptions of what each question asks. The
+  keyword form is what the harness grades, since sentence search was dropped.
 - Keep the identifier probes in `scripts/mcp_review/fixes.py` (256 patch ids, 30 file numbers) as
   the identifier check.
 - The syntax rules are checked by fix 2's shared cases, not by judged questions: a phrase either
@@ -301,19 +308,18 @@ not how results are ranked, so the judged questions cannot score them.
 |---|---|---|---|
 | Web: right manual on page 1, keyword questions | 12 / 24 | 24 / 24 | ≥ 24 / 24 |
 | Web: right manual first, keyword questions | 4 / 24 | 19 / 24 | ≥ 19 / 24 |
-| Web: right manual on page 1, full sentences | 5 / 24 | 23 / 24 | ≥ 22 / 24 |
 | Quoted phrase present in every result | 63% | by construction | 100% |
 | Excluded word absent (per passage) | 0–1% of results | by construction | 100% |
 | Web `a OR b`: share of true result set | 4% | by construction | 100% |
 | Patch id in top 5 | 124 / 256 | 216 / 256 | ≥ 216 / 256 |
 | `file #N` in top 5 | 17 / 30 | 25 / 30 | ≥ 25 / 30 |
 | MCP keyword questions, top 10 | 20 / 24 | 20 / 24 | no loss |
-| MCP full sentences, top 10 | 23 / 24 | 23 / 24 | no loss |
 | Application found by its code, top 10 | 101 / 109 | 108 / 109 | ≥ 108 / 109 |
 | Plain-English package name: its manuals on web page 1 | 91 / 242 | 242 / 242 | every name in the edited list |
 | Plain-English package name: its sections in the MCP top 10 | 186 / 242 | 242 / 242 | every name in the edited list |
 | Judged questions and identifier checks, synonym table on vs off | — | identical | no loss |
-| Each plain-English question in the key | not yet judged | — | right manual on page 1 |
+| Plain-English keyword searches (Appendix C): right manual on web page 1 | 3 / 6 (after fix 1) | — | 6 / 6 |
+| Plain-English keyword searches: a judged section in the MCP top 10 | 1 / 6 | — | 6 / 6 |
 | Search-box suggestions, time per keystroke | none | 34 ms (Python, full scan) | under 50 ms |
 
 ## 5. Order of work
@@ -321,9 +327,8 @@ not how results are ranked, so the judged questions cannot score them.
 Each step: write the test first, then build, then run `make check`, measure against §4, commit.
 
 1. **Fix 4 and Appendix B:** the keyword forms (Appendix A) and the plain-English package names
-   (Appendix B) were approved unchanged on 2026-11-06. Still to come: the operator supplies or
-   approves the six or so plain-English questions. The golden harness grades the keyword form
-   alongside the question.
+   (Appendix B) were approved unchanged on 2026-11-06. Still to come: the operator approves the six
+   plain-English keyword searches in Appendix C. The golden harness grades the keyword forms.
 2. **Fix 1 (built 2026-11-06, vdocs-web `926e320`):** relevance order and the any-word fallback
    in vdocs-web. This is the largest visible gain and needs no contract change.
 3. **Fix 2:** the reader in vdocs-web, the MCP and the Go CLI (D2), with the shared cases.
@@ -345,6 +350,9 @@ Each step: write the test first, then build, then run `make check`, measure agai
   application, written once and checked by the package-name measurement.
 - **Stemming, stopword lists, prefix matching, per-document caps.** All were measured on 2026-11-06
   as neutral or worse.
+- **Full-sentence search.** Dropped by the operator on 2026-11-06: the search boxes take keywords.
+  A sentence still gets results, through the any-word fallback, but sentences are not measured or
+  tuned for.
 - **Column-weight tuning for the web console.** Plain relevance matched the weighted version.
 - **An any-word default in the web console.** It would make the facet counts meaningless.
 - **A summary card per manual, searched first or blended in** (`reports/mcp-review-tiers.json`).
@@ -352,10 +360,9 @@ Each step: write the test first, then build, then run `make check`, measure agai
     plain-English names, document type, Monograph purpose, top two heading levels, the first 80
     words of its introduction, and its 10 most distinctive words.
   - Listing the manuals whose card matches first, then the rest, put the right manual first for 14
-    of 24 keyword questions instead of 17. One sentence question fell from 1st to 369th.
+    of 24 keyword questions instead of 17.
   - Blending the card into the ranking was also worse (by reciprocal-rank fusion, which merges two
-    orderings by position). First place fell from 17 to 16 for keywords and from 20 to 18 for
-    sentences. The MCP was worse on both.
+    orderings by position). First place fell from 17 to 16, and the MCP was worse too.
   - The card does help a query that names a package: first place for 107 → 143 of 238 names, with
     synonyms off. Fix 3 already puts every package name on page 1.
   - The cause: a card says what a whole manual is about, while the questions ask for a task inside
@@ -364,28 +371,28 @@ Each step: write the test first, then build, then run `make check`, measure agai
   - Hand-written abstracts fall with it.
 - **Pseudo-relevance feedback.** This adds the top results' shared distinctive words and searches
   again. It was worse everywhere.
-  - Web console, when the any-word fallback fires (15 of 24 sentences): first place 20 → 11, or
-    20 → 15 when merged with the first search.
   - MCP keyword questions in the top 10: 20 → 14.
+  - In the web console it was tried only where the any-word fallback fires, which keyword
+    searches almost never do; there it moved first place from 20 to 11.
   - The added words come from the largest manuals and pull results off topic. A fallback search
     also took three times as long (104 → 327 ms).
 - **A link-count prior.** index.db's 29,593 document-to-document links join documents that mention
   the same significant entity; they are not citations. As a mild weight it moved one keyword
-  question onto page 1, and cost one first place among sentences and one in each MCP set. A
-  stronger weight was worse. The effect is too small and too unstable to build.
+  question onto page 1 and cost first places in the MCP. A stronger weight was worse. The effect is too small and too unstable to build.
 
 ## 7. Decisions
 
-All three were taken by the operator on 2026-11-06, as recommended.
+All three were taken by the operator on 2026-11-06, as recommended. D1 was revised the same day.
 
 **Operator direction, 2026-11-06.** Translating plain-English package names into the VistA package
 name and namespace is a core capability of keyword search (fix 3). The operator approved the drafts
 in Appendix B unchanged on 2026-11-06. Search-box suggestions (fix 5) are in scope regardless of measured gain.
 
-- **D1. The MCP's default for bare words.** Recommended: any word, ranked. With it, full-sentence
-  questions still reach the top 10 for 23 of 24, and keyword questions are unchanged at 20 of 24.
-  The alternative, all words, drops full sentences to 2 of 24, with 18 returning nothing, and
-  agents often send sentences. **Decided: any word, ranked.**
+- **D1. The default for bare words.** First decided: any word, ranked, in the MCP, because agents
+  send sentences. **Revised 2026-11-06, when sentence search was dropped: all words in every front
+  door, falling back to any word, with a notice, when no passage holds them all.** On the 24
+  keyword questions the MCP keeps 20 of 24 in the top 10 and gains a first place (12 → 13);
+  identifier lookups are unchanged; the fallback never fired.
 - **D2. Whether the Go CLI (vdocs-cli) is in scope.** Recommended: yes, same reader, same shared
   cases. It is a port of the MCP engine, and leaving it out keeps a third set of rules alive. The
   alternative is to stop presenting it as an agent path. **Decided: in scope.**
@@ -573,3 +580,25 @@ the latest corpus.
 | ZSLOT | SlotMaster | ZSLOT | quick login |
 | XU (part) | TaskMan | TaskMan | background jobs, scheduled tasks |
 | XU (part) | Kernel Installation and Distribution System | KIDS, XPD | patches, software installation |
+
+## Appendix C: plain-English keyword searches
+
+Reviewer drafts for fix 4, for the operator to approve. Each uses a word the manuals avoid:
+password for verify code, jobs for tasks, printer for device, email for mail message.
+- Every judged section was checked present, latest and searchable in index.db. Each was graded by
+  reading its passage text: 3 ideal, 2 highly relevant, 1 related. Notes on what was left out are
+  in `scripts/mcp_review/plain_questions.py`.
+- "Today" is the web console as built by fix 1 (document rank of the first manual holding a judged
+  section, out of the documents matched), and the MCP as it is now (rank of the first judged
+  section in its top 15). Source: `reports/mcp-review-plain-questions.json`.
+- Once approved, they join `registries/golden-queries.yaml` with their keyword forms, and fix 3's
+  hand-written synonyms are added one search at a time until each passes.
+
+| Keyword search | What it asks | Judged answers (grade) | Today, web | Today, MCP |
+|---|---|---|---|---|
+| **change password** | How a user changes their VistA password; the manuals call it the verify code. | `XU/krn_8_0_sm_signon_security_ug/defining-a-strong-verify-code` (3); `XWB/xwb_1_1_sm_r/change-vista-verify-code-component` (2); `PRC/ifcp5_1ldqt_user_manual/changing-your-verify-code` (2); `XU/krn_8_0_sm_signon_security_ug/lifetime-of-verify-code` (1); `EDIS/edp_um/changing-your-verify-code` (1) | 7 of 39 | not in top 15 |
+| **create user account** | How a system administrator adds a new VistA user (Kernel, NEW PERSON file). | `XU/krn_8_0_sm_signon_security_ug/adding-new-users` (3); `XU/krn_8_0_sm_signon_security_ug/add-a-new-user-to-the-system-option` (3); `XU/krn_8_0_sm_signon_security_ug/edit-an-existing-user-option` (1) | 28 of 122 | not in top 15 |
+| **background jobs** | What runs work in the background in VistA: TaskMan, which the manuals call background tasks. | `XU/krn_8_0_sm_taskman_ug/introduction` (3); `XU/krn_8_0_sm_taskman_ug/taskman-user-interface` (3); `XU/krn_8_0_sm_taskman_ug/summary` (2); `XU/krn_8_0_dg_taskman_ug/overview` (2) | 4 of 57 | not in top 15 |
+| **set up printer** | How a printer is defined for VistA: an entry in Kernel's DEVICE (#3.5) file with a terminal type. | `XU/krn_8_0_sm_device_handler_ug/device-35-file` (3); `XU/krn_8_0_sm_device_handler_ug/terminal-type-32-file` (2); `XU/krn_8_0_sm_device_handler_ug/printing-to-devices` (1) | 18 of 125 | not in top 15 |
+| **enter patient allergies** | How a clinician records a patient's allergy: Adverse Reaction Tracking (GMRA), or CPRS's Allergies pane. | `GMRA/gmra_4_0_um/enteredit-patient-reaction-data` (3); `GMRA/gmra_4_0_um/enteredit-patient-reaction-data-1` (3); `CPRS/cprsguium/entering-allergies` (3); `CPRS/cprsguium/entering-new-allergies` (2); `GMRA/gmra_4_0_um/entering-allergies-from-the-cover-sheet` (2) | 1 of 50 | 4 |
+| **send email** | How a user sends a message in VistA: MailMan's Send a Message option. | `XM/xm_8_0_userguide/smlsend-a-message-option` (3); `XM/xm_8_0_getstartguide/sending-mail` (3); `XM/xm_8_0_userguide/sending-mail` (2); `XM/xm_8_0_netrefguide/sending-network-messages` (1) | 58 of 64 | not in top 15 |
