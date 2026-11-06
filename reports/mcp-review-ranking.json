@@ -1,0 +1,257 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "results": {
+  "web_keywords": {
+   "base": {
+    "n": 24,
+    "top10": 22,
+    "first": 17,
+    "mrr": 0.81
+   },
+   "phrase_bonus": {
+    "n": 24,
+    "top10": 22,
+    "first": 18,
+    "mrr": 0.822
+   },
+   "title_first": {
+    "n": 24,
+    "top10": 22,
+    "first": 17,
+    "mrr": 0.81
+   },
+   "passages_sum3": {
+    "n": 24,
+    "top10": 23,
+    "first": 20,
+    "mrr": 0.874
+   },
+   "passages_decay": {
+    "n": 24,
+    "top10": 24,
+    "first": 19,
+    "mrr": 0.85
+   },
+   "package_first": {
+    "n": 24,
+    "top10": 22,
+    "first": 17,
+    "mrr": 0.81
+   }
+  },
+  "mcp_keywords": {
+   "base": {
+    "n": 24,
+    "top10": 20,
+    "first": 12,
+    "mrr": 0.581
+   },
+   "phrase_bonus": {
+    "n": 24,
+    "top10": 20,
+    "first": 11,
+    "mrr": 0.558
+   },
+   "package_first": {
+    "n": 24,
+    "top10": 21,
+    "first": 12,
+    "mrr": 0.582
+   },
+   "section_collapse": {
+    "n": 24,
+    "top10": 20,
+    "first": 12,
+    "mrr": 0.581
+   }
+  },
+  "web_sentences": {
+   "base": {
+    "n": 24,
+    "top10": 22,
+    "first": 20,
+    "mrr": 0.875
+   },
+   "phrase_bonus": {
+    "n": 24,
+    "top10": 22,
+    "first": 20,
+    "mrr": 0.875
+   },
+   "title_first": {
+    "n": 24,
+    "top10": 22,
+    "first": 20,
+    "mrr": 0.875
+   },
+   "passages_sum3": {
+    "n": 24,
+    "top10": 22,
+    "first": 21,
+    "mrr": 0.896
+   },
+   "passages_decay": {
+    "n": 24,
+    "top10": 22,
+    "first": 21,
+    "mrr": 0.896
+   },
+   "package_first": {
+    "n": 24,
+    "top10": 22,
+    "first": 19,
+    "mrr": 0.838
+   }
+  },
+  "mcp_sentences": {
+   "base": {
+    "n": 24,
+    "top10": 23,
+    "first": 17,
+    "mrr": 0.783
+   },
+   "phrase_bonus": {
+    "n": 24,
+    "top10": 23,
+    "first": 17,
+    "mrr": 0.783
+   },
+   "package_first": {
+    "n": 24,
+    "top10": 23,
+    "first": 16,
+    "mrr": 0.762
+   },
+   "section_collapse": {
+    "n": 24,
+    "top10": 23,
+    "first": 17,
+    "mrr": 0.79
+   }
+  },
+  "web_plain_names_table_off": {
+   "base": {
+    "n": 238,
+    "top10": 189,
+    "first": 107,
+    "mrr": 0.575
+   },
+   "phrase_bonus": {
+    "n": 238,
+    "top10": 185,
+    "first": 109,
+    "mrr": 0.577
+   },
+   "title_first": {
+    "n": 238,
+    "top10": 189,
+    "first": 107,
+    "mrr": 0.573
+   },
+   "passages_sum3": {
+    "n": 238,
+    "top10": 197,
+    "first": 121,
+    "mrr": 0.621
+   },
+   "passages_decay": {
+    "n": 238,
+    "top10": 195,
+    "first": 120,
+    "mrr": 0.616
+   },
+   "package_first": {
+    "n": 238,
+    "top10": 215,
+    "first": 212,
+    "mrr": 0.894
+   }
+  }
+ },
+ "judged_questions_that_moved": {
+  "mcp_keywords_package_first": [
+   "kids-install-build: 11\u219210"
+  ],
+  "web_keywords_passages_sum3": [
+   "fileman-add-field: 22\u21926",
+   "rpc-broker-client-call: 2\u21921",
+   "hl7-security-keys: 1\u219216",
+   "fileman-file-200-new-person: 3\u21921",
+   "fileman-import-host-file: 2\u21921",
+   "kids-backup-transport-global: 2\u21921",
+   "vista-signon-credentials: 17\u21924"
+  ],
+  "web_keywords_passages_decay": [
+   "fileman-add-field: 22\u21929",
+   "hl7-security-keys: 1\u219210",
+   "fileman-file-200-new-person: 3\u21921",
+   "fileman-import-host-file: 2\u21921",
+   "kids-backup-transport-global: 2\u21921",
+   "vista-signon-credentials: 17\u21925"
+  ],
+  "mcp_sentences_section_collapse": [
+   "mailman-decnet-transmission: 3\u21922"
+  ],
+  "web_keywords_phrase_bonus": [
+   "tiu-unsigned-notes: 2\u21921",
+   "fileman-file-200-new-person: 3\u21928"
+  ],
+  "web_sentences_package_first": [
+   "tiu-unsigned-notes: 2\u21921",
+   "hl7-table-0136-values: 1\u219210",
+   "fileman-file-access-security: 1\u21922"
+  ],
+  "web_sentences_passages_sum3": [
+   "fileman-file-200-new-person: 2\u21921"
+  ],
+  "web_sentences_passages_decay": [
+   "fileman-file-200-new-person: 2\u21921"
+  ],
+  "mcp_keywords_phrase_bonus": [
+   "fileman-file-access-security: 1\u21922",
+   "fileman-finder-api: 4\u21925"
+  ],
+  "mcp_sentences_package_first": [
+   "fileman-file-access-security: 1\u21922"
+  ]
+ },
+ "named_apps_examples": {
+  "KIDS install build": [
+   "XU"
+  ],
+  "RPC Broker client call": [
+   "XWB"
+  ],
+  "unsigned progress notes": [
+   "TIU"
+  ],
+  "VPR allergy": [
+   "VPR"
+  ],
+  "enter immunization CPRS": [
+   "CPRS"
+  ],
+  "VBECS accept order": [
+   "VBECS"
+  ],
+  "HL7 security keys": [
+   "HL7"
+  ],
+  "QUASAR package wide variables": [
+   "ACKQ"
+  ],
+  "HL7 table 0136": [
+   "HL7"
+  ],
+  "monitor TaskMan": [
+   "XU"
+  ]
+ },
+ "note": "24 judged questions: one question moving is 1/24 of a count and up to ~0.04 of MRR; read small differences as noise."
+}
