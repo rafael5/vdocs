@@ -2,7 +2,8 @@
 
 **Status: PROPOSED · 2026-11-06 · decisions D1–D3 taken 2026-11-06 as recommended · amended
 2026-11-06: plain-English package names made a core part of fix 3, and search-box suggestions
-added as fix 5, both at the operator's direction · nothing built.** Consumer: vdocs-web (fixes 1–3
+added as fix 5, both at the operator's direction · fix 1 built in vdocs-web 2026-11-06
+(`926e320`); fixes 2–5 not built.** Consumer: vdocs-web (fixes 1–3
 and 5). Producer and MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
 **Evidence:** every number comes from a script in `scripts/mcp_review/` (`contract.py`, `fixes.py`,
 `package_names.py`, `ranking.py`, `tiers.py`, `suggest.py`), recorded with provenance in the
@@ -103,6 +104,18 @@ registry).
 
 ### Fix 1: the web console orders results by relevance
 
+**Built 2026-11-06** in vdocs-web `926e320`, as described below. `/api/candidates` now returns the
+documents together with a flag saying whether the any-word fallback produced them.
+- Measured on the live API against the real index.db, with today's parser (fixes 2 and 3 not yet
+  built). An independent Python computation gave the same order and fallback on all 48 judged
+  queries.
+  - Keywords: the right manual is on page 1 for 24 of 24 (12 before) and first for 20 of 24 (4
+    before).
+  - Full sentences: the right manual is on page 1 for 23 of 24 (5 before) and first for 23. The
+    fallback fired on 18.
+- A request took a median of 22 ms. The slowest took 334 ms: a full sentence whose any-word
+  fallback matched nearly every passage.
+
 - When the search box has text, order matching documents by relevance. Keep title order when
   there is no search text (pure facet browsing).
 - A document's score comes from its three best-matching passages, weighted 1, ½ and ¼. A manual
@@ -132,9 +145,11 @@ registry).
 - When no document contains all the words, show the documents that contain any of them, best
   first, under one line saying so. On keyword searches this never happened (0 of 24). For full
   sentences it lifts the right manual onto page 1 from 5 of 24 to 23 of 24.
-  - The facet counts then describe that wider set, about 500 documents.
-  - Requiring every word stays the default because it keeps the facets meaningful: a median of 16
+  - Requiring every word stays the default because it keeps the list short: a median of 16
     matching documents, against 496 of 615 when any word will do.
+  - Correction found while building: the web console's facet counts do not follow the search text
+    and never have, so the fallback leaves them unchanged. An earlier draft said they would
+    describe the wider set.
 - Cost: the relevance-ordered query took 1 ms for a keyword search and 125 ms for the largest
   any-word fallback, against 69–76 ms for today's title order on the same input.
 - Change: one SQL query in vdocs-web's candidate listing, plus a notice line in the UI. The
@@ -307,8 +322,8 @@ Each step: write the test first, then build, then run `make check`, measure agai
 1. **Fix 4 and Appendix B:** the operator edits the keyword forms, supplies or approves the
    plain-English questions, and edits the plain-English package names. The golden harness grades
    the keyword form alongside the question.
-2. **Fix 1:** relevance order and the any-word fallback in vdocs-web. This is the largest visible
-   gain and needs no contract change.
+2. **Fix 1 (built 2026-11-06, vdocs-web `926e320`):** relevance order and the any-word fallback
+   in vdocs-web. This is the largest visible gain and needs no contract change.
 3. **Fix 2:** the reader in vdocs-web, the MCP and the Go CLI (D2), with the shared cases.
 4. **Fix 3, straight after fix 2:** the producer writes the synonym table (contract 1.8), and every
    reader applies it. The package names are complete for every application in the first release.
