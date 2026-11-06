@@ -1,0 +1,100 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "variant": "v1",
+ "golden": {
+  "production": {
+   "ndcg@10": 0.6554,
+   "mrr": 0.7951,
+   "recall@15": 0.7761,
+   "succ@1": 0.7083,
+   "succ@5": 0.9583
+  },
+  "idaware": {
+   "ndcg@10": 0.6351,
+   "mrr": 0.7796,
+   "recall@15": 0.7483,
+   "succ@1": 0.7083,
+   "succ@5": 0.875
+  },
+  "queries_where_rule_fired": 4,
+  "paired": {
+   "ndcg@10": {
+    "delta": -0.0204,
+    "ci95": [
+     -0.0592,
+     0.0018
+    ],
+    "wins": 2,
+    "losses": 2
+   },
+   "recall@15": {
+    "delta": -0.0278,
+    "ci95": [
+     -0.0833,
+     0.0
+    ],
+    "wins": 0,
+    "losses": 1
+   },
+   "mrr": {
+    "delta": -0.0156,
+    "ci95": [
+     -0.0423,
+     0.0
+    ],
+    "wins": 0,
+    "losses": 2
+   }
+  }
+ },
+ "probes": {
+  "api_known_item": {
+   "production": {
+    "n": 421,
+    "succ@1": 0.682,
+    "succ@5": 0.936,
+    "mrr": 0.79
+   },
+   "idaware": {
+    "n": 421,
+    "succ@1": 0.722,
+    "succ@5": 0.964,
+    "mrr": 0.829
+   }
+  },
+  "patch_ids": {
+   "production": {
+    "n": 256,
+    "succ@1": 0.23,
+    "succ@5": 0.484,
+    "mrr": 0.336
+   },
+   "idaware": {
+    "n": 256,
+    "succ@1": 0.52,
+    "succ@5": 0.785,
+    "mrr": 0.637
+   }
+  },
+  "file_numbers": {
+   "production": {
+    "n": 30,
+    "succ@1": 0.267,
+    "succ@5": 0.5,
+    "mrr": 0.37
+   },
+   "idaware": {
+    "n": 30,
+    "succ@1": 0.767,
+    "succ@5": 1.0,
+    "mrr": 0.869
+   }
+  }
+ }
+}

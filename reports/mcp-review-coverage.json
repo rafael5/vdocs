@@ -1,0 +1,209 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "hardcoded": {
+  "live_sections": 52093,
+  "chunkless": 5476,
+  "chunkless_pct": 10.51,
+  "by_kind": [
+   {
+    "kind": "ok",
+    "n": 37431,
+    "nochunk": 0
+   },
+   {
+    "kind": "container",
+    "n": 11565,
+    "nochunk": 4641
+   },
+   {
+    "kind": "hollow",
+    "n": 2641,
+    "nochunk": 835
+   },
+   {
+    "kind": "stub",
+    "n": 456,
+    "nochunk": 0
+   }
+  ],
+  "table_csvs": 4246,
+  "table_chunks_in_index": 5226
+ },
+ "resolvability": {
+  "latest_body_ok": 615,
+  "latest_tables_ok": 437,
+  "latest_bundle_path_agrees": 615,
+  "latest_tables_none": 178,
+  "prior_body_ok": 425,
+  "prior_tables_ok": 307,
+  "prior_tables_none": 118
+ },
+ "resolvability_bad_sample": [],
+ "coverage": {
+  "docs": 615,
+  "body_tokens": 11007431,
+  "token_coverage_pct": 98.662,
+  "distinct_terms_in_body_absent_from_doc_index": 19369,
+  "distinct_terms_total": 924446,
+  "docs_below_99pct": 222,
+  "docs_below_95pct": 78,
+  "worst_docs": [
+   [
+    "RMPR/rmpr_3_nppdum",
+    9768,
+    0.1587,
+    1057
+   ],
+   [
+    "PSO/pso_7_0_iep_um_4_pt2",
+    3253,
+    0.4817,
+    214
+   ],
+   [
+    "PSN/psn_4_p296_um_cp",
+    2197,
+    0.5694,
+    155
+   ],
+   [
+    "KMPS/kmps2_0um",
+    3498,
+    0.6032,
+    311
+   ],
+   [
+    "SD/sd_pims_tm_addendum_943",
+    585,
+    0.6034,
+    100
+   ],
+   [
+    "PSO/pso_7_0_iep_um_5",
+    5574,
+    0.6294,
+    126
+   ],
+   [
+    "DI/fm22_krn8_file_security",
+    4015,
+    0.6595,
+    318
+   ],
+   [
+    "KMPV/kmp_um",
+    4696,
+    0.7076,
+    354
+   ]
+  ],
+  "most_common_missing_terms": [
+   [
+    "docx",
+    490
+   ],
+   [
+    "_version",
+    418
+   ],
+   [
+    "https",
+    380
+   ],
+   [
+    "published",
+    376
+   ],
+   [
+    "www",
+    285
+   ],
+   [
+    "vdl",
+    268
+   ],
+   [
+    "documents",
+    256
+   ],
+   [
+    "source",
+    222
+   ],
+   [
+    "gov",
+    210
+   ],
+   [
+    "patch",
+    123
+   ],
+   [
+    "contents",
+    116
+   ],
+   [
+    "_published",
+    86
+   ],
+   [
+    "08_",
+    79
+   ],
+   [
+    "clinical",
+    78
+   ],
+   [
+    "2025",
+    69
+   ],
+   [
+    "financial_admin",
+    69
+   ],
+   [
+    "03_",
+    68
+   ],
+   [
+    "manual",
+    59
+   ],
+   [
+    "orientation",
+    56
+   ],
+   [
+    "09_",
+    51
+   ],
+   [
+    "04_",
+    50
+   ],
+   [
+    "refer",
+    45
+   ],
+   [
+    "arevision",
+    42
+   ],
+   [
+    "pharm",
+    41
+   ],
+   [
+    "version",
+    40
+   ]
+  ]
+ }
+}

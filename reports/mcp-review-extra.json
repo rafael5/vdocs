@@ -1,0 +1,26 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "C_whatif_number_phrase": {
+  "integer_phrase_succ@5": 1.0,
+  "integer_phrase_prec@5": 0.741,
+  "decimal_phrase_succ@5": 1.0,
+  "decimal_phrase_prec@5": 0.754
+ },
+ "G_failure_signal": {
+  "queries": 36,
+  "failures": 9,
+  "auc_top1_bm25_score": 0.856,
+  "auc_query_term_coverage_top3": 0.626,
+  "median_cov_ok": 1.0,
+  "median_cov_fail": 0.8571428571428571
+ },
+ "H_not_operator": {
+  "top15_hits_containing_install": 15
+ }
+}

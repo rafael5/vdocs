@@ -1,0 +1,15 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "current_k15_median_tokens": 2268,
+ "compact_same_content": 1152,
+ "collapsed_with_260char_passages": 1691,
+ "read_top3_sections_full": 1162,
+ "section_tokens_median": 320,
+ "section_tokens_p90": 2137
+}

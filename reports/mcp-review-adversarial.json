@@ -1,0 +1,228 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "A_api_known_item": {
+  "distinct_apis": 421,
+  "query_is_ref": {
+   "n": 421,
+   "succ@1": 0.682,
+   "succ@5": 0.936,
+   "succ@15": 0.99,
+   "mrr": 0.79
+  },
+  "query_is_question": {
+   "n": 421,
+   "succ@1": 0.762,
+   "succ@5": 0.952,
+   "succ@15": 0.981,
+   "mrr": 0.844
+  },
+  "whatif_ref_phrase_clause": {
+   "n": 421,
+   "succ@1": 0.722,
+   "succ@5": 0.964,
+   "succ@15": 1.0,
+   "mrr": 0.829
+  },
+  "sample_failures": [
+   {
+    "ref": "C^%DTC",
+    "top1": "Table 4"
+   },
+   {
+    "ref": "FILE^DIE",
+    "top1": "This API will accept input values and return output values a"
+   },
+   {
+    "ref": "H^%DTC",
+    "top1": "Table 4"
+   },
+   {
+    "ref": "Y^DIQ",
+    "top1": "DIQ Defined"
+   }
+  ]
+ },
+ "B_patch_ids": {
+  "n": 256,
+  "production": {
+   "n": 256,
+   "succ@1": 0.23,
+   "succ@5": 0.484,
+   "succ@15": 0.652,
+   "mrr": 0.336,
+   "precision@5": 0.17
+  },
+  "whatif_phrase": {
+   "n": 256,
+   "succ@1": 0.539,
+   "succ@5": 0.844,
+   "succ@15": 0.949,
+   "mrr": 0.666,
+   "precision@5": 0.317
+  }
+ },
+ "C_fileman_numbers": {
+  "integer": {
+   "by_number_succ@5": 0.588,
+   "by_number_prec@5": 0.329,
+   "by_name_succ@5": 0.882,
+   "by_name_prec@5": 0.529,
+   "n": 17
+  },
+  "decimal": {
+   "by_number_succ@5": 0.385,
+   "by_number_prec@5": 0.231,
+   "by_name_succ@5": 0.923,
+   "by_name_prec@5": 0.538,
+   "n": 13
+  }
+ },
+ "D_app_codes": {
+  "code_prec@5": 0.787,
+  "name_prec@5": 0.903,
+  "code_vs_name_doc_jaccard": 0.484,
+  "n_apps": 109,
+  "two_letter_codes(code, prec@5, hits)": [
+   [
+    "DI",
+    0.8,
+    15
+   ],
+   [
+    "EC",
+    0.8,
+    15
+   ],
+   [
+    "EN",
+    0.0,
+    15
+   ],
+   [
+    "FB",
+    1.0,
+    15
+   ],
+   [
+    "FH",
+    1.0,
+    15
+   ],
+   [
+    "IB",
+    1.0,
+    15
+   ],
+   [
+    "LA",
+    0.2,
+    15
+   ],
+   [
+    "LR",
+    0.6,
+    15
+   ],
+   [
+    "MC",
+    0.2,
+    15
+   ],
+   [
+    "MD",
+    1.0,
+    15
+   ],
+   [
+    "OR",
+    0.0,
+    15
+   ],
+   [
+    "PX",
+    0.8,
+    15
+   ],
+   [
+    "RA",
+    0.2,
+    15
+   ],
+   [
+    "RT",
+    0.8,
+    15
+   ],
+   [
+    "SD",
+    0.0,
+    15
+   ],
+   [
+    "SR",
+    0.8,
+    15
+   ],
+   [
+    "WV",
+    1.0,
+    15
+   ],
+   [
+    "XM",
+    1.0,
+    15
+   ],
+   [
+    "XT",
+    1.0,
+    15
+   ],
+   [
+    "XU",
+    1.0,
+    15
+   ],
+   [
+    "YS",
+    1.0,
+    15
+   ]
+  ]
+ },
+ "D_or_namespace": {
+  "top5_pkg_ns": [
+   "MPIF",
+   "MPIF",
+   "MPIF",
+   "KMPR",
+   "IB"
+  ]
+ },
+ "E_paraphrase": {
+  "n": 12,
+  "original": {
+   "succ@15": 1.0,
+   "rr": 0.889,
+   "recall@15": 0.743
+  },
+  "paraphrased": {
+   "succ@15": 0.333,
+   "rr": 0.144,
+   "recall@15": 0.124
+  }
+ },
+ "F_operator_syntax": {
+  "'\"input transform\"' vs 'input transform'": "identical results",
+  "'KIDS NOT install' vs 'KIDS install'": "different",
+  "'FIND^DIC' vs 'FIND DIC'": "identical results",
+  "'$$GET1^DIQ' vs 'GET1 DIQ'": "identical results"
+ },
+ "F_long_query_ms": 1777.9
+}

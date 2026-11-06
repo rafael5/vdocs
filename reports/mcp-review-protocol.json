@@ -1,0 +1,131 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.7"
+ },
+ "negotiation": {
+  "requested": "2025-06-18",
+  "returned": "2024-11-05",
+  "capabilities": {
+   "tools": {}
+  },
+  "instructions_tokens": 150
+ },
+ "tools_list": {
+  "tokens": 542,
+  "tools": [
+   "search",
+   "lookup",
+   "query",
+   "orientation"
+  ],
+  "have_annotations": [],
+  "have_outputSchema": [],
+  "have_title": [],
+  "params_without_description": [
+   "search.query",
+   "search.k",
+   "search.app",
+   "search.doc_type",
+   "lookup.kind",
+   "lookup.key"
+  ]
+ },
+ "orientation": {
+  "tokens": 426,
+  "ms": 0.1
+ },
+ "unsupported_methods": {
+  "resources/list": -32601,
+  "resources/templates/list": -32601,
+  "prompts/list": -32601
+ },
+ "search": {
+  "queries": 25,
+  "latency_ms_p50": 119.1,
+  "latency_ms_p95": 148.7,
+  "response_tokens_mean": 2292,
+  "response_tokens_max": 2983,
+  "tokens_per_hit": 153,
+  "snippet_share_of_response_bytes": 0.196,
+  "snippet_chars_median": 115,
+  "snippets_with_nav_chrome": "58/375",
+  "derivable_field_share_of_bytes(uri+doc_id)": 0.134
+ },
+ "lookup_section": {
+  "latency_ms_p50": 19.5,
+  "latency_ms_p95": 28.4,
+  "returns_section_text": 0,
+  "sampled": 30
+ },
+ "read_text_via_query": {
+  "ms": 27.2,
+  "is_error": false,
+  "tokens": 215
+ },
+ "lookup_guesses": {
+  "doc:DI/fm22_2dg": "hit",
+  "doc:CPRS/or_um": "MISS",
+  "doc:FileMan Developer Guide": "MISS",
+  "doc:di/fm22_2dg": "MISS",
+  "entity:fileman_file:200": "hit",
+  "entity:fileman_file:NEW PERSON": "MISS",
+  "entity:file:200": "MISS",
+  "entity:rpc:ORWDX SAVE": "MISS",
+  "entity:routine:XUP": "hit",
+  "entity:global:^DPT": "hit",
+  "entity:global:^VA(200": "MISS"
+ },
+ "filters": {
+  "{\"query\": \"FIND^DIC finder\", \"app\": [\"DI\"]}": {
+   "hits": 15,
+   "warning_says_retrieval_artefact": false
+  },
+  "{\"query\": \"FIND^DIC finder\", \"app\": [\"di\"]}": {
+   "hits": 0,
+   "warning_says_retrieval_artefact": true
+  },
+  "{\"query\": \"FIND^DIC finder\", \"app\": [\"FileMan\"]}": {
+   "hits": 0,
+   "warning_says_retrieval_artefact": true
+  },
+  "{\"query\": \"FIND^DIC finder\", \"doc_type\": [\"Developer Guide\"]}": {
+   "hits": 0,
+   "warning_says_retrieval_artefact": true
+  },
+  "{\"query\": \"FIND^DIC finder\", \"doc_type\": [\"DG\"]}": {
+   "hits": 15,
+   "warning_says_retrieval_artefact": false
+  }
+ },
+ "zero_hit_warning_distinct_texts_for_absent_terms": 1,
+ "edge_cases": {
+  "{\"query\": \"kids\", \"k\": 51}": {
+   "isError": true,
+   "text": "k must be 1..50"
+  },
+  "{\"query\": \"kids\", \"k\": \"15\"}": {
+   "isError": true,
+   "text": "k must be 1..50"
+  },
+  "{\"query\": \"\"}": {
+   "isError": false,
+   "text": "{\n \"hits\": [],\n \"hit_count\": 0,\n \"warning\": \"NO INDEXED MATCH \u2014 this is not evidence of ab"
+  },
+  "{\"query\": \"!!! ??? ^^^\"}": {
+   "isError": false,
+   "text": "{\n \"hits\": [],\n \"hit_count\": 0,\n \"warning\": \"NO INDEXED MATCH \u2014 this is not evidence of ab"
+  },
+  "{\"query\": \"a I\"}": {
+   "isError": false,
+   "text": "{\n \"hits\": [],\n \"hit_count\": 0,\n \"warning\": \"NO INDEXED MATCH \u2014 this is not evidence of ab"
+  }
+ },
+ "runaway_query": {
+  "answered_within_20s": false,
+  "waited_s": 20.0
+ }
+}

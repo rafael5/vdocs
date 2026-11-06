@@ -28,6 +28,11 @@ Documentation here is classified by **lifecycle state, not topic**:
 
 ## Current state (2026-07-04)
 
+- **Proposed (2026-11-06), for review, nothing built:** [`proposals/vdocs-mcp-interface-design.md`](proposals/vdocs-mcp-interface-design.md)
+  — the MCP server and the other machine front doors (Go CLI, vdocs-web API) measured against the
+  code and against a machine-consumer metric set: nine drifted claims, identifier and paraphrase
+  weak spots, no way to read a cited passage, and fourteen ranked recommendations. Measurements:
+  `scripts/mcp_review/` → `../reports/mcp-review-*.json`.
 - **Proposed (2026-11-05); producer and web mode built, identity continuity next:** [`proposals/inventory-browser-proposal.md`](proposals/inventory-browser-proposal.md)
   — the whole VDL catalog (9,080 records) as an Inventory mode in vdocs-web, with Library facets
   plus gold / disposition / reason and each document's own last-updated date, carried in `index.db`.
