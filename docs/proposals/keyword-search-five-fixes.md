@@ -5,9 +5,9 @@
 package names made a core part of fix 3, and search-box suggestions added as fix 5, both at the
 operator's direction · fix 1 built in vdocs-web 2026-11-06 (`926e320`) · Appendices A, B and C
 approved by the operator unchanged 2026-11-06 · fix 2 built in vdocs (MCP and `vdocs ask`,
-`9bfc552`) and vdocs-web (`9448e4f`), the Go CLI next · fix 4 built in vdocs (`bc0188a`) · fixes 3
-and 5 not built.** Consumer: vdocs-web (fixes 1–3 and 5). Producer and MCP: vdocs (fixes 2–4). Read
-contract 1.7 → 1.8, additive, for fix 3 only.
+`9bfc552`), vdocs-web (`9448e4f`) and the Go CLI (`e9f8b62`) · fix 4 built in vdocs (`bc0188a`) ·
+fixes 3 and 5 not built.** Consumer: vdocs-web (fixes 1–3 and 5). Producer and MCP: vdocs (fixes
+2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
 **Evidence:** every number comes from a script in `scripts/mcp_review/` (`contract.py`, `fixes.py`,
 `package_names.py`, `ranking.py`, `tiers.py`, `suggest.py`), recorded with provenance in the
 matching `reports/mcp-review-<name>.json`. Corpus: `~/data/vdocs/index.db`, 1,040 documents (615 latest),
@@ -160,8 +160,8 @@ documents together with a flag saying whether the any-word fallback produced the
 
 ### Fix 2: one query reader, the same rules in every front door
 
-**Built 2026-11-06** in vdocs (`9bfc552`), for the MCP search tool and `vdocs ask`, and in vdocs-web
-(`9448e4f`). The Go CLI is next.
+**Built 2026-11-06** in vdocs (`9bfc552`), for the MCP search tool and `vdocs ask`, in vdocs-web
+(`9448e4f`), and in the Go CLI, vdocs-cli (`e9f8b62`).
 - The rules and 32 cases are in `contracts/query/v1.json`; vdocs's tests run every case and check
   each expected expression is valid FTS5.
 - The MCP tool description, the MCP orientation and `vdocs ask --help` state the syntax in one
@@ -177,6 +177,10 @@ documents together with a flag saying whether the any-word fallback produced the
   punctuation) counts as no search. On the live API the keyword questions keep 24 of 24 on page 1
   (20 first), and `allergies OR vitals` returns the full union of 128 documents, against 4% of it
   before.
+- In vdocs-cli, `internal/lexical/query.go` runs the vendored copy of the cases. `vdocs search`
+  and `vdocs facet search` require every keyword, fall back to any keyword with a note printed
+  above the hits, and state the syntax in their help. The new build is installed as the `vdocs`
+  on the PATH.
 
 The rules:
 - Text in double quotes is an exact phrase. A quote left open runs to the end of the query.
@@ -365,8 +369,8 @@ Each step: write the test first, then build, then run `make check`, measure agai
    2026-11-06. The golden harness grades the keyword forms (built 2026-11-06, `bc0188a`).
 2. **Fix 1 (built 2026-11-06, vdocs-web `926e320`):** relevance order and the any-word fallback
    in vdocs-web. This is the largest visible gain and needs no contract change.
-3. **Fix 2:** the reader in vdocs-web, the MCP and the Go CLI (D2), with the shared cases. The MCP
-   and `vdocs ask` part is built (`9bfc552`), and so is vdocs-web (`9448e4f`).
+3. **Fix 2 (built 2026-11-06):** the reader in the MCP and `vdocs ask` (`9bfc552`), vdocs-web
+   (`9448e4f`) and the Go CLI (`e9f8b62`, D2), with the shared cases.
 4. **Fix 3, straight after fix 2:** the producer writes the synonym table (contract 1.8), and every
    reader applies it. The package names are complete for every application in the first release.
    Other hand-written terms are added one judged question at a time.
