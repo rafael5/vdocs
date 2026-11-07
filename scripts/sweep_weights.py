@@ -56,7 +56,7 @@ def _score(
         if not judged:
             continue
         hits = _unique_sections(
-            search.lexical_search(index_db, q["query"], k=max(k, 10), weights=weights)
+            search.lexical_search(index_db, q["keywords"], k=max(k, 10), weights=weights)
         )
         ranked = [judged.get(h["section_id"], 0) for h in hits]
         per[q["id"]] = _ndcg(ranked, list(judged.values()), k)

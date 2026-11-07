@@ -23,6 +23,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from scripts.baseline_golden import evaluate, gate_exit_code, main  # noqa: E402
+from vdocs.server.search_pure import read_query  # noqa: E402
 
 LIVE_SECTION = "XX/doc1/alpha"
 GONE_SECTION = "ZZ/gone/never-fetched"
@@ -71,6 +72,7 @@ def _mk_key(tmp_path: Path, name: str, staled: bool) -> Path:
         {
             "id": "alpha-install",
             "query": "How do I install the alpha kernel distribution?",
+            "keywords": "install alpha kernel distribution",
             "intent": "answerable",
             "axis": "fixture",
             "relevant": [{"section_id": LIVE_SECTION, "grade": 3}],
@@ -81,6 +83,7 @@ def _mk_key(tmp_path: Path, name: str, staled: bool) -> Path:
             {
                 "id": "gone-question",
                 "query": "How does the departed application work?",
+                "keywords": "departed application",
                 "intent": "every judged section is outside the collection",
                 "axis": "fixture",
                 "relevant": [{"section_id": GONE_SECTION, "grade": 3}],
@@ -158,3 +161,69 @@ def test_main_completes_on_clean_key(tmp_path: Path, monkeypatch: pytest.MonkeyP
     )
     main()  # no SystemExit — a clean key completes normally
     assert out.is_file()
+
+
+# ── Fix 4 of the keyword-search proposal: the harness grades the keyword form ──────────────────
+
+
+def _write_key(tmp_path: Path, queries: list[dict]) -> Path:
+    path = tmp_path / "key.yaml"
+    path.write_text(yaml.safe_dump({"version": 1, "k": 10, "queries": queries}), encoding="utf-8")
+    return path
+
+
+def test_harness_searches_the_keyword_form_not_the_sentence(tmp_path: Path) -> None:
+    lake = _mk_lake(tmp_path)
+    # No word of the sentence is in the corpus, so searching it would find nothing at all.
+    key = _write_key(
+        tmp_path,
+        [
+            {
+                "id": "alpha-install",
+                "query": "What happens here?",
+                "keywords": "alpha install",
+                "axis": "fixture",
+                "relevant": [{"section_id": LIVE_SECTION, "grade": 3}],
+            }
+        ],
+    )
+    result = evaluate(lake, key, None, expand=False)
+    assert result["queries"][0]["top5"][0]["section_id"] == LIVE_SECTION
+    assert result["rollup"]["mean_ndcg@k"] == 1.0
+
+
+def test_a_query_without_a_keyword_form_is_refused(tmp_path: Path) -> None:
+    lake = _mk_lake(tmp_path)
+    key = _write_key(
+        tmp_path,
+        [
+            {
+                "id": "sentence-only",
+                "query": "How do I install the alpha kernel distribution?",
+                "axis": "fixture",
+                "relevant": [{"section_id": LIVE_SECTION, "grade": 3}],
+            }
+        ],
+    )
+    with pytest.raises(SystemExit, match="sentence-only"):
+        evaluate(lake, key, None, expand=False)
+
+
+def test_every_golden_query_has_a_searchable_keyword_form() -> None:
+    spec = yaml.safe_load(Path("registries/golden-queries.yaml").read_text(encoding="utf-8"))
+    for q in spec["queries"]:
+        assert read_query(q.get("keywords") or "").all, q["id"]
+
+
+def test_the_six_plain_english_searches_are_in_the_golden_key() -> None:
+    spec = yaml.safe_load(Path("registries/golden-queries.yaml").read_text(encoding="utf-8"))
+    plain = {q["keywords"]: q for q in spec["queries"] if q.get("axis") == "plain-english"}
+    assert set(plain) == {
+        "change password",
+        "create user account",
+        "background jobs",
+        "set up printer",
+        "enter patient allergies",
+        "send email",
+    }
+    assert all(q["relevant"] for q in plain.values())

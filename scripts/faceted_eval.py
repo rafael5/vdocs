@@ -67,10 +67,10 @@ def evaluate(data_dir: Path, facet: str) -> dict:
             "SELECT doc_type, app_code FROM documents WHERE doc_key = ?", (doc_key,)
         ).fetchone()
         dt, app = r if r else (None, None)
-        oh = _unique_sections(lexical_search(db, q["query"], k=10))
+        oh = _unique_sections(lexical_search(db, q["keywords"], k=10))
         o = _ndcg([judged.get(h["section_id"], 0) for h in oh], list(judged.values()), 10)
         kw = {"app": [app]} if facet == "app" else {"doc_type": [dt], "app": [app]}
-        fr = faceted_search(db, query=q["query"], k=10, **kw)
+        fr = faceted_search(db, query=q["keywords"], k=10, **kw)
         fh = _unique_sections(fr["hits"])
         f = _ndcg([judged.get(h["section_id"], 0) for h in fh], list(judged.values()), 10)
         rows.append((q["id"], round(o, 4), round(f, 4), f"{dt}+{app}", fr["candidate_docs"]))

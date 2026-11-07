@@ -1,0 +1,1185 @@
+{
+  "rollup": {
+    "k": 10,
+    "index_db": "/home/rafael/data/vdocs/index.db",
+    "documents": 1040,
+    "chunks": 57804,
+    "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+    "labeled_queries": 30,
+    "unscoreable_queries": 0,
+    "total_queries": 31,
+    "mean_ndcg@k": 0.4248,
+    "mean_mrr": 0.4954,
+    "mean_recall@k": 0.4436,
+    "mean_redundancy@k": 0.0871,
+    "mode": "lexical (FTS5+BM25), keyword forms"
+  },
+  "queries": [
+    {
+      "id": "kids-install-build",
+      "keywords": "KIDS install build",
+      "axis": "kids-install",
+      "n_judged": 7,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XU/krn_8_0_sm_kids_ug/kids-system-managementutilities",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XU/krn_8_0_sm_kids_ug/purge-build-or-install-files-option",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XU/krn_8_0_sm_kids_ug/reasons-to-retain-build-and-install-file-entries",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "NUPA/nupa1_0tm/kids-build-and-install-print-options",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XU/krn_8_0_dg_kids_ug/enxpdij-task-off-kids-install",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.0,
+      "mrr": 0.0,
+      "recall@k": 0.0
+    },
+    {
+      "id": "pharmacy-api-dispense",
+      "keywords": "pharmacy API dispense",
+      "axis": "redundancy-probe",
+      "n_judged": 0,
+      "hits": 10,
+      "redundancy@k": 0.7,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "PSX/phar_1_api_r0110/returns-the-va-print-name-field-5-the-va-product-identifier-field-6-the-transmit-to-cmop-field-7-from-the-va-product-file-5068-and-the-name-field-01-from-the-va-dispense-unit-file-5064",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "PSA/phar_1_api_r0520/returns-the-va-print-name-field-5-the-va-product-identifier-field-6-the-transmit-to-cmop-field-7-from-the-va-product-file-5068-and-the-name-field-01-from-the-va-dispense-unit-file-5064",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "PSN/phar_1_api_0520/returns-the-va-print-name-field-5-the-va-product-identifier-field-6-the-transmit-to-cmop-field-7-from-the-va-product-file-5068-and-the-name-field-01-from-the-va-dispense-unit-file-5064",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "PSN/phar_1_p576_api_r/returns-the-va-print-name-field-5-the-va-product-identifier-field-6-the-transmit-to-cmop-field-7-from-the-va-product-file-5068-and-the-name-field-01-from-the-va-dispense-unit-file-5064",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "PSX/phar_1_api_r0110/returns-the-iens-of-the-drug-file-50-if-there-is-data-in-the-quantity-dispense-message-field-215-in-the-array-defined-by-the-calling-application",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false
+    },
+    {
+      "id": "fileman-add-field",
+      "keywords": "add field data dictionary",
+      "axis": "fileman-dd",
+      "n_judged": 4,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "DI/scrn_tut/add-the-secondary-menu-options-synonym-field",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "DI/scrn_tut/summary-4",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "DI/scrn_tut/summary-7",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "DI/scrn_tut/overview-4",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "DI/scrn_tut/reposition-fields",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.0,
+      "mrr": 0.0,
+      "recall@k": 0.0
+    },
+    {
+      "id": "rpc-broker-client-call",
+      "keywords": "RPC Broker client call",
+      "axis": "rpc-broker",
+      "n_judged": 9,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XWB/xwb_1_1_tm_r/xwb-rpc-test",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XWB/xwb_1_1_tm_r/connections",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XWB/xwb_1_1_ug_r/backward-compatibility-issues",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "XWB/xwb_1_1_ug_r/rpc-broker",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XWB/xwb_1_1_dg_r/on-the-client",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.0673,
+      "mrr": 0.1429,
+      "recall@k": 0.1111
+    },
+    {
+      "id": "mailman-decnet-transmission",
+      "keywords": "DECnet transmission script",
+      "axis": "mailman-network",
+      "n_judged": 7,
+      "hits": 7,
+      "redundancy@k": 0.3,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XM/xm_8_0_netrefguide/2-enter-a-transmission-script-in-the-domain-file",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "XM/xm_8_0_netrefguide/revision-history",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XM/xm_8_0_netrefguide/setting-up-a-decnet-channel-for-mailman",
+          "grade": 2
+        },
+        {
+          "rank": 4,
+          "section_id": "XM/xm_8_0_netrefguide/3-create-a-logincom-file-on-your-local-machine",
+          "grade": 1
+        },
+        {
+          "rank": 5,
+          "section_id": "XM/xm_8_0_netrefguide/7-create-the-logincom-file",
+          "grade": 1
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.783,
+      "mrr": 1.0,
+      "recall@k": 0.5714
+    },
+    {
+      "id": "radiology-cancel-exam",
+      "keywords": "cancel radiology exam",
+      "axis": "radiology",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "RA/ra5_0hl7is/exam-cancel",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "RA/ra5_0um/radiologynuclear-med-order-entry-menu",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "RA/ra5_0tm/radnuc-med-clerk-menu-ra-clerkmenu",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "RA/ra5_0hl7/cancellationdeletion",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "RA/ra5_0um/exam-entryedit-menu",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.3308,
+      "mrr": 0.1429,
+      "recall@k": 0.6667
+    },
+    {
+      "id": "pharmacy-release-signed-order",
+      "keywords": "release digitally signed order",
+      "axis": "pharmacy-release",
+      "n_judged": 6,
+      "hits": 8,
+      "redundancy@k": 0.3,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "PSO/pso_7_0_p770_pharm_um_1/changes-to-releasing-orders-function---digitally-signed-orders-only",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "PSO/pso_7_tech_p737_um/changes-to-releasing-orders-function---digitally-signed-orders-only",
+          "grade": 3
+        },
+        {
+          "rank": 3,
+          "section_id": "PSO/pso_7_0_p653_man_um/changes-to-releasing-orders-function--digitally-signed-orders-only",
+          "grade": 3
+        },
+        {
+          "rank": 4,
+          "section_id": "CPRS/cprslmtm/the-provider-key",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "PSO/pso_7_tech_p737_um/preface",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.8415,
+      "mrr": 1.0,
+      "recall@k": 0.5
+    },
+    {
+      "id": "tiu-unsigned-notes",
+      "keywords": "unsigned progress notes",
+      "axis": "tiu-notes",
+      "n_judged": 4,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "TIU/tiuum/all-my-unsigned-progress-notes",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "TIU/tiutm/menu-and-option-assignment",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "TIU/tiuum/text-integration-utilities-tiu-clinical-coordinator-and-user-manual",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "TIU/tiuum/show-progress-notes-across-patients",
+          "grade": 2
+        },
+        {
+          "rank": 5,
+          "section_id": "CPRS/cprsguium/viewing-all-signed-notes-all-unsigned-notes-or-all-uncosigned-notes",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.7661,
+      "mrr": 1.0,
+      "recall@k": 0.5
+    },
+    {
+      "id": "vpr-allergy-data",
+      "keywords": "VPR allergy",
+      "axis": "vpr-domains",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "VPR/vpr_dg/print-an-entity-option",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "VPR/vpr_dg/allergies",
+          "grade": 2
+        },
+        {
+          "rank": 3,
+          "section_id": "VPR/vpr_dg/allergyadverse-reaction-tracking-gmra-1",
+          "grade": 1
+        },
+        {
+          "rank": 4,
+          "section_id": "VPR/vpr_dg/allergyadverse-reaction-tracking-gmra",
+          "grade": 3
+        },
+        {
+          "rank": 5,
+          "section_id": "VPR/vpr_dg/vpr-container-5601-file",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.5757,
+      "mrr": 0.5,
+      "recall@k": 1.0
+    },
+    {
+      "id": "lab-file60-audit",
+      "keywords": "audit laboratory test file",
+      "axis": "lab-audit",
+      "n_judged": 6,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "LR/lr_5_2_425_ps_ug/laboratory-test-file-60-audit-tool-overview",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "LR/lr_5_2_425_ps_ug/manually-run-file-60-audit-reports",
+          "grade": 1
+        },
+        {
+          "rank": 3,
+          "section_id": "LR/lr_5_2_425_ps_ug/display-list-of-audited-fields",
+          "grade": 1
+        },
+        {
+          "rank": 4,
+          "section_id": "LR/lr_5_2_425_ps_ug/file-60-audit-reports",
+          "grade": 1
+        },
+        {
+          "rank": 5,
+          "section_id": "LR/lr_5_2_425_ps_ug/file-60-audit-tool-options",
+          "grade": 2
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.9329,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "cprs-enter-immunization",
+      "keywords": "enter immunization CPRS",
+      "axis": "cprs-gui",
+      "n_judged": 6,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "CPRS/cprsguium/deleting-an-immunizationskin-test-in-cprs",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "CPRS/cprsguium/editing-an-immunizationskin-test-in-cprs",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "CPRS/cprsguium/description-of-the-enter-immunizationskin-test-screens",
+          "grade": 2
+        },
+        {
+          "rank": 4,
+          "section_id": "CPRS/cprsguium/viewing-the-immunizationskin-test-status-in-cprs",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "CPRS/cprsguium/accessing-the-enter-immunizationskin-test-screen-from-the-reminder-dialogs",
+          "grade": 1
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.5269,
+      "mrr": 0.3333,
+      "recall@k": 1.0
+    },
+    {
+      "id": "vbecs-accept-order",
+      "keywords": "VBECS accept order",
+      "axis": "vbecs-orders",
+      "n_judged": 4,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/accept-orders-accept-an-order",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/accept-orders-accept-an-order-uc_16",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/assumptions-45",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/outcome-46",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "VBECS/vbecs_2_4_1_user_guide/accept-orders-pending-order-list-uc_88",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.7126,
+      "mrr": 1.0,
+      "recall@k": 0.25
+    },
+    {
+      "id": "hl7-security-keys",
+      "keywords": "HL7 security keys",
+      "axis": "hl7-security",
+      "n_judged": 2,
+      "hits": 9,
+      "redundancy@k": 0.2,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "HL7/hl71_6sg/security-keys",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "PSS/pss_1_p136_and_p117_tm_cp/version-10",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "MAG/imgtechman_f/preface",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "PRC/ifcp5_1security_guide/introduction",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "HL7/hl_1_6_126_tm/main-menu",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.9173,
+      "mrr": 1.0,
+      "recall@k": 0.5
+    },
+    {
+      "id": "fileman-file-200-new-person",
+      "keywords": "NEW PERSON file",
+      "axis": "fileman-dd",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "EN/en_7_0_um/129-add-entry-to-new-person-file",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XU/krn_8_0_dg_user_ug/lookupxuser-new-person-file-lookup",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "SR/sr_3_tm_r1115/new-person-file-200",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "XU/krn_8_0_tm/kernel-1",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "FH/fh5_5tm/pointer-relations",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.0,
+      "mrr": 0.0,
+      "recall@k": 0.0
+    },
+    {
+      "id": "fileman-import-host-file",
+      "keywords": "import host file",
+      "axis": "api-leadin",
+      "n_judged": 6,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "GMPL/gmplum/import-problem-selection-list-gmpl-selection-list-import",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "DI/fm22_2dg/error-codes",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "PXRM/pxrm_2_22_mm/steps-to-use-reminder-exchange",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "DI/fm22_2dg/error-codes-returned-46",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "GMPL/gmpl_2_0_49_tm/locating-updates-to-the-national-problem-list-content",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.2404,
+      "mrr": 0.1429,
+      "recall@k": 0.5
+    },
+    {
+      "id": "fileman-input-transform-definition",
+      "keywords": "\"input transform\"",
+      "axis": "api-leadin",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.3,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "DI/fm22_2um2/input-transform-syntax",
+          "grade": 1
+        },
+        {
+          "rank": 2,
+          "section_id": "DI/fm22_2dg/input-transforms-and-the-verify-fields-option",
+          "grade": 1
+        },
+        {
+          "rank": 3,
+          "section_id": "DI/fm22_tutorial/standard-data-dictionary-listing-of-the-test-file",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "DI/fm22_2dg/input-transform",
+          "grade": 3
+        },
+        {
+          "rank": 5,
+          "section_id": "PSA/phar_1_api_r0520/provides-input-transform-lookup-functionality-for-fields-that-store-ndc-codes",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.5714,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "fileman-blddialog-icr-number",
+      "keywords": "BLD^DIALOG ICR",
+      "axis": "api-leadin",
+      "n_judged": 2,
+      "hits": 1,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "DI/fm22_2dg/blddialog-dialog-extractor",
+          "grade": 3
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.9173,
+      "mrr": 1.0,
+      "recall@k": 0.5
+    },
+    {
+      "id": "quasar-package-wide-variables",
+      "keywords": "QUASAR package wide variables",
+      "axis": "short-reference",
+      "n_judged": 1,
+      "hits": 1,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "ACKQ/ackq3_0tm/package-wide-variables",
+          "grade": 3
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 1.0,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "hl7-table-0136-values",
+      "keywords": "HL7 table 0136",
+      "axis": "short-reference",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "ACR/acr_p_pimstm/table-0136---yesno-indicator",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "ADT/adt_pims_tm/table-0136yesno-indicator",
+          "grade": 3
+        },
+        {
+          "rank": 3,
+          "section_id": "MPIF/mpif_1_0is/yesno-indicator-table",
+          "grade": 3
+        },
+        {
+          "rank": 4,
+          "section_id": "MPIF/mpif_1_0is/pid-30-patient-death-indicator-id-00741",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "PSJ/psj_5_0_p447_tm/sch-schedule-activity-information",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 1.0,
+      "mrr": 1.0,
+      "recall@k": 1.0
+    },
+    {
+      "id": "kids-backup-transport-global",
+      "keywords": "backup \"transport global\"",
+      "axis": "kids-install",
+      "n_judged": 1,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "YS/ys_asimv_igum/backup-transport-global",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "EPI/lab_epi_tech_user_guide/backup-routines",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XU/krn_8_0_sm_kids_ug/installation-menu",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "EPI/lab_epi_searchextract_tm_ug/backup-routines",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "EPI/lab_epi_hepc_tech_user_guide/backup-routines",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.2891,
+      "mrr": 0.1,
+      "recall@k": 1.0
+    },
+    {
+      "id": "hl7-start-tcpip-link",
+      "keywords": "start TCP/IP logical link",
+      "axis": "hl7-links",
+      "n_judged": 6,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "HL7/hl71_6p19/starting-tcpip-logical-links",
+          "grade": 3
+        },
+        {
+          "rank": 2,
+          "section_id": "HL7/hl71_6p19/patch-hl1619-release-notes",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "HL7/hl71_6p19/how-to-start-and-stop-the-listener-2",
+          "grade": 1
+        },
+        {
+          "rank": 4,
+          "section_id": "VBECS/vbecs_2_4_1_tech_security_guide/set-up-vbecs-outbound-logical-links",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "HL7/hl71_6p19/how-to-start-and-stop-the-listener",
+          "grade": 2
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.7829,
+      "mrr": 1.0,
+      "recall@k": 0.6667
+    },
+    {
+      "id": "fileman-file-access-security",
+      "keywords": "file access security",
+      "axis": "kernel-security",
+      "n_judged": 7,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "DI/fm22_krn8_file_security/kernel-file-access-security-vs-classic-va-fileman-file-access-security",
+          "grade": 2
+        },
+        {
+          "rank": 2,
+          "section_id": "DI/fm22_krn8_file_security/how-to-use-the-file-access-security-at-your-site",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "DI/fm22_krn8_file_security/file-level-security-properties-1",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "XU/krn_8_0_sm_signon_security_ug/when-is-file-access-security-checked",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "DI/fm22_krn8_file_security/kernel-file-access-security",
+          "grade": 3
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.5483,
+      "mrr": 1.0,
+      "recall@k": 0.5714
+    },
+    {
+      "id": "vista-signon-credentials",
+      "keywords": "sign on access code verify code",
+      "axis": "kernel-auth",
+      "n_judged": 4,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XWB/xwb_1_1_sm_r/vista-accessverify-code-sign-on-dialogue",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "FIM/fim_user_manual/sign-in-to-fim",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "FIM/fim_user_manual/vista-sign-on-window",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "RMPR/rmpr_3_136um/chapter-2--accesssign-on-instructions-to-gui",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "PSA/psa_3_um/non-pivalternate-logon",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.0,
+      "mrr": 0.0,
+      "recall@k": 0.0
+    },
+    {
+      "id": "fileman-finder-api",
+      "keywords": "FIND^DIC finder",
+      "axis": "fileman-api",
+      "n_judged": 5,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "DI/fm22_2dg/error-codes-returned-7",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "DI/fm22_2dg/details-and-features-4",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "DI/fm22_2dg/example-1-12",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "DI/fm22_2dg/finddic-finder",
+          "grade": 3
+        },
+        {
+          "rank": 5,
+          "section_id": "DI/fm22_2dg/uppercase",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.2953,
+      "mrr": 0.25,
+      "recall@k": 0.2
+    },
+    {
+      "id": "taskman-monitor",
+      "keywords": "monitor TaskMan",
+      "axis": "kernel-ops",
+      "n_judged": 7,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "XU/krn_8_0_sm_taskman_ug/monitor-taskman-option",
+          "grade": 1
+        },
+        {
+          "rank": 2,
+          "section_id": "XU/krn_8_0_dg_taskman_ug/d-ztmon-monitor-taskman-option",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XU/krn_8_0_sm_taskman_ug/monitor-taskman-option-1",
+          "grade": 3
+        },
+        {
+          "rank": 4,
+          "section_id": "XU/krn_8_0_sm_taskman_ug/monitor-action-prompt",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XU/krn_8_0_sm_taskman_ug/inspecting-the-tasks-in-the-monitors-lists",
+          "grade": 2
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.4715,
+      "mrr": 1.0,
+      "recall@k": 0.5714
+    },
+    {
+      "id": "plain-change-password",
+      "keywords": "change password",
+      "axis": "plain-english",
+      "n_judged": 5,
+      "hits": 10,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "GMRC/seoc_ug/changing-user-id-and-password",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "MAG/mag_dicomug/overview-1",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "MMRS/vle_micro_mmrs_1_0_5_user_guide/changing-user-id-and-password",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "MAG/mag_dicomug/enter-programmers-mode",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "PREA/prea_1_13_ampl_gui_ug/introduction",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.0,
+      "mrr": 0.0,
+      "recall@k": 0.0
+    },
+    {
+      "id": "plain-create-user-account",
+      "keywords": "create user account",
+      "axis": "plain-english",
+      "n_judged": 3,
+      "hits": 9,
+      "redundancy@k": 0.4,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "HL7/hl71_6p19/home-directory-setup-for-hl7-handler-account",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "XWB/xwb1_1p44um/set-up-home-directory-for-the-rpc-broker-handler-account",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XM/tcpip_service_for_mailman/the-steps-for-sites-that-were-ntcache-and-are-now-vmscache",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "HL7/hlo_system_manager_manual/creating-tcpip-services-for-open-vms-with-cache",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "HL7/hl_1_6_126_tm/create-openvms-user-account-1",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.0,
+      "mrr": 0.0,
+      "recall@k": 0.0
+    },
+    {
+      "id": "plain-background-jobs",
+      "keywords": "background jobs",
+      "axis": "plain-english",
+      "n_judged": 4,
+      "hits": 10,
+      "redundancy@k": 0.2,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "PSJ/psj_5_0_p447_tm/nightly-background-jobs",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "PSO/pso_7_0_p617_tm/queue-background-jobs-pso-autoqueue-jobs",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "PSO/pso_7_tm_sg/queue-background-jobs-pso-autoqueue-jobs",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "PSO/pso_7_0_p653_man_um/queue-background-jobs",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "PSO/pso_7_0_tmsg/39-queue-background-jobs",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.0,
+      "mrr": 0.0,
+      "recall@k": 0.0
+    },
+    {
+      "id": "plain-set-up-printer",
+      "keywords": "set up printer",
+      "axis": "plain-english",
+      "n_judged": 3,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "PSO/pso_7_0_p653_man_um/reinitialize-scriptalk-printer",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "PSJ/psj_5_0_p447_tm/software-set-up",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XU/krn_8_0_dg_device_handler_ug/psetzisp-set-up-special-printer-variables",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "PSJ/psj_5_0_p447_tm/hardware-set-up",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "PSO/pso_7_0_p653_man_um/set-up-and-test-scriptalk-device",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.0,
+      "mrr": 0.0,
+      "recall@k": 0.0
+    },
+    {
+      "id": "plain-enter-patient-allergies",
+      "keywords": "enter patient allergies",
+      "axis": "plain-english",
+      "n_judged": 5,
+      "hits": 9,
+      "redundancy@k": 0.1,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "CPRS/cprsguium/entering-allergies-from-the-orders-tab",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "CPRS/cprsguium/entering-no-known-allergies-assessments-from-the-cover-sheet",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "CPRS/cprsguium/assessing-entering-and-reviewing-allergiesadverse-reactions",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "CPRS/cprsguium/entering-allergies",
+          "grade": 3
+        },
+        {
+          "rank": 5,
+          "section_id": "CPRS/cprsguium/entering-no-known-allergies",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.1736,
+      "mrr": 0.25,
+      "recall@k": 0.2
+    },
+    {
+      "id": "plain-send-email",
+      "keywords": "send email",
+      "axis": "plain-english",
+      "n_judged": 4,
+      "hits": 10,
+      "redundancy@k": 0.0,
+      "top5": [
+        {
+          "rank": 1,
+          "section_id": "QAC/pats_1_5_userguide/sample-email-to-send-to-notification-recipients",
+          "grade": 0
+        },
+        {
+          "rank": 2,
+          "section_id": "LR/lr_5_2_425_ps_ug/smsend-mail-message-option",
+          "grade": 0
+        },
+        {
+          "rank": 3,
+          "section_id": "XT/xtvs_vpsrt_ug_r/meemail-extract-global",
+          "grade": 0
+        },
+        {
+          "rank": 4,
+          "section_id": "LR/lr_5_2_425_ps_ug/sxsend-extract-file-option",
+          "grade": 0
+        },
+        {
+          "rank": 5,
+          "section_id": "XT/xtvs_vpsrt_ug_r/ecremail-comparison-report",
+          "grade": 0
+        }
+      ],
+      "unscoreable": false,
+      "ndcg@k": 0.0,
+      "mrr": 0.0,
+      "recall@k": 0.0
+    }
+  ]
+}

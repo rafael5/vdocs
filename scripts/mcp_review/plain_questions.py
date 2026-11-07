@@ -1,9 +1,10 @@
 """Six plain-English keyword searches for the golden key (keyword-search proposal, fix 4, App. C).
 
-REVIEWER DRAFTS for the operator to approve; nothing here is in registries/golden-queries.yaml yet.
-Each search uses a word the manuals avoid ("password" where they say verify code). Every judged
-section was checked present, latest and searchable in index.db, and graded by reading its passage
-text (3 ideal · 2 highly relevant · 1 related), as the golden key requires.
+Reviewer drafts, approved by the operator unchanged on 2026-11-06 and copied into
+registries/golden-queries.yaml (axis plain-english), which is now their record. Each search uses
+a word the manuals avoid ("password" where they say verify code). Every judged section was checked
+present, latest and searchable in index.db, and graded by reading its passage text (3 ideal · 2
+highly relevant · 1 related), as the golden key requires.
 
 Measured today, before fixes 2 and 3:
 - the web console as built by fix 1 (all words, relevance order, any-word fallback), document level:
@@ -127,7 +128,10 @@ def web_docs(q: str) -> tuple[list[str], bool]:
 
 
 def main() -> None:
-    out: dict = {"provenance": provenance(), "status": "reviewer drafts, not yet approved"}
+    out: dict = {
+        "provenance": provenance(),
+        "status": "approved 2026-11-06; in registries/golden-queries.yaml",
+    }
     present = {r[0] for r in con.execute("SELECT DISTINCT section_id FROM chunks_fts")}
     sec_doc = dict(con.execute("SELECT section_id, doc_key FROM doc_sections"))
     for qid, d in DRAFTS.items():

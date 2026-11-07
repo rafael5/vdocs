@@ -1,8 +1,8 @@
 # registries/golden-queries.yaml — the Phase 0 retrieval-quality evaluation set (remediation-plan
 # §10.5 / §2 · implementation-plan Phase 0.2 & 0.4).
 #
-# A version-controlled set of natural-language queries with graded relevance judgements, used to
-# compute the baseline (0.4) and to gate every later phase (lexical → semantic → hybrid):
+# A version-controlled set of questions, each with a keyword form and graded relevance judgements,
+# used to compute the baseline (0.4) and to gate every later phase (lexical → semantic → hybrid):
 #   nDCG@10 · MRR · recall@k · redundancy@k · version-correctness.
 #
 # SCHEMA
@@ -10,7 +10,8 @@
 #   k:        default cutoff for @k metrics
 #   queries[]:
 #     id:        stable slug (kebab-case) — referenced in metric reports
-#     query:     the natural-language query as a user/agent would phrase it
+#     query:     a sentence describing the question; not searched (search takes keywords)
+#     keywords:  the keyword form a searcher types; the harness searches this (required)
 #     intent:    one-line description of the information need
 #     axis:      which answerable-Q label / capability this exercises (see dev-corpus.txt axis h)
 #     relevant[]: graded judgements
@@ -31,6 +32,12 @@
 # searchable in ~/data/vdocs/index.db (1,040 docs, corpus_content_hash 6dbec1f5…) before the
 # label was written, and graded by reading the passage text, never the title. The key stays at
 # 24 labelled queries + 1 unlabelled redundancy probe.
+#
+# Keyword-search proposal, fix 4 (2026-11-06, docs/proposals/keyword-search-five-fixes.md): search
+# takes keywords, not sentences, so every question gained its keyword form (`keywords:`, Appendix A,
+# approved by the operator unchanged) and the harness grades that form; `query:` stays as the
+# description. Six plain-English keyword searches were added (Appendix C, approved unchanged): the
+# key is now 30 labelled queries + 1 unlabelled redundancy probe.
 
 version: 1
 k: 10
@@ -39,6 +46,7 @@ queries:
   # ── answerable-Q: kids-install (XU Kernel / KIDS) ──────────────────────────────────────────────
   - id: kids-install-build
     query: How do I load and install a KIDS distribution build?
+    keywords: KIDS install build
     intent: Step-by-step KIDS build installation procedure.
     axis: kids-install
     relevant:
@@ -69,6 +77,7 @@ queries:
   # ── redundancy@k probe (near-duplicate Pharmacy API pair) ──────────────────────────────────────
   - id: pharmacy-api-dispense
     query: Pharmacy API for dispensing / outpatient medication data
+    keywords: pharmacy API dispense
     intent: Locate the Pharmacy API entry points — used to measure redundancy@k.
     axis: redundancy-probe
     relevant: []
@@ -86,6 +95,7 @@ queries:
   # ── answerable-Q: fileman-dd (DI FileMan Developer's Guide) ────────────────────────────────────
   - id: fileman-add-field
     query: How do I add a new field to a FileMan file's data dictionary?
+    keywords: add field data dictionary
     intent: Adding/defining fields in a FileMan file via the DD editor.
     axis: fileman-dd
     relevant:
@@ -104,6 +114,7 @@ queries:
   # ── answerable-Q: rpc-broker (XWB RPC Broker Developer's Guide) ────────────────────────────────
   - id: rpc-broker-client-call
     query: How does a client application call an RPC through the RPC Broker?
+    keywords: RPC Broker client call
     intent: Steps a client takes to connect and invoke a remote procedure via XWB.
     axis: rpc-broker
     relevant:
@@ -128,6 +139,7 @@ queries:
   # ── answerable-Q: mailman-network (XM MailMan Network Reference Guide) ─────────────────────────
   - id: mailman-decnet-transmission
     query: How do I configure a DECnet transmission script for MailMan network mail?
+    keywords: DECnet transmission script
     intent: Setting up DECnet transmission/domain entries for network MailMan.
     axis: mailman-network
     relevant:
@@ -147,6 +159,7 @@ queries:
   # ── answerable-Q: radiology (RA Radiology User Manual) ─────────────────────────────────────────
   - id: radiology-cancel-exam
     query: How do I cancel a radiology exam or request?
+    keywords: cancel radiology exam
     intent: Cancelling an exam/request in the Radiology package.
     axis: radiology
     relevant:
@@ -162,6 +175,7 @@ queries:
   # ── answerable-Q: pharmacy-release (PSO Outpatient Pharmacy User Manual) ───────────────────────
   - id: pharmacy-release-signed-order
     query: How does releasing a digitally signed outpatient pharmacy order work?
+    keywords: release digitally signed order
     intent: The release/finish flow for digitally signed orders in Outpatient Pharmacy.
     axis: pharmacy-release
     relevant:
@@ -181,6 +195,7 @@ queries:
   # ── answerable-Q: tiu-notes (TIU Clinical Coordinator & User Manual) ───────────────────────────
   - id: tiu-unsigned-notes
     query: How do I find and print my unsigned progress notes in TIU?
+    keywords: unsigned progress notes
     intent: Locating/printing a clinician's unsigned documents/progress notes.
     axis: tiu-notes
     relevant:
@@ -196,6 +211,7 @@ queries:
   # ── answerable-Q: vpr-domains (VPR Developer's Guide) ──────────────────────────────────────────
   - id: vpr-allergy-data
     query: How does the Virtual Patient Record return allergy and adverse reaction data?
+    keywords: VPR allergy
     intent: The VPR allergy/adverse-reaction (GMRA) data domain.
     axis: vpr-domains
     relevant:
@@ -206,6 +222,7 @@ queries:
   # ── answerable-Q: lab-audit (LR Laboratory User Guide) ─────────────────────────────────────────
   - id: lab-file60-audit
     query: How do I audit changes to the Laboratory Test file (#60)?
+    keywords: audit laboratory test file
     intent: Using the File #60 audit tool in the Laboratory package.
     axis: lab-audit
     relevant:
@@ -223,6 +240,7 @@ queries:
   # ── answerable-Q: cprs-gui (CPRS GUI User Manual) ──────────────────────────────────────────────
   - id: cprs-enter-immunization
     query: How do I enter an immunization in the CPRS GUI?
+    keywords: enter immunization CPRS
     intent: Entering immunizations from the coversheet/encounter form in CPRS.
     axis: cprs-gui
     relevant:
@@ -241,6 +259,7 @@ queries:
   # ── answerable-Q: vbecs-orders (VBECS Blood Bank User Guide) ───────────────────────────────────
   - id: vbecs-accept-order
     query: How do I accept or cancel a blood bank order in VBECS?
+    keywords: VBECS accept order
     intent: Accepting/cancelling pending orders in VBECS.
     axis: vbecs-orders
     relevant:
@@ -258,6 +277,7 @@ queries:
   # ── answerable-Q: hl7-security (HL7 Package Security Guide) ────────────────────────────────────
   - id: hl7-security-keys
     query: What security keys does the HL7 package use?
+    keywords: HL7 security keys
     intent: HL7 package security keys and FileMan access.
     axis: hl7-security
     relevant:
@@ -270,6 +290,7 @@ queries:
   # expansion (200 → "NEW PERSON", from index.db:entity_skl) pulls them in. nDCG@10: 0 → positive.
   - id: fileman-file-200-new-person
     query: What is FileMan file 200, the user account file?
+    keywords: NEW PERSON file
     intent: The NEW PERSON file (#200) — VistA's user/account file — what it is and holds.
     axis: fileman-dd
     relevant:
@@ -291,6 +312,7 @@ queries:
   # engine; the lexical near-misses are deliberately left unlabelled as discriminators.
   - id: fileman-import-host-file
     query: How do I import data from a host file into a VA FileMan file?
+    keywords: import host file
     intent: The FILE^DDMP API — the supported way to load ASCII host-file data into FileMan.
     axis: api-leadin
     relevant:
@@ -313,6 +335,7 @@ queries:
 
   - id: fileman-input-transform-definition
     query: What is an INPUT transform in VA FileMan?
+    keywords: '"input transform"'
     intent: The definition of an INPUT transform (M code validating a field's data).
     axis: api-leadin
     relevant:
@@ -329,6 +352,7 @@ queries:
 
   - id: fileman-blddialog-icr-number
     query: What is the ICR number for the BLD^DIALOG API?
+    keywords: BLD^DIALOG ICR
     intent: The Integration Control Registration number recorded for BLD^DIALOG (2050).
     axis: api-leadin
     relevant:
@@ -341,6 +365,7 @@ queries:
 
   - id: quasar-package-wide-variables
     query: Does the QUASAR package define any package-wide variables?
+    keywords: QUASAR package wide variables
     intent: Whether ACKQ (QUASAR) declares package-wide/special variables — a negative answer.
     axis: short-reference
     relevant:
@@ -354,6 +379,7 @@ queries:
 
   - id: hl7-table-0136-values
     query: What are the allowed values for HL7 table 0136, the yes/no indicator?
+    keywords: HL7 table 0136
     intent: The value/description pairs for HL7 table 0136 (Y = YES, N = NO).
     axis: short-reference
     relevant:
@@ -382,6 +408,7 @@ queries:
   # ── answerable-Q: kids-install (XU KIDS User Guide) — replaces kids-delphi-components-install ──
   - id: kids-backup-transport-global
     query: How do I back up a transport global before installing a KIDS patch?
+    keywords: 'backup "transport global"'
     intent: The KIDS Backup a Transport Global option — restoring the pre-patch state.
     axis: kids-install
     relevant:
@@ -395,6 +422,7 @@ queries:
   # ── answerable-Q: hl7-links (HL7 1.6) — replaces hwsc-rest-from-vista-m ────────────────────────
   - id: hl7-start-tcpip-link
     query: How do I start a TCP/IP logical link to enable HL7 message exchange?
+    keywords: start TCP/IP logical link
     intent: Starting an HL7 TCP/IP logical link (START LLP) so messages flow to a remote system.
     axis: hl7-links
     relevant:
@@ -418,6 +446,7 @@ queries:
   # ── answerable-Q: kernel-security (Kernel / FileMan file security) — replaces hwsc-install-privileges
   - id: fileman-file-access-security
     query: How does Kernel's File Access Security control which VA FileMan files a user can access?
+    keywords: file access security
     intent: The Kernel File Access Security system (ACCESSIBLE FILE #32 multiple) vs DUZ(0) codes.
     axis: kernel-security
     relevant:
@@ -442,6 +471,7 @@ queries:
   # ── answerable-Q: kernel-auth (Kernel Signon/Security UG) — replaces kaajee-install-procedure ──
   - id: vista-signon-credentials
     query: How does a user sign on to VistA, and what credentials are required?
+    keywords: sign on access code verify code
     intent: The Kernel signon interface — Access/Verify codes vs 2FA (PIV + PIN via IAM).
     axis: kernel-auth
     relevant:
@@ -458,6 +488,7 @@ queries:
   # ── answerable-Q: fileman-api (DI FileMan DG lookup APIs) — replaces lexicon-lookup ────────────
   - id: fileman-finder-api
     query: How do I find records in a FileMan file with the FIND^DIC Finder API?
+    keywords: FIND^DIC finder
     intent: The FIND^DIC (Finder) DBS call — inputs, indexes, screening, output.
     axis: fileman-api
     relevant:
@@ -476,6 +507,7 @@ queries:
   # ── answerable-Q: kernel-ops (TaskMan UG) — replaces hwsc-web-service-manager ──────────────────
   - id: taskman-monitor
     query: How do I monitor TaskMan's current state and check its environment?
+    keywords: monitor TaskMan
     intent: The Monitor Taskman [XUTM ZTMON] and Check Taskman's Environment [XUTM CHECK ENV] options.
     axis: kernel-ops
     relevant:
@@ -495,6 +527,97 @@ queries:
       that lists both options is context (g1). RC.2 (2026-08-03, read the top ten): the Check
       Environment second screen carries the actual environment report (g2) and the Status List
       internals are related monitoring detail (g1).
+
+  # ════════════════════════════════════════════════════════════════════════════════════════════════
+  # Keyword-search proposal, fix 4 (2026-11-06): six plain-English keyword searches, each using a
+  # word the manuals avoid. Reviewer drafts approved by the operator unchanged (Appendix C of
+  # docs/proposals/keyword-search-five-fixes.md). Every judged section was checked present, latest
+  # and searchable in ~/data/vdocs/index.db (corpus_content_hash 5b118189…) and graded by reading
+  # its passage text. Fix 3's hand-written synonyms are added one search at a time until each passes.
+  # ════════════════════════════════════════════════════════════════════════════════════════════════
+
+  - id: plain-change-password
+    query: How a user changes their VistA password; the manuals call it the verify code.
+    keywords: change password
+    intent: 'A plain-English word the manuals avoid: password, where the manuals say verify code.'
+    axis: plain-english
+    relevant:
+      - { section_id: XU/krn_8_0_sm_signon_security_ug/defining-a-strong-verify-code, grade: 3 }
+      - { section_id: XWB/xwb_1_1_sm_r/change-vista-verify-code-component, grade: 2 }
+      - { section_id: PRC/ifcp5_1ldqt_user_manual/changing-your-verify-code, grade: 2 }
+      - { section_id: XU/krn_8_0_sm_signon_security_ug/lifetime-of-verify-code, grade: 1 }
+      - { section_id: EDIS/edp_um/changing-your-verify-code, grade: 1 }
+    notes: >
+      The 'Changing User ID and Password' sections (VSE GUI, lab, SEOC manuals) say only 'Not
+      applicable' or 'contact your supervisor': not relevant, and exactly what a plain 'password'
+      search finds first.
+
+  - id: plain-create-user-account
+    query: How a system administrator adds a new VistA user (Kernel, NEW PERSON file).
+    keywords: create user account
+    intent: 'A plain-English word the manuals avoid: user account, where the manuals say new user and the NEW PERSON file.'
+    axis: plain-english
+    relevant:
+      - { section_id: XU/krn_8_0_sm_signon_security_ug/adding-new-users, grade: 3 }
+      - { section_id: XU/krn_8_0_sm_signon_security_ug/add-a-new-user-to-the-system-option, grade: 3 }
+      - { section_id: XU/krn_8_0_sm_signon_security_ug/edit-an-existing-user-option, grade: 1 }
+    notes: >
+      The manuals say 'new user' and the NEW PERSON (#200) file; 'user account' appears in two of
+      the judged passages.
+
+  - id: plain-background-jobs
+    query: 'What runs work in the background in VistA: TaskMan, which the manuals call background tasks.'
+    keywords: background jobs
+    intent: 'A plain-English word the manuals avoid: jobs, where the manuals say tasks (TaskMan).'
+    axis: plain-english
+    relevant:
+      - { section_id: XU/krn_8_0_sm_taskman_ug/introduction, grade: 3 }
+      - { section_id: XU/krn_8_0_sm_taskman_ug/taskman-user-interface, grade: 3 }
+      - { section_id: XU/krn_8_0_sm_taskman_ug/summary, grade: 2 }
+      - { section_id: XU/krn_8_0_dg_taskman_ug/overview, grade: 2 }
+    notes: >
+      The manuals say 'tasks' and 'background processing', rarely 'jobs'.
+
+  - id: plain-set-up-printer
+    query: 'How a printer is defined for VistA: an entry in Kernel''s DEVICE (#3.5) file with a terminal type.'
+    keywords: set up printer
+    intent: 'A plain-English word the manuals avoid: printer, where the manuals say device (the DEVICE file).'
+    axis: plain-english
+    relevant:
+      - { section_id: XU/krn_8_0_sm_device_handler_ug/device-35-file, grade: 3 }
+      - { section_id: XU/krn_8_0_sm_device_handler_ug/terminal-type-32-file, grade: 2 }
+      - { section_id: XU/krn_8_0_sm_device_handler_ug/printing-to-devices, grade: 1 }
+    notes: >
+      Kernel's general device setup. Application-specific printer sections (VBECS printers,
+      ScripTalk printers) answer a narrower question and are not judged.
+
+  - id: plain-enter-patient-allergies
+    query: 'How a clinician records a patient''s allergy: Adverse Reaction Tracking (GMRA), or CPRS''s Allergies pane.'
+    keywords: enter patient allergies
+    intent: 'A plain-English word the manuals avoid: allergies, where the option is Enter/Edit Patient Reaction Data.'
+    axis: plain-english
+    relevant:
+      - { section_id: GMRA/gmra_4_0_um/enteredit-patient-reaction-data, grade: 3 }
+      - { section_id: GMRA/gmra_4_0_um/enteredit-patient-reaction-data-1, grade: 3 }
+      - { section_id: CPRS/cprsguium/entering-allergies, grade: 3 }
+      - { section_id: CPRS/cprsguium/entering-new-allergies, grade: 2 }
+      - { section_id: GMRA/gmra_4_0_um/entering-allergies-from-the-cover-sheet, grade: 2 }
+    notes: >
+      The roll-and-scroll option is 'Enter/Edit Patient Reaction Data'; twin titles graded by
+      content (both describe the option in full).
+
+  - id: plain-send-email
+    query: 'How a user sends a message in VistA: MailMan''s Send a Message option.'
+    keywords: send email
+    intent: 'A plain-English word the manuals avoid: email, where the manuals say mail message (MailMan).'
+    axis: plain-english
+    relevant:
+      - { section_id: XM/xm_8_0_userguide/smlsend-a-message-option, grade: 3 }
+      - { section_id: XM/xm_8_0_getstartguide/sending-mail, grade: 3 }
+      - { section_id: XM/xm_8_0_userguide/sending-mail, grade: 2 }
+      - { section_id: XM/xm_8_0_netrefguide/sending-network-messages, grade: 1 }
+    notes: >
+      The manuals say 'mail' and 'message', rarely 'email'.
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════
 # RETIRED (RC.1, 2026-08-03) — retiring is not deleting: each entry below is evidence of what the

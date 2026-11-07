@@ -11,6 +11,11 @@ phase (semantic, hybrid RRF) is measured against:
 The retrieval path is imported (we measure the real engine); the metric math is **inlined** here
 as an independent oracle (same discipline as `scripts/audit_gold_cleanup.py`). Deterministic.
 
+Each question is searched by its keyword form (`keywords:`), the words a searcher types. The
+`query:` sentence only describes the question: search takes keywords, not sentences (keyword-search
+proposal, fix 4, docs/proposals/keyword-search-five-fixes.md). A question without a keyword form is
+refused, so a key can never be graded on sentences by accident.
+
 Scoring choices (documented so the number is reproducible and comparable):
   * Hits are *chunks*; we reduce each query's ranked hits to the ranked list of unique `section_id`s
     (first appearance wins), since citations resolve at the section level. nDCG/MRR/recall are
@@ -154,6 +159,9 @@ def evaluate(
         # operator error (wrong --data-dir), and the answer to it is a sentence, not a traceback.
         raise SystemExit(f"no index.db at {index_db} — pass --data-dir <lake> (run `vdocs index`?)")
     spec = yaml.safe_load(queries_path.read_text(encoding="utf-8"))
+    missing = [q["id"] for q in spec["queries"] if not (q.get("keywords") or "").strip()]
+    if missing:
+        raise SystemExit(f"no keyword form (`keywords:`) for: {', '.join(missing)}")
     k = k_override or int(spec.get("k", 10))
     # expand=True (default) → SKL-grounded query expansion (S3.4, the merge `entity_skl` table);
     # expand=False → {} disables it (the pre-S3.4 lexical-only baseline, for an apples-to-apples
@@ -174,7 +182,7 @@ def evaluate(
         # silently dragging the reported mean down by ~13 points. Excluded from the means and
         # reported loudly: a zero you cannot act on is not a measurement.
         unscoreable = bool(judged) and not any(s in live_sections for s in judged)
-        raw_hits = lexical_search(index_db, q["query"], k=max(k, 10), expansions=expansions)
+        raw_hits = lexical_search(index_db, q["keywords"], k=max(k, 10), expansions=expansions)
         # redundancy is measured over the RAW top-k chunk hits (their text); nDCG/MRR/recall over
         # the unique-section reduction.
         texts = _section_texts(index_db, [h["section_id"] for h in raw_hits[:k]])
@@ -185,6 +193,7 @@ def evaluate(
 
         entry: dict[str, Any] = {
             "id": q["id"],
+            "keywords": q["keywords"],
             "axis": q.get("axis"),
             "n_judged": len(judged),
             "hits": len(hits),
@@ -231,7 +240,7 @@ def evaluate(
         "mean_redundancy@k": round(sum(e["redundancy@k"] for e in per_query) / len(per_query), 4)
         if per_query
         else None,
-        "mode": "lexical (FTS5+BM25)",
+        "mode": "lexical (FTS5+BM25), keyword forms",
     }
     return {"rollup": rollup, "queries": per_query}
 
