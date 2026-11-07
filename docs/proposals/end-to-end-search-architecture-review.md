@@ -1,6 +1,6 @@
 # vdocs end to end: capture, storage, indexing and search — an adversarial review
 
-**Status:** proposal · 2026-11-07 · decisions D1–D5 taken by the operator on 2026-11-07 as recommended (§9) · nothing in §6 is built.
+**Status:** proposal · 2026-11-07 · decisions D1–D5 taken by the operator on 2026-11-07 as recommended (§9) · **A1 built `ccc184b` and adopted 2026-11-07** (`reports/a1-before.md`, `a1-after.md`, `a1-paired.md`); A2–A5 and B1–B5 not built.
 **Corpus measured:** `~/data/vdocs/index.db` · 1,040 documents (615 latest) · 52,093 live sections ·
 57,804 chunks · `corpus_content_hash 5b118189…` · read contract 1.8 · 363 MB. The lake after the
 2026-11-05 PXRM refresh, with keyword-search fixes 1–5 built.
@@ -446,6 +446,26 @@ inside a dropped construct survives; no `<`, `](`, `↑` or 40-plus-character he
 *Expected:* −10% index tokens, −8% vocabulary, clean snippets, false matches on markup gone.
 *Measured before adoption:* the 30-question harness and the identifier probes on a rebuilt index,
 paired per question; adopt if no question loses its top-10 answer.
+**Built `ccc184b`, measured 2026-11-07, adopted.** As written, with one correction made the same
+day before building: `chunks.text` stays markdown (vdocs-web rebuilds previews from it), so the
+projection goes into the FTS `body` and `title` columns only. Before → after on the same 1,040
+documents and 57,804 chunks (`reports/a1-before.md` → `a1-after.md`): nav line in the FTS body
+80.6% → 0; vocabulary 138,350 → 115,421 (−16.6%, twice the expected); asset-hash terms 11,486 → 0
+(10 hex terms remain, all quoted document content); `back`/`contents` from 3rd/4th to outside the
+top 100; link-polluted titles 320 → 0; snippet chrome 33% → 0 (6 of 428 snippets carry `<PF1>`-style
+keystroke notation, which is content); index.db 379.9 → 360.5 MB, FTS content + index 172 → 154 MB.
+Paired per question (`a1-paired.md`): no judged section lost from any top 10, one grade-3 section
+gained (`fileman-file-200-new-person`, rank 8); nDCG@10 0.4437 → 0.4530 (4 wins, 4 losses, 22
+ties, 95% CI [−0.002, +0.027]), MRR 0.5426 → 0.5449, recall@10 0.4636 → 0.4747 (1 win, 0 losses);
+patch ids in the top 5 216 → 223 of 256, `file #N` 25 of 30 unchanged. `doctor` GREEN; vdocs-web
+and vdocs-cli gates green; read contract stays 1.8. What the kickoff did not know and the before
+measurement found: the corpus's keystroke notation is mostly Pandoc-escaped (`\<Enter\>` 12,805 vs
+`<Enter>` 1,313) and its placeholders collide with element names only in case (`<A>`, `<P>`,
+`<Code>`), so the whitelist is case-sensitive lowercase and a tag is recognised by its unescaped
+closing `>`; Pandoc's escapes are restored last so `<Enter>` is one surface in index and snippet.
+Residue after five rebuild-and-measure passes: 0 unescaped tags, 18 link targets in `GMRC/constm`
+where the oversized-split's character windows cut a link in two (a chunking matter, not the
+projection's).
 
 **A2. Index the preamble and gate body coverage.**
 `shred_sections` emits a `preamble` section for substantive text before the first retained
@@ -562,7 +582,8 @@ markdown into component files; deleting bronze, silver or history; a reranker mo
 **All five taken on 2026-11-07, as recommended.** The order of work follows §6: A1–A5, then
 B1–B5, each a TDD increment measured per §8 before the next starts.
 Kickoff prompts for A1–A5, each with its before and after measurements, are in `docs/prompts/`
-(`a1-clean-index-text-kickoff.md` … `a5-mcp-input-validation-and-generated-numbers-kickoff.md`).
+(`a2-preamble-and-coverage-gate-kickoff.md` … `a5-mcp-input-validation-and-generated-numbers-kickoff.md`;
+A1's moved to `docs/prompts/historical/` when it landed).
 
 - **D1. Clean projection in the index (A1).** Decided: yes, body.md unchanged. Alternative: strip
   only the nav line (R13 as written). The whitelist approach removes seven times more junk and is
@@ -669,5 +690,5 @@ document's non-table chunks.
 | R10 | identifier-aware parsing | **closed by fix 2** (patch ids 124 → 216 of 256) | — |
 | R11 | failure signal | open | B4 |
 | R12 | one engine behind every front door | **closed by fixes 2 and 3** (shared reader and table; web ranks documents by design) | B1 brings the document unit to the MCP |
-| R13 | index hygiene: indexes, nav chrome, 320 link-polluted titles, 78 low-coverage documents | open; cause of the coverage loss found here (§3.2) | A1, A2, A4; the titles with A1 |
+| R13 | index hygiene: indexes, nav chrome, 320 link-polluted titles, 78 low-coverage documents | nav chrome and the titles **closed by A1** (`ccc184b`); indexes and the coverage loss open (cause found here, §3.2) | A2, A4 |
 | R14 | grow the key: identifier, paraphrase, filtered, negative questions | partly: 6 plain-English questions added by fix 4 | precondition for B4 and C2 |
