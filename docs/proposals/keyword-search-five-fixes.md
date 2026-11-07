@@ -4,8 +4,7 @@
 2026-11-06 when sentence search was dropped (keywords only) · amended
 2026-11-06: plain-English package names made a core part of fix 3, and search-box suggestions
 added as fix 5, both at the operator's direction · fix 1 built in vdocs-web 2026-11-06
-(`926e320`) · Appendices A and B approved by the operator unchanged 2026-11-06 · Appendix C
-drafted for approval · fix 2 built in vdocs (MCP and `vdocs ask`, `9bfc552`) and vdocs-web
+(`926e320`) · Appendices A, B and C approved by the operator unchanged 2026-11-06 · fix 2 built in vdocs (MCP and `vdocs ask`, `9bfc552`) and vdocs-web
 (`9448e4f`), the Go CLI next · fixes 3–5 not built.** Consumer: vdocs-web (fixes 1–3
 and 5). Producer and MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
 **Evidence:** every number comes from a script in `scripts/mcp_review/` (`contract.py`, `fixes.py`,
@@ -277,7 +276,8 @@ capability, complete for every application, not an extra grown one question at a
 - Each of the 24 judged questions gains its keyword form. The drafts are in Appendix A, written by
   the reviewer, who knew the answers; the operator approved them unchanged on 2026-11-06 (D3).
 - Add six plain-English keyword searches of the kind a non-technical searcher types, judged the
-  same way: reviewer drafts with proposed answers in Appendix C, for the operator to approve.
+  same way: reviewer drafts with their answers in Appendix C; the operator approved them unchanged
+  on 2026-11-06.
   Today the right manual reaches the web console's page 1 for 3 of the 6, and the MCP's top 15
   for 1. They
   test the words the manuals don't use ("change password" where the manuals say verify code), so
@@ -346,8 +346,8 @@ not how results are ranked, so the judged questions cannot score them.
 Each step: write the test first, then build, then run `make check`, measure against §4, commit.
 
 1. **Fix 4 and Appendix B:** the keyword forms (Appendix A) and the plain-English package names
-   (Appendix B) were approved unchanged on 2026-11-06. Still to come: the operator approves the six
-   plain-English keyword searches in Appendix C. The golden harness grades the keyword forms.
+   (Appendix B) and the six plain-English keyword searches (Appendix C) were approved unchanged on
+   2026-11-06. Still to come: the golden harness grades the keyword forms.
 2. **Fix 1 (built 2026-11-06, vdocs-web `926e320`):** relevance order and the any-word fallback
    in vdocs-web. This is the largest visible gain and needs no contract change.
 3. **Fix 2:** the reader in vdocs-web, the MCP and the Go CLI (D2), with the shared cases. The MCP
@@ -603,15 +603,16 @@ the latest corpus.
 
 ## Appendix C: plain-English keyword searches
 
-Reviewer drafts for fix 4, for the operator to approve. Each uses a word the manuals avoid:
-password for verify code, jobs for tasks, printer for device, email for mail message.
+Reviewer drafts for fix 4, approved by the operator unchanged on 2026-11-06. Each uses a word the
+manuals avoid: password for verify code, jobs for tasks, printer for device, email for mail
+message.
 - Every judged section was checked present, latest and searchable in index.db. Each was graded by
   reading its passage text: 3 ideal, 2 highly relevant, 1 related. Notes on what was left out are
   in `scripts/mcp_review/plain_questions.py`.
 - "Today" is the web console as built by fix 1 (document rank of the first manual holding a judged
   section, out of the documents matched), and the MCP as it is now (rank of the first judged
   section in its top 15). Source: `reports/mcp-review-plain-questions.json`.
-- Once approved, they join `registries/golden-queries.yaml` with their keyword forms, and fix 3's
+- Next, they join `registries/golden-queries.yaml` with their keyword forms, and fix 3's
   hand-written synonyms are added one search at a time until each passes.
 
 | Keyword search | What it asks | Judged answers (grade) | Today, web | Today, MCP |
