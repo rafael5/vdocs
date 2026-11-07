@@ -1,6 +1,6 @@
 # vdocs end to end: capture, storage, indexing and search — an adversarial review
 
-**Status:** proposal · 2026-11-07 · decisions D1–D5 taken by the operator on 2026-11-07 as recommended (§9) · **A1 built `ccc184b` and adopted 2026-11-07** (`reports/a1-before.md`, `a1-after.md`, `a1-paired.md`); A2–A5 and B1–B5 not built.
+**Status:** proposal · 2026-11-07 · decisions D1–D5 taken by the operator on 2026-11-07 as recommended (§9) · **A1 built `ccc184b` and A2 built `e538111`, both adopted 2026-11-07** (`reports/a1-*.md`, `reports/a2-*.md`); A3–A5 and B1–B5 not built.
 **Corpus measured:** `~/data/vdocs/index.db` · 1,040 documents (615 latest) · 52,093 live sections ·
 57,804 chunks · `corpus_content_hash 5b118189…` · read contract 1.8 · 363 MB. The lake after the
 2026-11-05 PXRM refresh, with keyword-search fixes 1–5 built.
@@ -474,6 +474,30 @@ heading. `normalize` repairs the empty-title heading by joining `# ` with the ne
 chunks, FAIL below 95% unless the document is in a named exception list in `doctor-policy.yaml`,
 and the exception list is printed. Red-prove the gate with a planted document.
 *Expected:* the 78 documents below 95% become visible; the three in §3.2 index fully.
+**Built `e538111`, measured 2026-11-07, adopted.** With three findings that changed the plan
+(`reports/a2-before.md`, `a2-after.md`, `a2-paired.md`). First, the "78" above was a bag-of-words
+instrument (a body word counted as covered when it occurred anywhere in the document's index,
+table chunks and titles included); the strict measure the gate uses — body word tokens in sequence
+against the non-table chunks — gives 150 before any correction, 70 once the generated `## Contents`
+list is excluded, and the gate also excludes normalize's identity header (a 148-token change page
+read 80% covered with every word of its text indexed). A coverage gate must subtract the pipeline's
+own text. Second, the kickoff's join rule would have promoted 63 paragraphs to headings: the repair
+joins only a short title line (at most 12 words, a leading Word bookmark span kept), otherwise drops
+the bare `# `; and it runs *before* `recover_headings`, because the empty heading was load-bearing
+there and in `recover_headings_from_toc` — repairing it afterwards cost `RMPR/rmpr_3_nppdum` its one
+heading, which `validate`'s count-drop tripwire (`refs_sidecars` 1,005 → 1,004) caught and blocked.
+Third, the residue has one cause: converter paragraphs turned into headings with nothing under them
+(`# The Laboratory Planning and Implementation Guide … provides detailed instructions…`), which
+`is_searchable` rightly keeps off the surface as bare headings and wrongly loses as text — **130
+such sections in 31 latest documents**; a "sentence heading carries its own text" chunking rule is
+the follow-up, and `LR/labbbumf`, `EDIS/edp_2_1_1_ug` and `PXRM/ahobpr_registrantportal_usermanual_v3`
+are named exceptions with that reason until it lands. Results: latest documents below 95% body
+coverage 70 → 3 (the exceptions), below 99% 147 → 72; the three hand-checked documents all at or
+above 95%; empty-title headings 1,907 → 3 (inside what the shared fence scan reads as code);
+195 `preamble` sections; the 30-question harness identical on every question, no preamble in any
+top 10; `doctor` GREEN with the exception list printed; vdocs-web and vdocs-cli gates green; the Go
+CLI resolves `…/preamble` sections. **D2: the floor stays at 95** — two of the three known causes
+are fixed, the sentence-heading cause is not, and 72 documents sit between 95 and 99%.
 
 **A3. Section-level, compact, structured MCP results, and a read tool.**
 Collapse hits to one slot per section; send document metadata once per document; drop the
@@ -582,14 +606,15 @@ markdown into component files; deleting bronze, silver or history; a reranker mo
 **All five taken on 2026-11-07, as recommended.** The order of work follows §6: A1–A5, then
 B1–B5, each a TDD increment measured per §8 before the next starts.
 Kickoff prompts for A1–A5, each with its before and after measurements, are in `docs/prompts/`
-(`a2-preamble-and-coverage-gate-kickoff.md` … `a5-mcp-input-validation-and-generated-numbers-kickoff.md`;
-A1's moved to `docs/prompts/historical/` when it landed).
+(`a3-mcp-section-results-and-read-tool-kickoff.md` … `a5-mcp-input-validation-and-generated-numbers-kickoff.md`;
+A1's and A2's moved to `docs/prompts/historical/` when they landed).
 
 - **D1. Clean projection in the index (A1).** Decided: yes, body.md unchanged. Alternative: strip
   only the nav line (R13 as written). The whitelist approach removes seven times more junk and is
   the same amount of code.
 - **D2. Coverage gate floor (A2).** Decided: 95% with a printed exception list, tightened to 99%
-  once the three known causes are fixed.
+  once the three known causes are fixed. *2026-11-07, A2 built:* stays 95; the empty heading and
+  the preamble are fixed, the bodiless sentence heading is not (130 sections, 31 documents).
 - **D3. Default unit for the MCP search tool (B1).** Decided: keep sections as the default and
   add documents as an option, until the harness grades both units.
 - **D4. Which synonym classes to generate (B2).** Decided: file numbers and option names, each
@@ -690,5 +715,5 @@ document's non-table chunks.
 | R10 | identifier-aware parsing | **closed by fix 2** (patch ids 124 → 216 of 256) | — |
 | R11 | failure signal | open | B4 |
 | R12 | one engine behind every front door | **closed by fixes 2 and 3** (shared reader and table; web ranks documents by design) | B1 brings the document unit to the MCP |
-| R13 | index hygiene: indexes, nav chrome, 320 link-polluted titles, 78 low-coverage documents | nav chrome and the titles **closed by A1** (`ccc184b`); indexes and the coverage loss open (cause found here, §3.2) | A2, A4 |
+| R13 | index hygiene: indexes, nav chrome, 320 link-polluted titles, 78 low-coverage documents | nav chrome and the titles **closed by A1** (`ccc184b`); the coverage loss **closed by A2** (`e538111`: 70 → 3 named exceptions, gated); indexes open | A4 |
 | R14 | grow the key: identifier, paraphrase, filtered, negative questions | partly: 6 plain-English questions added by fix 4 | precondition for B4 and C2 |
