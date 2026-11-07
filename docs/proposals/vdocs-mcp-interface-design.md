@@ -151,7 +151,7 @@ Raising k beyond 15 is past the knee measured earlier. Embeddings remain ruled o
 - The MCP server (`src/vdocs/server/mcp.py`).
 - The engine it shares with `vdocs ask --json` (`server/search.py`, `server/search_pure.py`).
 - The Go `vdocs` binary (`~/projects/vdocs-cli`, binary built 2026-07-24).
-- The vdocs-web JSON API (`~/projects/vdocs-web/internal/api`, the running instance on `:8765`).
+- The vdocs-web JSON API (`~/vista-forge/vdocs-web/internal/api`, the running instance on `:8765`).
 - The published read contract (`contracts/read/v1.json`).
 
 Pipeline stages are in scope only where they limit what search can find (§4.7).
@@ -774,7 +774,7 @@ has no identifier-only questions, so a whole query class can regress unseen.
 - `docs/proposals/vdocs-quality-synonym-layer/` §10 (why the expansion map stays one entry);
 - `docs/reference/pipeline-adversarial-audit.md`;
 - `contracts/read/v1.json`;
-- `~/projects/vdocs-web/internal/index/` (the web query core).
+- `~/vista-forge/vdocs-web/internal/index/` (the web query core).
 
 ## Appendix A — reproducing the measurements
 
