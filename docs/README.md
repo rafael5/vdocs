@@ -28,7 +28,14 @@ Documentation here is classified by **lifecycle state, not topic**:
 
 ## Current state (2026-07-04)
 
-- **Proposed (2026-11-06), decisions taken; fix 1 built in vdocs-web, fixes 2–5 not built:** [`proposals/keyword-search-five-fixes.md`](proposals/keyword-search-five-fixes.md)
+- **Proposed (2026-11-07), for review, nothing built:** [`proposals/end-to-end-search-architecture-review.md`](proposals/end-to-end-search-architecture-review.md)
+  — adversarial end-to-end review of capture, storage, indexing and search: 10% of indexed tokens
+  are markup, text before the first heading is never indexed, 6.3% of chunks are template copies,
+  13 near-duplicate latest-document pairs, the text stored twice with no `ANALYZE`; ranked A/B/C
+  recommendations (clean-text projection, preamble + coverage gate, section-collapsed MCP results
+  and a read tool, database hygiene, a document-unit option, generated synonym classes) and the
+  preconditions for a `sqlite-vec` trial. Re-ranks the open items of the MCP review (Appendix B).
+- **Proposed (2026-11-06), decisions taken; all five fixes built (2026-11-07):** [`proposals/keyword-search-five-fixes.md`](proposals/keyword-search-five-fixes.md)
   — good-enough keyword search: the web console sorts by relevance, scoring each manual by its
   three best passages (right manual on page 1 for 12 → 24 of 24 keyword searches), one query reader obeys quotes, AND/OR/NOT and identifiers in
   every front door, a synonym list whose core is plain-English package names ("blood bank" finds
