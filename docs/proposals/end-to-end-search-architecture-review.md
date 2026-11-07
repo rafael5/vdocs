@@ -1,6 +1,6 @@
 # vdocs end to end: capture, storage, indexing and search — an adversarial review
 
-**Status:** proposal for review · 2026-11-07 · nothing in §6 is built.
+**Status:** proposal · 2026-11-07 · decisions D1–D5 taken by the operator on 2026-11-07 as recommended (§9) · nothing in §6 is built.
 **Corpus measured:** `~/data/vdocs/index.db` · 1,040 documents (615 latest) · 52,093 live sections ·
 57,804 chunks · `corpus_content_hash 5b118189…` · read contract 1.8 · 363 MB. The lake after the
 2026-11-05 PXRM refresh, with keyword-search fixes 1–5 built.
@@ -553,16 +553,19 @@ markdown into component files; deleting bronze, silver or history; a reranker mo
 
 ## 9. Decisions for the operator
 
-- **D1. Clean projection in the index (A1).** Recommended: yes, body.md unchanged. Alternative: strip
+**All five taken on 2026-11-07, as recommended.** The order of work follows §6: A1–A5, then
+B1–B5, each a TDD increment measured per §8 before the next starts.
+
+- **D1. Clean projection in the index (A1).** Decided: yes, body.md unchanged. Alternative: strip
   only the nav line (R13 as written). The whitelist approach removes seven times more junk and is
   the same amount of code.
-- **D2. Coverage gate floor (A2).** Recommended: 95% with a printed exception list, tightened to 99%
+- **D2. Coverage gate floor (A2).** Decided: 95% with a printed exception list, tightened to 99%
   once the three known causes are fixed.
-- **D3. Default unit for the MCP search tool (B1).** Recommended: keep sections as the default and
+- **D3. Default unit for the MCP search tool (B1).** Decided: keep sections as the default and
   add documents as an option, until the harness grades both units.
-- **D4. Which synonym classes to generate (B2).** Recommended: file numbers and option names, each
+- **D4. Which synonym classes to generate (B2).** Decided: file numbers and option names, each
   measured alone. Routines and globals are already exact-match identifiers and need none.
-- **D5. Whether to open a `sqlite-vec` trial (C2).** Recommended: not before B4 and R14 exist.
+- **D5. Whether to open a `sqlite-vec` trial (C2).** Decided: not before B4 and R14 exist.
 
 ## 10. References
 
