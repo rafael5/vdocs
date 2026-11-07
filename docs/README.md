@@ -28,7 +28,7 @@ Documentation here is classified by **lifecycle state, not topic**:
 
 ## Current state (2026-07-04)
 
-- **Proposed (2026-11-07), decisions D1–D5 taken as recommended, nothing built:** [`proposals/end-to-end-search-architecture-review.md`](proposals/end-to-end-search-architecture-review.md)
+- **Proposed (2026-11-07), decisions D1–D5 taken as recommended; A1 built and adopted 2026-11-07 (`reports/a1-before.md` / `a1-after.md` / `a1-paired.md`), A2–A5 open:** [`proposals/end-to-end-search-architecture-review.md`](proposals/end-to-end-search-architecture-review.md)
   — adversarial end-to-end review of capture, storage, indexing and search: 10% of indexed tokens
   are markup, text before the first heading is never indexed, 6.3% of chunks are template copies,
   13 near-duplicate latest-document pairs, the text stored twice with no `ANALYZE`; ranked A/B/C

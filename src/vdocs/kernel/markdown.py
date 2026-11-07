@@ -93,6 +93,7 @@ __all__ = [
     "FENCE_RE",
     "MULTI_BLANK",
     "ARTIFACT_RE",
+    "NAV_LINK_RE",
     "TAG_RE",
     "REVISION_HEADING_TEXTS",
     "LEGACY_TOC_TITLES",
@@ -120,6 +121,9 @@ MIN_SUBSTANTIVE_TOKENS = 8
 # referent); the round-trip back-link is pure nav furniture; a link/image reduces to its label/alt.
 _REFERENT_RE = re.compile(r"\]\([^)]*(?:_shared/|tables/|assets/|\.csv)[^)]*\)")
 _NAV_RE = re.compile(r"↑\s*Back to Contents", re.IGNORECASE)
+# The whole round-trip nav link `normalize` writes under every heading, for a caller that removes
+# it rather than merely recognising the line (`index`'s clean FTS projection, review A1).
+NAV_LINK_RE = re.compile(r"\[↑\s*Back to Contents\]\(#contents\)", re.IGNORECASE)
 _LINK_LABEL_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
 _WORD_RE = re.compile(r"\w+")
 

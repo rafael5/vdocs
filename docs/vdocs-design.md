@@ -1888,6 +1888,20 @@ competing near-duplicate hits and the agent gets conflicting, stale answers. A *
 not enough — stale chunks left in the ANN index still distort the neighborhood; they must be out of
 the index (ADR-021).
 
+**Index a clean projection, read the markdown.** (End-to-end review A1, decision D1, built
+2026-11-07.) The FTS `body` column is not the chunk's markdown but `index_pure.index_text` of it:
+the `[↑ Back to Contents](#contents)` nav line, extracted-table markers, HTML comments and fence
+lines dropped; whitelisted HTML tags removed with their inner text kept (`<img>` → its alt text);
+links and images reduced to their labels; heading marks and emphasis delimiters gone; whitespace
+collapsed. Keystroke notation (`<Enter>`, Pandoc-escaped `\<RET\>`) and placeholders that differ
+from an element name only in case (`<A>`, `<P>`) are content and stay as written — the whitelist is
+case-sensitive lowercase. Section titles are their link labels (320 live titles were legacy TOC
+entries `[Preface [ii](#preface)](#preface)`); the slug, hence the section id, still comes from the
+raw heading. `chunks.text` and the gold `body.md` stay markdown: vdocs-web rebuilds previews and
+section text from `v_chunks.text`. Measured on the 2026-11-06 index: 10.1% of body tokens were
+markup, 11,486 vocabulary terms were asset hashes, `back`/`contents` ranked 3rd/4th by document
+frequency, and a third of golden-query snippets carried the nav line (`reports/a1-before.md`).
+
 **Why removing redundant text improves retrieval — concretely.** Three distinct mechanisms, each
 countered by a specific part of the design:
 1. **Embedding dilution.** A chunk that mixes boilerplate with real content yields a vector blended

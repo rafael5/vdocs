@@ -212,7 +212,11 @@ class IndexStage(Stage):
     # contract → v1.7 (additive MINOR).
     # v18 (keyword-search proposal, fix 3): index.db gained the EMPTY search_synonyms shell +
     # v_search_synonyms, which `merge` fills; read contract → v1.8 (additive MINOR).
-    contract_ver = 18
+    # v19 (end-to-end review A1, decision D1): the FTS `body` column is the clean projection of the
+    # chunk (`index_pure.index_text` — nav line, tags, link targets, asset hashes gone; keystroke
+    # notation kept) and section titles are their link labels; `chunks.text` stays markdown. No
+    # view or column changed, so the read contract stays 1.8 (a data correction, see its CHANGELOG).
+    contract_ver = 19
     # ^ v15: `searchable` is the retrieval predicate, not a `kind` alias (P6.1b)
     # ^ v14: vocab-validated option recognizer (un-quarantined)
 
@@ -255,7 +259,7 @@ class IndexStage(Stage):
         sections: list[tuple] = []  # one row per heading — the anchor/structure map
         chunks: list[tuple] = []  # (chunk_id, section_id, doc_key, part, text) — search units
         # fts cols: (chunk_id, section_id, doc_key, title, doc_title, section_path, body)
-        fts: list[tuple] = []
+        fts: list[tuple] = []  # body = ip.index_text(chunk text): the clean projection (A1)
         ent_count: Counter = Counter()  # (entity_id, type, canonical) → mentions
         mentions: list[tuple] = []
 
@@ -340,7 +344,7 @@ class IndexStage(Stage):
                                 unit.title,
                                 fts_title,
                                 unit.section_path,
-                                c.text,
+                                ip.index_text(c.text),
                             )
                         )
                 # B3b (§8.4): re-introduce each extracted `tables/*.csv` as a searchable chunk
@@ -358,7 +362,7 @@ class IndexStage(Stage):
                             chunks.append((tid, s.section_id, doc_key, i, text))
                             fts.append(
                                 (tid, s.section_id, doc_key, caption, fts_title,
-                                 s.section_path, text)
+                                 s.section_path, ip.index_text(text))
                             )  # fmt: skip
 
         def build(conn: sqlite3.Connection) -> None:

@@ -488,3 +488,213 @@ def test_last_updated_falls_back_to_the_title_page():
 def test_a_member_with_no_date_is_undated():
     assert ip.last_updated({"official_date": "", "revisions": [{"date": ""}]}) == ("", "")
     assert ip.last_updated({"official_date": None}) == ("", "")
+
+
+# --- A1: the clean index projection (end-to-end review §3.1 / §6 A1, decision D1) ---------------
+# `chunks.text` stays markdown (vdocs-web rebuilds previews from it); only the FTS `body` and
+# `title` columns receive the projection. Every rule has its own case.
+
+_HEX = "423150d509e08571d51a105b88535c889463cae606df6229e815ece5d077df43"
+
+
+def test_index_text_drops_the_nav_line_and_table_marker():
+    src = (
+        "## Purge Files\n\n[↑ Back to Contents](#contents)\n\nEach installation adds one entry.\n\n"
+        "_[Table 3 (extracted to CSV)](tables/table-03.csv)_\n"
+    )
+    assert ip.index_text(src) == "Purge Files Each installation adds one entry."
+
+
+def test_index_text_strips_whitelisted_html_tags_and_keeps_inner_text():
+    src = (
+        '<p>Use <strong>DIC</strong> for <u>lookups</u>.</p><span id="_Toc123"></span>'
+        '<blockquote><p><span class="mark">Note</span></p></blockquote>'
+    )
+    assert ip.index_text(src) == "Use DIC for lookups. Note"
+
+
+def test_index_text_keeps_html_table_cell_text_and_drops_the_tags():
+    src = (
+        '<table>\n<colgroup>\n<col style="width: 20%" />\n</colgroup>\n<thead>\n'
+        '<tr class="header">\n<th>Field</th>\n<th>Meaning</th>\n</tr>\n</thead>\n<tbody>\n'
+        '<tr class="odd">\n<td style="text-align: left;">DFN</td>\n<td>patient ien</td>\n</tr>\n'
+        "</tbody>\n</table>"
+    )
+    out = ip.index_text(src)
+    assert out == "Field Meaning DFN patient ien"
+    assert "width" not in out and "odd" not in out
+
+
+def test_index_text_reduces_img_to_its_alt_text_and_drops_the_asset_hash():
+    src = f'<img src="{_HEX}.png" style="width:6.79in;height:8in" alt="Audiogram data flow" />'
+    assert ip.index_text(src) == "Audiogram data flow"
+    assert ip.index_text(f'<img src="{_HEX}.png" style="width:6in" />') == ""
+    assert ip.index_text(f"![Flow diagram](assets/{_HEX}.png)") == "Flow diagram"
+
+
+def test_index_text_strips_pandoc_html_headings_and_footnote_backlinks():
+    src = (
+        '<h3 id="a-needed-rpc-is-not-available.">A needed RPC is not available.</h3>'
+        '<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a><hr />'
+    )
+    assert ip.index_text(src) == "A needed RPC is not available. ↩︎"
+
+
+@pytest.mark.parametrize(
+    "token",
+    ["<Enter>", "<RET>", "<Tab>", "<CR>", "<PF1>", "<ServerName>", "<A>", "<P>", "<Code>",
+     "<name of file>", "<http://x.gov>", "<Logger name=\"x\"/>"],
+)  # fmt: skip
+def test_index_text_leaves_keystroke_and_placeholder_notation_as_written(token):
+    # the corpus writes keystrokes as <Enter>/<RET>/<Tab>; placeholders collide with element names
+    # only in CASE (<A>, <P>, <Code>) — the whitelist is case-sensitive lowercase, so a tag strip
+    # never deletes them (kickoff step 4).
+    assert ip.index_text(f"press {token} to continue") == f"press {token} to continue"
+
+
+@pytest.mark.parametrize(
+    ("escaped", "plain"),
+    [("\\<Enter\\>", "<Enter>"), ("\\<RET\\>", "<RET>"), ("\\<A\\>", "<A>"),
+     ("<Code\\>", "<Code>"), ("</Code\\>", "</Code>"), ("<B\\>", "<B>"),
+     ("\\$\\$GET1^DIQ", "$$GET1^DIQ"), ("\\| a \\| b \\|", "| a | b |"), ("2\\. step", "2. step"),
+     ("\\*not emphasis\\*", "*not emphasis*"), ("\\\\server\\share", "\\server\\share"),
+     ("\\<!-- xml comment --\\>", "<!-- xml comment -->")],
+)  # fmt: skip
+def test_index_text_restores_pandoc_backslash_escapes_last(escaped, plain):
+    # Pandoc escapes literal markdown punctuation (12,805 `\<Enter\>` vs 1,313 bare `<Enter>` in
+    # the corpus; `\$\$GET1^DIQ`, `\|` table pipes). The escape is markdown syntax, the character
+    # is content: it is restored as the LAST step, so a restored `*` or `<` is never re-read as
+    # emphasis or a tag — `\<p\>` written about HTML stays `<p>` in the index text.
+    assert ip.index_text(f"press {escaped} now") == f"press {plain} now"
+
+
+def test_index_text_strips_a_tag_nested_inside_placeholder_notation():
+    # an XML example escaped by Pandoc with a real <span class="mark"> highlight inside it: the
+    # attribute scan stops at `<`, so the inner tag is seen (and stripped) and the outer `<Logger`
+    # placeholder stays as written
+    src = '\\<Logger name="<span class="mark">gov.va.med</span>" level="info"/\\>'
+    assert ip.index_text(src) == '<Logger name="gov.va.med" level="info"/>'
+    assert ip.index_text('\\<Back Button <img src="ab12.png" alt="back" />\\>') == (
+        "<Back Button back >"
+    )
+
+
+def test_index_text_reduces_links_whose_labels_carry_escapes_or_footnote_refs():
+    assert ip.index_text("[ASCD Compile \\[SDSC SITE PARAMETER\\] Option](#ascd-compile)") == (
+        "ASCD Compile [SDSC SITE PARAMETER] Option"
+    )
+    assert ip.index_text("- [M routines[^16]](#m-routines16) - [Delphi[^17]](#delphi17)") == (
+        "- M routines[^16] - Delphi[^17]"
+    )
+    assert (
+        ip.index_text(
+            "[[The XXXXXXXX program\\[option name\\] could not be accessed. 2](#the-x)](#the-x)"
+        )
+        == "The XXXXXXXX program[option name] could not be accessed. 2"
+    )
+
+
+def test_index_text_reduces_a_link_whose_label_ends_in_a_lone_backslash():
+    # 89 live TOC links end their label with a bare `\` (the heading text ended in one and Pandoc
+    # did not double it): `\]` there is a literal backslash and the link's end, not an escape
+    assert ip.index_text("- [MSH – Field Separator \\/\\/\\](#msh--field-separator-) - x") == (
+        "- MSH – Field Separator //\\ - x"
+    )
+    assert ip.index_text("[Tab Symbol \\](#tab-symbol-)") == "Tab Symbol \\"
+
+
+def test_index_text_reduces_an_img_whose_alt_text_carries_keystroke_notation():
+    # a FileMan figure's alt text quotes the prompt dialogue, `<Enter>` included (675 characters
+    # in DI/fm22_2um1); the attribute scan must step over a nested `<…>` to find the tag's end
+    src = '<img src="1509f3.jpeg" style="width:5in" alt="NAME: FMUSER,ONE// <Enter> accepts it" />'
+    assert ip.index_text(src) == "NAME: FMUSER,ONE// <Enter> accepts it"
+
+
+def test_index_text_strips_a_tag_that_follows_a_literal_backslash():
+    # content ending in a backslash right before a tag — HL7's `\F\</p>`, a path `\image\</p>`
+    # (12 live cases) — is a real tag's; only a tag ending in `\>` is Pandoc's escaped literal
+    assert ip.index_text("<p>DOS c:\\scratch\\</p><p>UNIX /home</p>") == (
+        "DOS c:\\scratch\\ UNIX /home"
+    )
+    assert ip.index_text("<li><p>\\F\\</p></li>") == "\\F\\"
+    assert ip.index_text("<p>\\\\servername\\image\\</p>") == "\\servername\\image\\"
+    assert ip.index_text("a \\<p\\> b \\</p\\>") == "a <p> b </p>"  # escaped literals stay text
+
+
+def test_index_text_never_reads_escaped_brackets_as_a_link():
+    # a screen capture: `\[ENTER\](JUN 17, 1996@09:00)` is a keystroke followed by the value in
+    # parentheses — content, not a link whose target may be dropped
+    src = "Check out date: JUN 17,1996@09:00// \\[ENTER\\](JUN 17, 1996@09:00) Patient's Service"
+    assert ip.index_text(src) == (
+        "Check out date: JUN 17,1996@09:00// [ENTER](JUN 17, 1996@09:00) Patient's Service"
+    )
+
+
+def test_index_text_reduces_links_to_their_labels():
+    src = "See [the Finder API](#finder-api) and [Table 2](tables/table-02.csv) for [DIC](dic.md)."
+    assert ip.index_text(src) == "See the Finder API and Table 2 for DIC."
+
+
+def test_index_text_drops_legacy_toc_page_numbers_with_their_targets():
+    # the 320 polluted titles have this shape; the inner link is a page number, not label text
+    assert ip.index_text("[Scope of Manual [ii](#scope-of-manual)](#scope-of-manual)") == (
+        "Scope of Manual"
+    )
+    assert ip.index_text("[Chapter [7-9](#ch)](#ch) and [Intro [vii](#i)](#i)") == (
+        "Chapter and Intro"
+    )
+    # a nested link that is not a page number keeps both labels
+    assert ip.index_text("[Outer [inner](#a)](#b)") == "Outer inner"
+
+
+def test_index_text_drops_heading_emphasis_and_code_marks_but_not_intra_word_operators():
+    src = "## **Bold** _title_\n\nUse `$$GET1^DIQ` with *care*; S X=A_B*C and **Note:** done."
+    assert ip.index_text(src) == "Bold title Use $$GET1^DIQ with care; S X=A_B*C and Note: done."
+
+
+def test_index_text_keeps_fenced_code_content_and_drops_the_fence_lines():
+    src = 'Example:\n\n```text\nS DIC="^VA(200,"\nD ^DIC\n```\n\ndone'
+    assert ip.index_text(src) == 'Example: S DIC="^VA(200," D ^DIC done'
+    assert ip.index_text("~~~\nI X<Y D ^XUP\n~~~") == "I X<Y D ^XUP"
+
+
+def test_index_text_drops_html_comments_and_collapses_whitespace():
+    assert ip.index_text("a <!-- hidden\nnote --> b\n\n\n   c\t d") == "a b c d"
+    assert ip.index_text("") == ""
+    assert ip.index_text("   \n\n ") == ""
+
+
+def test_index_text_on_a_table_chunk_only_collapses_whitespace():
+    plain = ip.table_chunk_text("Table 1", [["Field", "Meaning"], ["DFN", "patient ien"]])
+    assert ip.index_text(plain) == "Table 1 Field | Meaning DFN | patient ien"
+
+
+def test_link_labels_cleans_a_title_without_touching_other_markup():
+    assert ip.link_labels("[Preface [ii](#preface)](#preface)") == "Preface"
+    # the one live title whose label carries escaped brackets (ACKQ/ackq3_0_p12tm); escapes are
+    # left in a title as they are today — only the link rule applies to titles
+    assert (
+        ip.link_labels(
+            "[The XXXXXXXX program\\[option name\\] could not be accessed. 2](#the-xxxxxxxx)"
+        )
+        == "The XXXXXXXX program\\[option name\\] could not be accessed. 2"
+    )
+    assert ip.link_labels("FP Food Preference \\[FHSELX\\][1](#_bookmark6)") == (
+        "FP Food Preference \\[FHSELX\\]1"
+    )
+    assert ip.link_labels("**Bold** plain <Enter>") == "**Bold** plain <Enter>"
+
+
+def test_shred_cleans_the_title_but_keeps_the_slug_from_the_raw_heading():
+    # the slug (hence section_id) is what refs.yaml and every consumer cite — it must not move;
+    # the stored title and the section_path built from titles become the label text (kickoff step 4)
+    body = (
+        "# Doc\n\n## [Preface [ii](#preface)](#preface)\n\nintro text here\n\n"
+        "### Child\n\nchild text\n\n## [](#empty)\n\nkept raw when the label is empty\n"
+    )
+    secs = {s.slug: s for s in ip.shred_sections(body, "ACKQ/ackq3_0_p12tm")}
+    pre = secs["preface-iiprefacepreface"]
+    assert pre.section_id == "ACKQ/ackq3_0_p12tm/preface-iiprefacepreface"
+    assert pre.title == "Preface"
+    assert secs["child"].section_path == "Doc > Preface"
+    assert secs["empty"].title == "[](#empty)"

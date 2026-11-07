@@ -603,7 +603,7 @@
         },
         "title": {
           "indexed": true,
-          "desc": "chunk unit (section) title"
+          "desc": "chunk unit (section) title, as its link label"
         },
         "doc_title": {
           "indexed": true,
@@ -615,7 +615,7 @@
         },
         "body": {
           "indexed": true,
-          "desc": "chunk body text"
+          "desc": "chunk body as clean index text (markup, nav line and link targets removed; v_chunks.text keeps the markdown)"
         }
       }
     }

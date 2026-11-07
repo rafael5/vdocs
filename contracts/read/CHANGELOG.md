@@ -6,6 +6,17 @@ Semver for the **read** contract (`read_schema_version`), the consumer-facing in
 replacement additively, keep the old as an alias for one release, then remove + MAJOR bump. See
 [ADR-0001](../../docs/adr/0001-read-contract-and-drift-prevention.md).
 
+## v1.8 — data correction, 2026-11-07 (no version change)
+
+The `chunks_fts` `body` column now holds the **clean projection** of the chunk
+(`index_pure.index_text`): the nav line, HTML tags, link targets and `<img>` asset hashes are gone,
+inner text, alt text, link labels and keystroke notation (`<Enter>`) stay. `chunks_fts.title` and
+`v_doc_sections.title` / `section_path` carry the heading's link label instead of a legacy TOC
+entry (`[Preface [ii](#preface)](#preface)` → `Preface`; 320 live titles, 10 documents). `v_chunks.text`
+is unchanged markdown. No view, column or meaning changed — `body` was always "the text of the
+chunk" and `title` "the heading text" — so the version stays 1.8; `index` `contract_ver` 18→19
+rebuilds it. End-to-end search review A1, decision D1 (`docs/proposals/end-to-end-search-architecture-review.md`).
+
 ## v1.8 — 2026-11-06
 
 Additive (backward-compatible) — the search synonym table (keyword-search proposal, fix 3,

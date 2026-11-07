@@ -686,3 +686,36 @@ def test_a_listed_refiling_is_labelled_in_v_inventory(ctx):
     assert _q(ctx, "SELECT doc_id, refiled_from FROM v_inventory WHERE refiled_from <> ''") == [
         (inventory_id, gold_id)
     ]
+
+
+def test_fts_body_and_title_carry_the_clean_projection_while_chunks_text_stays_markdown(ctx):
+    # A1 (end-to-end review §3.1, decision D1): the FTS `body` is the clean projection of the chunk
+    # — nav line, tags and link targets gone, keystroke notation kept — while `chunks.text` stays
+    # the markdown vdocs-web rebuilds previews from. The `title` column (and doc_sections.title)
+    # becomes the link label; the slug, hence the section_id, still comes from the raw heading.
+    _seed(ctx)
+    body = (
+        "# Doc\n\n## [Preface [ii](#preface)](#preface)\n\n[↑ Back to Contents](#contents)\n\n"
+        '<p>Press <strong>\\<Enter\\></strong> at the <u>prompt</u>.</p>\n\n<img src="'
+        + "a" * 64
+        + '.png" alt="Login screen" />\n'
+    )
+    _seed_bundle(ctx, "CPRS", "or_3_566_ig", "OR*3.0*566", body)
+    _bless(ctx, "normalize", TEXT_NORMALIZED)
+    (result,) = Orchestrator([IndexStage()]).run(ctx)
+    assert result.status == "ok"
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        sid = "CPRS/or_3_566_ig/preface-iiprefacepreface"
+        (text,) = conn.execute("SELECT text FROM chunks WHERE chunk_id = ?", (sid,)).fetchone()
+        fts_title, fts_body = conn.execute(
+            "SELECT title, body FROM chunks_fts WHERE chunk_id = ?", (sid,)
+        ).fetchone()
+        (title,) = conn.execute(
+            "SELECT title FROM doc_sections WHERE section_id = ?", (sid,)
+        ).fetchone()
+    finally:
+        conn.close()
+    assert "<p>" in text and "[↑ Back to Contents](#contents)" in text  # markdown, unchanged
+    assert fts_body == "Preface Press <Enter> at the prompt. Login screen"
+    assert title == "Preface" and fts_title == "Preface"

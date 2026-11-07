@@ -15,6 +15,7 @@ from dataclasses import dataclass
 
 from vdocs.kernel.markdown import (
     FENCE_RE,
+    NAV_LINK_RE,
     classify_section,
     is_searchable,
     iter_headings,
@@ -279,6 +280,131 @@ def table_chunk_texts(
     return [w for w in windows if w.strip()]
 
 
+# --- A1: the clean index projection (end-to-end review §3.1 / §6 A1, decision D1) ---------------
+# The FTS `body` column used to be the section's markdown verbatim, and a tenth of its tokens were
+# markup: HTML tags (7%), `<img>` asset hashes (2.3%, 11,486 vocabulary terms), link targets, the
+# `[↑ Back to Contents](#contents)` nav line under 80% of chunks (`back`/`contents` were the 3rd and
+# 4th most frequent terms in the corpus). `index_text` turns a chunk's markdown into index text;
+# `chunks.text` and the gold `body.md` stay markdown (vdocs-web rebuilds previews from them).
+#
+# The one trap, measured 2026-11-07 (reports/a1-before.md): the corpus writes keystrokes as
+# `<Enter>`, `<RET>`, `<Tab>` — 14,000+ of them, mostly Pandoc-escaped as `\<Enter\>` — and
+# placeholders like `<A>`, `<P>`, `<Code\>` that differ from an element name only in case. So a tag
+# is recognised only by shape AND a case-sensitive lowercase whitelist (Pandoc emits lowercase);
+# anything else in angle brackets is content and is left exactly as written.
+
+# HTML element names Pandoc emits into the corpus (kickoff whitelist + the ones measured present:
+# h1–h6, mark, caption, hr, aside, …). Lowercase, matched case-sensitively.
+HTML_ELEMENTS = frozenset(
+    "p span u strong em b i br blockquote li ul ol table thead tbody tfoot tr td th col colgroup "
+    "caption div a sup sub code pre h1 h2 h3 h4 h5 h6 mark hr aside dl dt dd kbd s del ins small "
+    "cite q abbr figure figcaption section header footer nav article details summary".split()
+)
+# A tag-shaped token: `<`, optional `/`, a name, then whitespace, `/` or `>` (so `\<Enter\>`,
+# `<http://…>` and `<name of file>` never have the shape), the attributes, and a `>` that is NOT
+# `\>`. The closing side decides what is escaped: Pandoc writes a literal tag as `\<p\>` /
+# `\</Console\>`, always with `\>`, while content that ends in a bare backslash right before a
+# real tag — HL7's `\F\</p>`, a path `\image\</p>` — is written with a plain `>`, so a rule on
+# the opening backslash would misread 12 live tags as text. The attributes may hold one nested
+# `<…>` — a FileMan figure's alt text quotes its prompt dialogue, `<Enter>` included — and a
+# non-whitelisted match has its inside processed again, so a real tag nested inside placeholder
+# notation is still seen on its own (an escaped placeholder, VistALink's XML
+# `\<Logger name="<span class="mark">…</span>"/\>`, ends in `\>`, is skipped as a whole, and its
+# inner tags are found directly).
+_TAG_SHAPE_RE = re.compile(r"<(/?)([A-Za-z][A-Za-z0-9]*)(?=[\s/>])((?:[^<>]|<[^<>]*>)*?)(?<!\\)>")
+_ALT_RE = re.compile(r"""\balt=(?:"([^"]*)"|'([^']*)')""")
+_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+_FENCE_LINE_RE = re.compile(r"^[ \t]*(?:```|~~~)[^\n]*$", re.MULTILINE)
+# A link label: anything but brackets, with Pandoc's escaped brackets `\[SDSC SITE PARAMETER\]`
+# (1,496 live links) and footnote references `[^16]` (85) allowed inside. An escaped `\[` never
+# opens a link and an escaped `\]` never closes one — `\[ENTER\](JUN 17, 1996@09:00)` in a screen
+# capture is a keystroke and a value, and the value must not be dropped as a target. The one
+# exception is a lone backslash right before `](`: 89 live TOC links end their label with the
+# heading's own `\` (`[MSH – Field Separator \/\/\](#…)`), which Pandoc did not double.
+_LABEL = r"((?:[^\[\]\\]|\\(?=\]\()|\\.|\[\^\w+\])*?)"
+# A legacy TOC entry `[Title [ii](#a)](#a)`: the inner link is a page number (integer, roman or
+# chapter-dash — the `LEGACY_TOC_ENTRY_RE` page class), not label text, so it goes with its target.
+_TOC_PAGE_LINK_RE = re.compile(
+    r"(?<!\\)\[" + _LABEL + r"\s*\[[0-9ivxlcdmIVXLCDM\-]+\]\(#[^)]*\)\]\(#[^)]*\)"
+)
+# The innermost markdown link or image → its label / alt text (applied until none is left).
+_LINK_RE = re.compile(r"(?<!\\)!?\[" + _LABEL + r"\]\([^)]*\)")
+# Pandoc escapes literal markdown punctuation (`\<Enter\>` 12,805 times vs 1,313 bare;
+# `\$\$GET1^DIQ`, `\|` table pipes, `\[FHMGR\]`). The escape is markdown syntax, the character is
+# content: it is restored as the LAST step, so a restored `*`, `[` or `<` is never re-read as
+# markup.
+_UNESCAPE_RE = re.compile(r"\\([!-/:-@\[-`{-~])")
+_HEADING_MARK_RE = re.compile(r"^[ \t]*#+[ \t]+", re.MULTILINE)
+# Emphasis / inline-code delimiters: a run of `*`, `_` or backticks at a word edge. A run BETWEEN
+# two word characters is an operator (`A_B` concatenation, `A*B`) and stays — a removal there would
+# glue two tokens the FTS tokenizer keeps apart today.
+# An escaped delimiter (`\*`) is a literal character, not emphasis, and is restored below.
+_EMPHASIS_OPEN_RE = re.compile(r"(?<!\w)(?<!\\)[*_`]{1,3}(?=\S)")
+_EMPHASIS_CLOSE_RE = re.compile(r"(?<=\S)(?<!\\)[*_`]{1,3}(?!\w)")
+_WS_RE = re.compile(r"\s+")
+# A removed BLOCK tag (`<p>`, `<td>`, `<br>`, `<h3>` …) becomes a space, like the line break it
+# rendered as. A removed INLINE tag leaves this marker instead; a run of markers between two word
+# characters becomes one space (`<span>a</span><span>b</span>` → `a b`), elsewhere nothing
+# (`<u>x</u>.` → `x.`), so the FTS tokens are exactly the inner text's and a snippet reads as prose.
+_INLINE_ELEMENTS = frozenset(
+    "span u strong em b i a sup sub code mark kbd s del ins small cite q abbr".split()
+)
+_TAG_GAP = "\x00"
+_TAG_GAP_BETWEEN_WORDS_RE = re.compile(r"(?<=\w)\x00+(?=\w)")
+
+
+def _tag_text(m: re.Match[str]) -> str:
+    """What a tag-shaped token contributes to the index text: an `<img>` its alt text, a block
+    element a space, an inline element a gap marker (the inner text is outside the match), and
+    anything else — `<Enter>`, `<A>`, `<ServerName>` — itself, unchanged."""
+    name = m.group(2)
+    if name == "img":
+        alt = _ALT_RE.search(m.group(3))
+        return f" {alt.group(1) or alt.group(2) or ''} " if alt else " "
+    if name in _INLINE_ELEMENTS:
+        return _TAG_GAP
+    if name in HTML_ELEMENTS:
+        return " "
+    return "<" + _TAG_SHAPE_RE.sub(_tag_text, m.group(0)[1:])  # placeholder: keep, look inside
+
+
+def link_labels(text: str) -> str:
+    """Markdown links and images reduced to their label / alt text, targets dropped; a legacy TOC
+    entry `[Title [ii](#a)](#a)` reduces to `Title` (the page number goes with its target). Nested
+    links reduce from the inside out. This is the one rule applied to section titles (kickoff step
+    4): 320 live titles were `[Preface [ii](#preface)](#preface)`."""
+    text = _TOC_PAGE_LINK_RE.sub(r"\1", text)
+    while True:
+        new = _LINK_RE.sub(r"\1", text)
+        if new == text:
+            return text
+        text = new
+
+
+def index_text(markdown: str) -> str:
+    """A chunk's markdown → the text the FTS `body` column indexes (A1, decision D1).
+
+    Drops the nav line, extracted-table markers, HTML comments and fence lines; strips whitelisted
+    HTML tags (inner text kept, `<img>` → alt text); reduces links and images to their labels;
+    drops heading marks and emphasis / inline-code delimiters at word edges; restores Pandoc's
+    backslash-escaped punctuation last (`\\<RET\\>` → `<RET>`); collapses whitespace. Keystroke
+    and placeholder notation (`<Enter>`, `<A>`) is content and stays. Every word token outside a
+    dropped construct survives (property-tested); a table chunk, already plain, only has its
+    whitespace collapsed. One pass, deliberately not idempotent (a restored escape is content)."""
+    text = NAV_LINK_RE.sub(" ", markdown)
+    text = TABLE_REF_RE.sub(" ", text)
+    text = _COMMENT_RE.sub(" ", text)
+    text = _FENCE_LINE_RE.sub(" ", text)
+    text = _TAG_SHAPE_RE.sub(_tag_text, text)
+    text = _TAG_GAP_BETWEEN_WORDS_RE.sub(" ", text).replace(_TAG_GAP, "")
+    text = link_labels(text)
+    text = _HEADING_MARK_RE.sub("", text)
+    text = _EMPHASIS_OPEN_RE.sub("", text)
+    text = _EMPHASIS_CLOSE_RE.sub("", text)
+    text = _UNESCAPE_RE.sub(r"\1", text)
+    return _WS_RE.sub(" ", text).strip()
+
+
 def _blocks(text: str) -> list[str]:
     """Split ``text`` into paragraph blocks separated by blank lines, keeping a fenced code block
     (``` / ~~~) atomic — its inner blank lines never break it (so a split never lands mid-fence)."""
@@ -396,8 +522,12 @@ def shred_sections(
     used: set[str] = set()
     sections: list[Section] = []
     path_stack: list[tuple[int, str]] = []  # (level, title) of the current heading's open ancestors
-    for i, (idx, level, title) in enumerate(heads):
-        slug = _unique(github_slug(title, seen), used)
+    for i, (idx, level, raw_title) in enumerate(heads):
+        # The slug — hence the section_id refs.yaml and every consumer cite — comes from the raw
+        # heading text; the stored title is its link label (A1 step 4: 320 live titles were legacy
+        # TOC entries `[Preface [ii](#preface)](#preface)`). An empty label keeps the raw text.
+        slug = _unique(github_slug(raw_title, seen), used)
+        title = link_labels(raw_title) or raw_title
         end = heads[i + 1][0] if i + 1 < len(heads) else len(lines)
         text = "\n".join(lines[idx:end]).strip()
         # Ancestor-title path (same stack discipline as normalize_pure.infer_heading_levels, so the
