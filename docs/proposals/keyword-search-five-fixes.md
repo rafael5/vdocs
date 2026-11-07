@@ -7,7 +7,7 @@ operator's direction · fix 1 built in vdocs-web 2026-11-06 (`926e320`) · Appen
 approved by the operator unchanged 2026-11-06 · fix 2 built in vdocs (MCP and `vdocs ask`,
 `9bfc552`), vdocs-web (`9448e4f`) and the Go CLI (`e9f8b62`) · fix 4 built in vdocs (`bc0188a`) ·
 fix 3 built in all three (read contract 1.8) · decisions D4 and D5 on fix 3 taken 2026-11-07 as
-recommended · fix 5 not built.** Consumer: vdocs-web (fixes 1–3 and
+recommended · fix 5 built in vdocs-web 2026-11-07 (`05040bb`): all five fixes are built.** Consumer: vdocs-web (fixes 1–3 and
 5). Producer and MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3.
 **Evidence:** every number comes from a script in `scripts/mcp_review/` (`contract.py`, `fixes.py`,
 `package_names.py`, `ranking.py`, `tiers.py`, `suggest.py`), recorded with provenance in the
@@ -351,6 +351,33 @@ capability, complete for every application, not an extra grown one question at a
 
 ### Fix 5: suggestions in the web console's search box
 
+**Built 2026-11-07** in vdocs-web (`05040bb`), as described below. Measured through the running
+vdocs-web (`reports/mcp-review-suggest-built.json`, `scripts/mcp_review/suggest_built.py`).
+
+- `GET /api/suggest?q=` serves a list built once when vdocs-web opens index.db, and a drop-down
+  under the search box shows it. Arrow keys and Enter, or a click, choose a suggestion; Escape
+  closes the list.
+- Time per keystroke, measured at the browser's side of the connection, so it includes the request:
+  median 2.3 ms, at most 9.0 ms over 157 keystrokes (target: under 50 ms).
+- Typed in full, every application name (109), plain-English package name (238) and Kernel part
+  name (4) is offered, and every application code but one (108 of 109). The exception is CPRS's
+  code OR, which is an operator word: chosen, it would turn the search into an OR. Its plain names
+  "orders" and "ordering" are offered.
+- Typed only to the end of the first word, 101 of 109 application names and 208 of 238 plain names
+  are offered. The rest share a first word ("patient", "drug") with more than 3 shorter packages, so
+  the check the plan set ("offered once its first word is typed") holds on the test data but not on
+  the whole corpus. The second word brings them up.
+- Choosing a heading searches for it as a quoted phrase. All 69 headings offered for the 14 probe
+  searches find their documents. Bare headings with nothing indexed beneath them are left out,
+  because a search for them finds nothing; before that rule, 2 of 69 found nothing.
+- Changed from the plan: the entry that is exactly what was typed comes first. Without that, "lab"
+  was pushed out by shorter packages that only start with "lab".
+- Found while checking it in a browser: the web console sends a query on every keystroke and showed
+  whichever answer arrived last, so a late empty answer to "emai" could replace the 362 documents
+  of "email". It now shows only the answer to the latest query.
+
+The plan, as approved:
+
 The operator added this on 2026-11-06 regardless of any measured gain. Suggestions show a
 non-technical searcher the words the manuals use before they search. They change what people type,
 not how results are ranked, so the judged questions cannot score them.
@@ -375,7 +402,7 @@ not how results are ranked, so the judged questions cannot score them.
   headings, after removing leading numbers and markdown marks. Scanning the whole list took 34 ms
   per keystroke in the Python prototype, so no special index is needed at this size. Some headings
   stay noisy, such as a routine's first line; they are shown as the manuals have them.
-- **Change:** an in-memory list and one small request in vdocs-web's API, which does not exist yet,
+- **Change:** an in-memory list and one small request in vdocs-web's API (built: `/api/suggest`),
   plus a drop-down under the search box. It is built after fix 3 so that plain-English names are in
   from the start.
 - **Check:** vdocs-web's tests confirm that every package name and plain-English name is offered
@@ -399,7 +426,7 @@ not how results are ranked, so the judged questions cannot score them.
 | Judged questions and identifier checks, synonym table on vs off | — | identical | no loss, except the two costs accepted in D4 |
 | Plain-English keyword searches (Appendix C): right manual on web page 1 | 3 / 6 (after fix 1) | — | 6 / 6 |
 | Plain-English keyword searches: a judged section in the MCP top 10 | 1 / 6 | — | measured, not a target (D5) |
-| Search-box suggestions, time per keystroke | none | 34 ms (Python, full scan) | under 50 ms |
+| Search-box suggestions, time per keystroke | none | 34 ms (Python, full scan) | under 50 ms (built: median 2.3 ms, at most 9.0 ms) |
 
 ## 5. Order of work
 
@@ -415,7 +442,8 @@ Each step: write the test first, then build, then run `make check`, measure agai
 4. **Fix 3 (built 2026-11-06):** the producer writes the synonym table (contract 1.8), and every
    reader applies it. The package names are complete for every application. Hand-written terms
    are added one judged question at a time; two are in.
-5. **Fix 5:** search-box suggestions in vdocs-web, reading the synonym table from step 4.
+5. **Fix 5 (built 2026-11-07, vdocs-web `05040bb`):** search-box suggestions in vdocs-web, reading
+   the synonym table from step 4.
 
 ## 6. Deliberately not building
 

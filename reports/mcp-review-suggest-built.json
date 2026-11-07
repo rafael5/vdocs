@@ -1,0 +1,118 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.8",
+  "web": "http://127.0.0.1:8765"
+ },
+ "ms_per_keystroke_at_the_client": {
+  "keystrokes": 157,
+  "median": 2.3,
+  "p95": 5.5,
+  "max": 9.0
+ },
+ "package_names": {
+  "application names": {
+   "names": 109,
+   "offered_typed_in_full": 109,
+   "offered_after_the_first_word": 101,
+   "not_offered_typed_in_full": [],
+   "not_offered_after_the_first_word_sample": [
+    "Quality Audiology and Speech Analysis and Reporting",
+    "Patient Assessment Documentation Package",
+    "Automated Safety Incident Surveillance Tracking System",
+    "Patient Appointment Info. Transmission",
+    "Patient Advocate Tracking System",
+    "Clinical Monitoring System",
+    "VistA Blood Establishment Computer Software",
+    "VistA Data Extraction Framework"
+   ]
+  },
+  "application codes": {
+   "names": 109,
+   "offered_typed_in_full": 108,
+   "offered_after_the_first_word": 108,
+   "not_offered_typed_in_full": [
+    "OR"
+   ],
+   "not_offered_after_the_first_word_sample": [
+    "OR"
+   ]
+  },
+  "plain-English package names": {
+   "names": 238,
+   "offered_typed_in_full": 238,
+   "offered_after_the_first_word": 208,
+   "not_offered_typed_in_full": [],
+   "not_offered_after_the_first_word_sample": [
+    "electronic health record",
+    "patient chart",
+    "pharmacy claims",
+    "patient problems",
+    "drug allergies",
+    "patient summary report",
+    "home health",
+    "lab instruments",
+    "lab tests",
+    "lab results",
+    "patient identity",
+    "nursing assessments",
+    "nursing documentation",
+    "patient panels",
+    "patient debts"
+   ]
+  },
+  "Kernel parts": {
+   "names": 4,
+   "offered_typed_in_full": 4,
+   "offered_after_the_first_word": 4,
+   "not_offered_typed_in_full": [],
+   "not_offered_after_the_first_word_sample": []
+  }
+ },
+ "chosen_headings_that_find_documents": "69/69",
+ "examples": {
+  "blood b": [
+   "Blood Bank → Laboratory (LR); VistA Blood Establishment Computer Software (VBECS)",
+   "blood pressure → Vitals/Measurements (GMRV)",
+   "VistA Blood Establishment Computer Software (VBECS)",
+   "Blood Bank Clearance",
+   "Blood Bank",
+   "BLOOD BANK SOFTWARE REFERENCES",
+   "Blood Bank LRBL]",
+   "Blood Bank Extract (LBB)"
+  ],
+  "email": [
+   "email → MailMan (XM)",
+   "Emails",
+   "Email Messages",
+   "Email Post Office",
+   "Email Address for Emergency Messages",
+   "Log Collector Automatic Emails",
+   "Changing User List for Get Invalid ROI Credentials Email Notifications",
+   "Check Email"
+  ],
+  "taskm": [
+   "TaskMan",
+   "background jobs → TaskMan",
+   "scheduled tasks → TaskMan",
+   "TaskMan-Scheduled Options",
+   "TaskMan Multi-Threaded Listener",
+   "TaskMan scheduled install verify of data file",
+   "TaskManager",
+   "TASKMAN Option"
+  ],
+  "cancel ord": [
+   "Cancel the Order",
+   "Cancelling Orders",
+   "Canceling Lab Orders",
+   "ORM for a canceled order",
+   "Cancel an Incomplete PC Order",
+   "Cancel an Incomplete Delivery Order",
+   "CA Cancel Additional Order [FHOMRAC]",
+   "Accept Orders: Cancel a Pending Order"
+  ]
+ }
+}
