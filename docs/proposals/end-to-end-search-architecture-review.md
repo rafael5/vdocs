@@ -54,7 +54,7 @@ query itself runs in 1–3 ms.
 | Preamble never indexed | text before the first retained heading is dropped; `RMPR/rmpr_3_nppdum` indexes 9,098 of 78,223 characters | a whole manual is effectively unsearchable; the cause is an empty-title heading (`# ` on its own line) that Pandoc emits and the shredder discards |
 | Exact duplicate chunks | 2,364 texts recur; 6,033 chunks, 3,669 redundant (6.3%) | duplicate slots in results; the XPAR parameter template ("Precedence:", "Values:") and DIBR template instructions left in by authors dominate |
 | Near-duplicate latest documents | 13 pairs with Jaccard ≥ 0.5 over long chunks, 18 documents | the same pharmacy API manual is indexed three times under PSA, PSN and PSX; two ROR technical manuals and two Scheduling GUI manuals are consecutive versions both marked latest |
-| Database hygiene | text stored twice (117 MB `chunks` + 126 MB FTS content); no `ANALYZE`; section lookup is a full scan; 11 FTS segments | 33% avoidable size; lookups that grow linearly with the corpus |
+| Database hygiene | text stored twice (117 MB `chunks` + 126 MB FTS content); no `ANALYZE`; section lookup is a full scan; 11 FTS segments | lookups that grow linearly with the corpus; some avoidable size (see §4.1: the markdown copy must stay for vdocs-web's preview) |
 | Capture gap | 216 held VDL listings have no document (209 DOCX, 7 PDF) | admitted manuals that cannot be found at all |
 
 **Where the MCP still costs the agent** (from the 2026-11-06 review, still open): no way to read a
@@ -71,7 +71,7 @@ ranks documents.
 | A1 | Index clean text: strip tags, image targets, link targets and the nav line at chunk time (body.md unchanged) | 1 day | −10% index tokens, −8% vocabulary, clean snippets, removes a class of false matches; ranking effect measured before adoption |
 | A2 | Index the preamble as its own section; add a per-document body-coverage gate to `doctor` | ½ day | the 78 documents below 95% coverage become visible and gated; `rmpr_3_nppdum` 12% → ~100% |
 | A3 | Section-collapsed, compact, structured MCP results plus a section-text tool that does the body.md fallback itself (R5 + R7) | 2 days | −25% to −49% tokens per page, Recall@15 +0.016, round trips 3 → 2 |
-| A4 | Database hygiene: external-content FTS, `ANALYZE`, FTS `optimize`, the missing indexes | ½ day | 363 → ~245 MB; lookups indexed; no contract change |
+| A4 | Database hygiene: the missing indexes, `ANALYZE`, FTS `optimize`; external-content FTS only if the measured saving earns it | ½ day | lookups indexed and statistics present; size saving measured first (tens of MB, not a third) |
 | A5 | Validate inputs, bound `query`, generate the numbers in tool text (R1–R3) | 1 day | no more false "retrieval artefact" on a typo; no stall |
 | B1 | A document-level ranking mode in the MCP search tool (the web's 1, ½, ¼ aggregation) | 1 day | plain-English and package questions answered at the granularity they work at |
 | B2 | Structural synonym classes generated from the entity tables: file number ↔ file name, option name ↔ option text; each class measured on/off as a block | 1 day + measurement | file-number lookups by name; menu options by their text |
@@ -283,9 +283,14 @@ Observations:
 
 - **The text is stored twice.** FTS5 supports an external content table: the index then reads
   column values from `chunks` on demand, `snippet()` and column reads keep working, and consumers
-  see the same `chunks_fts` surface. `chunks` needs the three heading columns added (they belong
-  there anyway for section-collapsed results). Saving: about 120 MB, a third of the file. Because
-  `index` rebuilds atomically there is no delete-synchronisation risk.
+  see the same `chunks_fts` surface. **Correction (2026-11-07, same day):** vdocs-web rebuilds a
+  document's preview from the markdown in `v_chunks.text` (`Preview`, `SectionText`), so that
+  column must stay markdown and cannot double as the clean projection A1 indexes. An external
+  content table would therefore need `chunks` to carry the clean `body` beside `text`, and the
+  saving is the FTS content copy minus that new column: tens of megabytes, not a third of the
+  file. Whether it is worth the schema change is decided by measurement in the A4 kickoff; the
+  indexes, statistics and segment merge are worth doing regardless. Because `index` rebuilds
+  atomically there is no delete-synchronisation risk either way.
 - **Never analysed.** There is no `sqlite_stat1`. The planner has no row estimates for any join.
   One `ANALYZE` at the end of the build, or `PRAGMA optimize`, fixes that.
 - **Missing indexes.** `SELECT 1 FROM chunks WHERE section_id = ?` is a full table scan (the MCP
@@ -460,12 +465,13 @@ CSV. This is R5 and R7 of the MCP review; the measurements there stand (−25% t
 Recall@15 +0.016, 3 → 2 round trips).
 
 **A4. Database hygiene.**
-Add `title`, `doc_title`, `section_path` to `chunks` and make `chunks_fts` an external-content
-table over it. Add indexes on `chunks(section_id)`, `chunks(doc_key)`, `doc_sections(doc_key,
-seq)`, `entity_mentions(doc_key)`, `relations(dst_type, dst_id)`. Run FTS `optimize` and `ANALYZE`
-at the end of the build. Bump the read contract's minor version only if a view changes (it should
-not). *Expected:* 363 → about 245 MB; section lookup and outline queries use indexes; `doctor`
-asserts `sqlite_stat1` exists.
+Add indexes on `chunks(section_id)`, `chunks(doc_key)`, `doc_sections(doc_key, seq)`,
+`entity_mentions(doc_key)`, `relations(dst_type, dst_id)`. Run FTS `optimize` and `ANALYZE` at the
+end of the build. Measure the external-content option (clean `body` plus the heading columns in
+`chunks`, `chunks_fts` reading from it) on a scratch copy first and build it only if it saves at
+least 40 MB; otherwise leave the FTS content table as it is. Bump the read contract's minor version
+only if a view changes (it should not). *Expected:* section lookup and outline queries use indexes;
+`doctor` asserts `sqlite_stat1` exists; ranking byte-identical before and after.
 
 **A5. Input validation, a time budget, generated numbers (R1–R3).**
 Reject unknown `app` and `doc_type` values with the nearest valid codes, accept names and
@@ -555,6 +561,8 @@ markdown into component files; deleting bronze, silver or history; a reranker mo
 
 **All five taken on 2026-11-07, as recommended.** The order of work follows §6: A1–A5, then
 B1–B5, each a TDD increment measured per §8 before the next starts.
+Kickoff prompts for A1–A5, each with its before and after measurements, are in `docs/prompts/`
+(`a1-clean-index-text-kickoff.md` … `a5-mcp-input-validation-and-generated-numbers-kickoff.md`).
 
 - **D1. Clean projection in the index (A1).** Decided: yes, body.md unchanged. Alternative: strip
   only the nav line (R13 as written). The whitelist approach removes seven times more junk and is
