@@ -46,6 +46,7 @@ from typing import Any
 
 import yaml
 
+from vdocs.server import search_pure as sp
 from vdocs.server.search import lexical_search
 
 
@@ -163,10 +164,9 @@ def evaluate(
     if missing:
         raise SystemExit(f"no keyword form (`keywords:`) for: {', '.join(missing)}")
     k = k_override or int(spec.get("k", 10))
-    # expand=True (default) → SKL-grounded query expansion (S3.4, the merge `entity_skl` table);
-    # expand=False → {} disables it (the pre-S3.4 lexical-only baseline, for an apples-to-apples
-    # comparison on the same lake).
-    expansions = None if expand else {}
+    # expand=True (default) → the synonym table in index.db (keyword-search proposal, fix 3);
+    # expand=False → no synonyms, for an apples-to-apples comparison on the same lake.
+    synonyms = None if expand else sp.NO_SYNONYMS
 
     per_query: list[dict[str, Any]] = []
     ndcgs: list[float] = []
@@ -182,7 +182,7 @@ def evaluate(
         # silently dragging the reported mean down by ~13 points. Excluded from the means and
         # reported loudly: a zero you cannot act on is not a measurement.
         unscoreable = bool(judged) and not any(s in live_sections for s in judged)
-        raw_hits = lexical_search(index_db, q["keywords"], k=max(k, 10), expansions=expansions)
+        raw_hits = lexical_search(index_db, q["keywords"], k=max(k, 10), synonyms=synonyms)
         # redundancy is measured over the RAW top-k chunk hits (their text); nDCG/MRR/recall over
         # the unique-section reduction.
         texts = _section_texts(index_db, [h["section_id"] for h in raw_hits[:k]])
@@ -303,7 +303,7 @@ def main() -> None:
     ap.add_argument(
         "--no-expand",
         action="store_true",
-        help="disable SKL query expansion (the pre-S3.4 lexical-only baseline)",
+        help="disable the synonym table (fix 3), for a comparison on the same lake",
     )
     args = ap.parse_args()
 

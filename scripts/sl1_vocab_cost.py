@@ -21,7 +21,8 @@ same index, the same k — only the word changed, and the passages appeared.
 
 It then prices the fix. For every failing question it re-runs the number query with the expansion
 the synonym layer *would* supply if that file were seeded (`<N> → <NAME>`, the exact shape
-`search_pure.skl_expansion_map` emits) and reports how many failures it repairs and how many
+the SKL rows `merge_pure.search_synonym_rows` emits, formerly `skl_expansion_map`) and
+reports how many failures it repairs and how many
 questions it damages. That repaired count is the headroom, measured rather than asserted, and it
 doubles as SL.3a's expected-gain statement.
 
@@ -46,7 +47,8 @@ from typing import Any
 from sl1_ambiguity import name_in_file_context  # noqa: E402  (sibling script, same directory)
 
 from vdocs.server.search import lexical_search
-from vdocs.server.search_pure import skl_expansion_map
+from vdocs.server.search_pure import NO_SYNONYMS, Synonyms, synonyms_from_rows
+from vdocs.stages.merge.merge_pure import HandSynonyms, search_synonym_rows
 
 DEFAULT_DATA_DIR = Path.home() / "data" / "vdocs"
 
@@ -68,11 +70,11 @@ def answering_sections(
     return {sid for sid, text in rows if name_in_file_context(text or "", name, number)}
 
 
-def top_sections(index_db: Path, query: str, k: int, expansions: dict[str, str]) -> list[str]:
+def top_sections(index_db: Path, query: str, k: int, synonyms: Synonyms) -> list[str]:
     """The ranked unique section ids the production engine returns (first appearance wins)."""
     out: list[str] = []
     seen: set[str] = set()
-    for hit in lexical_search(index_db, query, k=k, expansions=expansions):
+    for hit in lexical_search(index_db, query, k=k, synonyms=synonyms):
         sid = hit["section_id"]
         if sid not in seen:
             seen.add(sid)
@@ -111,23 +113,26 @@ def run(
 
             q_num = f"what is file {number}?"
             q_name = f"what is the {name} file?"
-            num_hits = top_sections(index_db, q_num, k, {})
-            name_hits = top_sections(index_db, q_name, k, {})
+            num_hits = top_sections(index_db, q_num, k, NO_SYNONYMS)
+            name_hits = top_sections(index_db, q_name, k, NO_SYNONYMS)
 
             num_ok = bool(set(num_hits) & answers)
             name_ok = bool(set(name_hits) & answers)
 
             # The expansion the synonym layer would supply for this file, produced by the shipped
             # projection so the test cannot drift from what the feature actually emits.
-            exp = skl_expansion_map([(number, name)])
-            fixed_hits = top_sections(index_db, q_num, k, exp) if exp else num_hits
+            rows, _ = search_synonym_rows([], HandSynonyms({}, (), ()), [(number, name)])
+            exp = synonyms_from_rows((r[1], r[2], r[3]) for r in rows)
+            fixed_hits = top_sections(index_db, q_num, k, exp) if rows else num_hits
             fixed_ok = bool(set(fixed_hits) & answers)
 
             # The CEILING: both vocabularies present in one query. No expansion map can beat this —
             # an expansion adds the name phrase to a query that already carries the number tokens,
             # which is what this is. Measured through the real engine (no re-implementation), so it
             # prices the whole direction, not just the guards that happen to be in the way today.
-            oracle_ok = bool(set(top_sections(index_db, f"{q_num} {name}", k, {})) & answers)
+            oracle_ok = bool(
+                set(top_sections(index_db, f"{q_num} {name}", k, NO_SYNONYMS)) & answers
+            )
 
             results.append(
                 {

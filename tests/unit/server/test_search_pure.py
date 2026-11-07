@@ -24,24 +24,3 @@ def test_bm25_weights_module_defaults_favor_title_over_body():
 def test_bm25_expr_is_a_weighted_bm25_call_in_column_order():
     expr = sp.bm25_expr("chunks_fts", ("title", "body"), {"title": 8.0, "body": 1.0})
     assert expr == "bm25(chunks_fts, 8.0, 1.0)"
-
-
-def test_skl_expansion_map_maps_distinctive_number_to_its_name_phrase():
-    # SKL entity identity rows (canonical, canonical_name): a file *number* → its spelled-out name,
-    # so a query "file #200" expands to the precise phrase "new person" (S3.4 vocabulary mismatch).
-    rows = [("200", "NEW PERSON"), ("442", "TORS LOG")]
-    assert sp.skl_expansion_map(rows) == {"200": "NEW PERSON", "442": "TORS LOG"}
-
-
-def test_skl_expansion_map_drops_short_keys_and_single_word_names():
-    # guarded: a <3-char key (the matcher ignores it) and a 1-word name (a bare common word
-    # like "FILE" must never become an expansion) are both excluded.
-    rows = [("1", "FILE"), ("19", "OPTION"), ("200", "NEW PERSON")]
-    assert sp.skl_expansion_map(rows) == {"200": "NEW PERSON"}
-
-
-def test_skl_expansion_map_drops_decimal_keys_that_cannot_match_a_token():
-    # FTS tokenises on '.', so a decimal file number like "1.2" can never be a single query token —
-    # keeping it would be a dead (and confusing) entry.
-    rows = [("1.2", "ALTERNATE EDITOR"), ("200", "NEW PERSON")]
-    assert sp.skl_expansion_map(rows) == {"200": "NEW PERSON"}

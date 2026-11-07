@@ -8,6 +8,10 @@ new extraction — only *derived* tables over what the two stages already produc
   on `(type, canonical)`, carrying the SKL identity onto the index side.
 * **entity_synonyms** — the SKL surface catalog (canonical name + synonyms) per entity.
 * **chunk_entities** — chunk → entity tags (entity-keyed retrieval; distinctive surfaces only).
+* **search_synonyms** — the search synonym table every front door applies (keyword-search
+  proposal, fix 3): `registries/search-synonyms.yaml` (plain-English package names, Kernel parts,
+  judged terms), the latest documents' application names, codes, namespaces and products, the
+  package master's namespaces, and the SKL's file names (file 200 → NEW PERSON).
 
 The tables are the EMPTY shells `index` owns (so the read-schema version is consistent before
 `merge` runs); `merge` populates each via `kernel.db.replace_table_atomic`, so `index`'s own tables
@@ -24,15 +28,19 @@ import structlog
 
 from vdocs.contracts.registry import (
     INDEX_CHUNKS,
+    INDEX_DOCUMENTS,
     INDEX_ENTITIES,
     KNOWLEDGE_ENTITIES,
     MERGE_CHUNK_ENTITIES,
     MERGE_ENTITY_SKL,
     MERGE_ENTITY_SYNONYMS,
+    MERGE_SEARCH_SYNONYMS,
+    REGISTRIES,
 )
 from vdocs.kernel import db, knowledge_db
 from vdocs.models.stage import Idempotency, RunResult
 from vdocs.orchestrator.stage import Stage, StageContext
+from vdocs.stages.catalog.registries import parse_package_master
 from vdocs.stages.merge import merge_pure as mp
 
 log = structlog.get_logger(__name__)
@@ -52,15 +60,28 @@ _CHUNK_ENTITIES_DDL = (
     "CREATE TABLE {new} (chunk_id TEXT NOT NULL, node_id TEXT NOT NULL, "
     "PRIMARY KEY (chunk_id, node_id))"
 )
+_SEARCH_SYNONYMS_DDL = (
+    "CREATE TABLE {new} (seq INTEGER PRIMARY KEY, term TEXT NOT NULL, alternative TEXT NOT NULL, "
+    "match_case INTEGER NOT NULL, source TEXT NOT NULL)"
+)
 
 
 class MergeStage(Stage):
     name = "merge"
     description = "fold the SKL into index.db: reconcile entity ids, synonym catalog, chunk tags"
-    requires = [INDEX_ENTITIES, INDEX_CHUNKS, KNOWLEDGE_ENTITIES]
-    produces = [MERGE_ENTITY_SKL, MERGE_ENTITY_SYNONYMS, MERGE_CHUNK_ENTITIES]
+    # INDEX_DOCUMENTS + REGISTRIES: the search synonym table reads the documents' application
+    # names and registries/search-synonyms.yaml, so an edit to either re-runs merge
+    requires = [INDEX_ENTITIES, INDEX_CHUNKS, INDEX_DOCUMENTS, KNOWLEDGE_ENTITIES, REGISTRIES]
+    produces = [
+        MERGE_ENTITY_SKL,
+        MERGE_ENTITY_SYNONYMS,
+        MERGE_CHUNK_ENTITIES,
+        MERGE_SEARCH_SYNONYMS,
+    ]
     idempotency = Idempotency.SKIP_IF_UNCHANGED
-    contract_ver = 1  # bump when the merge table shapes change (re-runs search/manifest consumers)
+    # bump when the merge table shapes change (re-runs search/manifest consumers).
+    # v2 (keyword-search proposal, fix 3): merge also writes search_synonyms (read contract 1.8).
+    contract_ver = 2
 
     def run(self, ctx: StageContext, force: bool) -> RunResult:
         cfg = ctx.cfg
@@ -86,12 +107,27 @@ class MergeStage(Stage):
         _replace(cfg.index_db, "entity_synonyms", _SYNONYMS_DDL, "node_id, surface, kind", syn_rows)
         _replace(cfg.index_db, "chunk_entities", _CHUNK_ENTITIES_DDL, "chunk_id, node_id", tags)
 
+        hand = mp.parse_search_synonyms(
+            (cfg.registries / "search-synonyms.yaml").read_text(encoding="utf-8")
+        )
+        search_rows, missing = mp.search_synonym_rows(
+            _read_apps(cfg.index_db, cfg.registries),
+            hand,
+            [(r[3], r[4]) for r in skl_rows],
+        )
+        if missing:  # fail loud, never silent: a registry name with nothing to expand to
+            log.warning("merge.search_synonyms.packages_without_documents", codes=missing)
+        _replace(cfg.index_db, "search_synonyms", _SEARCH_SYNONYMS_DDL,
+                 "seq, term, alternative, match_case, source", search_rows)  # fmt: skip
+
         return RunResult(
             counts={
                 "entities_reconciled": len(skl_rows),
                 "synonyms": len(syn_rows),
                 "chunk_tags": len(tags),
                 "skl_entities": len(entities),
+                "search_synonyms": len(search_rows),
+                "search_synonym_packages_without_documents": len(missing),
             }
         )
 
@@ -112,6 +148,39 @@ def _read_chunks(index_db) -> list[tuple[str, str]]:  # type: ignore[no-untyped-
         return [(r[0], r[1]) for r in conn.execute("SELECT chunk_id, text FROM chunks").fetchall()]
     finally:
         conn.close()
+
+
+def _read_apps(index_db, registries) -> list[mp.AppNames]:  # type: ignore[no-untyped-def]
+    """Each application of the latest documents, with its namespaces (the documents', then the
+    package master's) and its product abbreviations."""
+    master = parse_package_master(
+        (registries / "inventory" / "package-master.yaml").read_text(encoding="utf-8")
+    )
+    conn = db.connect(index_db, read_only=True)
+    try:
+        rows = conn.execute(
+            "SELECT app_code, app_name, pkg_ns, product_abbr, product_full FROM documents "
+            "WHERE is_latest = 1 AND app_code IS NOT NULL AND app_code != '' ORDER BY doc_key"
+        ).fetchall()
+    finally:
+        conn.close()
+    names: dict[str, str] = {}
+    namespaces: dict[str, list[str]] = {}
+    products: dict[str, list[tuple[str, str]]] = {}
+    for code, name, ns, abbr, full in rows:
+        names.setdefault(code, name or "")
+        namespaces.setdefault(code, [])
+        products.setdefault(code, [])
+        if ns and ns not in namespaces[code]:
+            namespaces[code].append(ns)
+        if abbr and full and (abbr, full) not in products[code]:
+            products[code].append((abbr, full))
+    apps = []
+    for code in sorted(names):
+        entry = master.get(code)
+        ns = [*namespaces[code], *([entry.pkg_ns] if entry and entry.pkg_ns else [])]
+        apps.append(mp.AppNames(code, names[code], tuple(dict.fromkeys(ns)), tuple(products[code])))
+    return apps
 
 
 def _replace(index_db, table, ddl, cols, rows):  # type: ignore[no-untyped-def]

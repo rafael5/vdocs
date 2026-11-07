@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "How every vdocs search front door (the MCP search tool and `vdocs ask`, vdocs-web, vdocs-cli) turns typed keywords into an SQLite FTS5 MATCH expression. Each case gives the query and the two expressions every reader must produce exactly: `all` (searched first) and `any` (the fallback, searched only when `all` matches nothing; empty when there is no fallback). vdocs runs every case in tests/unit/server/test_query_reader.py; consumers copy this file by hand, as they copy contracts/read/v1.json, and run every case in their own tests. Keyword-search proposal, fix 2 (docs/proposals/keyword-search-five-fixes.md).",
+  "description": "How every vdocs search front door (the MCP search tool and `vdocs ask`, vdocs-web, vdocs-cli) turns typed keywords into an SQLite FTS5 MATCH expression. Each case gives the query and the two expressions every reader must produce exactly: `all` (searched first) and `any` (the fallback, searched only when `all` matches nothing; empty when there is no fallback). vdocs runs every case in tests/unit/server/test_query_reader.py; consumers copy this file by hand, as they copy contracts/read/v1.json, and run every case in their own tests, including the `synonyms` cases. Keyword-search proposal, fix 2 (docs/proposals/keyword-search-five-fixes.md).",
   "rules": [
     "Split the query at every double quote. Pieces at odd positions are quoted; a quote left open runs to the end of the query.",
     "A quoted piece is one exact phrase. Outside quotes, words are separated by whitespace.",
@@ -11,7 +11,7 @@
     "Terms are joined by the operator typed between them, or by AND when none was typed. When several operators are typed in a row, the last one counts. An operator before the first term or after the last is dropped.",
     "The output is each term as a double-quoted phrase, joined by ' AND ', ' OR ' or ' NOT '. FTS5 binds NOT tightest, then AND, then OR.",
     "`any` is the same terms joined by ' OR ' when no operator was typed and there are at least two terms; otherwise it is empty.",
-    "Synonym expansion (fix 3) is not part of these cases."
+    "Synonyms (fix 3) apply only with a synonym table; the `cases` use none, and the `synonyms` section below gives its rules, a fixed table and its own cases."
   ],
   "cases": [
     {"query": "", "all": "", "any": "", "why": "empty query"},
@@ -46,5 +46,56 @@
     {"query": "café menus", "all": "\"café\" AND \"menus\"", "any": "\"café\" OR \"menus\"", "why": "letters beyond ASCII are letters"},
     {"query": "under_score", "all": "\"under score\"", "any": "", "why": "underscore separates runs, as in the FTS5 index"},
     {"query": "taskman\nmonitor", "all": "\"taskman\" AND \"monitor\"", "any": "\"taskman\" OR \"monitor\"", "why": "any whitespace separates words"}
-  ]
+  ],
+  "synonyms": {
+    "rules": [
+      "A synonym table is rows of (term, alternative, match_case), in order. A term is a phrase of letter-and-digit runs joined by single spaces, of at least two characters. match_case 0: the term matches typed words in any case. match_case 1: only as written (application codes, namespaces, product abbreviations).",
+      "Outside quotes, at each word that is not an operator, take the longest run of consecutive non-operator words whose letter-and-digit runs, joined by single spaces, equal a term (exactly for match_case 1, ignoring case for 0). The run becomes one term. When no run matches, the word follows the rules above.",
+      "The term's alternatives are its rows' alternatives in table order (match_case 1 rows first, then match_case 0), each written as a phrase of its letter-and-digit runs. Drop an alternative that equals the typed run ignoring case, one that is AND, OR or NOT in any case, and a repeat ignoring case.",
+      "With alternatives left, the term is the typed run's phrase and the alternatives' phrases joined by ' OR ' in parentheses: (\"blood bank\" OR \"VBECS\"). With none left, it is the typed run's phrase alone.",
+      "Text in double quotes is never expanded. The term counts as one term for the joins and for `any`."
+    ],
+    "table": [
+      {"term": "blood bank", "alternative": "VistA Blood Establishment Computer Software", "match_case": 0},
+      {"term": "blood bank", "alternative": "VBECS", "match_case": 0},
+      {"term": "VBECS", "alternative": "VistA Blood Establishment Computer Software", "match_case": 1},
+      {"term": "email", "alternative": "MailMan", "match_case": 0},
+      {"term": "email", "alternative": "XM", "match_case": 0},
+      {"term": "x ray", "alternative": "Radiology/Nuclear Medicine", "match_case": 0},
+      {"term": "x ray", "alternative": "RA", "match_case": 0},
+      {"term": "background jobs", "alternative": "TaskMan", "match_case": 0},
+      {"term": "200", "alternative": "NEW PERSON", "match_case": 0},
+      {"term": "order entry", "alternative": "OR", "match_case": 0},
+      {"term": "order entry", "alternative": "CPRS", "match_case": 0},
+      {"term": "kernel", "alternative": "Kernel", "match_case": 0},
+      {"term": "kernel", "alternative": "XU", "match_case": 0},
+      {"term": "menus", "alternative": "Menus", "match_case": 0},
+      {"term": "AR WS", "alternative": "Automatic Replenishment/Ward Stock", "match_case": 1},
+      {"term": "blood", "alternative": "hematology", "match_case": 0},
+      {"term": "PSO", "alternative": "Outpatient Pharmacy", "match_case": 1},
+      {"term": "pso", "alternative": "prescriptions", "match_case": 0}
+    ],
+    "cases": [
+      {"query": "blood bank ISBT", "all": "(\"blood bank\" OR \"VistA Blood Establishment Computer Software\" OR \"VBECS\") AND \"ISBT\"", "any": "(\"blood bank\" OR \"VistA Blood Establishment Computer Software\" OR \"VBECS\") OR \"ISBT\"", "why": "a two-word term and a word"},
+      {"query": "\"blood bank\" ISBT", "all": "\"blood bank\" AND \"ISBT\"", "any": "\"blood bank\" OR \"ISBT\"", "why": "quoted text is never expanded"},
+      {"query": "Blood Bank", "all": "(\"Blood Bank\" OR \"VistA Blood Establishment Computer Software\" OR \"VBECS\")", "any": "", "why": "a match_case 0 term ignores case; the typed case is kept"},
+      {"query": "blood test", "all": "(\"blood\" OR \"hematology\") AND \"test\"", "any": "(\"blood\" OR \"hematology\") OR \"test\"", "why": "the longest run that matches wins"},
+      {"query": "blood AND bank", "all": "(\"blood\" OR \"hematology\") AND \"bank\"", "any": "", "why": "an operator ends a run"},
+      {"query": "VBECS", "all": "(\"VBECS\" OR \"VistA Blood Establishment Computer Software\")", "any": "", "why": "a code typed as written"},
+      {"query": "vbecs", "all": "\"vbecs\"", "any": "", "why": "a match_case 1 term matches only as written"},
+      {"query": "send email", "all": "\"send\" AND (\"email\" OR \"MailMan\" OR \"XM\")", "any": "\"send\" OR (\"email\" OR \"MailMan\" OR \"XM\")", "why": "a one-word term"},
+      {"query": "x-ray", "all": "(\"x ray\" OR \"Radiology Nuclear Medicine\" OR \"RA\")", "any": "", "why": "terms and alternatives are phrases of their runs"},
+      {"query": "background jobs", "all": "(\"background jobs\" OR \"TaskMan\")", "any": "", "why": "a Kernel part"},
+      {"query": "file #200", "all": "\"file\" AND (\"200\" OR \"NEW PERSON\")", "any": "\"file\" OR (\"200\" OR \"NEW PERSON\")", "why": "a word with identifier characters can match"},
+      {"query": "order entry", "all": "(\"order entry\" OR \"CPRS\")", "any": "", "why": "an operator word is never an alternative"},
+      {"query": "Kernel", "all": "(\"Kernel\" OR \"XU\")", "any": "", "why": "an alternative equal to the typed run is dropped"},
+      {"query": "menus", "all": "\"menus\"", "any": "", "why": "no alternative left: the plain phrase"},
+      {"query": "AR/WS", "all": "(\"AR WS\" OR \"Automatic Replenishment Ward Stock\")", "any": "", "why": "a match_case 1 term of two runs"},
+      {"query": "ar/ws", "all": "\"ar ws\"", "any": "", "why": "not as written: no match"},
+      {"query": "PSO", "all": "(\"PSO\" OR \"Outpatient Pharmacy\" OR \"prescriptions\")", "any": "", "why": "match_case 1 rows first, then match_case 0"},
+      {"query": "pso", "all": "(\"pso\" OR \"prescriptions\")", "any": "", "why": "only the match_case 0 row matches in lower case"},
+      {"query": "email NOT spam", "all": "(\"email\" OR \"MailMan\" OR \"XM\") NOT \"spam\"", "any": "", "why": "a term with NOT"},
+      {"query": "email \"blood bank", "all": "(\"email\" OR \"MailMan\" OR \"XM\") AND \"blood bank\"", "any": "(\"email\" OR \"MailMan\" OR \"XM\") OR \"blood bank\"", "why": "an open quote is not expanded"}
+    ]
+  }
 }

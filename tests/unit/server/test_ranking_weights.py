@@ -73,19 +73,21 @@ def test_search_honours_an_explicit_weight_override(tmp_path: Path) -> None:
     db = _lake(tmp_path)
     # doc_title weighted far above body promotes the document whose TITLE carries the token…
     heavy_title = search.lexical_search(
-        db, "taskman", k=2, expansions={}, weights={"doc_title": 50.0, "body": 1.0}
+        db, "taskman", k=2, synonyms=sp.NO_SYNONYMS, weights={"doc_title": 50.0, "body": 1.0}
     )
     assert heavy_title[0]["section_id"] == "XX/titled/s"
     # …and the reverse ordering promotes the section whose BODY does. The override reaches the
     # ranking, which is what makes a sweep meaningful.
     heavy_body = search.lexical_search(
-        db, "taskman", k=2, expansions={}, weights={"doc_title": 0.1, "body": 50.0}
+        db, "taskman", k=2, synonyms=sp.NO_SYNONYMS, weights={"doc_title": 0.1, "body": 50.0}
     )
     assert heavy_body[0]["section_id"] == "XX/bodied/s"
 
 
 def test_search_defaults_to_the_shipped_weights(tmp_path: Path) -> None:
     db = _lake(tmp_path)
-    default = search.lexical_search(db, "taskman", k=2, expansions={})
-    explicit = search.lexical_search(db, "taskman", k=2, expansions={}, weights=sp.FTS_WEIGHTS)
+    default = search.lexical_search(db, "taskman", k=2, synonyms=sp.NO_SYNONYMS)
+    explicit = search.lexical_search(
+        db, "taskman", k=2, synonyms=sp.NO_SYNONYMS, weights=sp.FTS_WEIGHTS
+    )
     assert [h["section_id"] for h in default] == [h["section_id"] for h in explicit]

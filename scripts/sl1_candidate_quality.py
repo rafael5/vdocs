@@ -13,7 +13,8 @@ is the whole point:
   `data-model/files.tsv`, routine names from `code-model/routines.tsv`, global names from
   `code-model/routine-globals.tsv`). This scores the *extraction*.
 * **Could approving it ever reach search?** — the only thing search consumes from this layer is
-  `search_pure.skl_expansion_map`, which reads FileMan file **numbers** and their canonical names
+  the SKL guard in `merge_pure.search_synonym_rows` (formerly `skl_expansion_map`), which
+  reads FileMan file **numbers** and their canonical names
   off `index.db:entity_skl`. A proposal for a routine, a global, a namespace, a build or an HL7
   segment has nowhere to land: the DD seed represents FileMan files, and the expansion map keys on
   their numbers. Those proposals are *structurally inert* — not wrong, not curatable, simply not
@@ -36,7 +37,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from vdocs.server.search_pure import skl_expansion_map
+from vdocs.stages.merge.merge_pure import HandSynonyms, search_synonym_rows
 
 DEFAULT_DATA_DIR = Path.home() / "data" / "vdocs"
 DEFAULT_VISTA_META = Path.home() / "projects" / "vista-meta" / "vista" / "export"
@@ -88,7 +89,7 @@ def judge(proposal: dict[str, Any], truth: dict[str, Any]) -> dict[str, Any]:
         name = truth["_by_number"].get(surface, "")
         if recognised != "valid":
             reach = "inert-not-a-real-file"
-        elif skl_expansion_map([(surface, name)]):
+        elif search_synonym_rows([], HandSynonyms({}, (), ()), [(surface, name)])[0]:
             reach = "would-expand"
         else:
             reach = "inert-guards-drop-it"

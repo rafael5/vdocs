@@ -48,7 +48,7 @@ def test_version_and_capabilities_read_from_spec():
 def test_load_reads_the_real_v1_contract():
     # the shipped contract parses and declares the views consumers bind to
     spec = rc.load(rc.contract_path())
-    assert rc.version(spec) == "1.7"
+    assert rc.version(spec) == "1.8"
     cols = rc.view_columns(spec)
     expected = {"v_documents", "v_sections", "v_chunks", "v_entities", "v_entity_mentions"}
     assert expected <= set(cols) and "v_vocab" in cols
@@ -110,15 +110,35 @@ def test_removing_a_capability_is_breaking():
 _V1_6 = Path(__file__).parents[2] / "fixtures" / "read-contract-v1.6.json"
 
 
+_V1_7 = Path(__file__).parents[2] / "fixtures" / "read-contract-v1.7.json"
+
+
 def test_the_inventory_bump_is_a_correctly_sized_minor():
-    prev, cur = rc.load(_V1_6), rc.load(rc.contract_path())
+    prev, cur = rc.load(_V1_6), rc.load(_V1_7)
     assert rc.version(prev) == "1.6" and rc.version(cur) == "1.7"
     assert rc.lint_bump(prev, cur) == []
 
 
 def test_the_same_additions_without_the_bump_would_red():
-    cur = rc.load(rc.contract_path())
+    cur = rc.load(_V1_7)
     assert rc.lint_bump(rc.load(_V1_6), {**cur, "read_schema_version": "1.6"})
+
+
+# --- 1.7 → 1.8: the search synonym table (keyword-search proposal, fix 3) ----------------------
+# Checked against a frozen copy of the 1.7 spec (git show 3732525:contracts/read/v1.json).
+
+
+def test_the_search_synonyms_bump_is_a_correctly_sized_minor():
+    prev, cur = rc.load(_V1_7), rc.load(rc.contract_path())
+    assert rc.version(prev) == "1.7" and rc.version(cur) == "1.8"
+    assert rc.lint_bump(prev, cur) == []
+    assert "v_search_synonyms" in rc.view_columns(cur)
+    assert "search_synonyms" in rc.capabilities(cur)
+
+
+def test_the_synonym_view_without_the_bump_would_red():
+    cur = rc.load(rc.contract_path())
+    assert rc.lint_bump(rc.load(_V1_7), {**cur, "read_schema_version": "1.7"})
 
 
 def test_v_inventory_publishes_the_rows_columns_in_order():

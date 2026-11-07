@@ -14,6 +14,7 @@ more weight than `body`. The column order here is the single source of truth and
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from typing import Any, NamedTuple
 
 _TOKEN = re.compile(r"[A-Za-z0-9_]+")
@@ -36,28 +37,6 @@ FTS_WEIGHTS: dict[str, float] = {
 }  # fmt: skip
 
 
-def skl_expansion_map(entities: list[tuple[str, str]]) -> dict[str, str]:
-    """Build the query-expansion map from SKL entity identity rows `(canonical, canonical_name)` —
-    the S3.3 `entity_skl` projection (`merge`). A distinctive identifier token (a FileMan file
-    *number*) maps to its spelled-out canonical name, so a query that names an entity by its number
-    expands to the precise name phrase the matching doc actually spells (`file #200` → `NEW PERSON`,
-    the vocabulary-mismatch fix, S3.4). Replaces the hand-seeded `registries/glossary/expansions`
-    (L1.3) with SKL-grounded data.
-
-    Guarded so a bare common word never becomes an expansion: the key is kept only when it is a
-    single alphanumeric token of ≥3 chars (`acronym_phrase_clauses` matches one `token.upper()`,
-    and FTS tokenisation splits on `.`, so a decimal file number like `1.2` can never match and is
-    dropped); the value only when it is a ≥2-word phrase (so `1 → FILE` / `19 → OPTION` drop while
-    `200 → NEW PERSON` survives). Keyed upper-case to match the `acronym_phrase_clauses` lookup.
-    """
-    out: dict[str, str] = {}
-    for canonical, name in entities:
-        key = canonical.strip().upper()
-        if len(key) >= 3 and key.isalnum() and len((name or "").split()) >= 2:
-            out[key] = name
-    return out
-
-
 # --- fix 2: one query reader (contracts/query/v1.json) --------------------------------------------
 _RUN = re.compile(r"[^\W_]+")  # letter-and-digit runs; FTS5's unicode61 index splits the same way
 _ID_CHARS = frozenset("*^#.$%/")  # a word holding one of these keeps a lone single character
@@ -72,7 +51,41 @@ class QueryMatch(NamedTuple):
     any: str
 
 
-def read_query(text: str, expansions: dict[str, str] | None = None) -> QueryMatch:
+class Synonyms(NamedTuple):
+    """A synonym table ready for `read_query` (fix 3; rules in `contracts/query/v1.json`).
+
+    `exact` holds match_case 1 terms as written (application codes), `folded` match_case 0 terms in
+    lower case; each maps to its alternatives in table order. `longest` is the most runs any term
+    has, which bounds how many typed words a term can span."""
+
+    exact: dict[str, tuple[str, ...]]
+    folded: dict[str, tuple[str, ...]]
+    longest: int
+
+
+NO_SYNONYMS = Synonyms({}, {}, 0)
+
+
+def synonyms_from_rows(rows: Iterable[tuple[str, str, int]]) -> Synonyms:
+    """`(term, alternative, match_case)` rows, in table order → a `Synonyms`."""
+    exact: dict[str, list[str]] = {}
+    folded: dict[str, list[str]] = {}
+    longest = 0
+    for term, alternative, match_case in rows:
+        key = " ".join(_RUN.findall(term))
+        if not key:
+            continue
+        longest = max(longest, key.count(" ") + 1)
+        if match_case:
+            exact.setdefault(key, []).append(alternative)
+        else:
+            folded.setdefault(key.lower(), []).append(alternative)
+    return Synonyms(
+        {k: tuple(v) for k, v in exact.items()}, {k: tuple(v) for k, v in folded.items()}, longest
+    )
+
+
+def read_query(text: str, synonyms: Synonyms | None = None) -> QueryMatch:
     """Typed keywords → FTS5 MATCH expressions, by the shared rules in `contracts/query/v1.json`.
 
     Quoted text is one exact phrase (an open quote runs to the end); AND, OR and NOT in capitals
@@ -80,26 +93,23 @@ def read_query(text: str, expansions: dict[str, str] | None = None) -> QueryMatc
     identifier like DG*5.3*1029 stays whole. Bare terms are joined by AND. `any` OR-joins the
     terms, and exists only when no operator was typed and there are at least two terms.
 
-    `expansions` (upper-case token → name) is today's SKL expansion (file 200 → NEW PERSON): an
-    unquoted single-run term of three or more characters that is a key gains its name as an OR'd
-    phrase, `("200" OR "new person")`. Fix 3's synonym table will replace it."""
+    With `synonyms` (fix 3), the longest run of unquoted words that is a term of the table becomes
+    one term with its alternatives OR'd in: "blood bank" → ("blood bank" OR "VBECS")."""
+    syn = synonyms or NO_SYNONYMS
     terms: list[str] = []
     joins: list[str] = []
     typed_operator = False
     pending = "AND"
     for i, piece in enumerate((text or "").split('"')):
-        quoted = i % 2 == 1
-        for word in [piece] if quoted else piece.split():
-            if not quoted and word in _OPERATORS:
-                pending, typed_operator = word, True
-                continue
-            term = _term(word, quoted, expansions or {})
-            if term is None:
-                continue
-            if terms:
-                joins.append(pending)
-            terms.append(term)
-            pending = "AND"
+        items = [_term(piece, quoted=True)] if i % 2 == 1 else _unquoted_terms(piece.split(), syn)
+        for item in items:
+            if item in _OPERATORS:
+                pending, typed_operator = item, True
+            elif item is not None:
+                if terms:
+                    joins.append(pending)
+                terms.append(item)
+                pending = "AND"
     if not terms:
         return QueryMatch("", "")
     all_ = terms[0] + "".join(f" {op} {t}" for op, t in zip(joins, terms[1:], strict=True))
@@ -107,7 +117,47 @@ def read_query(text: str, expansions: dict[str, str] | None = None) -> QueryMatc
     return QueryMatch(all_, any_)
 
 
-def _term(word: str, quoted: bool, expansions: dict[str, str]) -> str | None:
+def _unquoted_terms(words: list[str], syn: Synonyms) -> list[str | None]:
+    """The terms of an unquoted piece, in order, with each operator word passed through as is."""
+    out: list[str | None] = []
+    i = 0
+    while i < len(words):
+        if words[i] in _OPERATORS:
+            out.append(words[i])
+            i += 1
+            continue
+        span = 0
+        while i + span < len(words) and words[i + span] not in _OPERATORS:
+            span += 1
+        for n in range(min(syn.longest, span), 0, -1):
+            term = _synonym_term(words[i : i + n], syn)
+            if term:
+                out.append(term)
+                i += n
+                break
+        else:
+            out.append(_term(words[i], quoted=False))
+            i += 1
+    return out
+
+
+def _synonym_term(words: list[str], syn: Synonyms) -> str | None:
+    """The words as one term with their alternatives, or None when they are not a term."""
+    key = " ".join(_RUN.findall(" ".join(words)))
+    if not key or (key not in syn.exact and key.lower() not in syn.folded):
+        return None
+    seen = {key.lower()}
+    phrases = [f'"{key}"']
+    for alternative in (*syn.exact.get(key, ()), *syn.folded.get(key.lower(), ())):
+        phrase = " ".join(_RUN.findall(alternative))
+        if not phrase or phrase.lower() in seen or phrase.upper() in _OPERATORS:
+            continue
+        seen.add(phrase.lower())
+        phrases.append(f'"{phrase}"')
+    return phrases[0] if len(phrases) == 1 else "(" + " OR ".join(phrases) + ")"
+
+
+def _term(word: str, quoted: bool) -> str | None:
     """One word or quoted piece as a quoted FTS5 phrase, or None when it is skipped."""
     runs = _RUN.findall(word)
     if not runs:
@@ -115,13 +165,7 @@ def _term(word: str, quoted: bool, expansions: dict[str, str]) -> str | None:
     lone = len(runs) == 1 and len(runs[0]) == 1
     if not quoted and lone and not _ID_CHARS & set(word):
         return None  # a single-character bare word (I, a) carries no signal
-    phrase = " ".join(runs)
-    clause = f'"{phrase}"'
-    if not quoted and len(runs) == 1 and len(phrase) >= 3:
-        name = _RUN.findall(expansions.get(phrase.upper(), ""))
-        if len(name) >= 2:
-            clause = f'({clause} OR "{" ".join(name).lower()}")'
-    return clause
+    return '"' + " ".join(runs) + '"'
 
 
 def bm25_weights(

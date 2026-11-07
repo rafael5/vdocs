@@ -73,34 +73,43 @@ def test_lexical_search_empty_query_returns_nothing(tmp_path):
     assert search.lexical_search(index_db, "   ?  ", k=5) == []
 
 
-def _seed_entity_skl(index_db, rows):
-    """Add the merge-owned entity_skl table (canonical, canonical_name) skl_expansions reads."""
+def _seed_search_synonyms(index_db, rows):
+    """Add the merge-filled search_synonyms table and its v_search_synonyms view (contract 1.8)."""
     conn = db.connect(index_db)
-    conn.execute(
-        "CREATE TABLE entity_skl (entity_id TEXT PRIMARY KEY, node_id TEXT, "
-        "type TEXT, canonical TEXT, canonical_name TEXT)"
+    conn.executescript(
+        """
+        CREATE TABLE search_synonyms (seq INTEGER PRIMARY KEY, term TEXT NOT NULL,
+          alternative TEXT NOT NULL, match_case INTEGER NOT NULL, source TEXT NOT NULL);
+        CREATE VIEW v_search_synonyms AS
+          SELECT seq, term, alternative, match_case, source FROM search_synonyms;
+        """
     )
-    conn.executemany("INSERT INTO entity_skl VALUES (?, ?, ?, ?, ?)", rows)
+    conn.executemany(
+        "INSERT INTO search_synonyms VALUES (?, ?, ?, ?, ?)",
+        [(i, *r) for i, r in enumerate(rows)],
+    )
     conn.commit()
     conn.close()
 
 
-def test_skl_expansions_reads_entity_skl_and_is_empty_when_absent(tmp_path):
+def test_search_synonyms_reads_the_table_and_is_empty_when_absent(tmp_path):
     index_db = tmp_path / "index.db"
     _build(index_db)
-    # no entity_skl table yet → no-op (back-compat with a pre-merge index.db)
-    assert search.skl_expansions(str(index_db)) == {}
-    _seed_entity_skl(
+    # an index.db from before contract 1.8 has no table: no expansion
+    assert search.search_synonyms(str(index_db)) == search.sp.NO_SYNONYMS
+    _seed_search_synonyms(
         index_db,
-        [("fileman_file:200", "fileman_file/200", "fileman_file", "200", "NEW PERSON")],
+        [("200", "NEW PERSON", 0, "skl"), ("KAAJEE", "Kernel Authentication", 1, "application")],
     )
-    search.skl_expansions.cache_clear()
-    assert search.skl_expansions(str(index_db)) == {"200": "NEW PERSON"}
+    search.search_synonyms.cache_clear()
+    syn = search.search_synonyms(str(index_db))
+    assert syn.folded == {"200": ("NEW PERSON",)}
+    assert syn.exact == {"KAAJEE": ("Kernel Authentication",)}
 
 
-def test_lexical_search_uses_skl_expansion_by_default(tmp_path):
-    # a query naming the file by its NUMBER finds the chunk that only spells the NAME (S3.4 fix):
-    # the SKL expands "200" → the phrase "new person".
+def test_lexical_search_applies_the_synonym_table_by_default(tmp_path):
+    # a query naming the file by its NUMBER finds the chunk that only spells the NAME: the table
+    # expands "200" → "NEW PERSON" (the SKL's file name, now a row of the one synonym table).
     index_db = tmp_path / "index.db"
     _build(index_db)
     conn = db.connect(index_db)
@@ -112,18 +121,14 @@ def test_lexical_search_uses_skl_expansion_by_default(tmp_path):
     )  # fmt: skip
     conn.commit()
     conn.close()
-    _seed_entity_skl(
-        index_db,
-        [("fileman_file:200", "fileman_file/200", "fileman_file", "200", "NEW PERSON")],
-    )
-    search.skl_expansions.cache_clear()
-    # the bare number names the entity but appears nowhere in the name-only chunk:
-    # without expansion (opt out) it never reaches it
-    off = search.lexical_search(index_db, "200", k=5, expansions={})
+    _seed_search_synonyms(index_db, [("200", "NEW PERSON", 0, "skl")])
+    search.search_synonyms.cache_clear()
+    off = search.lexical_search(index_db, "200", k=5, synonyms=search.sp.NO_SYNONYMS)
     assert not any(h["section_id"] == "DI/fm/np" for h in off)
-    # default (None) → SKL expansion on → "200" expands to "new person" → the chunk is retrievable
     on = search.lexical_search(index_db, "200", k=5)
     assert any(h["section_id"] == "DI/fm/np" for h in on)
+    # quoted text is exact: never expanded
+    assert not any(h["section_id"] == "DI/fm/np" for h in search.lexical_search(index_db, '"200"'))
 
 
 # --- fix 2 (keyword-search proposal): every keyword must appear; any-word fallback, flagged -------
@@ -134,7 +139,7 @@ def _ids(hits):
 def test_keyword_search_requires_every_keyword(tmp_path):
     index_db = tmp_path / "index.db"
     _build(index_db)
-    res = search.keyword_search(index_db, "KAAJEE broker", k=5, expansions={})
+    res = search.keyword_search(index_db, "KAAJEE broker", k=5, synonyms=search.sp.NO_SYNONYMS)
     assert _ids(res.hits) == ["KAAJEE/dibr/intro"]  # the CPRS passage has no "broker"
     assert res.any_word is False
 
@@ -143,7 +148,7 @@ def test_keyword_search_falls_back_to_any_keyword_and_says_so(tmp_path):
     index_db = tmp_path / "index.db"
     _build(index_db)
     # "tokens" is only in the CPRS passage and "broker" only in the KAAJEE one
-    res = search.keyword_search(index_db, "tokens broker", k=5, expansions={})
+    res = search.keyword_search(index_db, "tokens broker", k=5, synonyms=search.sp.NO_SYNONYMS)
     assert _ids(res.hits) == ["CPRS/or_um/auth", "KAAJEE/dibr/intro"]
     assert res.any_word is True
 
@@ -151,24 +156,27 @@ def test_keyword_search_falls_back_to_any_keyword_and_says_so(tmp_path):
 def test_a_typed_operator_turns_the_fallback_off(tmp_path):
     index_db = tmp_path / "index.db"
     _build(index_db)
-    res = search.keyword_search(index_db, "tokens AND broker", k=5, expansions={})
+    res = search.keyword_search(index_db, "tokens AND broker", k=5, synonyms=search.sp.NO_SYNONYMS)
     assert res.hits == [] and res.any_word is False
 
 
 def test_not_excludes_a_keyword(tmp_path):
     index_db = tmp_path / "index.db"
     _build(index_db)
-    hits = search.lexical_search(index_db, "KAAJEE NOT broker", k=5, expansions={})
+    hits = search.lexical_search(index_db, "KAAJEE NOT broker", k=5, synonyms=search.sp.NO_SYNONYMS)
     assert _ids(hits) == ["CPRS/or_um/auth"]
 
 
 def test_a_quoted_phrase_must_appear_as_typed(tmp_path):
     index_db = tmp_path / "index.db"
     _build(index_db)
-    assert _ids(search.lexical_search(index_db, '"single sign-on"', k=5, expansions={})) == [
-        "CPRS/or_um/auth"
-    ]
-    assert search.lexical_search(index_db, '"sign-on single"', k=5, expansions={}) == []
+    assert _ids(
+        search.lexical_search(index_db, '"single sign-on"', k=5, synonyms=search.sp.NO_SYNONYMS)
+    ) == ["CPRS/or_um/auth"]
+    assert (
+        search.lexical_search(index_db, '"sign-on single"', k=5, synonyms=search.sp.NO_SYNONYMS)
+        == []
+    )
 
 
 def test_the_envelope_notes_the_fallback_only_when_it_ran():

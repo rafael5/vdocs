@@ -281,6 +281,15 @@ MERGE_CHUNK_ENTITIES = ArtifactContract(
     db="index.db",
     table="chunk_entities",
 )
+# keyword-search proposal, fix 3: the search synonym table every front door applies (v1.8).
+MERGE_SEARCH_SYNONYMS = ArtifactContract(
+    key="index.db:search_synonyms",
+    kind=Kind.SQLITE_TABLE,
+    storage_class=StorageClass.STATE,
+    produced_by="merge",
+    db="index.db",
+    table="search_synonyms",
+)
 # `manifest`: the agent front door — corpus schema/counts/ID-scheme/capabilities (§14.4).
 # Lexical-first/offline: the capability manifest advertises lexical/structured/graph only.
 CORPUS_MANIFEST = ArtifactContract(
@@ -385,6 +394,7 @@ def default_registry() -> ArtifactRegistry:
         MERGE_ENTITY_SKL,
         MERGE_ENTITY_SYNONYMS,
         MERGE_CHUNK_ENTITIES,
+        MERGE_SEARCH_SYNONYMS,
         CORPUS_MANIFEST,
         DISCOVERY_JSON,
         AI_MANIFEST,

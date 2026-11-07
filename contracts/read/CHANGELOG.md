@@ -6,6 +6,25 @@ Semver for the **read** contract (`read_schema_version`), the consumer-facing in
 replacement additively, keep the old as an alias for one release, then remove + MAJOR bump. See
 [ADR-0001](../../docs/adr/0001-read-contract-and-drift-prevention.md).
 
+## v1.8 — 2026-11-06
+
+Additive (backward-compatible) — the search synonym table (keyword-search proposal, fix 3,
+`docs/proposals/keyword-search-five-fixes.md`):
+
+- **`v_search_synonyms`** — term → alternatives, in table order (`seq`), that every search front
+  door ORs into an unquoted word or phrase that is a term: "blood bank" → ("blood bank" OR "VistA
+  Blood Establishment Computer Software" OR "VBECS"). `match_case` 1 marks a term that matches
+  only as written (application codes, namespaces and product abbreviations, many of which are also
+  ordinary words); 0 matches in any case. `source` says where the row came from: the plain-English
+  package names, Kernel parts and judged terms of `registries/search-synonyms.yaml`, the
+  documents' application names, codes, namespaces and products, or the SKL's file names (file 200
+  → NEW PERSON, which the MCP used to read from `v_entity_skl`). The reader rules and their cases
+  are `contracts/query/v1.json` (`synonyms`).
+- **capability `search_synonyms`.**
+
+`index` owns the empty shell and `merge` fills it, like the other SKL tables. (`index`
+`contract_ver` 17→18, `merge` 1→2.)
+
 ## v1.7 — 2026-11-05
 
 Additive (backward-compatible) — the whole VDL inventory in `index.db` (inventory browser step 1,

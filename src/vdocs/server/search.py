@@ -20,33 +20,26 @@ from vdocs.server import search_pure as sp
 
 
 @lru_cache(maxsize=8)
-def skl_expansions(index_db: str) -> dict[str, str]:
-    """The SKL-grounded query-expansion map (S3.4): a FileMan file *number* → its canonical name
-    phrase, read from `index.db:entity_skl` (the `merge` projection). Replaces the hand-seeded
-    `registries/glossary/expansions.yaml` (L1.3) with **entity-resolved** data — one source the CLI
-    and the measurement harness expand identically. `{}` when the SKL table is absent (a pre-`merge`
-    index.db) or empty, so expansion is then a no-op. Cached per index.db path (call `cache_clear()`
-    after a rebuild). `index_db` is a `str` so the result is hashable/cacheable.
-
-    **Scope, measured 2026-08-04 (SL.1).** On the production collection this map holds exactly
-    **one** entry (`200 → NEW PERSON`), against 233 FileMan files that are genuinely split across a
-    number and a name vocabulary. The limit is here, not in the curation queue: `skl_expansion_map`
-    drops a two-digit number (`len(key) >= 3`, enforced again in `acronym_phrase_clauses`) and any
-    decimal number (`.isalnum()` — and beneath that, FTS5 tokenises `50.7` into `50` and `7`, so a
-    single-token key could never match one). Of 28 identifier-shaped questions that fail for
-    vocabulary reasons alone, this repairs 3; the ceiling for any expansion is 23. Do not describe
-    this as a collection-wide vocabulary fix — see `docs/proposals/vdocs-quality-synonym-layer/`."""
+def search_synonyms(index_db: str) -> sp.Synonyms:
+    """The search synonym table (keyword-search proposal, fix 3), read from `index.db`'s
+    `v_search_synonyms` (read contract 1.8) in table order: plain-English package names, Kernel
+    parts, judged terms, application codes and names, and the SKL's file names (file 200 → NEW
+    PERSON). `NO_SYNONYMS` for an index.db from before contract 1.8, so expansion is then a no-op.
+    Cached per index.db path (call `cache_clear()` after a rebuild); `index_db` is a `str` so the
+    result is cacheable."""
     path = Path(index_db)
     if not path.exists():
-        return {}
+        return sp.NO_SYNONYMS
     conn = db.connect(path, read_only=True)
     try:
-        rows = conn.execute("SELECT canonical, canonical_name FROM entity_skl").fetchall()
+        rows = conn.execute(
+            "SELECT term, alternative, match_case FROM v_search_synonyms ORDER BY seq"
+        ).fetchall()
     except sqlite3.OperationalError:
-        return {}  # pre-merge index.db has no entity_skl table
+        return sp.NO_SYNONYMS  # an index.db from before read contract 1.8
     finally:
         conn.close()
-    return sp.skl_expansion_map([(r[0], r[1]) for r in rows])
+    return sp.synonyms_from_rows((r[0], r[1], int(r[2])) for r in rows)
 
 
 # 0-based column index of `body` in chunks_fts (the snippet() target) — single-sourced from the
@@ -151,7 +144,7 @@ def keyword_search(
     k: int = 10,
     app: list[str] | None = None,
     doc_type: list[str] | None = None,
-    expansions: dict[str, str] | None = None,
+    synonyms: sp.Synonyms | None = None,
     weights: dict[str, float] | None = None,
 ) -> KeywordResult:
     """Rank `is_latest` chunks against the keywords in `query` by BM25; up to `k` pre-cited hits.
@@ -165,19 +158,17 @@ def keyword_search(
     ranking, §14.2). Each hit: `{score, section_id, doc_key, doc_id, doc_title, section_title,
     app_code, doc_type, snippet, uri, body_path}` (`score` = −bm25, so higher is more relevant).
 
-    `expansions` (token → name phrase) is the query-expansion map. **Default (None) → the
-    SKL-grounded `skl_expansions(index_db)`** (S3.4): a number/identifier query expands to the
-    entity's spelled-out name (`file #200` → `NEW PERSON`), the principled vocabulary-mismatch fix.
-    Pass `{}` to disable expansion (the old hand-seeded glossary path that *regressed* — L1.3 — is
-    retired; the SKL data is entity-resolved, not common-word acronym noise).
+    `synonyms` is the synonym table (fix 3). **Default (None) → `search_synonyms(index_db)`**, the
+    table in index.db: an unquoted word or phrase that is a term gains its alternatives as OR'd
+    phrases ("blood bank" → VBECS, `file #200` → NEW PERSON). Pass `sp.NO_SYNONYMS` to turn it off.
 
     `weights` overrides the per-column bm25 weights for one call (default: the shipped
     `search_pure.FTS_WEIGHTS`). It exists so a weight sweep measures **this** function rather than a
     re-implementation of its query — the same discipline the golden harness follows by importing the
     engine instead of reproducing it. Production callers leave it None."""
-    if expansions is None:
-        expansions = skl_expansions(str(index_db))
-    match = sp.read_query(query, expansions)
+    if synonyms is None:
+        synonyms = search_synonyms(str(index_db))
+    match = sp.read_query(query, synonyms)
     if not match.all:
         return KeywordResult([], False)
     hits = _ranked(index_db, match.all, k, app, doc_type, weights)
@@ -194,13 +185,13 @@ def lexical_search(
     k: int = 10,
     app: list[str] | None = None,
     doc_type: list[str] | None = None,
-    expansions: dict[str, str] | None = None,
+    synonyms: sp.Synonyms | None = None,
     weights: dict[str, float] | None = None,
 ) -> list[dict[str, Any]]:
     """`keyword_search`'s hits alone, for callers that do not report the fallback (the golden
     harness and the measurement scripts). Returns `[]` for an empty/no-usable-term query."""
     return keyword_search(
-        index_db, query, k=k, app=app, doc_type=doc_type, expansions=expansions, weights=weights
+        index_db, query, k=k, app=app, doc_type=doc_type, synonyms=synonyms, weights=weights
     ).hits
 
 

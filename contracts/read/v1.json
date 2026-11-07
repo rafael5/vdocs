@@ -1,5 +1,5 @@
 {
-  "read_schema_version": "1.7",
+  "read_schema_version": "1.8",
   "description": "Published read contract for vdocs index.db (ADR-0001). Consumers (vdocs-tui, vdocs-web, MCP) bind ONLY to the v_* views + the named chunks_fts surface \u2014 never to physical tables. The pipeline may refactor physical tables freely behind these. Views are GENERATED from this spec (kernel.read_contract.view_ddl), so they cannot drift from it; `vdocs doctor` asserts the emitted DB matches.",
   "views": {
     "v_documents": {
@@ -426,6 +426,37 @@
         }
       }
     },
+    "v_search_synonyms": {
+      "source": "search_synonyms",
+      "description": "Search synonym table (keyword-search proposal, fix 3): term \u2192 alternatives that every search front door ORs into an unquoted word or phrase that is a term, by the rules in contracts/query/v1.json (`synonyms`). Written by `merge` from registries/search-synonyms.yaml (plain-English package names, Kernel parts, judged terms), the documents' application names, codes, namespaces and products, and the SKL's file names. Read it ORDER BY seq.",
+      "columns": {
+        "seq": {
+          "type": "INTEGER",
+          "nullable": false,
+          "desc": "table order (ORDER BY this; alternatives are applied in this order)"
+        },
+        "term": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "the term a typed word or phrase must equal, as letter-and-digit runs (at least two characters)"
+        },
+        "alternative": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "a phrase ORed in when the term is typed"
+        },
+        "match_case": {
+          "type": "INTEGER",
+          "nullable": false,
+          "desc": "1: the term matches only as written (application codes, namespaces, product abbreviations); 0: in any case"
+        },
+        "source": {
+          "type": "TEXT",
+          "nullable": false,
+          "desc": "package_name | kernel_part | application | product | term | skl"
+        }
+      }
+    },
     "v_inventory": {
       "source": "inventory",
       "description": "One row per VDL listing in the gold inventory (one link on one application page, as inventory.json holds it; not a document), as of the last `vdocs index` \u2014 meta.inventory_content_hash says which inventory. Gold status is not a column: join doc_id to v_documents (and the reverse join finds gold documents no listing carries). Definitions: v_vocab kinds disposition, reason_kind, namespace (pkg_ns full names, PACKAGE file #9.4 first) and doc_type_family.",
@@ -599,6 +630,7 @@
     "skl_entity_keying",
     "lifecycle_labels",
     "inventory",
-    "last_updated"
+    "last_updated",
+    "search_synonyms"
   ]
 }

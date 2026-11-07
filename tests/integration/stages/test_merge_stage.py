@@ -8,7 +8,12 @@ a re-run is idempotent; a common-word surface never over-tags.
 
 from __future__ import annotations
 
-from vdocs.contracts.registry import INDEX_CHUNKS, INDEX_ENTITIES, KNOWLEDGE_ENTITIES
+from vdocs.contracts.registry import (
+    INDEX_CHUNKS,
+    INDEX_DOCUMENTS,
+    INDEX_ENTITIES,
+    KNOWLEDGE_ENTITIES,
+)
 from vdocs.kernel import db, knowledge_db
 from vdocs.models.knowledge import EntityNode, Provenance
 from vdocs.models.stage import Decision, StageRun
@@ -43,8 +48,19 @@ def _seed(ctx):
         CREATE TABLE entities (entity_id TEXT PRIMARY KEY, type TEXT, canonical_name TEXT);
         CREATE TABLE chunks (chunk_id TEXT PRIMARY KEY, section_id TEXT, doc_key TEXT,
                              part INTEGER, text TEXT);
+        CREATE TABLE documents (doc_key TEXT PRIMARY KEY, app_code TEXT, app_name TEXT,
+                                pkg_ns TEXT, product_abbr TEXT, product_full TEXT,
+                                is_latest INTEGER);
         """
     )
+    conn.executemany(
+        "INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [
+            ("VBECS/um", "VBECS", "VistA Blood Establishment Computer Software (VBECS)", "VBEC",
+             "VBECS", "VistA Blood Establishment Computer Software", 1),
+            ("XM/old", "XM", "MailMan", "XM", "XM", "MailMan", 0),  # not latest: not an app here
+        ],
+    )  # fmt: skip
     # index recognized file #200 and file #1 (both present so both can reconcile)
     conn.executemany(
         "INSERT INTO entities VALUES (?, ?, ?)",
@@ -72,7 +88,10 @@ def _seed(ctx):
             started_at="t",
             finished_at="t",
             inputs_fp={},
-            outputs_fp={a.key: a.fingerprint(ctx.cfg) for a in (INDEX_ENTITIES, INDEX_CHUNKS)},
+            outputs_fp={
+                a.key: a.fingerprint(ctx.cfg)
+                for a in (INDEX_ENTITIES, INDEX_CHUNKS, INDEX_DOCUMENTS)
+            },
             counts={},
             contract_ver=12,
             tool_ver=ctx.cfg.tool_ver,
@@ -142,3 +161,26 @@ def test_merge_is_idempotent(ctx):
     after = sorted(tuple(r) for r in conn.execute("SELECT * FROM chunk_entities"))
     conn.close()
     assert before == after
+
+
+def test_merge_writes_the_search_synonym_table(ctx):
+    _seed(ctx)
+    (result,) = Orchestrator([MergeStage()]).run(ctx)
+    assert result.status == "ok"
+    conn = db.connect(ctx.cfg.index_db, read_only=True)
+    try:
+        rows = [
+            tuple(r)
+            for r in conn.execute(
+                "SELECT term, alternative, match_case, source FROM search_synonyms ORDER BY seq"
+            )
+        ]
+    finally:
+        conn.close()
+    blood_bank = [alt for term, alt, _, src in rows if term == "blood bank"]
+    assert blood_bank == ["VistA Blood Establishment Computer Software", "VBECS", "VBEC"]
+    assert ("VBECS", "VistA Blood Establishment Computer Software", 1, "application") in rows
+    assert ("200", "NEW PERSON", 0, "skl") in rows  # the SKL's file name: one mechanism
+    assert not [r for r in rows if r[0] == "email"]  # MailMan has only an old document here
+    # the registry's other applications have no documents in this lake: reported, not guessed
+    assert result.counts["search_synonym_packages_without_documents"] == 108

@@ -149,6 +149,10 @@ CREATE TABLE chunk_entities (
   chunk_id TEXT NOT NULL, node_id TEXT NOT NULL,
   PRIMARY KEY (chunk_id, node_id)
 );
+CREATE TABLE search_synonyms (
+  seq INTEGER PRIMARY KEY, term TEXT NOT NULL, alternative TEXT NOT NULL,
+  match_case INTEGER NOT NULL, source TEXT NOT NULL
+);
 """
 
 _DOC_COLUMNS = (
@@ -206,7 +210,9 @@ class IndexStage(Stage):
     # last_updated_source from history.yaml, vocab gained dispositions, reason kinds, doc-type
     # families and namespace names, and meta the inventory's count and content hash; read
     # contract → v1.7 (additive MINOR).
-    contract_ver = 17
+    # v18 (keyword-search proposal, fix 3): index.db gained the EMPTY search_synonyms shell +
+    # v_search_synonyms, which `merge` fills; read contract → v1.8 (additive MINOR).
+    contract_ver = 18
     # ^ v15: `searchable` is the retrieval predicate, not a `kind` alias (P6.1b)
     # ^ v14: vocab-validated option recognizer (un-quarantined)
 
