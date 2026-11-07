@@ -6,7 +6,8 @@ package names made a core part of fix 3, and search-box suggestions added as fix
 operator's direction · fix 1 built in vdocs-web 2026-11-06 (`926e320`) · Appendices A, B and C
 approved by the operator unchanged 2026-11-06 · fix 2 built in vdocs (MCP and `vdocs ask`,
 `9bfc552`), vdocs-web (`9448e4f`) and the Go CLI (`e9f8b62`) · fix 4 built in vdocs (`bc0188a`) ·
-fix 3 built in all three (read contract 1.8) · fix 5 not built.** Consumer: vdocs-web (fixes 1–3 and
+fix 3 built in all three (read contract 1.8) · decisions D4 and D5 on fix 3 taken 2026-11-07 as
+recommended · fix 5 not built.** Consumer: vdocs-web (fixes 1–3 and
 5). Producer and MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3.
 **Evidence:** every number comes from a script in `scripts/mcp_review/` (`contract.py`, `fixes.py`,
 `package_names.py`, `ranking.py`, `tiers.py`, `suggest.py`), recorded with provenance in the
@@ -249,11 +250,12 @@ reproduces the live figures.
 
 - **Two costs, both from approved names.** "progress notes" → TIU moves the unsigned-notes
   question from 1st to 2nd on the web. "allergies" → Adverse Reaction Tracking takes "enter
-  patient allergies" out of the MCP top 15 (it was 4th), while the web keeps it 1st.
+  patient allergies" out of the MCP top 15 (it was 4th), while the web keeps it 1st. Both names
+  stay (D4).
 - **Short of the target.** "set up printer" stays off web page 1 (18th), and in the MCP only
   "change password" reaches the top 10. The MCP ranks sections, and a broad word such as "jobs" or
   "email", even expanded to TaskMan or MailMan, matches thousands of sections; synonyms cannot lift
-  the judged introductions above them.
+  the judged introductions above them. The MCP figure is now a measurement, not a target (D5).
 
 The operator set this on 2026-11-06: keyword search must translate the plain-English name of a
 package into its VistA package name and namespace, so "blood bank" finds VBECS. It is a core
@@ -394,9 +396,9 @@ not how results are ranked, so the judged questions cannot score them.
 | Application found by its code, top 10 | 101 / 109 | 108 / 109 | ≥ 108 / 109 |
 | Plain-English package name: its manuals on web page 1 | 91 / 242 | 242 / 242 | every name in the edited list |
 | Plain-English package name: its sections in the MCP top 10 | 186 / 242 | 242 / 242 | every name in the edited list |
-| Judged questions and identifier checks, synonym table on vs off | — | identical | no loss |
+| Judged questions and identifier checks, synonym table on vs off | — | identical | no loss, except the two costs accepted in D4 |
 | Plain-English keyword searches (Appendix C): right manual on web page 1 | 3 / 6 (after fix 1) | — | 6 / 6 |
-| Plain-English keyword searches: a judged section in the MCP top 10 | 1 / 6 | — | 6 / 6 |
+| Plain-English keyword searches: a judged section in the MCP top 10 | 1 / 6 | — | measured, not a target (D5) |
 | Search-box suggestions, time per keystroke | none | 34 ms (Python, full scan) | under 50 ms |
 
 ## 5. Order of work
@@ -460,7 +462,8 @@ Each step: write the test first, then build, then run `make check`, measure agai
 
 ## 7. Decisions
 
-All three were taken by the operator on 2026-11-06, as recommended. D1 was revised the same day.
+D1–D3 were taken by the operator on 2026-11-06, as recommended; D1 was revised the same day. D4
+and D5 were taken on 2026-11-07, as recommended, once fix 3 was built and measured.
 
 **Operator direction, 2026-11-06.** Translating plain-English package names into the VistA package
 name and namespace is a core capability of keyword search (fix 3). The operator approved the drafts
@@ -478,6 +481,18 @@ in Appendix B unchanged on 2026-11-06. Search-box suggestions (fix 5) are in sco
   the reviewer's drafts (Appendix A), because the drafts were written by someone who knew the
   answers. **Decided: the operator edits them.** The operator approved them unchanged on
   2026-11-06.
+- **D4. Keep the two approved package names that cost a judged question.** "progress notes" →
+  Text Integration Utility (TIU) moves the unsigned-notes question from 1st to 2nd on the web.
+  "allergies" → Adverse Reaction Tracking (GMRA) takes "enter patient allergies" from 4th to out
+  of the MCP top 15, while the web keeps it 1st. Recommended: keep both, because package names
+  are the core of fix 3 and the web console loses nothing. The alternative was to drop them from
+  the registry. **Decided: keep both.**
+- **D5. The target for the six plain-English keyword searches.** The target was 6 of 6 on web
+  page 1 and in the MCP top 10. Built, they reach 5 of 6 on the web and 1 of 6 in the MCP: the MCP
+  ranks sections, and a broad word matches thousands of them, which synonyms cannot change.
+  Recommended: keep web page 1 as the target and keep the MCP figure as a measurement only.
+  **Decided: as recommended.** "set up printer" (18th on the web) is the one search still short
+  of the target.
 
 ## 8. References
 
