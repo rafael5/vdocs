@@ -228,3 +228,115 @@ def test_a_listed_refiling_that_matches_nothing_warns():
 def test_no_exception_file_is_the_expired_state_and_passes_out_loud():
     c = refiled_exceptions_check({}, inventory_ids=set(), gold_ids=set())
     assert c.health is Health.PASS and "none listed" in c.detail
+
+
+# --- body coverage gate (end-to-end review A2, decision D2) --------------------------------------
+# Per latest document: body word tokens (gold body.md minus the generated TOC) present in its
+# non-table chunks; FAIL below the floor unless the document is a named exception, and the
+# exception list is printed on every run, even when empty.
+
+from vdocs.server.doctor import (  # noqa: E402
+    BodyCoverageRow,
+    body_coverage_checks,
+    body_tokens,
+    indexed_tokens,
+)
+
+
+def _row(key, body, indexed):
+    return BodyCoverageRow(doc_key=key, body_tokens=body, indexed_tokens=indexed)
+
+
+def test_body_coverage_passes_above_the_floor_and_prints_an_empty_exception_list():
+    checks = body_coverage_checks([_row("A/a", 1000, 990), _row("B/b", 10, 10)], floor=95.0,
+                                  exceptions={})  # fmt: skip
+    gate, listed = checks
+    assert gate.name == "body coverage" and gate.health is Health.PASS
+    assert "2/2" in gate.detail and "95" in gate.detail
+    assert listed.name == "body coverage exceptions" and listed.health is Health.PASS
+    assert "none" in listed.detail
+
+
+def test_body_coverage_fails_below_the_floor_and_names_the_document_with_its_share():
+    (gate, _) = body_coverage_checks([_row("RMPR/x", 11340, 1198), _row("B/b", 10, 10)],
+                                     floor=95.0, exceptions={})  # fmt: skip
+    assert gate.health is Health.FAIL
+    assert "RMPR/x" in gate.detail and "10.6%" in gate.detail and "1/2" in gate.detail
+
+
+def test_body_coverage_exception_turns_a_failure_into_by_design_and_is_printed():
+    gate, listed = body_coverage_checks(
+        [_row("LR/labbbumf", 17996, 14408)], floor=95.0,
+        exceptions={"LR/labbbumf": "TOC entries are whole paragraphs"},
+    )  # fmt: skip
+    assert gate.health is Health.BY_DESIGN
+    assert listed.health is Health.BY_DESIGN
+    assert "LR/labbbumf" in listed.detail and "whole paragraphs" in listed.detail
+
+
+def test_body_coverage_exception_that_is_not_needed_is_still_printed_and_not_a_failure():
+    gate, listed = body_coverage_checks([_row("A/a", 100, 100)], floor=95.0,
+                                        exceptions={"A/a": "was low once"})  # fmt: skip
+    assert gate.health is Health.PASS and "A/a" in listed.detail
+
+
+def test_body_coverage_with_no_rows_is_a_warning_not_a_pass():
+    # fail closed: a gate that measured nothing says so instead of going green
+    gate, _ = body_coverage_checks([], floor=95.0, exceptions={})
+    assert gate.health is Health.WARN and "not measured" in gate.detail
+
+
+def test_body_tokens_drop_the_frontmatter_identity_header_and_generated_toc_only():
+    # the identity header (`**title**`, `_Version · Patch · Published_`, `Source: <url>`) and the
+    # `## Contents` list are normalize's own text; on a 148-token change page they were 20% of the
+    # "body" (PRCA/icd_10_um_tp_4_5_281 read 80% covered with every word of its text indexed)
+    text = (
+        "---\ntitle: X\n---\n**X Manual**\n\n_Version 4.5 · Published 1995-03_\n\n"
+        "Source: <https://x.gov/a.docx>\n\n## Contents\n\n- [Intro](#intro)\n  - [Sub](#sub)\n\n"
+        "Preamble words here.\n\n# Intro\n\nbody words\n"
+    )
+    assert body_tokens(text) == 3 + 1 + 2  # Preamble words here · Intro · body words
+
+
+def test_indexed_tokens_count_part_zero_whole_and_drop_the_overlap_block_of_later_parts():
+    # split_oversized repeats the last block of a window at the start of the next; a line-split
+    # giant block has no overlap and loses one line — the safe direction for a floor
+    chunks = [("S/a", 0, "one two\n\nthree four"), ("S/a", 1, "three four\n\nfive six"),
+              ("S/a#table-01.csv", 0, "cap | a | b")]  # fmt: skip
+    assert indexed_tokens(chunks) == 6
+
+
+def test_policy_loads_the_body_coverage_block(tmp_path):
+    (tmp_path / "doctor-policy.yaml").write_text(
+        "coverage:\n  doc_type: {min_pct: 100}\n"
+        "body_coverage:\n  min_pct: 95\n  exceptions:\n"
+        "    LR/labbbumf: TOC entries are paragraphs\n",
+        encoding="utf-8",
+    )
+    pol = load_doctor_policy(tmp_path)
+    assert pol.body_coverage.min_pct == 95.0
+    assert pol.body_coverage.exceptions == {"LR/labbbumf": "TOC entries are paragraphs"}
+
+
+def test_policy_body_coverage_defaults_when_absent(tmp_path):
+    (tmp_path / "doctor-policy.yaml").write_text("coverage:\n  doc_type: {min_pct: 100}\n")
+    pol = load_doctor_policy(tmp_path)
+    assert pol.body_coverage.min_pct == 95.0 and pol.body_coverage.exceptions == {}
+
+
+def test_policy_rejects_an_exception_without_a_reason(tmp_path):
+    import pytest
+
+    (tmp_path / "doctor-policy.yaml").write_text(
+        "coverage:\n  doc_type: {min_pct: 100}\nbody_coverage:\n  exceptions:\n    A/a: ''\n"
+    )
+    with pytest.raises(ValueError, match="reason"):
+        load_doctor_policy(tmp_path)
+
+
+def test_body_coverage_exception_naming_no_latest_document_is_a_failure():
+    # fail closed: a vanished document must not keep an exception alive
+    gate, listed = body_coverage_checks([_row("A/a", 100, 100)], floor=95.0,
+                                        exceptions={"GONE/x": "was low"})  # fmt: skip
+    assert gate.health is Health.FAIL and "GONE/x" in gate.detail
+    assert listed.health is Health.WARN and "not in the index" in listed.detail

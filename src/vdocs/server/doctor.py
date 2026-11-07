@@ -19,12 +19,13 @@ and assembles the report. This GREEN/RED is the authoritative gate (replacing th
 
 from __future__ import annotations
 
+import re
 import sqlite3
-from collections.abc import Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import yaml
 
@@ -189,6 +190,119 @@ def refiled_exceptions_check(
     )
 
 
+# --- body coverage (end-to-end review A2, decision D2) -------------------------------------------
+# Per latest document: body word tokens (the gold body.md, frontmatter and the generated TOC
+# dropped) against the word tokens of its non-table chunks. Nothing compared a body with its chunks
+# before; a manual could lose 89% of its text (RMPR/rmpr_3_nppdum) and the library stayed GREEN.
+
+
+class BodyCoverageRow(NamedTuple):
+    doc_key: str
+    body_tokens: int
+    indexed_tokens: int
+
+    @property
+    def pct(self) -> float:
+        return 100.0 if self.body_tokens == 0 else 100.0 * self.indexed_tokens / self.body_tokens
+
+
+_WORD_RE = re.compile(r"\w+")
+_FRONTMATTER_RE = re.compile(r"\A---\n.*?\n---\n", re.DOTALL)
+
+
+def body_tokens(body_md: str) -> int:
+    """Word tokens of a gold ``body.md`` that are the document's own: the frontmatter, the identity
+    header (`**title**`, `_Version · Patch · Published_`, `Source: <url>`) and the generated
+    `## Contents` list dropped — the same two shapes `index_pure.preamble_text` sets aside, from the
+    one home (§9.2)."""
+    from vdocs.stages.index.index_pure import GENERATED_TOC_RE, IDENTITY_HEADER_RE
+
+    text = _FRONTMATTER_RE.sub("", body_md, count=1)
+    text = IDENTITY_HEADER_RE.sub("", text, count=1)
+    return len(_WORD_RE.findall(GENERATED_TOC_RE.sub("", text)))
+
+
+def indexed_tokens(chunks: Iterable[tuple[str, int, str]]) -> int:
+    """Word tokens a document's non-table chunks hold, as ``(chunk_id, part, text)`` rows. Part 0
+    counts whole; a later ``#pN`` part drops its first block — `split_oversized` repeats the last
+    block of a window at the start of the next — or, with no blank line to mark a block, its first
+    line (a line-split giant block has no overlap; one line under is the safe direction)."""
+    total = 0
+    for chunk_id, part, text in chunks:
+        if "#table" in chunk_id:
+            continue
+        if part >= 1:
+            text = text.split("\n\n", 1)[1] if "\n\n" in text else text.split("\n", 1)[-1]
+        total += len(_WORD_RE.findall(text))
+    return total
+
+
+def body_coverage_checks(
+    rows: Sequence[BodyCoverageRow], *, floor: float, exceptions: Mapping[str, str]
+) -> tuple[Check, Check]:
+    """The gate and the printed exception list. FAIL when a latest document below ``floor`` is not
+    a named exception, or when an exception names a document that is not a latest document (a
+    vanished document must not keep an exception alive); BY-DESIGN when every document below the
+    floor is excepted; WARN, not PASS, when there was nothing to measure. The second check lists
+    every exception with its reason on every run — "none" when there are none — and WARNs on an
+    exception the document no longer needs."""
+    listed_name = "body coverage exceptions"
+    if not rows:
+        return (
+            Check(
+                "body coverage", Health.WARN, "not measured: no latest document with a gold body"
+            ),
+            Check(listed_name, Health.PASS, "none" if not exceptions else _listed(exceptions, {})),
+        )
+    by_key = {r.doc_key: r for r in rows}
+    below = [r for r in rows if r.pct + 1e-9 < floor]
+    failing = [r for r in below if r.doc_key not in exceptions]
+    excepted = [r for r in below if r.doc_key in exceptions]
+    unknown = sorted(k for k in exceptions if k not in by_key)
+    ok = len(rows) - len(below)
+    base = f"{ok}/{len(rows)} latest documents at or above {floor:g}% of body tokens indexed"
+    if unknown:
+        gate = Check(
+            "body coverage",
+            Health.FAIL,
+            f"{base}; exception(s) name no latest document: {', '.join(unknown)} — remove them "
+            "from registries/doctor-policy.yaml",
+        )
+    elif failing:
+        worst = sorted(failing, key=lambda r: r.pct)
+        gate = Check(
+            "body coverage",
+            Health.FAIL,
+            f"{base}; below: "
+            + ", ".join(f"{r.doc_key} ({r.pct:.1f}%)" for r in worst[:8])
+            + (f" (+{len(worst) - 8} more)" if len(worst) > 8 else ""),
+        )
+    elif excepted:
+        gate = Check(
+            "body coverage",
+            Health.BY_DESIGN,
+            f"{base}; {len(excepted)} below the floor accepted by policy",
+        )
+    else:
+        gate = Check("body coverage", Health.PASS, base)
+    if not exceptions:
+        return gate, Check(listed_name, Health.PASS, "none")
+    stale = sorted(k for k in exceptions if k in by_key and by_key[k].pct + 1e-9 >= floor)
+    health = Health.WARN if stale or unknown else Health.BY_DESIGN
+    detail = _listed(exceptions, by_key)
+    if stale:
+        detail += f"; no longer needed, remove: {', '.join(stale)}"
+    return gate, Check(listed_name, health, detail)
+
+
+def _listed(exceptions: Mapping[str, str], by_key: Mapping[str, BodyCoverageRow]) -> str:
+    items = ", ".join(
+        f"{k} — {v}" + (f" ({by_key[k].pct:.1f}%)" if k in by_key else " (not in the index)")
+        for k, v in exceptions.items()
+    )
+    return f"{len(exceptions)} listed: {items}"
+
+
 def contract_check(
     emitted_views: dict[str, list[str]], stamped_version: str, spec: dict[str, Any]
 ) -> Check:
@@ -224,12 +338,24 @@ class CoverageSpec:
 
 
 @dataclass(frozen=True)
+class BodyCoverageSpec:
+    """The body-coverage gate (end-to-end review A2, decision D2): the share of a latest
+    document's body word tokens that its non-table chunks hold must reach ``min_pct``, unless the
+    document is a named exception — ``doc_key → reason`` — and the exception list is printed on
+    every run. D2: 95 now, 99 once the three known causes are fixed."""
+
+    min_pct: float = 95.0
+    exceptions: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class DoctorPolicy:
     coverage: dict[str, CoverageSpec]
     accepted_anchor_edge_cases: frozenset[str]
     # D2: version groups known to carry no is_latest anchor (upstream grouping drift —
     # the latest lives under a sibling anchor_key spelling). WARN, never silent PASS.
     accepted_anchorless_groups: frozenset[str] = frozenset()
+    body_coverage: BodyCoverageSpec = field(default_factory=BodyCoverageSpec)
 
 
 def load_doctor_policy(registries_dir: Path) -> DoctorPolicy:
@@ -243,7 +369,12 @@ def load_doctor_policy(registries_dir: Path) -> DoctorPolicy:
             "file is a broken install — fail loud, tenet #7)"
         )
     raw: dict[str, Any] = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    known = {"coverage", "accepted_anchor_edge_cases", "accepted_anchorless_groups"}
+    known = {
+        "coverage",
+        "accepted_anchor_edge_cases",
+        "accepted_anchorless_groups",
+        "body_coverage",
+    }
     unknown = set(raw) - known
     if unknown:
         raise ValueError(
@@ -260,10 +391,19 @@ def load_doctor_policy(registries_dir: Path) -> DoctorPolicy:
         raise ValueError("doctor-policy.yaml: a non-empty `coverage:` block is required")
     accepted = frozenset(raw.get("accepted_anchor_edge_cases") or [])
     anchorless = frozenset(raw.get("accepted_anchorless_groups") or [])
+    bc_raw = raw.get("body_coverage") or {}
+    exceptions = {str(k): str(v or "") for k, v in (bc_raw.get("exceptions") or {}).items()}
+    unreasoned = sorted(k for k, v in exceptions.items() if not v.strip())
+    if unreasoned:
+        raise ValueError(
+            f"doctor-policy.yaml: body_coverage exception(s) without a reason: {unreasoned}"
+        )
+    body_coverage = BodyCoverageSpec(float(bc_raw.get("min_pct", 95.0)), exceptions)
     return DoctorPolicy(
         coverage=coverage,
         accepted_anchor_edge_cases=accepted,
         accepted_anchorless_groups=anchorless,
+        body_coverage=body_coverage,
     )
 
 
@@ -290,10 +430,13 @@ def diagnose(
     skl_entities: int | None = None,
     published_usage: str | None = None,
     published_query_recipe: dict[str, Any] | None = None,
+    body_coverage: Sequence[BodyCoverageRow] | None = None,
 ) -> DoctorReport:
     """Run every soundness check against ``index.db`` and assemble the report. ``kept_doctypes`` is
     the gate's Tier-A keep set (gold must contain only those). When ``read_spec`` (a read-contract)
-    is given, also gate that the emitted DB matches it verbatim (ADR-0001 P1)."""
+    is given, also gate that the emitted DB matches it verbatim (ADR-0001 P1). ``body_coverage``
+    (A2) is the per-document body-vs-chunks token count the lake driver measures; ``None`` (no gold
+    bodies to read) is reported as WARN "not measured", never as a pass."""
 
     def one(sql: str, *params: object) -> int:
         return int(conn.execute(sql, params).fetchone()[0])
@@ -579,6 +722,14 @@ def diagnose(
             )
         )
 
+    # A2: the body-coverage gate + its printed exception list, from the lake driver's rows
+    checks.extend(
+        body_coverage_checks(
+            list(body_coverage or ()),
+            floor=policy.body_coverage.min_pct,
+            exceptions=policy.body_coverage.exceptions,
+        )
+    )
     return DoctorReport(gold_count=gold, checks=checks)
 
 
@@ -641,6 +792,7 @@ def diagnose_lake(cfg: Settings) -> DoctorReport:
             skl_entities=skl_entities,
             published_usage=published_usage,
             published_query_recipe=published_query_recipe,
+            body_coverage=body_coverage_rows(conn, cfg.gold_consolidated),
         )
         report.checks.append(
             inventory_freshness_check(_meta(conn, META_CONTENT_HASH), current_inventory)
@@ -649,6 +801,29 @@ def diagnose_lake(cfg: Settings) -> DoctorReport:
         return report
     finally:
         conn.close()
+
+
+def body_coverage_rows(conn: sqlite3.Connection, gold_root: Path) -> list[BodyCoverageRow] | None:
+    """One :class:`BodyCoverageRow` per latest document: its gold ``body.md`` word tokens against
+    the tokens of its non-table chunks in ``index.db``. ``None`` when the gold tree is absent (the
+    gate then says "not measured"); a document whose body file is missing is counted with zero
+    body tokens, so it cannot lower the measure, and surfaces through the anchor checks instead."""
+    if not gold_root.is_dir():
+        return None
+    by_doc: dict[str, list[tuple[str, int, str]]] = {}
+    for chunk_id, doc_key, part, text in conn.execute(
+        "SELECT c.chunk_id, c.doc_key, c.part, c.text FROM chunks c "
+        "JOIN documents d ON d.doc_key = c.doc_key WHERE d.is_latest = 1"
+    ):
+        by_doc.setdefault(doc_key, []).append((chunk_id, int(part), text))
+    rows: list[BodyCoverageRow] = []
+    for doc_key, bundle_path in conn.execute(
+        "SELECT doc_key, bundle_path FROM documents WHERE is_latest = 1 ORDER BY doc_key"
+    ):
+        body_path = gold_root / str(bundle_path) / "body.md"
+        total = body_tokens(body_path.read_text(encoding="utf-8")) if body_path.is_file() else 0
+        rows.append(BodyCoverageRow(doc_key, total, indexed_tokens(by_doc.get(doc_key, []))))
+    return rows
 
 
 def _refiled_check(conn: sqlite3.Connection, listed: dict[str, str]) -> Check:
@@ -701,7 +876,13 @@ __all__ = [
     "DoctorPolicy",
     "DoctorReport",
     "Health",
+    "BodyCoverageRow",
+    "BodyCoverageSpec",
+    "body_coverage_checks",
+    "body_coverage_rows",
+    "body_tokens",
     "coverage_check",
+    "indexed_tokens",
     "diagnose",
     "diagnose_lake",
     "integrity_check",

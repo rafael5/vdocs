@@ -33,3 +33,22 @@ accepted_anchor_edge_cases:
 # under a sibling anchor_key spelling). Each entry stays visible as WARN, never silent PASS.
 # accepted_anchorless_groups:
 #   - "APP:PKG:DT:slug"
+
+# Body coverage (end-to-end review A2, decision D2): the share of each latest document's body word
+# tokens (gold body.md with the frontmatter, normalize's identity header and the generated
+# `## Contents` list dropped) that its non-table chunks hold. Below `min_pct` is RED unless the document is listed here WITH a reason; the list is
+# printed on every `vdocs doctor` run, an exception naming a document that is not a latest document
+# is RED (a vanished document must not keep an exception alive), and one the document no longer
+# needs is a WARN to remove. D2: 95 now, 99 once the three known causes are fixed.
+body_coverage:
+  min_pct: 95
+  # Three documents whose converter turned whole paragraphs into headings with nothing under them
+  # (LR 48 such sections, EDIS 18, PXRM 14). A heading with no body is not on the search surface
+  # (kernel.markdown.is_searchable), so the sentence IS the lost text. Measured 2026-11-07
+  # (reports/a2-after.md); 130 such sections in 31 latest documents corpus-wide. Expiry: a
+  # "sentence heading carries its own text" chunking rule (end-to-end review, follow-up to A2) —
+  # when it lands these three rise above the floor and doctor WARNs that the entries are stale.
+  exceptions:
+    LR/labbbumf: paragraphs converted as headings with no body (48 sections); their text is the heading, which a bodiless section does not index
+    EDIS/edp_2_1_1_ug: paragraphs converted as headings with no body (18 NOTE sections); same cause
+    PXRM/ahobpr_registrantportal_usermanual_v3: paragraphs converted as headings with no body (14 sections); same cause

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from vdocs.stages.normalize import normalize_pure as nz
 
 
@@ -662,3 +664,93 @@ def test_anchorless_legacy_entry_is_not_reported_unresolved():
     _, amap = nz.normalize_body(body, frozenset(), toc_titles=_TOC_TITLES)
     assert [e["title"] for e in amap.legacy_toc] == ["Introduction"]
     assert amap.toc_unresolved == []
+
+
+# --- A2 (end-to-end review §3.2): the empty-title heading Pandoc emits as a bare `# ` line -------
+# 1,907 such lines in 307 normalized bodies (reports/a2-before.md step 3): 1,618 are followed by
+# another heading, 169 by a short title line Pandoc rendered as a paragraph, 63 by a long paragraph.
+
+
+def test_repair_empty_headings_takes_a_following_short_title_line():
+    body = (
+        "# Doc\n\n## Contents\n\n- [x](#x)\n\n# \n\nUsing Surgical Implants\n\nThe manual covers.\n"
+    )
+    assert nz.repair_empty_headings(body) == (
+        "# Doc\n\n## Contents\n\n- [x](#x)\n\n# Using Surgical Implants\n\nThe manual covers.\n"
+    )
+    # a bold pseudo-heading keeps its text, loses the emphasis
+    assert nz.repair_empty_headings("## \n\n**Enhancements in Patch 18**\n\ntext\n") == (
+        "## Enhancements in Patch 18\n\ntext\n"
+    )
+
+
+def test_repair_empty_headings_drops_the_bare_line_before_a_heading_or_structure():
+    assert (
+        nz.repair_empty_headings("# \n\n## Contents\n\n- [a](#a)\n") == "## Contents\n\n- [a](#a)\n"
+    )
+    assert nz.repair_empty_headings("#\n# Intro\n\ntext\n") == "# Intro\n\ntext\n"
+    for nxt in (
+        "```\ncode\n```",
+        "- item",
+        "1. item",
+        "| a | b |",
+        '<img src="x.png" />',
+        "[↑ Back to Contents](#contents)",
+        "_[Table 1 (extracted to CSV)](tables/t.csv)_",
+    ):
+        assert nz.repair_empty_headings(f"## \n\n{nxt}\n") == f"{nxt}\n", nxt
+    assert nz.repair_empty_headings("text\n\n# \n") == "text\n"  # at the end of the document
+
+
+def test_repair_empty_headings_never_promotes_a_paragraph():
+    para = (
+        "In the Reminder Exchange utility, entries are packed into the Exchange File in XML format."
+    )
+    assert nz.repair_empty_headings(f"# \n\n{para}\n") == f"{para}\n"
+
+
+def test_repair_empty_headings_is_fence_aware_and_idempotent():
+    body = "```\n# \nkept\n```\n\n# \n\nTitle Here\n\nbody\n"
+    once = nz.repair_empty_headings(body)
+    assert once == "```\n# \nkept\n```\n\n# Title Here\n\nbody\n"
+    assert nz.repair_empty_headings(once) == once
+    assert nz.repair_empty_headings("# Real\n\ntext\n") == "# Real\n\ntext\n"
+
+
+def test_normalize_body_recovers_bookmark_headings_when_the_only_heading_was_empty():
+    # a document whose only heading is a bare `# ` followed by prose, with `_Toc` bookmark
+    # paragraphs: the empty heading used to make `recover_headings` treat it as structured
+    # (bold-only promotion), so nothing was promoted and the empty heading swallowed the body.
+    # The repair runs first, drops the bare line, and the structureless path recovers the headings.
+    para = "This paragraph is the body text that followed the empty heading in the converted file."
+    body = (
+        f'# \n\n{para}\n\n<span id="_Toc100"></span>Introduction\n\nThe package records.\n\n'
+        '<span id="_Toc101"></span>Implementation\n\nInstall the build.\n'
+    )
+    out, anchors = nz.normalize_body(body, frozenset(), doc_id="GMRV/x")
+    assert "## Introduction" in out and "## Implementation" in out and para in out
+    assert not re.search(r"^#+\s*$", out, re.M)
+    assert anchors.rows  # the bookmark anchors resolve, so a refs sidecar is written
+
+
+def test_repair_empty_headings_takes_a_bookmarked_title_line_and_keeps_its_anchor():
+    # RMPR/rmpr_3_nppdum as converted: `# ` then `<span id="_Toc…" class="anchor"></span>Using
+    # Surgical Implants`. The span is the heading's bookmark identity (parse_headings reads it
+    # inline), so it rides along onto the repaired heading line.
+    span = '<span id="_Toc346873633" class="anchor"></span>'
+    body = f"# Intro\n\ntext\n\n# \n\n{span}Using Surgical Implants\n\nThe manual covers.\n"
+    assert nz.repair_empty_headings(body) == (
+        f"# Intro\n\ntext\n\n# {span}Using Surgical Implants\n\nThe manual covers.\n"
+    )
+    # a span followed by a paragraph is still prose: the bare heading goes, the span paragraph stays
+    para = f"{span}" + " ".join(["word"] * 20)
+    assert nz.repair_empty_headings(f"# \n\n{para}\n") == f"{para}\n"
+
+
+def test_normalize_body_keeps_a_structured_documents_bookmarked_title_heading():
+    span = '<span id="_Toc346873633" class="anchor"></span>'
+    body = f"# Intro\n\nIntro text here.\n\n# \n\n{span}Using Surgical Implants\n\nThe manual.\n"
+    out, anchors = nz.normalize_body(body, frozenset(), doc_id="RMPR/x")
+    assert "Using Surgical Implants" in [h.text for h in nz.parse_headings(out)]
+    # the bookmark rode along onto the heading and was captured into the anchor map (refs.yaml)
+    assert "_Toc346873633" in [r.original_bookmark for r in anchors.rows]

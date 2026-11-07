@@ -216,7 +216,10 @@ class IndexStage(Stage):
     # chunk (`index_pure.index_text` — nav line, tags, link targets, asset hashes gone; keystroke
     # notation kept) and section titles are their link labels; `chunks.text` stays markdown. No
     # view or column changed, so the read contract stays 1.8 (a data correction, see its CHANGELOG).
-    contract_ver = 19
+    # v20 (end-to-end review A2): `shred_sections` emits a `<doc_key>/preamble` section for the
+    # substantive text before a document's first retained heading (70 latest documents indexed
+    # under 95% of their body without it). Section ids are additive; the read contract stays 1.8.
+    contract_ver = 20
     # ^ v15: `searchable` is the retrieval predicate, not a `kind` alias (P6.1b)
     # ^ v14: vocab-validated option recognizer (un-quarantined)
 

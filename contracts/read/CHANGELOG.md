@@ -6,6 +6,15 @@ Semver for the **read** contract (`read_schema_version`), the consumer-facing in
 replacement additively, keep the old as an alias for one release, then remove + MAJOR bump. See
 [ADR-0001](../../docs/adr/0001-read-contract-and-drift-prevention.md).
 
+## v1.8 — data addition, 2026-11-07 (no version change)
+
+`v_doc_sections` / `v_chunks` gain a `<doc_key>/preamble` row for a latest document whose text
+before its first retained heading carries substance (end-to-end review A2): `slug` `preamble`,
+`title` the document's title, `level` 1, `section_path` empty, `seq` 0, searchable, with its chunk
+in `chunks_fts`. Section ids are additive and every column keeps its meaning, so the version stays
+1.8; `index` `contract_ver` 19→20, `normalize` 3→4 (its `repair_empty_headings` changes the bodies
+of 307 documents, so `body.md` and section sets move for them).
+
 ## v1.8 — data correction, 2026-11-07 (no version change)
 
 The `chunks_fts` `body` column now holds the **clean projection** of the chunk

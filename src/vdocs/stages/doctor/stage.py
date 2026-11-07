@@ -45,7 +45,7 @@ log = structlog.get_logger(__name__)
 
 class DoctorStage(Stage):
     name = "doctor"
-    description = "corpus-soundness gate: 22 checks over index.db → GOLD LIBRARY GREEN|RED"
+    description = "corpus-soundness gate: 24 checks over index.db → GOLD LIBRARY GREEN|RED"
     # CONTRACT_MANIFEST (produced by `manifest`) is the edge that makes this terminal; the two
     # index.db tables are the substrate the checks actually read. REGISTRIES carries the policy
     # the verdict is measured against (doctor-policy / the gate keep-set / entity-quality), so it

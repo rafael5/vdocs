@@ -1,0 +1,1028 @@
+{
+ "before": {
+  "index_db": "/tmp/claude-1000/-home-rafael-projects-vdocs/ae1b7fa5-e74d-4f10-a921-9bc6bccc221f/scratchpad/index.db.a1",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25"
+ },
+ "after": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 58240,
+  "corpus_content_hash": "b6e38e5841bec9765fe3c567476c51dc50f4ab314ac72e0e36f7e3adf4977007"
+ },
+ "questions": 30,
+ "summary": {
+  "ndcg@10": {
+   "before": 0.453,
+   "after": 0.453,
+   "delta": 0.0,
+   "ci95": [
+    0.0,
+    0.0
+   ],
+   "wins": 0,
+   "losses": 0,
+   "ties": 30
+  },
+  "mrr": {
+   "before": 0.5449,
+   "after": 0.5449,
+   "delta": 0.0,
+   "ci95": [
+    0.0,
+    0.0
+   ],
+   "wins": 0,
+   "losses": 0,
+   "ties": 30
+  },
+  "recall@10": {
+   "before": 0.4747,
+   "after": 0.4747,
+   "delta": 0.0,
+   "ci95": [
+    0.0,
+    0.0
+   ],
+   "wins": 0,
+   "losses": 0,
+   "ties": 30
+  },
+  "ndcg@10_24_originals": {
+   "before": 0.5433,
+   "after": 0.5433,
+   "n": 24
+  }
+ },
+ "judged_sections_lost_from_top10": [],
+ "judged_sections_gained_in_top10": [],
+ "adoption_rule_passed": true,
+ "per_query": [
+  {
+   "id": "kids-install-build",
+   "axis": "kids-install",
+   "ndcg@10_before": 0.0,
+   "mrr_before": 0.0,
+   "recall@10_before": 0.0,
+   "ndcg@10_after": 0.0,
+   "mrr_after": 0.0,
+   "recall@10_after": 0.0,
+   "top10_before": [
+    "XU/krn_8_0_sm_kids_ug/kids-system-managementutilities",
+    "XU/krn_8_0_sm_kids_ug/purge-build-or-install-files-option",
+    "XU/krn_8_0_sm_kids_ug/reasons-to-retain-build-and-install-file-entries",
+    "NUPA/nupa1_0tm/kids-build-and-install-print-options",
+    "XU/krn_8_0_dg_kids_ug/enxpdij-task-off-kids-install",
+    "XU/krn_8_0_dg_kids_ug/key-variables-during-pre--and-post-install-routines",
+    "XU/krn_8_0_sm_kids_ug/purging-the-build-and-install-files",
+    "XU/krn_8_0_dg_kids_ug/edit-a-build-name-and-version-build-information",
+    "XU/krn_8_0_dg_kids_ug/pre--and-post-install-routines-special-features",
+    "XU/krn_8_0_dg_kids_ug/pre-transportation-routine-900-field"
+   ],
+   "top10_after": [
+    "XU/krn_8_0_sm_kids_ug/kids-system-managementutilities",
+    "XU/krn_8_0_sm_kids_ug/purge-build-or-install-files-option",
+    "XU/krn_8_0_sm_kids_ug/reasons-to-retain-build-and-install-file-entries",
+    "NUPA/nupa1_0tm/kids-build-and-install-print-options",
+    "XU/krn_8_0_dg_kids_ug/enxpdij-task-off-kids-install",
+    "XU/krn_8_0_dg_kids_ug/key-variables-during-pre--and-post-install-routines",
+    "XU/krn_8_0_sm_kids_ug/purging-the-build-and-install-files",
+    "XU/krn_8_0_dg_kids_ug/edit-a-build-name-and-version-build-information",
+    "XU/krn_8_0_dg_kids_ug/pre--and-post-install-routines-special-features",
+    "XU/krn_8_0_dg_kids_ug/pre-transportation-routine-900-field"
+   ]
+  },
+  {
+   "id": "fileman-add-field",
+   "axis": "fileman-dd",
+   "ndcg@10_before": 0.0,
+   "mrr_before": 0.0,
+   "recall@10_before": 0.0,
+   "ndcg@10_after": 0.0,
+   "mrr_after": 0.0,
+   "recall@10_after": 0.0,
+   "top10_before": [
+    "DI/scrn_tut/add-the-secondary-menu-options-synonym-field",
+    "DI/scrn_tut/summary-4",
+    "DI/scrn_tut/summary-7",
+    "DI/scrn_tut/overview-4",
+    "DI/scrn_tut/reposition-fields",
+    "DI/scrn_tut/adding-ssn-field",
+    "DI/scrn_tut/add-data-dictionary-fields-1",
+    "DI/scrn_tut/adding-name-field",
+    "DI/scrn_tut/add-the-division-multiple-field",
+    "DI/scrn_tut/add-the-secondary-menu-options-01-field"
+   ],
+   "top10_after": [
+    "DI/scrn_tut/add-the-secondary-menu-options-synonym-field",
+    "DI/scrn_tut/summary-4",
+    "DI/scrn_tut/summary-7",
+    "DI/scrn_tut/overview-4",
+    "DI/scrn_tut/reposition-fields",
+    "DI/scrn_tut/adding-ssn-field",
+    "DI/scrn_tut/add-data-dictionary-fields-1",
+    "DI/scrn_tut/adding-name-field",
+    "DI/scrn_tut/add-the-division-multiple-field",
+    "DI/scrn_tut/add-the-secondary-menu-options-01-field"
+   ]
+  },
+  {
+   "id": "rpc-broker-client-call",
+   "axis": "rpc-broker",
+   "ndcg@10_before": 0.0637,
+   "mrr_before": 0.125,
+   "recall@10_before": 0.1111,
+   "ndcg@10_after": 0.0637,
+   "mrr_after": 0.125,
+   "recall@10_after": 0.1111,
+   "top10_before": [
+    "XWB/xwb_1_1_dg_r/broker-overview",
+    "XWB/xwb_1_1_tm_r/connections",
+    "XWB/xwb_1_1_tm_r/exported-options",
+    "XWB/xwb_1_1_ug_r/rpc-broker",
+    "XWB/xwb_1_1_ug_r/backward-compatibility-issues",
+    "XWB/xwb_1_1_tm_r/xwb-rpc-test",
+    "XWB/xwb_1_1_dg_r/on-the-client",
+    "XWB/xwb_1_1_ug_r/what-is-a-remote-procedure-call",
+    "XWB/xwb_1_1_tm_r/end-user-workstation",
+    "XWB/xwb_1_1_dg_r/remote-procedure-8994-file"
+   ],
+   "top10_after": [
+    "XWB/xwb_1_1_dg_r/broker-overview",
+    "XWB/xwb_1_1_tm_r/connections",
+    "XWB/xwb_1_1_tm_r/exported-options",
+    "XWB/xwb_1_1_ug_r/rpc-broker",
+    "XWB/xwb_1_1_ug_r/backward-compatibility-issues",
+    "XWB/xwb_1_1_tm_r/xwb-rpc-test",
+    "XWB/xwb_1_1_dg_r/on-the-client",
+    "XWB/xwb_1_1_ug_r/what-is-a-remote-procedure-call",
+    "XWB/xwb_1_1_tm_r/end-user-workstation",
+    "XWB/xwb_1_1_dg_r/remote-procedure-8994-file"
+   ]
+  },
+  {
+   "id": "mailman-decnet-transmission",
+   "axis": "mailman-network",
+   "ndcg@10_before": 0.783,
+   "mrr_before": 1.0,
+   "recall@10_before": 0.5714,
+   "ndcg@10_after": 0.783,
+   "mrr_after": 1.0,
+   "recall@10_after": 0.5714,
+   "top10_before": [
+    "XM/xm_8_0_netrefguide/2-enter-a-transmission-script-in-the-domain-file",
+    "XM/xm_8_0_netrefguide/revision-history",
+    "XM/xm_8_0_netrefguide/setting-up-a-decnet-channel-for-mailman",
+    "XM/xm_8_0_netrefguide/3-create-a-logincom-file-on-your-local-machine",
+    "XM/xm_8_0_netrefguide/7-create-the-logincom-file",
+    "XM/xm_8_0_netrefguide/index",
+    "XM/xm_8_0_sysmgmtguide/mailman-site-parameters"
+   ],
+   "top10_after": [
+    "XM/xm_8_0_netrefguide/2-enter-a-transmission-script-in-the-domain-file",
+    "XM/xm_8_0_netrefguide/revision-history",
+    "XM/xm_8_0_netrefguide/setting-up-a-decnet-channel-for-mailman",
+    "XM/xm_8_0_netrefguide/3-create-a-logincom-file-on-your-local-machine",
+    "XM/xm_8_0_netrefguide/7-create-the-logincom-file",
+    "XM/xm_8_0_netrefguide/index",
+    "XM/xm_8_0_sysmgmtguide/mailman-site-parameters"
+   ]
+  },
+  {
+   "id": "radiology-cancel-exam",
+   "axis": "radiology",
+   "ndcg@10_before": 0.3308,
+   "mrr_before": 0.1429,
+   "recall@10_before": 0.6667,
+   "ndcg@10_after": 0.3308,
+   "mrr_after": 0.1429,
+   "recall@10_after": 0.6667,
+   "top10_before": [
+    "RA/ra5_0hl7is/exam-cancel",
+    "RA/ra5_0um/radiologynuclear-med-order-entry-menu",
+    "RA/ra5_0tm/radnuc-med-clerk-menu-ra-clerkmenu",
+    "RA/ra5_0hl7/cancellationdeletion",
+    "RA/ra5_0um/exam-entryedit-menu",
+    "RA/ra5_0tm/radnuc-med-technologist-menu-ra-techmenu",
+    "RA/ra5_0um/cancel-a-request",
+    "RA/ra5_0hl7is_vr/cancellationdeletion",
+    "RA/ra5_0um/cancel-an-exam-18",
+    "RA/ra5_0um/index"
+   ],
+   "top10_after": [
+    "RA/ra5_0hl7is/exam-cancel",
+    "RA/ra5_0um/radiologynuclear-med-order-entry-menu",
+    "RA/ra5_0tm/radnuc-med-clerk-menu-ra-clerkmenu",
+    "RA/ra5_0hl7/cancellationdeletion",
+    "RA/ra5_0um/exam-entryedit-menu",
+    "RA/ra5_0tm/radnuc-med-technologist-menu-ra-techmenu",
+    "RA/ra5_0um/cancel-a-request",
+    "RA/ra5_0hl7is_vr/cancellationdeletion",
+    "RA/ra5_0um/cancel-an-exam-18",
+    "RA/ra5_0um/index"
+   ]
+  },
+  {
+   "id": "pharmacy-release-signed-order",
+   "axis": "pharmacy-release",
+   "ndcg@10_before": 0.8415,
+   "mrr_before": 1.0,
+   "recall@10_before": 0.5,
+   "ndcg@10_after": 0.8415,
+   "mrr_after": 1.0,
+   "recall@10_after": 0.5,
+   "top10_before": [
+    "PSO/pso_7_tech_p737_um/changes-to-releasing-orders-function---digitally-signed-orders-only",
+    "PSO/pso_7_0_p770_pharm_um_1/changes-to-releasing-orders-function---digitally-signed-orders-only",
+    "PSO/pso_7_0_p653_man_um/changes-to-releasing-orders-function--digitally-signed-orders-only",
+    "CPRS/cprslmtm/the-provider-key",
+    "PSO/pso_7_tech_p737_um/preface",
+    "PSO/pso_7_0_p770_pharm_um_1/pharmacists-user-manual",
+    "PSO/pso_7_tech_p737_um/medication-profile-long-format",
+    "PSO/pso_7_0_p653_man_um/chapter-1-introduction"
+   ],
+   "top10_after": [
+    "PSO/pso_7_tech_p737_um/changes-to-releasing-orders-function---digitally-signed-orders-only",
+    "PSO/pso_7_0_p770_pharm_um_1/changes-to-releasing-orders-function---digitally-signed-orders-only",
+    "PSO/pso_7_0_p653_man_um/changes-to-releasing-orders-function--digitally-signed-orders-only",
+    "CPRS/cprslmtm/the-provider-key",
+    "PSO/pso_7_tech_p737_um/preface",
+    "PSO/pso_7_0_p770_pharm_um_1/pharmacists-user-manual",
+    "PSO/pso_7_tech_p737_um/medication-profile-long-format",
+    "PSO/pso_7_0_p653_man_um/chapter-1-introduction"
+   ]
+  },
+  {
+   "id": "tiu-unsigned-notes",
+   "axis": "tiu-notes",
+   "ndcg@10_before": 0.754,
+   "mrr_before": 1.0,
+   "recall@10_before": 0.5,
+   "ndcg@10_after": 0.754,
+   "mrr_after": 1.0,
+   "recall@10_after": 0.5,
+   "top10_before": [
+    "TIU/tiuum/all-my-unsigned-progress-notes",
+    "TIU/tiutm/menu-and-option-assignment",
+    "TIU/tiutm/actionsfunctions-across-applications",
+    "TIU/tiuum/text-integration-utilities-tiu-clinical-coordinator-and-user-manual",
+    "TIU/tiuum/show-progress-notes-across-patients",
+    "TIU/tiuum/chapter-8-progress-notes-print-options",
+    "TIU/tiuum/progress-notesdischarge-summary-menu",
+    "TIU/tiuum/progress-notes-options"
+   ],
+   "top10_after": [
+    "TIU/tiuum/all-my-unsigned-progress-notes",
+    "TIU/tiutm/menu-and-option-assignment",
+    "TIU/tiutm/actionsfunctions-across-applications",
+    "TIU/tiuum/text-integration-utilities-tiu-clinical-coordinator-and-user-manual",
+    "TIU/tiuum/show-progress-notes-across-patients",
+    "TIU/tiuum/chapter-8-progress-notes-print-options",
+    "TIU/tiuum/progress-notesdischarge-summary-menu",
+    "TIU/tiuum/progress-notes-options"
+   ]
+  },
+  {
+   "id": "vpr-allergy-data",
+   "axis": "vpr-domains",
+   "ndcg@10_before": 0.7364,
+   "mrr_before": 1.0,
+   "recall@10_before": 1.0,
+   "ndcg@10_after": 0.7364,
+   "mrr_after": 1.0,
+   "recall@10_after": 1.0,
+   "top10_before": [
+    "VPR/vpr_dg/allergyadverse-reaction-tracking-gmra-1",
+    "VPR/vpr_dg/allergyadverse-reaction-tracking-gmra",
+    "VPR/vpr_dg/allergies",
+    "VPR/vpr_dg/vital-measurements-gmv",
+    "VPR/vpr_dg/print-an-entity-option",
+    "VPR/vpr_dg/remote-procedure-calls",
+    "VPR/vpr_dg/reference-files",
+    "VPR/vpr_dg/vpr-container-5601-file",
+    "VPR/vpr_dg/alerts"
+   ],
+   "top10_after": [
+    "VPR/vpr_dg/allergyadverse-reaction-tracking-gmra-1",
+    "VPR/vpr_dg/allergyadverse-reaction-tracking-gmra",
+    "VPR/vpr_dg/allergies",
+    "VPR/vpr_dg/vital-measurements-gmv",
+    "VPR/vpr_dg/print-an-entity-option",
+    "VPR/vpr_dg/remote-procedure-calls",
+    "VPR/vpr_dg/reference-files",
+    "VPR/vpr_dg/vpr-container-5601-file",
+    "VPR/vpr_dg/alerts"
+   ]
+  },
+  {
+   "id": "lab-file60-audit",
+   "axis": "lab-audit",
+   "ndcg@10_before": 0.9329,
+   "mrr_before": 1.0,
+   "recall@10_before": 1.0,
+   "ndcg@10_after": 0.9329,
+   "mrr_after": 1.0,
+   "recall@10_after": 1.0,
+   "top10_before": [
+    "LR/lr_5_2_425_ps_ug/laboratory-test-file-60-audit-tool-overview",
+    "LR/lr_5_2_425_ps_ug/manually-run-file-60-audit-reports",
+    "LR/lr_5_2_425_ps_ug/display-list-of-audited-fields",
+    "LR/lr_5_2_425_ps_ug/file-60-audit-reports",
+    "LR/lr_5_2_425_ps_ug/file-60-audit-tool-options",
+    "LR/lr_5_2_425_ps_ug/display-file-60-changes",
+    "LR/lr_5_2_425_ps_ug/send-file-60-changes-in-mail",
+    "LR/lr_5_2_425_ps_ug/delete-auditing-from-optional-fields",
+    "LR/lr_5_2_425_ps_ug/send-display-as-mail-message-option",
+    "LR/lr_5_2_425_ps_ug/send-extract-file-as-mail-message"
+   ],
+   "top10_after": [
+    "LR/lr_5_2_425_ps_ug/laboratory-test-file-60-audit-tool-overview",
+    "LR/lr_5_2_425_ps_ug/manually-run-file-60-audit-reports",
+    "LR/lr_5_2_425_ps_ug/display-list-of-audited-fields",
+    "LR/lr_5_2_425_ps_ug/file-60-audit-reports",
+    "LR/lr_5_2_425_ps_ug/file-60-audit-tool-options",
+    "LR/lr_5_2_425_ps_ug/display-file-60-changes",
+    "LR/lr_5_2_425_ps_ug/send-file-60-changes-in-mail",
+    "LR/lr_5_2_425_ps_ug/delete-auditing-from-optional-fields",
+    "LR/lr_5_2_425_ps_ug/send-display-as-mail-message-option",
+    "LR/lr_5_2_425_ps_ug/send-extract-file-as-mail-message"
+   ]
+  },
+  {
+   "id": "cprs-enter-immunization",
+   "axis": "cprs-gui",
+   "ndcg@10_before": 0.554,
+   "mrr_before": 1.0,
+   "recall@10_before": 1.0,
+   "ndcg@10_after": 0.554,
+   "mrr_after": 1.0,
+   "recall@10_after": 1.0,
+   "top10_before": [
+    "CPRS/cprsguium/accessing-the-enter-immunizationskin-test-screen-from-the-reminder-dialogs",
+    "CPRS/cprsguium/deleting-an-immunizationskin-test-in-cprs",
+    "CPRS/cprsguium/editing-an-immunizationskin-test-in-cprs",
+    "CPRS/cprsguium/accessing-the-enter-immunizationskin-test-screen-from-the-encounter-form",
+    "CPRS/cprsguium/viewing-the-immunizationskin-test-status-in-cprs",
+    "CPRS/cprsguium/accessing-the-enter-immunization-screen-from-the-coversheet",
+    "CPRS/cprsguium/description-of-the-enter-immunizationskin-test-screens",
+    "CPRS/cprsguium/adding-an-immunizationskin-test-to-cprs",
+    "CPRS/cprsguitm_0_636/or-immunization-document-title",
+    "CPRS/cprsguium/documenting-a-patients-immunizations-and-skin-tests-in-cprs"
+   ],
+   "top10_after": [
+    "CPRS/cprsguium/accessing-the-enter-immunizationskin-test-screen-from-the-reminder-dialogs",
+    "CPRS/cprsguium/deleting-an-immunizationskin-test-in-cprs",
+    "CPRS/cprsguium/editing-an-immunizationskin-test-in-cprs",
+    "CPRS/cprsguium/accessing-the-enter-immunizationskin-test-screen-from-the-encounter-form",
+    "CPRS/cprsguium/viewing-the-immunizationskin-test-status-in-cprs",
+    "CPRS/cprsguium/accessing-the-enter-immunization-screen-from-the-coversheet",
+    "CPRS/cprsguium/description-of-the-enter-immunizationskin-test-screens",
+    "CPRS/cprsguium/adding-an-immunizationskin-test-to-cprs",
+    "CPRS/cprsguitm_0_636/or-immunization-document-title",
+    "CPRS/cprsguium/documenting-a-patients-immunizations-and-skin-tests-in-cprs"
+   ]
+  },
+  {
+   "id": "vbecs-accept-order",
+   "axis": "vbecs-orders",
+   "ndcg@10_before": 0.7126,
+   "mrr_before": 1.0,
+   "recall@10_before": 0.25,
+   "ndcg@10_after": 0.7126,
+   "mrr_after": 1.0,
+   "recall@10_after": 0.25,
+   "top10_before": [
+    "VBECS/vbecs_2_4_1_user_guide/accept-orders-accept-an-order",
+    "VBECS/vbecs_2_4_1_user_guide/accept-orders-accept-an-order-uc_16",
+    "VBECS/vbecs_2_4_1_user_guide/outcome-46",
+    "VBECS/vbecs_2_4_1_user_guide/accept-orders-pending-order-list-uc_88",
+    "VBECS/vbecs_2_4_1_user_guide/assumptions-45",
+    "VBECS/vbecs_2_4_1_user_guide/display-order-alerts-uc_84",
+    "VBECS/vbecs_2_4_1_user_guide/assumptions-46",
+    "VBECS/vbecs_2_4_1_user_guide/limitations-and-restrictions-46",
+    "VBECS/vbecs_2_4_1_user_guide/user-roles-with-access-to-this-option-45",
+    "VBECS/vbecs_2_4_1_user_guide/outcome-47"
+   ],
+   "top10_after": [
+    "VBECS/vbecs_2_4_1_user_guide/accept-orders-accept-an-order",
+    "VBECS/vbecs_2_4_1_user_guide/accept-orders-accept-an-order-uc_16",
+    "VBECS/vbecs_2_4_1_user_guide/outcome-46",
+    "VBECS/vbecs_2_4_1_user_guide/accept-orders-pending-order-list-uc_88",
+    "VBECS/vbecs_2_4_1_user_guide/assumptions-45",
+    "VBECS/vbecs_2_4_1_user_guide/display-order-alerts-uc_84",
+    "VBECS/vbecs_2_4_1_user_guide/assumptions-46",
+    "VBECS/vbecs_2_4_1_user_guide/limitations-and-restrictions-46",
+    "VBECS/vbecs_2_4_1_user_guide/user-roles-with-access-to-this-option-45",
+    "VBECS/vbecs_2_4_1_user_guide/outcome-47"
+   ]
+  },
+  {
+   "id": "hl7-security-keys",
+   "axis": "hl7-security",
+   "ndcg@10_before": 0.9173,
+   "mrr_before": 1.0,
+   "recall@10_before": 0.5,
+   "ndcg@10_after": 0.9173,
+   "mrr_after": 1.0,
+   "recall@10_after": 0.5,
+   "top10_before": [
+    "HL7/hl71_6sg/security-keys",
+    "PSS/pss_1_p136_and_p117_tm_cp/version-10",
+    "MAG/imgtechman_f/preface",
+    "PRC/ifcp5_1security_guide/introduction",
+    "HL7/hl_1_6_126_tm/main-menu",
+    "XU/krn_8_0_tm/generating-menu-diagrams",
+    "ROR/ror1_5_41tm/security-keys",
+    "ROR/ror1_5_42tm/security-keys",
+    "HL7/hlo_system_manager_manual/main-menu"
+   ],
+   "top10_after": [
+    "HL7/hl71_6sg/security-keys",
+    "PSS/pss_1_p136_and_p117_tm_cp/version-10",
+    "MAG/imgtechman_f/preface",
+    "PRC/ifcp5_1security_guide/introduction",
+    "HL7/hl_1_6_126_tm/main-menu",
+    "XU/krn_8_0_tm/generating-menu-diagrams",
+    "ROR/ror1_5_41tm/security-keys",
+    "ROR/ror1_5_42tm/security-keys",
+    "HL7/hlo_system_manager_manual/main-menu"
+   ]
+  },
+  {
+   "id": "fileman-file-200-new-person",
+   "axis": "fileman-dd",
+   "ndcg@10_before": 0.2351,
+   "mrr_before": 0.125,
+   "recall@10_before": 0.3333,
+   "ndcg@10_after": 0.2351,
+   "mrr_after": 0.125,
+   "recall@10_after": 0.3333,
+   "top10_before": [
+    "EN/en_7_0_um/129-add-entry-to-new-person-file",
+    "XU/krn_8_0_dg_user_ug/lookupxuser-new-person-file-lookup",
+    "SR/sr_3_tm_r1115/new-person-file-200",
+    "FH/fh5_5tm/pointer-relations",
+    "XU/krn_8_0_tm/kernel-1",
+    "POC/lab_poc_iug/-new-person-file-200-new-entries",
+    "PX/px_um/xu827--new-person-file-patch",
+    "DI/fm22_2um2/new-person-file-for-standalone-va-fileman",
+    "HBPC/hbh_um/np-display-new-person-entries",
+    "EN/engt7_0/file-name-number-it-assignment-69163"
+   ],
+   "top10_after": [
+    "EN/en_7_0_um/129-add-entry-to-new-person-file",
+    "XU/krn_8_0_dg_user_ug/lookupxuser-new-person-file-lookup",
+    "SR/sr_3_tm_r1115/new-person-file-200",
+    "FH/fh5_5tm/pointer-relations",
+    "XU/krn_8_0_tm/kernel-1",
+    "POC/lab_poc_iug/-new-person-file-200-new-entries",
+    "PX/px_um/xu827--new-person-file-patch",
+    "DI/fm22_2um2/new-person-file-for-standalone-va-fileman",
+    "HBPC/hbh_um/np-display-new-person-entries",
+    "EN/engt7_0/file-name-number-it-assignment-69163"
+   ]
+  },
+  {
+   "id": "fileman-import-host-file",
+   "axis": "api-leadin",
+   "ndcg@10_before": 0.2404,
+   "mrr_before": 0.1429,
+   "recall@10_before": 0.5,
+   "ndcg@10_after": 0.2404,
+   "mrr_after": 0.1429,
+   "recall@10_after": 0.5,
+   "top10_before": [
+    "GMPL/gmplum/import-problem-selection-list-gmpl-selection-list-import",
+    "DI/fm22_2dg/error-codes",
+    "PXRM/pxrm_2_22_mm/steps-to-use-reminder-exchange",
+    "DI/fm22_2dg/error-codes-returned-46",
+    "GMPL/gmpl_2_0_49_tm/locating-updates-to-the-national-problem-list-content",
+    "DI/fm22_2um2/importing-from-vms-files",
+    "DI/fm22_2um2/sending-export-data-to-a-host-file",
+    "DI/fm22_2um2/specify-data-format-source-file-and-destination-file",
+    "DI/fm22_2dg/fileddmp-data-import",
+    "PXRM/pxrm_2_22_mm/reminder-exchange-main-screen"
+   ],
+   "top10_after": [
+    "GMPL/gmplum/import-problem-selection-list-gmpl-selection-list-import",
+    "DI/fm22_2dg/error-codes",
+    "PXRM/pxrm_2_22_mm/steps-to-use-reminder-exchange",
+    "DI/fm22_2dg/error-codes-returned-46",
+    "GMPL/gmpl_2_0_49_tm/locating-updates-to-the-national-problem-list-content",
+    "DI/fm22_2um2/importing-from-vms-files",
+    "DI/fm22_2um2/sending-export-data-to-a-host-file",
+    "DI/fm22_2um2/specify-data-format-source-file-and-destination-file",
+    "DI/fm22_2dg/fileddmp-data-import",
+    "PXRM/pxrm_2_22_mm/reminder-exchange-main-screen"
+   ]
+  },
+  {
+   "id": "fileman-input-transform-definition",
+   "axis": "api-leadin",
+   "ndcg@10_before": 0.631,
+   "mrr_before": 1.0,
+   "recall@10_before": 1.0,
+   "ndcg@10_after": 0.631,
+   "mrr_after": 1.0,
+   "recall@10_after": 1.0,
+   "top10_before": [
+    "DI/fm22_2um2/input-transform-syntax",
+    "DI/fm22_2dg/input-transforms-and-the-verify-fields-option",
+    "DI/fm22_2dg/input-transform",
+    "DI/fm22_tutorial/standard-data-dictionary-listing-of-the-test-file",
+    "PSA/phar_1_api_r0520/provides-input-transform-lookup-functionality-for-fields-that-store-ndc-codes",
+    "PSN/phar_1_api_0520/provides-input-transform-lookup-functionality-for-fields-that-store-ndc-codes",
+    "PSN/phar_1_p576_api_r/provides-input-transform-lookup-functionality-for-fields-that-store-ndc-codes",
+    "LR/ap_a/anatomic-pathology-data-dictionary-and-functionality-changes",
+    "LR/lab_ap_lr_5_2_ug/anatomic-pathology-data-dictionary-and-functionality-changes",
+    "LR/apump422/anatomic-pathology-data-dictionary-and-functionality-changes"
+   ],
+   "top10_after": [
+    "DI/fm22_2um2/input-transform-syntax",
+    "DI/fm22_2dg/input-transforms-and-the-verify-fields-option",
+    "DI/fm22_2dg/input-transform",
+    "DI/fm22_tutorial/standard-data-dictionary-listing-of-the-test-file",
+    "PSA/phar_1_api_r0520/provides-input-transform-lookup-functionality-for-fields-that-store-ndc-codes",
+    "PSN/phar_1_api_0520/provides-input-transform-lookup-functionality-for-fields-that-store-ndc-codes",
+    "PSN/phar_1_p576_api_r/provides-input-transform-lookup-functionality-for-fields-that-store-ndc-codes",
+    "LR/ap_a/anatomic-pathology-data-dictionary-and-functionality-changes",
+    "LR/lab_ap_lr_5_2_ug/anatomic-pathology-data-dictionary-and-functionality-changes",
+    "LR/apump422/anatomic-pathology-data-dictionary-and-functionality-changes"
+   ]
+  },
+  {
+   "id": "fileman-blddialog-icr-number",
+   "axis": "api-leadin",
+   "ndcg@10_before": 0.9173,
+   "mrr_before": 1.0,
+   "recall@10_before": 0.5,
+   "ndcg@10_after": 0.9173,
+   "mrr_after": 1.0,
+   "recall@10_after": 0.5,
+   "top10_before": [
+    "DI/fm22_2dg/blddialog-dialog-extractor"
+   ],
+   "top10_after": [
+    "DI/fm22_2dg/blddialog-dialog-extractor"
+   ]
+  },
+  {
+   "id": "quasar-package-wide-variables",
+   "axis": "short-reference",
+   "ndcg@10_before": 1.0,
+   "mrr_before": 1.0,
+   "recall@10_before": 1.0,
+   "ndcg@10_after": 1.0,
+   "mrr_after": 1.0,
+   "recall@10_after": 1.0,
+   "top10_before": [
+    "ACKQ/ackq3_0tm/package-wide-variables"
+   ],
+   "top10_after": [
+    "ACKQ/ackq3_0tm/package-wide-variables"
+   ]
+  },
+  {
+   "id": "hl7-table-0136-values",
+   "axis": "short-reference",
+   "ndcg@10_before": 1.0,
+   "mrr_before": 1.0,
+   "recall@10_before": 1.0,
+   "ndcg@10_after": 1.0,
+   "mrr_after": 1.0,
+   "recall@10_after": 1.0,
+   "top10_before": [
+    "ACR/acr_p_pimstm/table-0136---yesno-indicator",
+    "ADT/adt_pims_tm/table-0136yesno-indicator",
+    "MPIF/mpif_1_0is/yesno-indicator-table",
+    "MPIF/mpif_1_0is/pid-30-patient-death-indicator-id-00741",
+    "MPIF/mpif_1_0is/pid-24-multiple-birth-indicator-id-00127",
+    "PSJ/psj_5_0_p447_tm/sch-schedule-activity-information",
+    "MAG/vista_pacs_hl7_profile_1_2/pid-segment-2",
+    "MPIF/mpif_1_0is/pv2-patient-visit-segment--additional-information",
+    "MAG/vista_pacs_hl7_profile_1_2/dg1-segment",
+    "ACR/acr_p_pimstm/pv2---patient-visit---additional-information-segment"
+   ],
+   "top10_after": [
+    "ACR/acr_p_pimstm/table-0136---yesno-indicator",
+    "ADT/adt_pims_tm/table-0136yesno-indicator",
+    "MPIF/mpif_1_0is/yesno-indicator-table",
+    "MPIF/mpif_1_0is/pid-30-patient-death-indicator-id-00741",
+    "MPIF/mpif_1_0is/pid-24-multiple-birth-indicator-id-00127",
+    "PSJ/psj_5_0_p447_tm/sch-schedule-activity-information",
+    "MAG/vista_pacs_hl7_profile_1_2/pid-segment-2",
+    "MPIF/mpif_1_0is/pv2-patient-visit-segment--additional-information",
+    "MAG/vista_pacs_hl7_profile_1_2/dg1-segment",
+    "ACR/acr_p_pimstm/pv2---patient-visit---additional-information-segment"
+   ]
+  },
+  {
+   "id": "kids-backup-transport-global",
+   "axis": "kids-install",
+   "ndcg@10_before": 0.301,
+   "mrr_before": 0.1111,
+   "recall@10_before": 1.0,
+   "ndcg@10_after": 0.301,
+   "mrr_after": 0.1111,
+   "recall@10_after": 1.0,
+   "top10_before": [
+    "YS/ys_asimv_igum/backup-transport-global",
+    "EPI/lab_epi_tech_user_guide/backup-routines",
+    "XU/krn_8_0_sm_kids_ug/installation-menu",
+    "EPI/lab_epi_searchextract_tm_ug/backup-routines",
+    "EPI/lab_epi_hepc_tech_user_guide/backup-routines",
+    "EPI/lab_epi_rollup_mod_tech_user_manual/backup-routines",
+    "LA/lab_52_la66_install_user_guide/backup-routines",
+    "POC/lab_poc_iug/backup-routines",
+    "XU/krn_8_0_sm_kids_ug/backing-up-transport-globals",
+    "LR/lrar/kids-installation-instructions"
+   ],
+   "top10_after": [
+    "YS/ys_asimv_igum/backup-transport-global",
+    "EPI/lab_epi_tech_user_guide/backup-routines",
+    "XU/krn_8_0_sm_kids_ug/installation-menu",
+    "EPI/lab_epi_searchextract_tm_ug/backup-routines",
+    "EPI/lab_epi_hepc_tech_user_guide/backup-routines",
+    "EPI/lab_epi_rollup_mod_tech_user_manual/backup-routines",
+    "LA/lab_52_la66_install_user_guide/backup-routines",
+    "POC/lab_poc_iug/backup-routines",
+    "XU/krn_8_0_sm_kids_ug/backing-up-transport-globals",
+    "LR/lrar/kids-installation-instructions"
+   ]
+  },
+  {
+   "id": "hl7-start-tcpip-link",
+   "axis": "hl7-links",
+   "ndcg@10_before": 0.7829,
+   "mrr_before": 1.0,
+   "recall@10_before": 0.6667,
+   "ndcg@10_after": 0.7829,
+   "mrr_after": 1.0,
+   "recall@10_after": 0.6667,
+   "top10_before": [
+    "HL7/hl71_6p19/starting-tcpip-logical-links",
+    "HL7/hl71_6p19/patch-hl1619-release-notes",
+    "HL7/hl71_6p19/how-to-start-and-stop-the-listener-2",
+    "VBECS/vbecs_2_4_1_tech_security_guide/set-up-vbecs-outbound-logical-links",
+    "HL7/hl71_6p19/how-to-start-and-stop-the-listener",
+    "HL7/hl71_6p19/how-to-start-and-stop-the-listener-1",
+    "HL7/hl71_6p19/new-logical-link-fields",
+    "LEDI/lab_ledi_iii_imp_ug/host-facility--dod-to-va-laboratory-implementation-instructions",
+    "MD/cp_flows/configuring-the-inbound-hl7-feed",
+    "TIU/tiuhl7/2-the-hl7-logical-link-file-870--link-for-ddc"
+   ],
+   "top10_after": [
+    "HL7/hl71_6p19/starting-tcpip-logical-links",
+    "HL7/hl71_6p19/patch-hl1619-release-notes",
+    "HL7/hl71_6p19/how-to-start-and-stop-the-listener-2",
+    "VBECS/vbecs_2_4_1_tech_security_guide/set-up-vbecs-outbound-logical-links",
+    "HL7/hl71_6p19/how-to-start-and-stop-the-listener",
+    "HL7/hl71_6p19/how-to-start-and-stop-the-listener-1",
+    "HL7/hl71_6p19/new-logical-link-fields",
+    "MD/cp_flows/configuring-the-inbound-hl7-feed",
+    "TIU/tiuhl7/2-the-hl7-logical-link-file-870--link-for-ddc",
+    "IB/ib_2_0_eiv_iiu_tm/appendix-c--eiv-troubleshooting"
+   ]
+  },
+  {
+   "id": "fileman-file-access-security",
+   "axis": "kernel-security",
+   "ndcg@10_before": 0.57,
+   "mrr_before": 1.0,
+   "recall@10_before": 0.5714,
+   "ndcg@10_after": 0.57,
+   "mrr_after": 1.0,
+   "recall@10_after": 0.5714,
+   "top10_before": [
+    "DI/fm22_krn8_file_security/kernel-file-access-security-vs-classic-va-fileman-file-access-security",
+    "DI/fm22_krn8_file_security/how-to-use-the-file-access-security-at-your-site",
+    "DI/fm22_krn8_file_security/file-level-security-properties-1",
+    "DI/fm22_krn8_file_security/kernel-file-access-security",
+    "XU/krn_8_0_sm_signon_security_ug/when-is-file-access-security-checked",
+    "DI/fm22_krn8_file_security/what-type-of-file-access-security-is-your-site-using",
+    "XU/krn_8_0_sm_signon_security_ug/using-the-file-access-options",
+    "VPR/vpr_tm/file-security",
+    "XU/krn_8_0_sm_signon_security_ug/file-access-security-system-management",
+    "XU/krn_8_0_sm_signon_security_ug/file-access-security"
+   ],
+   "top10_after": [
+    "DI/fm22_krn8_file_security/kernel-file-access-security-vs-classic-va-fileman-file-access-security",
+    "DI/fm22_krn8_file_security/how-to-use-the-file-access-security-at-your-site",
+    "DI/fm22_krn8_file_security/file-level-security-properties-1",
+    "DI/fm22_krn8_file_security/kernel-file-access-security",
+    "XU/krn_8_0_sm_signon_security_ug/when-is-file-access-security-checked",
+    "DI/fm22_krn8_file_security/what-type-of-file-access-security-is-your-site-using",
+    "XU/krn_8_0_sm_signon_security_ug/using-the-file-access-options",
+    "VPR/vpr_tm/file-security",
+    "XU/krn_8_0_sm_signon_security_ug/file-access-security-system-management",
+    "XU/krn_8_0_sm_signon_security_ug/file-access-security"
+   ]
+  },
+  {
+   "id": "vista-signon-credentials",
+   "axis": "kernel-auth",
+   "ndcg@10_before": 0.0,
+   "mrr_before": 0.0,
+   "recall@10_before": 0.0,
+   "ndcg@10_after": 0.0,
+   "mrr_after": 0.0,
+   "recall@10_after": 0.0,
+   "top10_before": [
+    "XWB/xwb_1_1_sm_r/vista-accessverify-code-sign-on-dialogue",
+    "PRC/ifcp5_1ldqt_user_manual/chapter-7-error-messages",
+    "FIM/fim_user_manual/sign-in-to-fim",
+    "FIM/fim_user_manual/vista-sign-on-window",
+    "RMPR/rmpr_3_136um/chapter-2--accesssign-on-instructions-to-gui",
+    "PSA/psa_3_um/non-pivalternate-logon",
+    "FH/fh5_5p8um/how-to-sign-on",
+    "PSB/psb_3_um/accessing-bcma-features-and-options",
+    "CPRS/cprsguium_ro/signing-on-to-cprs",
+    "PRC/ifcp5_1ldqt_user_manual/enter-access-and-verify-codes"
+   ],
+   "top10_after": [
+    "XWB/xwb_1_1_sm_r/vista-accessverify-code-sign-on-dialogue",
+    "PRC/ifcp5_1ldqt_user_manual/chapter-7-error-messages",
+    "FIM/fim_user_manual/sign-in-to-fim",
+    "FIM/fim_user_manual/vista-sign-on-window",
+    "RMPR/rmpr_3_136um/chapter-2--accesssign-on-instructions-to-gui",
+    "PSA/psa_3_um/non-pivalternate-logon",
+    "FH/fh5_5p8um/how-to-sign-on",
+    "PSB/psb_3_um/accessing-bcma-features-and-options",
+    "CPRS/cprsguium_ro/signing-on-to-cprs",
+    "PRC/ifcp5_1ldqt_user_manual/enter-access-and-verify-codes"
+   ]
+  },
+  {
+   "id": "fileman-finder-api",
+   "axis": "fileman-api",
+   "ndcg@10_before": 0.2652,
+   "mrr_before": 0.2,
+   "recall@10_before": 0.2,
+   "ndcg@10_after": 0.2652,
+   "mrr_after": 0.2,
+   "recall@10_after": 0.2,
+   "top10_before": [
+    "DI/fm22_2dg/error-codes-returned-7",
+    "DI/fm22_2dg/example-1-12",
+    "DI/fm22_2dg/uppercase",
+    "DI/fm22_2dg/spacebar-recall",
+    "DI/fm22_2dg/finddic-finder",
+    "DI/fm22_2dg/example-5-1",
+    "DI/fm22_2dg/details-and-features-4",
+    "DI/fm22_2dg/write-id-nodes",
+    "DI/fm22_2dg/lookup-value-transforms-list",
+    "DI/fm22_2dg/partial-matches"
+   ],
+   "top10_after": [
+    "DI/fm22_2dg/error-codes-returned-7",
+    "DI/fm22_2dg/example-1-12",
+    "DI/fm22_2dg/uppercase",
+    "DI/fm22_2dg/spacebar-recall",
+    "DI/fm22_2dg/finddic-finder",
+    "DI/fm22_2dg/example-5-1",
+    "DI/fm22_2dg/details-and-features-4",
+    "DI/fm22_2dg/write-id-nodes",
+    "DI/fm22_2dg/lookup-value-transforms-list",
+    "DI/fm22_2dg/partial-matches"
+   ]
+  },
+  {
+   "id": "taskman-monitor",
+   "axis": "kernel-ops",
+   "ndcg@10_before": 0.4697,
+   "mrr_before": 1.0,
+   "recall@10_before": 0.5714,
+   "ndcg@10_after": 0.4697,
+   "mrr_after": 1.0,
+   "recall@10_after": 0.5714,
+   "top10_before": [
+    "XU/krn_8_0_sm_taskman_ug/monitor-taskman-option",
+    "XU/krn_8_0_dg_taskman_ug/d-ztmon-monitor-taskman-option",
+    "XU/krn_8_0_sm_taskman_ug/monitor-taskman-option-1",
+    "XU/krn_8_0_sm_taskman_ug/monitor-action-prompt",
+    "XU/krn_8_0_sm_taskman_ug/inspecting-the-tasks-in-the-monitors-lists",
+    "KMPV/kmp_tm/data-dictionary-1",
+    "XU/krn_8_0_sm_taskman_ug/taskman-management-utilities",
+    "XU/krn_8_0_sm_taskman_ug/run-node",
+    "VDEF/vdef_1_0_technical_manual/vdef-initialization-at-system-startup",
+    "KMPR/kmpr2_0tm/option-dependencies"
+   ],
+   "top10_after": [
+    "XU/krn_8_0_sm_taskman_ug/monitor-taskman-option",
+    "XU/krn_8_0_dg_taskman_ug/d-ztmon-monitor-taskman-option",
+    "XU/krn_8_0_sm_taskman_ug/monitor-taskman-option-1",
+    "XU/krn_8_0_sm_taskman_ug/monitor-action-prompt",
+    "XU/krn_8_0_sm_taskman_ug/inspecting-the-tasks-in-the-monitors-lists",
+    "KMPV/kmp_tm/data-dictionary-1",
+    "XU/krn_8_0_sm_taskman_ug/taskman-management-utilities",
+    "XU/krn_8_0_sm_taskman_ug/run-node",
+    "VDEF/vdef_1_0_technical_manual/vdef-initialization-at-system-startup",
+    "KMPR/kmpr2_0tm/option-dependencies"
+   ]
+  },
+  {
+   "id": "plain-change-password",
+   "axis": "plain-english",
+   "ndcg@10_before": 0.5525,
+   "mrr_before": 0.5,
+   "recall@10_before": 0.8,
+   "ndcg@10_after": 0.5525,
+   "mrr_after": 0.5,
+   "recall@10_after": 0.8,
+   "top10_before": [
+    "MAG/mag_dicomug/overview-1",
+    "XU/krn_8_0_sm_signon_security_ug/defining-a-strong-verify-code",
+    "XU/krn_8_0_sm_signon_security_ug/editable-field-attributes",
+    "XU/krn8_0st/accessverify-codes",
+    "XWB/xwb_1_1_sm_r/change-vista-verify-code-component",
+    "XU/krn_8_0_dg_signon_security_ug/cvcxusrb-vistalinkchange-users-verify-code",
+    "GMRC/seoc_ug/changing-user-id-and-password",
+    "EDIS/edp_um/changing-your-verify-code",
+    "XU/krn_8_0_sm_signon_security_ug/lifetime-of-verify-code",
+    "EDIS/edis_2_1_2_ug/221-changing-your-verify-code"
+   ],
+   "top10_after": [
+    "MAG/mag_dicomug/overview-1",
+    "XU/krn_8_0_sm_signon_security_ug/defining-a-strong-verify-code",
+    "XU/krn_8_0_sm_signon_security_ug/editable-field-attributes",
+    "XU/krn8_0st/accessverify-codes",
+    "XWB/xwb_1_1_sm_r/change-vista-verify-code-component",
+    "XU/krn_8_0_dg_signon_security_ug/cvcxusrb-vistalinkchange-users-verify-code",
+    "GMRC/seoc_ug/changing-user-id-and-password",
+    "EDIS/edp_um/changing-your-verify-code",
+    "XU/krn_8_0_sm_signon_security_ug/lifetime-of-verify-code",
+    "EDIS/edis_2_1_2_ug/221-changing-your-verify-code"
+   ]
+  },
+  {
+   "id": "plain-create-user-account",
+   "axis": "plain-english",
+   "ndcg@10_before": 0.0,
+   "mrr_before": 0.0,
+   "recall@10_before": 0.0,
+   "ndcg@10_after": 0.0,
+   "mrr_after": 0.0,
+   "recall@10_after": 0.0,
+   "top10_before": [
+    "PSB/psb_3_p84_bcbu_sg/create-a-new-user",
+    "HL7/hl_1_6_126_tm/create-openvms-user-account-1",
+    "HL7/hl_1_6_126_tm/create-openvms-user-account",
+    "HL7/hlo_system_manager_manual/create-openvms-user-account-1",
+    "HL7/hlo_system_manager_manual/create-openvms-user-account",
+    "XU/krn8_0st/appendix-avista-security-forms",
+    "HL7/hlo_system_manager_manual/creating-tcpip-services-for-open-vms-with-cache",
+    "XU/krn_8_0_sm_signon_security_ug/grant-access-by-profile-option",
+    "HL7/hl_1_6_126_tm/creating-a-tcpip-services-for-open-vms-with-cache",
+    "SRA/sra_3_p9_um/setting-up-oit-staff-supporting-the-risk-assessment-database"
+   ],
+   "top10_after": [
+    "PSB/psb_3_p84_bcbu_sg/create-a-new-user",
+    "HL7/hl_1_6_126_tm/create-openvms-user-account-1",
+    "HL7/hl_1_6_126_tm/create-openvms-user-account",
+    "HL7/hlo_system_manager_manual/create-openvms-user-account-1",
+    "HL7/hlo_system_manager_manual/create-openvms-user-account",
+    "XU/krn8_0st/appendix-avista-security-forms",
+    "HL7/hlo_system_manager_manual/creating-tcpip-services-for-open-vms-with-cache",
+    "XU/krn_8_0_sm_signon_security_ug/grant-access-by-profile-option",
+    "HL7/hl_1_6_126_tm/creating-a-tcpip-services-for-open-vms-with-cache",
+    "SRA/sra_3_p9_um/setting-up-oit-staff-supporting-the-risk-assessment-database"
+   ]
+  },
+  {
+   "id": "plain-background-jobs",
+   "axis": "plain-english",
+   "ndcg@10_before": 0.0,
+   "mrr_before": 0.0,
+   "recall@10_before": 0.0,
+   "ndcg@10_after": 0.0,
+   "mrr_after": 0.0,
+   "recall@10_after": 0.0,
+   "top10_before": [
+    "XU/krn_8_0_sm_taskman_ug/background-jobs",
+    "XU/krn_8_0_sm_taskman_ug/taskmans-division-of-labor",
+    "XU/krn_8_0_sm_taskman_ug/taskmans-reach",
+    "MPIF/rg1_0_pm/what-is-the-inactive-state",
+    "ECX/ecx_3_178_tm/background-job-options",
+    "PSO/pso_7_0_p653_man_um/queue-background-jobs",
+    "PSO/pso_7_0_p617_tm/queue-background-jobs-pso-autoqueue-jobs",
+    "PSO/pso_7_tm_sg/queue-background-jobs-pso-autoqueue-jobs",
+    "PSO/pso_7_0_tmsg/39-queue-background-jobs",
+    "MPIF/rg1_0_pm/purging-the-hl7-globals"
+   ],
+   "top10_after": [
+    "XU/krn_8_0_sm_taskman_ug/background-jobs",
+    "XU/krn_8_0_sm_taskman_ug/taskmans-division-of-labor",
+    "XU/krn_8_0_sm_taskman_ug/taskmans-reach",
+    "MPIF/rg1_0_pm/what-is-the-inactive-state",
+    "ECX/ecx_3_178_tm/background-job-options",
+    "PSO/pso_7_0_p653_man_um/queue-background-jobs",
+    "PSO/pso_7_0_p617_tm/queue-background-jobs-pso-autoqueue-jobs",
+    "PSO/pso_7_tm_sg/queue-background-jobs-pso-autoqueue-jobs",
+    "PSO/pso_7_0_tmsg/39-queue-background-jobs",
+    "MPIF/rg1_0_pm/purging-the-hl7-globals"
+   ]
+  },
+  {
+   "id": "plain-set-up-printer",
+   "axis": "plain-english",
+   "ndcg@10_before": 0.0,
+   "mrr_before": 0.0,
+   "recall@10_before": 0.0,
+   "ndcg@10_after": 0.0,
+   "mrr_after": 0.0,
+   "recall@10_after": 0.0,
+   "top10_before": [
+    "PSO/pso_7_0_p653_man_um/reinitialize-scriptalk-printer",
+    "PSJ/psj_5_0_p447_tm/software-set-up",
+    "PSJ/psj_5_0_p447_tm/hardware-set-up",
+    "XU/krn_8_0_dg_device_handler_ug/psetzisp-set-up-special-printer-variables",
+    "PSO/pso_7_0_p653_man_um/set-up-and-test-scriptalk-device",
+    "RA/ra5_0ag/order-entry-parameters",
+    "XU/krn_8_0_dg_device_handler_ug/example-2-dup-1",
+    "PSX/psx_2_0_p91_tm/cmop-host-facility-install-for-printer",
+    "ADT/sadt_um/device-selection",
+    "XU/krn_8_0_dg_device_handler_ug/pkillzisp-kill-special-printer-variables"
+   ],
+   "top10_after": [
+    "PSO/pso_7_0_p653_man_um/reinitialize-scriptalk-printer",
+    "PSJ/psj_5_0_p447_tm/software-set-up",
+    "PSJ/psj_5_0_p447_tm/hardware-set-up",
+    "XU/krn_8_0_dg_device_handler_ug/psetzisp-set-up-special-printer-variables",
+    "PSO/pso_7_0_p653_man_um/set-up-and-test-scriptalk-device",
+    "RA/ra5_0ag/order-entry-parameters",
+    "XU/krn_8_0_dg_device_handler_ug/example-2-dup-1",
+    "PSX/psx_2_0_p91_tm/cmop-host-facility-install-for-printer",
+    "ADT/sadt_um/device-selection",
+    "XU/krn_8_0_dg_device_handler_ug/pkillzisp-kill-special-printer-variables"
+   ]
+  },
+  {
+   "id": "plain-enter-patient-allergies",
+   "axis": "plain-english",
+   "ndcg@10_before": 0.0,
+   "mrr_before": 0.0,
+   "recall@10_before": 0.0,
+   "ndcg@10_after": 0.0,
+   "mrr_after": 0.0,
+   "recall@10_after": 0.0,
+   "top10_before": [
+    "GMRA/gmra_4_0_um/preface",
+    "GMRA/gmra_4_0_tm/menu-options",
+    "GMRA/gmra_4_0_tm/art-and-data-standardization",
+    "GMRA/gmra_4_0_tm/gmra4068",
+    "GMRA/gmra_4_0_um/gmra435---possible-problem-with-list-by-location-unassessed",
+    "GMRA/gmra_4_0_tm/adverse-reaction-tracking-40-technical-manual",
+    "GMRA/gmra_4_0_um/gmra4021---removal-of-allergies-as-orders",
+    "GMRA/gmra_4_0_tm/gmra4025---blank-signsymptom-problem",
+    "GMRA/gmra_4_0_um/gmra4025---blank-signsymptom-problem"
+   ],
+   "top10_after": [
+    "GMRA/gmra_4_0_um/preface",
+    "GMRA/gmra_4_0_tm/menu-options",
+    "GMRA/gmra_4_0_tm/art-and-data-standardization",
+    "GMRA/gmra_4_0_tm/gmra4068",
+    "GMRA/gmra_4_0_um/gmra435---possible-problem-with-list-by-location-unassessed",
+    "GMRA/gmra_4_0_tm/adverse-reaction-tracking-40-technical-manual",
+    "GMRA/gmra_4_0_um/gmra4021---removal-of-allergies-as-orders",
+    "GMRA/gmra_4_0_tm/gmra4025---blank-signsymptom-problem",
+    "GMRA/gmra_4_0_um/gmra4025---blank-signsymptom-problem",
+    "CPRS/cprsguitm_0_636/allergyadverse-reaction-tracking-dialog"
+   ]
+  },
+  {
+   "id": "plain-send-email",
+   "axis": "plain-english",
+   "ndcg@10_before": 0.0,
+   "mrr_before": 0.0,
+   "recall@10_before": 0.0,
+   "ndcg@10_after": 0.0,
+   "mrr_after": 0.0,
+   "recall@10_after": 0.0,
+   "top10_before": [
+    "XM/xm_8_0_techman/appendix-ahelp-frames",
+    "XM/xm_8_0_techman/xmsend",
+    "XM/xm_8_0_techman/xm-ftp-put",
+    "XM/xm_8_0_techman/xmuser",
+    "XM/xm_8_0_techman/xm-ftp-get",
+    "XM/xm_8_0_techman/routines",
+    "XM/xm_8_0_techman/menu-diagram",
+    "XM/xm_8_0_techman/xmblobsend",
+    "XM/xm_8_0_techman/bulletins",
+    "XM/xm_8_0_techman/revision-history"
+   ],
+   "top10_after": [
+    "XM/xm_8_0_techman/appendix-ahelp-frames",
+    "XM/xm_8_0_techman/xmsend",
+    "XM/xm_8_0_techman/xm-ftp-put",
+    "XM/xm_8_0_techman/xmuser",
+    "XM/xm_8_0_techman/xm-ftp-get",
+    "XM/xm_8_0_techman/routines",
+    "XM/xm_8_0_techman/menu-diagram",
+    "XM/xm_8_0_techman/xmblobsend",
+    "XM/xm_8_0_techman/bulletins",
+    "XU/vista_build_analyzer_ug/including-sqa-checklist-items-component-descriptions-and-routine-text-2"
+   ]
+  }
+ ]
+}

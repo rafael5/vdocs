@@ -50,7 +50,10 @@ class NormalizeStage(Stage):
     # shape, so the bump re-runs normalize and cascades to its consumers.
     # v3: revisions.yaml normalizes every measured revision-date shape (MM/YY, M-D-YY, Month D YYYY,
     # spans …) and bounds revision_newest by the run month — the dates change, so re-run.
-    contract_ver = 3
+    # v4 (end-to-end review A2): `repair_empty_headings` gives Pandoc's bare `# ` headings their
+    # following title line or drops them (1,907 lines in 307 bodies) — the bodies change, so
+    # re-run; `consolidate` and everything after follow.
+    contract_ver = 4
 
     def __init__(self) -> None:
         self._errors = 0  # per-document failures isolated this run (R6 — see doc_error_gate)

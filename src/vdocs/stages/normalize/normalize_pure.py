@@ -34,6 +34,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from vdocs.kernel.markdown import (
+    FENCE_RE,
     HEADING_RE,
     MULTI_BLANK,
     is_legacy_toc_entry,
@@ -326,6 +327,66 @@ def decode_entities(body: str) -> str:
 _HEADING_LEADER_RE = re.compile(
     r"[ \t]*\.{4,}[ \t]*(?:" + PAGE_NUMBER + r")?[ \t]*$", re.IGNORECASE
 )
+
+
+# A2 (end-to-end review §3.2): Pandoc emits an empty styled paragraph as a bare `# ` heading —
+# 1,907 lines in 307 normalized bodies. Followed by another heading (1,618) it is noise; followed
+# by a short plain line (169, e.g. `**Enhancements in Patch 18**`) that line is the title Pandoc
+# rendered as a paragraph; followed by a long paragraph (63) it is noise again — the paragraph is
+# prose, never a heading. Left alone, `shred_sections` drops the empty heading and the text before
+# the next retained heading is never indexed (RMPR/rmpr_3_nppdum indexed 10.6% of its body).
+_EMPTY_HEADING_RE = re.compile(r"^(#+)[ \t]*$")
+_MAX_TITLE_WORDS = 12
+# a line that is structure, not a title: heading, fence, list item, table row, HTML, image, link
+# or table-marker line (`[↑ Back to Contents]`, `_[Table 1 (extracted to CSV)]`), blockquote
+_NOT_A_TITLE_RE = re.compile(r"^[ \t]*(?:#|```|~~~|[-*+][ \t]|\d+\.[ \t]|\||<|!\[|\[|_\[|>)")
+
+
+# a title line may open with its Word bookmark (`<span id="_Toc…" class="anchor"></span>Title`);
+# the span is the heading's anchor identity and rides along onto the repaired heading line
+_BOOKMARKED_TITLE_RE = re.compile(r'^(<span id="[^"]*"(?: class="anchor")?></span>)\s*(.*)$')
+
+
+def _title_from_line(line: str) -> str | None:
+    """The heading text a bare `# ` line takes from the next non-blank line, or None when that
+    line is structure or prose rather than a short title (emphasis wrapping is dropped; a leading
+    bookmark span is kept)."""
+    text = line.strip()
+    span = ""
+    if m := _BOOKMARKED_TITLE_RE.match(text):
+        span, text = m.group(1), m.group(2).strip()
+    if not text or _NOT_A_TITLE_RE.match(text) or len(text.split()) > _MAX_TITLE_WORDS:
+        return None
+    title = text.strip("*_ ").strip()
+    return span + title if title else None
+
+
+def repair_empty_headings(body: str) -> str:
+    """Give an empty-title heading (`# ` on its own line) the short title line that follows it, or
+    drop it (A2). Fence-aware and idempotent: a repaired heading has text, a dropped one is gone."""
+    lines = body.split("\n")
+    out: list[str] = []
+    in_fence = False
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if FENCE_RE.match(line):
+            in_fence = not in_fence
+        m = None if in_fence else _EMPTY_HEADING_RE.match(line)
+        if m is None:
+            out.append(line)
+            i += 1
+            continue
+        j = i + 1
+        while j < len(lines) and not lines[j].strip():
+            j += 1
+        title = _title_from_line(lines[j]) if j < len(lines) else None
+        if title is not None:
+            out.append(f"{m.group(1)} {title}")
+            i = j + 1  # the title line (and the blanks before it) folded into the heading
+        else:
+            i = j  # the bare heading and the blank run after it go
+    return "\n".join(out)
 
 
 def trim_heading_leaders(body: str) -> str:
@@ -991,7 +1052,11 @@ def normalize_body(
     # for markup — and doing it before any heading is parsed keeps slugs, TOC links and anchors
     # computed from one spelling. Decoding *after* the TOC was generated desynchronised them and
     # cost 28 of 1,567 links on the FileMan Developer's Guide.
-    body = subtract_phrases(strip_artifacts(recover_headings(decode_entities(body))), phrases)
+    # A2: an empty `# ` heading takes its following title line or goes — BEFORE `recover_headings`
+    # decides whether the body is structured, so a document whose only heading was the bare `# `
+    # (GMRV/vitl_5_p22_tm) is seen as structureless and gets its bookmark headings recovered.
+    body = repair_empty_headings(decode_entities(body))
+    body = subtract_phrases(strip_artifacts(recover_headings(body)), phrases)
     body = subtract_boilerplate(body, boilerplate)
     # CORRELATE-BEFORE-DROPPING (§6.7 role-1): capture the legacy TOC's original entries (title +
     # page + anchor) *before* it leaves the body, then strip it (ATX-heading + plain-text forms).

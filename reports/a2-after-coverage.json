@@ -1,0 +1,102 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 58240,
+  "corpus_content_hash": "b6e38e5841bec9765fe3c567476c51dc50f4ab314ac72e0e36f7e3adf4977007"
+ },
+ "latest_documents": 615,
+ "below_95": 5,
+ "below_99": 72,
+ "raw_method_below_95": 98,
+ "raw_method_below_99": 328,
+ "distribution": {
+  "0-50": 0,
+  "50-80": 0,
+  "80-90": 2,
+  "90-95": 3,
+  "95-99": 67,
+  "99-100": 192
+ },
+ "causes_below_95": {
+  "c: other": 3,
+  "b: first retained heading after >5% of body": 2
+ },
+ "below_95_list": [
+  {
+   "doc_key": "LR/labbbumf",
+   "body_tokens": 17996,
+   "indexed_tokens": 14412,
+   "coverage_pct": 80.08,
+   "db_chunks": 27,
+   "headings": 88,
+   "contents_tokens": 6784,
+   "raw_body_tokens": 24780,
+   "raw_coverage_pct": 58.16,
+   "empty_title_heading": false,
+   "preamble_share_pct": 0.02,
+   "cause": "c: other",
+   "head200": "## Contents\n\n- [The Laboratory Planning and Implementation Guide Version 5.2 of the Laboratory software application provides detailed instructions on implementation of the software application and fil"
+  },
+  {
+   "doc_key": "PRCA/icd_10_um_tp_4_5_281",
+   "body_tokens": 148,
+   "indexed_tokens": 119,
+   "coverage_pct": 80.41,
+   "db_chunks": 1,
+   "headings": 1,
+   "contents_tokens": 3,
+   "raw_body_tokens": 151,
+   "raw_coverage_pct": 78.81,
+   "empty_title_heading": false,
+   "preamble_share_pct": 21.62,
+   "cause": "b: first retained heading after >5% of body",
+   "head200": null
+  },
+  {
+   "doc_key": "ADT/adt_mcsm",
+   "body_tokens": 518,
+   "indexed_tokens": 475,
+   "coverage_pct": 91.7,
+   "db_chunks": 3,
+   "headings": 5,
+   "contents_tokens": 36,
+   "raw_body_tokens": 554,
+   "raw_coverage_pct": 85.74,
+   "empty_title_heading": false,
+   "preamble_share_pct": 6.37,
+   "cause": "b: first retained heading after >5% of body",
+   "head200": null
+  },
+  {
+   "doc_key": "PXRM/ahobpr_registrantportal_usermanual_v3",
+   "body_tokens": 4319,
+   "indexed_tokens": 3977,
+   "coverage_pct": 92.08,
+   "db_chunks": 27,
+   "headings": 40,
+   "contents_tokens": 640,
+   "raw_body_tokens": 4959,
+   "raw_coverage_pct": 80.2,
+   "empty_title_heading": false,
+   "preamble_share_pct": 0.81,
+   "cause": "c: other",
+   "head200": "## Contents\n\n- [Overview](#overview)\n  - [As required by Public Law 112-260, Dignified Burial and Other Veterans\u2019 Benefits Improvement Act of 2012, the Department of Veterans Affairs (VA) launched the"
+  },
+  {
+   "doc_key": "EDIS/edp_2_1_1_ug",
+   "body_tokens": 25537,
+   "indexed_tokens": 23612,
+   "coverage_pct": 92.46,
+   "db_chunks": 159,
+   "headings": 314,
+   "contents_tokens": 4658,
+   "raw_body_tokens": 30195,
+   "raw_coverage_pct": 78.2,
+   "empty_title_heading": false,
+   "preamble_share_pct": 2.27,
+   "cause": "c: other",
+   "head200": "**Emergency Dept Integration Software (EDIS) Version 2.1.1 Increment 3 User Guide**\n\n_Version 2.1.1 \u00b7 Patch EDIS*2.1.1 \u00b7 Published 2013-07_\n\nSource: <https://www.va.gov/vdl/documents/Clinical/Emergenc"
+  }
+ ]
+}

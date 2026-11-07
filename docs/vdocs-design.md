@@ -1902,6 +1902,22 @@ section text from `v_chunks.text`. Measured on the 2026-11-06 index: 10.1% of bo
 markup, 11,486 vocabulary terms were asset hashes, `back`/`contents` ranked 3rd/4th by document
 frequency, and a third of golden-query snippets carried the nav line (`reports/a1-before.md`).
 
+**The preamble is a section; the body is gated against its chunks.** (End-to-end review A2,
+decision D2, built 2026-11-07.) `shred_sections` emits a `<doc_key>/preamble` section — titled from
+the document, level 1, never an ancestor, a leaf judged like any other — for the substantive text
+before a document's first retained heading, after `normalize`'s identity header and the generated
+`## Contents` list are set aside (`index_pure.preamble_text`). Before it, 70 of the 615 latest
+documents indexed under 95% of their body (`RMPR/rmpr_3_nppdum`: 10.6%; `reports/a2-before.md`).
+Upstream, `normalize.repair_empty_headings` gives Pandoc's bare `# ` heading (1,907 lines in 307
+bodies) its following short title line or drops it, so an empty heading no longer swallows the
+text up to the next one. Downstream, `doctor` gains the **body coverage** gate: per latest
+document, the word tokens of the gold `body.md` (frontmatter, identity header and generated TOC
+dropped) against the tokens of its non-table chunks (`#pN` overlap removed); below the floor in
+`registries/doctor-policy.yaml` `body_coverage.min_pct` is RED unless the document is a named
+exception with a reason, the exception list is printed on every run, an exception naming a
+document that is not a latest document is RED, and a stale one is a WARN. Red-proved with a planted
+chunk deletion and a planted exception for a non-existent document.
+
 **Why removing redundant text improves retrieval — concretely.** Three distinct mechanisms, each
 countered by a specific part of the design:
 1. **Embedding dilution.** A chunk that mixes boilerplate with real content yields a vector blended

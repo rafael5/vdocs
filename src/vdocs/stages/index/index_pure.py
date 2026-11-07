@@ -501,6 +501,29 @@ def fts_doc_title(app_name: str, title: str) -> str:
     return f"{app} {title}"
 
 
+# A2 (end-to-end review §3.2): the lines before the first retained heading were never chunked.
+# 70 latest documents indexed under 95% of their body for it (RMPR/rmpr_3_nppdum: 10.6%). The
+# preamble becomes a section of its own when it carries substance — but `normalize`'s identity
+# header (`**title**`, `_Version · Patch · Published_`, `Source: <url>`) and the generated
+# `## Contents` list are ours, not the document's, and never count as substance.
+IDENTITY_HEADER_RE = re.compile(
+    r"\A\s*(?:\*\*.*\*\*[ \t]*\n)?"  # **title**
+    r"\s*(?:_(?:Version|Patch|Published)\b[^\n]*_[ \t]*\n)?"  # _Version · Patch · Published_
+    r"\s*(?:Source: <[^>\n]*>[ \t]*\n)?"  # Source: <url>
+)
+GENERATED_TOC_RE = re.compile(r"(?m)^#+[ \t]+Contents[ \t]*\n(?:[ \t]*\n|[ \t]*-[ \t]+\[.*\n)*")
+PREAMBLE_SLUG = "preamble"
+
+
+def preamble_text(lines: list[str]) -> str:
+    """The document's own text among ``lines`` (the lines before the first retained heading):
+    the identity header and the generated TOC removed, surrounding blank lines stripped."""
+    text = "\n".join(lines) + "\n"
+    text = IDENTITY_HEADER_RE.sub("", text, count=1)
+    text = GENERATED_TOC_RE.sub("", text)
+    return text.strip()
+
+
 def shred_sections(
     body: str,
     doc_key: str,
@@ -521,6 +544,30 @@ def shred_sections(
     seen: dict[str, int] = {}
     used: set[str] = set()
     sections: list[Section] = []
+    if heads:
+        # A2: substantive text before the first retained heading is the `preamble` section —
+        # a leaf like any other (searchable, classified by the floor), first in document order,
+        # titled from the document, never an ancestor. Its slug is reserved first, so a heading
+        # named "Preamble" takes the `-dup-N` form.
+        text = preamble_text(lines[: heads[0][0]])
+        has_referent, tokens = substantive_tokens(text.split("\n"))
+        if is_searchable(has_referent=has_referent, tokens=tokens):
+            used.add(PREAMBLE_SLUG)
+            sections.append(
+                Section(
+                    section_id=f"{doc_key}/{PREAMBLE_SLUG}",
+                    slug=PREAMBLE_SLUG,
+                    title=doc_title or "Document",
+                    level=1,
+                    text=text,
+                    toc_level=lo <= 1 <= hi,
+                    kind=classify_section(
+                        is_container=False, has_referent=has_referent, tokens=tokens
+                    ),
+                    searchable=True,
+                    section_path="",
+                )
+            )
     path_stack: list[tuple[int, str]] = []  # (level, title) of the current heading's open ancestors
     for i, (idx, level, raw_title) in enumerate(heads):
         # The slug — hence the section_id refs.yaml and every consumer cite — comes from the raw
@@ -556,7 +603,7 @@ def shred_sections(
                 section_path=section_path,
             )
         )
-    if not sections and body.strip():
+    if not heads and body.strip():
         # No heading produced a section — emit the whole body as one leaf so its text still reaches
         # the chunk/FTS surface (classified by the shared substantive-token floor, like any leaf).
         has_referent, tokens = substantive_tokens(lines)

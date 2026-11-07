@@ -698,3 +698,67 @@ def test_shred_cleans_the_title_but_keeps_the_slug_from_the_raw_heading():
     assert pre.title == "Preface"
     assert secs["child"].section_path == "Doc > Preface"
     assert secs["empty"].title == "[](#empty)"
+
+
+# --- A2 (end-to-end review §3.2): the preamble — text before the first retained heading ----------
+
+_HEADER = (
+    "**NPPD User Manual (Updated RMPR*3*168)**\n\n"
+    "_Version 3 · Patch RMPR*3*168 · Published 2004-09_"
+    "\n\nSource: <https://www.va.gov/vdl/documents/Clinical/Prothestics/rmpr_3_nppdum.docx>\n\n"
+)
+_TOC = "## Contents\n\n- [Appendix B](#appendix-b)\n  - [Levels](#levels)\n\n"
+
+
+def test_shred_emits_a_preamble_section_for_substantive_text_before_the_first_heading():
+    body = (
+        _HEADER + _TOC + "NPPD User Manual\n\nOverview\n\nThis manual covers the NPPD tool.\n\n"
+        "# Appendix B\n\nlevels text\n\n## Levels\n\nmore\n"
+    )
+    secs = ip.shred_sections(body, "RMPR/rmpr_3_nppdum", doc_title="NPPD User Manual")
+    pre = secs[0]
+    assert pre.section_id == "RMPR/rmpr_3_nppdum/preamble" and pre.slug == "preamble"
+    assert pre.title == "NPPD User Manual" and pre.level == 1 and pre.section_path == ""
+    assert pre.searchable and pre.kind == "ok"
+    # the text is the preamble prose: neither the identity header nor the generated TOC
+    assert pre.text == "NPPD User Manual\n\nOverview\n\nThis manual covers the NPPD tool."
+    assert [s.slug for s in secs] == ["preamble", "appendix-b", "levels"]
+    assert secs[1].section_path == ""  # the preamble is not an ancestor of anything
+
+
+def test_shred_emits_no_preamble_when_only_the_header_and_toc_precede_the_first_heading():
+    body = _HEADER + _TOC + "# Appendix B\n\nlevels text\n"
+    assert [s.slug for s in ip.shred_sections(body, "D/k")] == ["appendix-b"]
+    # a nav line or a blank run is not substance either
+    body = _HEADER + _TOC + "[↑ Back to Contents](#contents)\n\n\n# Appendix B\n\nlevels text\n"
+    assert [s.slug for s in ip.shred_sections(body, "D/k")] == ["appendix-b"]
+
+
+def test_shred_preamble_is_a_leaf_judged_like_any_other():
+    # thin but real text → searchable (is_searchable: any substantive token), kind by the floor
+    body = "# Doc\n\n" if False else "Short note.\n\n# A\n\ntext\n"
+    secs = ip.shred_sections(body, "D/k", doc_title="Doc")
+    assert secs[0].slug == "preamble" and secs[0].searchable and secs[0].kind == "hollow"
+    # a referent-only preamble (an extracted table) is searchable and a stub
+    body = "_[Table 1 (extracted to CSV)](tables/table-01.csv)_\n\n# A\n\ntext\n"
+    secs = ip.shred_sections(body, "D/k", doc_title="Doc")
+    assert secs[0].slug == "preamble" and secs[0].searchable and secs[0].kind == "stub"
+
+
+def test_shred_preamble_does_not_collide_with_a_heading_named_preamble():
+    body = "Intro text here.\n\n# Preamble\n\nreal section\n"
+    secs = ip.shred_sections(body, "D/k", doc_title="Doc")
+    assert [s.slug for s in secs] == ["preamble", "preamble-dup-1"]
+    assert secs[0].title == "Doc" and secs[1].title == "Preamble"
+
+
+def test_shred_whole_body_fallback_is_unchanged_when_no_heading_survives():
+    secs = ip.shred_sections("just text, no headings\n", "D/k", doc_title="Doc")
+    assert [s.slug for s in secs] == ["body"]
+
+
+def test_substantive_tokens_ignore_the_generated_toc_and_identity_header():
+    assert ip.preamble_text((_HEADER + _TOC).split("\n")) == ""
+    assert (
+        ip.preamble_text((_HEADER + _TOC + "Real words here.\n").split("\n")) == "Real words here."
+    )
