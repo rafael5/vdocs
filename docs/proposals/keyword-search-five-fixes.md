@@ -259,7 +259,7 @@ The operator set this on 2026-11-06: keyword search must translate the plain-Eng
 package into its VistA package name and namespace, so "blood bank" finds VBECS. It is a core
 capability, complete for every application, not an extra grown one question at a time.
 
-- **One table of term → alternatives in `index.db`** (it does not exist yet), written by the
+- **One table of term → alternatives in `index.db`** (built: `search_synonyms`), written by the
   producer from three sources:
   - **Plain-English package names (core).** Every application in the corpus gets the names a
     non-technical searcher would type. Each name expands to that application's package name, code
@@ -267,7 +267,7 @@ capability, complete for every application, not an extra grown one question at a
     namespace columns, and the package master registry. Two Kernel parts that people name on their
     own get entries of their own: TaskMan ("background jobs") and KIDS ("patches").
     - The names are written once, for all 109 applications, in one registry file with one entry per
-      application. That file does not exist yet.
+      application. That file is `registries/search-synonyms.yaml`.
     - The operator approved the reviewer's drafts in Appendix B unchanged on 2026-11-06.
   - **Generated, no curation:** application codes, namespaces and product abbreviations ↔ their
     names (307 pairs for 109 applications), plus today's one expansion (file 200 → NEW PERSON),
