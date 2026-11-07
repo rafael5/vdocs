@@ -1,12 +1,13 @@
 # Good-enough keyword search — five small fixes
 
 **Status: PROPOSED · 2026-11-06 · decisions D1–D3 taken 2026-11-06 as recommended; D1 revised
-2026-11-06 when sentence search was dropped (keywords only) · amended
-2026-11-06: plain-English package names made a core part of fix 3, and search-box suggestions
-added as fix 5, both at the operator's direction · fix 1 built in vdocs-web 2026-11-06
-(`926e320`) · Appendices A, B and C approved by the operator unchanged 2026-11-06 · fix 2 built in vdocs (MCP and `vdocs ask`, `9bfc552`) and vdocs-web
-(`9448e4f`), the Go CLI next · fixes 3–5 not built.** Consumer: vdocs-web (fixes 1–3
-and 5). Producer and MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
+2026-11-06 when sentence search was dropped (keywords only) · amended 2026-11-06: plain-English
+package names made a core part of fix 3, and search-box suggestions added as fix 5, both at the
+operator's direction · fix 1 built in vdocs-web 2026-11-06 (`926e320`) · Appendices A, B and C
+approved by the operator unchanged 2026-11-06 · fix 2 built in vdocs (MCP and `vdocs ask`,
+`9bfc552`) and vdocs-web (`9448e4f`), the Go CLI next · fix 4 built in vdocs (`bc0188a`) · fixes 3
+and 5 not built.** Consumer: vdocs-web (fixes 1–3 and 5). Producer and MCP: vdocs (fixes 2–4). Read
+contract 1.7 → 1.8, additive, for fix 3 only.
 **Evidence:** every number comes from a script in `scripts/mcp_review/` (`contract.py`, `fixes.py`,
 `package_names.py`, `ranking.py`, `tiers.py`, `suggest.py`), recorded with provenance in the
 matching `reports/mcp-review-<name>.json`. Corpus: `~/data/vdocs/index.db`, 1,040 documents (615 latest),
@@ -273,6 +274,20 @@ capability, complete for every application, not an extra grown one question at a
 
 ### Fix 4: keyword-form test questions
 
+**Built 2026-11-06** in vdocs (`bc0188a`), as described below.
+- Every question in `registries/golden-queries.yaml` carries its keyword form (`keywords:`), and
+  the harness (`scripts/baseline_golden.py`) searches that form. It refuses a question without one.
+  The weight sweep and the facet evaluation search the keyword forms too.
+- The six plain-English searches are in the key as axis `plain-english`: 30 judged questions in
+  all, plus the unjudged redundancy probe.
+- The new baseline, on the real index.db (`reports/fix4-golden-keywords.json`, corpus
+  `5b118189…`): the 24 keyword forms score nDCG@10 0.524 and MRR 0.609, with 20 in the top 10 and
+  13 first. The six plain-English searches have 1 in the top 10 (nDCG@10 0.029). All 30 together:
+  nDCG@10 0.425.
+- The earlier baseline of record, nDCG@10 0.655, graded the sentences under the any-word reader
+  that fix 2 replaced. It is not comparable and is retired. The same sentences under today's
+  search score 0.451, but sentences are no longer graded.
+
 - Each of the 24 judged questions gains its keyword form. The drafts are in Appendix A, written by
   the reviewer, who knew the answers; the operator approved them unchanged on 2026-11-06 (D3).
 - Add six plain-English keyword searches of the kind a non-technical searcher types, judged the
@@ -347,7 +362,7 @@ Each step: write the test first, then build, then run `make check`, measure agai
 
 1. **Fix 4 and Appendix B:** the keyword forms (Appendix A) and the plain-English package names
    (Appendix B) and the six plain-English keyword searches (Appendix C) were approved unchanged on
-   2026-11-06. Still to come: the golden harness grades the keyword forms.
+   2026-11-06. The golden harness grades the keyword forms (built 2026-11-06, `bc0188a`).
 2. **Fix 1 (built 2026-11-06, vdocs-web `926e320`):** relevance order and the any-word fallback
    in vdocs-web. This is the largest visible gain and needs no contract change.
 3. **Fix 2:** the reader in vdocs-web, the MCP and the Go CLI (D2), with the shared cases. The MCP
