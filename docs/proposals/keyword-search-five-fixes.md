@@ -6,8 +6,8 @@ package names made a core part of fix 3, and search-box suggestions added as fix
 operator's direction · fix 1 built in vdocs-web 2026-11-06 (`926e320`) · Appendices A, B and C
 approved by the operator unchanged 2026-11-06 · fix 2 built in vdocs (MCP and `vdocs ask`,
 `9bfc552`), vdocs-web (`9448e4f`) and the Go CLI (`e9f8b62`) · fix 4 built in vdocs (`bc0188a`) ·
-fixes 3 and 5 not built.** Consumer: vdocs-web (fixes 1–3 and 5). Producer and MCP: vdocs (fixes
-2–4). Read contract 1.7 → 1.8, additive, for fix 3 only.
+fix 3 built in all three (read contract 1.8) · fix 5 not built.** Consumer: vdocs-web (fixes 1–3 and
+5). Producer and MCP: vdocs (fixes 2–4). Read contract 1.7 → 1.8, additive, for fix 3.
 **Evidence:** every number comes from a script in `scripts/mcp_review/` (`contract.py`, `fixes.py`,
 `package_names.py`, `ranking.py`, `tiers.py`, `suggest.py`), recorded with provenance in the
 matching `reports/mcp-review-<name>.json`. Corpus: `~/data/vdocs/index.db`, 1,040 documents (615 latest),
@@ -216,6 +216,45 @@ search box gets a one-line hint. Those descriptions are how people and agents le
 
 ### Fix 3: synonyms, with plain-English package names at the core
 
+**Built 2026-11-06** in vdocs (`8426865`, `19c5bf8`), vdocs-web (`b2d1207`) and vdocs-cli
+(`e005e43`), with read contract 1.8. Measured through the production code and the live web console
+(`reports/mcp-review-synonyms.json`, `scripts/mcp_review/synonyms.py`). The web console cannot turn
+the table off, so its "before" package-name figure comes from a replica of its ranking that
+reproduces the live figures.
+- `merge` writes `index.db` `search_synonyms` (view `v_search_synonyms`, 625 rows) from
+  `registries/search-synonyms.yaml` (the approved names of Appendix B, the two Kernel parts, and
+  hand-written terms), the documents' application codes and namespaces, and the SKL's file names.
+  The MCP's separate file 200 → NEW PERSON expansion is now a row of this table.
+- The reader rules and 20 cases are in `contracts/query/v1.json` (`synonyms`); all three front
+  doors pass them. The web console applies the table to its list, its fallback and its facet counts.
+- **Changed from the plan, by measurement.** A name expanding to its codes ("Laboratory" → LR, LA,
+  Lab) and a product abbreviation expanding to its name ("RPC" → Remote Procedure Call Broker) each
+  cost a judged question its place and found nothing the code → name rows did not, so neither is
+  written. Application codes and namespaces still expand to the application's name.
+- Two hand-written terms, each moving only its own question: password → verify code ("change
+  password": web 7th → 1st, MCP not found → 2nd) and user account → new user ("create user
+  account": web 28th → 3rd). "printer" → "device" did not reach web page 1 (18th → 13th) and
+  "create" → "add" is a general verb, so neither went in.
+
+  | Measure | Before fix 3 | After |
+  |---|---|---|
+  | Plain-English package names: a manual of it on web page 1 | 196 / 238 | 238 / 238 |
+  | Plain-English package names: a section of it in the MCP top 10 | 183 / 238 | 238 / 238 |
+  | Application found by its code, web top 10 | 101 / 109 | 108 / 109 |
+  | Plain-English keyword searches: right manual on web page 1 | 3 / 6 | 5 / 6 |
+  | Plain-English keyword searches: a judged section in the MCP top 10 | 1 / 6 | 1 / 6 |
+  | Judged keyword questions, MCP: top 10 / first | 20 / 13 | 20 / 15 |
+  | Judged keyword questions, web: page 1 / first | 24 / 20 | 24 / 19 |
+  | Patch ids / `file #N` in the MCP top 5 | 216 / 25 | 216 / 25 |
+
+- **Two costs, both from approved names.** "progress notes" → TIU moves the unsigned-notes
+  question from 1st to 2nd on the web. "allergies" → Adverse Reaction Tracking takes "enter
+  patient allergies" out of the MCP top 15 (it was 4th), while the web keeps it 1st.
+- **Short of the target.** "set up printer" stays off web page 1 (18th), and in the MCP only
+  "change password" reaches the top 10. The MCP ranks sections, and a broad word such as "jobs" or
+  "email", even expanded to TaskMan or MailMan, matches thousands of sections; synonyms cannot lift
+  the judged introductions above them.
+
 The operator set this on 2026-11-06: keyword search must translate the plain-English name of a
 package into its VistA package name and namespace, so "blood bank" finds VBECS. It is a core
 capability, complete for every application, not an extra grown one question at a time.
@@ -371,9 +410,9 @@ Each step: write the test first, then build, then run `make check`, measure agai
    in vdocs-web. This is the largest visible gain and needs no contract change.
 3. **Fix 2 (built 2026-11-06):** the reader in the MCP and `vdocs ask` (`9bfc552`), vdocs-web
    (`9448e4f`) and the Go CLI (`e9f8b62`, D2), with the shared cases.
-4. **Fix 3, straight after fix 2:** the producer writes the synonym table (contract 1.8), and every
-   reader applies it. The package names are complete for every application in the first release.
-   Other hand-written terms are added one judged question at a time.
+4. **Fix 3 (built 2026-11-06):** the producer writes the synonym table (contract 1.8), and every
+   reader applies it. The package names are complete for every application. Hand-written terms
+   are added one judged question at a time; two are in.
 5. **Fix 5:** search-box suggestions in vdocs-web, reading the synonym table from step 4.
 
 ## 6. Deliberately not building

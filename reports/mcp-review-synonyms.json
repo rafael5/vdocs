@@ -1,0 +1,87 @@
+{
+ "provenance": {
+  "index_db": "/home/rafael/data/vdocs/index.db",
+  "documents": 1040,
+  "chunks": 57804,
+  "corpus_content_hash": "5b1181890616a7ea6630fea3e5f5c3b76fed84748bbd9374d80f2475790ffc25",
+  "read_schema_version": "1.8"
+ },
+ "plain_english_searches": {
+  "change password": {
+   "web_rank": 1,
+   "mcp_rank_on": 2,
+   "mcp_rank_off": null
+  },
+  "create user account": {
+   "web_rank": 3,
+   "mcp_rank_on": null,
+   "mcp_rank_off": null
+  },
+  "background jobs": {
+   "web_rank": 1,
+   "mcp_rank_on": null,
+   "mcp_rank_off": null
+  },
+  "set up printer": {
+   "web_rank": 18,
+   "mcp_rank_on": null,
+   "mcp_rank_off": null
+  },
+  "enter patient allergies": {
+   "web_rank": 1,
+   "mcp_rank_on": null,
+   "mcp_rank_off": 4
+  },
+  "send email": {
+   "web_rank": 4,
+   "mcp_rank_on": null,
+   "mcp_rank_off": null
+  }
+ },
+ "summary": {
+  "judged_web": {
+   "n": 24,
+   "top10": 24,
+   "first": 19
+  },
+  "judged_mcp_on": {
+   "n": 24,
+   "top10": 20,
+   "first": 15
+  },
+  "judged_mcp_off": {
+   "n": 24,
+   "top10": 20,
+   "first": 13
+  },
+  "plain_web": {
+   "n": 6,
+   "top10": 5,
+   "first": 3
+  },
+  "plain_mcp_on": {
+   "n": 6,
+   "top10": 1,
+   "first": 0
+  },
+  "plain_mcp_off": {
+   "n": 6,
+   "top10": 1,
+   "first": 0
+  }
+ },
+ "judged_questions_that_moved_in_the_mcp": [
+  "vpr-allergy-data: 2\u21921",
+  "cprs-enter-immunization: 3\u21921"
+ ],
+ "plain_package_names": {
+  "names": 238,
+  "web_page1": 238,
+  "mcp_top10": 238
+ },
+ "application_by_code_web_top10": "108/109",
+ "identifiers_mcp_top5": {
+  "patch_ids": "on 216/256, off 216/256",
+  "file_numbers": "on 25/30, off 25/30"
+ }
+}
