@@ -2,9 +2,9 @@
 # (keyword-search proposal, fix 3, docs/proposals/keyword-search-five-fixes.md).
 #
 # `merge` writes index.db `search_synonyms` (read contract v_search_synonyms) from this file plus
-# data the producer already holds: the documents' application names, codes, namespaces and
-# products, the package master registry (inventory/package-master.yaml), and the SKL's file names
-# (file 200 → NEW PERSON). Every search front door expands an unquoted word or phrase that is a
+# data the producer already holds: the documents' application codes and namespaces (each expands
+# to the application's name), the package master registry (inventory/package-master.yaml), and the
+# SKL's file names (file 200 → NEW PERSON). Every search front door expands an unquoted word or phrase that is a
 # term into its alternatives (rules and cases: contracts/query/v1.json, `synonyms`).
 #
 # packages      application code → the plain-English names a non-technical searcher types. Each
@@ -137,4 +137,15 @@ kernel_parts:
   - names: [patches, software installation]
     alternatives: [KIDS, Kernel Installation and Distribution System, XPD]
 
-terms: []
+terms:
+  # change password: the manuals call the password the verify code. Measured 2026-11-06
+  # (reports/mcp-review-synonyms.json): web 7th → 1st, MCP not in top 15 → 2nd; no other judged
+  # query moves.
+  - term: password
+    alternatives: [verify code]
+    fixes: plain-change-password
+  # create user account: the manuals say "new user" (Add a New User to the System). Web 28th → 3rd;
+  # no other judged query moves.
+  - term: user account
+    alternatives: [new user]
+    fixes: plain-create-user-account

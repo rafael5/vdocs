@@ -136,8 +136,11 @@ def tag_chunks(chunks: list[tuple[str, str]], entities: list[SklEntity]) -> list
 # --- search synonyms (keyword-search proposal, fix 3) ---------------------------------------------
 # One table of term → alternatives that every search front door applies (rules and cases:
 # contracts/query/v1.json, `synonyms`). Written from the hand-written registry
-# (registries/search-synonyms.yaml), the documents' application names, codes, namespaces and
-# products, and the SKL's file names (file 200 → NEW PERSON), so there is one expansion mechanism.
+# (registries/search-synonyms.yaml), the documents' application codes and namespaces with their
+# names, and the SKL's file names (file 200 → NEW PERSON), so there is one expansion mechanism.
+# Measured 2026-11-06 (reports/mcp-review-synonyms.json): a name expanding to its codes and a
+# product abbreviation expanding to its name each cost a judged question its place and found
+# nothing the code → name rows did not, so neither is written.
 
 # (seq, term, alternative, match_case, source); match_case 1 = the term matches only as written.
 SearchSynonymRow = tuple[int, str, str, int, str]
@@ -153,7 +156,6 @@ class AppNames:
     code: str
     name: str  # documents.app_name, raw ("Pharmacy: Automatic Replenish / Ward Stock")
     namespaces: tuple[str, ...]
-    products: tuple[tuple[str, str], ...]  # (abbreviation, full name)
 
 
 @dataclass(frozen=True)
@@ -218,13 +220,8 @@ def search_synonym_rows(
         for n in names:
             add(n, list(alternatives), 0, "kernel_part")
     for a in apps:
-        name = clean_app_name(a.name)
         for code in dict.fromkeys((a.code, *a.namespaces)):
-            add(code, [name], 1, "application")
-        add(name, list(dict.fromkeys((a.code, *a.namespaces))), 0, "application")
-        for abbr, full in a.products:
-            add(abbr, [clean_app_name(full)], 1, "product")
-            add(clean_app_name(full), [abbr], 0, "product")
+            add(code, [clean_app_name(a.name)], 1, "application")
     for term, alternatives, match_case in hand.terms:
         add(term, list(alternatives), match_case, "term")
     for canonical, name in skl_names:

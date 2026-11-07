@@ -2,7 +2,7 @@
 
 One table of term → alternatives for every search front door, from the hand-written registry
 (`registries/search-synonyms.yaml`: plain-English package names, Kernel parts, judged terms), the
-documents' application names, codes, namespaces and products, and the SKL's file names. The rules
+documents' application codes and namespaces with their names, and the SKL's file names. The rules
 the readers apply are in `contracts/query/v1.json` (`synonyms`).
 """
 
@@ -19,19 +19,12 @@ VBECS = mp.AppNames(
     code="VBECS",
     name="VistA Blood Establishment Computer Software (VBECS)",
     namespaces=("VBECS", "VBEC"),
-    products=(("VBECS", "VistA Blood Establishment Computer Software"),),
 )
 CPRS = mp.AppNames(
-    code="CPRS",
-    name="Computerized Patient Record System",
-    namespaces=("CPRS", "OR"),
-    products=(("CPRS", "Computerized Patient Record System"),),
+    code="CPRS", name="Computerized Patient Record System", namespaces=("CPRS", "OR")
 )
 ARWS = mp.AppNames(
-    code="AR/WS",
-    name="Pharmacy: Automatic Replenish / Ward Stock",
-    namespaces=("PSGW",),
-    products=(),
+    code="AR/WS", name="Pharmacy: Automatic Replenish / Ward Stock", namespaces=("PSGW",)
 )
 NO_HAND = mp.HandSynonyms(packages={}, kernel_parts=(), terms=())
 
@@ -57,20 +50,17 @@ def test_application_names_are_cleaned_of_prefixes_and_parentheses() -> None:
     assert _alts(rows, "AR/WS", 1) == ["Automatic Replenish / Ward Stock"]
 
 
-def test_codes_and_namespaces_expand_to_the_name_and_the_name_to_them() -> None:
+def test_codes_and_namespaces_expand_to_the_name_but_not_the_name_to_them() -> None:
+    # measured 2026-11-06 (reports/mcp-review-synonyms.json): a name expanding to its codes
+    # ("Laboratory" → LR, LA, Lab) and product abbreviations expanding to their names ("RPC" →
+    # Remote Procedure Call Broker) each cost a judged question its place; neither found anything
+    # the code → name rows did not
     rows, _ = mp.search_synonym_rows([VBECS], NO_HAND, [])
     name = "VistA Blood Establishment Computer Software"
     assert _alts(rows, "VBECS", 1) == [name]
     assert _alts(rows, "VBEC", 1) == [name]
-    assert _alts(rows, name, 0) == ["VBECS", "VBEC"]
-
-
-def test_a_product_abbreviation_and_its_name_expand_to_each_other() -> None:
-    oe = mp.AppNames(code="OE", name="Order Entry", namespaces=(), products=(("CPRS", "CPRS GUI"),))
-    rows, _ = mp.search_synonym_rows([oe], NO_HAND, [])
-    assert _alts(rows, "CPRS", 1) == ["CPRS GUI"]
-    assert _alts(rows, "CPRS GUI", 0) == ["CPRS"]
-    assert {r[4] for r in rows if r[1] in ("CPRS", "CPRS GUI")} == {"product"}
+    assert not [r for r in rows if r[3] == 0]
+    assert {r[4] for r in rows} == {"application"}
 
 
 def test_an_operator_word_is_never_a_term_or_an_alternative() -> None:
@@ -109,7 +99,7 @@ def test_skl_file_names_keep_only_distinctive_numbers_and_multi_word_names() -> 
 
 
 def test_a_one_character_term_is_never_written() -> None:
-    app = mp.AppNames(code="Q", name="Quality Thing", namespaces=("Q",), products=())
+    app = mp.AppNames(code="Q", name="Quality Thing", namespaces=("Q",))
     rows, _ = mp.search_synonym_rows([app], NO_HAND, [])
     assert not [r for r in rows if len(r[1]) < 2]
 

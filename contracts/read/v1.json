@@ -428,7 +428,7 @@
     },
     "v_search_synonyms": {
       "source": "search_synonyms",
-      "description": "Search synonym table (keyword-search proposal, fix 3): term \u2192 alternatives that every search front door ORs into an unquoted word or phrase that is a term, by the rules in contracts/query/v1.json (`synonyms`). Written by `merge` from registries/search-synonyms.yaml (plain-English package names, Kernel parts, judged terms), the documents' application names, codes, namespaces and products, and the SKL's file names. Read it ORDER BY seq.",
+      "description": "Search synonym table (keyword-search proposal, fix 3): term \u2192 alternatives that every search front door ORs into an unquoted word or phrase that is a term, by the rules in contracts/query/v1.json (`synonyms`). Written by `merge` from registries/search-synonyms.yaml (plain-English package names, Kernel parts, judged terms), the documents' application codes and namespaces (each \u2192 the application's name), and the SKL's file names. Read it ORDER BY seq.",
       "columns": {
         "seq": {
           "type": "INTEGER",
@@ -448,12 +448,12 @@
         "match_case": {
           "type": "INTEGER",
           "nullable": false,
-          "desc": "1: the term matches only as written (application codes, namespaces, product abbreviations); 0: in any case"
+          "desc": "1: the term matches only as written (application codes and namespaces); 0: in any case"
         },
         "source": {
           "type": "TEXT",
           "nullable": false,
-          "desc": "package_name | kernel_part | application | product | term | skl"
+          "desc": "package_name | kernel_part | application | term | skl"
         }
       }
     },

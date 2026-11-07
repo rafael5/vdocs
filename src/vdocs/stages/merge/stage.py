@@ -10,7 +10,7 @@ new extraction — only *derived* tables over what the two stages already produc
 * **chunk_entities** — chunk → entity tags (entity-keyed retrieval; distinctive surfaces only).
 * **search_synonyms** — the search synonym table every front door applies (keyword-search
   proposal, fix 3): `registries/search-synonyms.yaml` (plain-English package names, Kernel parts,
-  judged terms), the latest documents' application names, codes, namespaces and products, the
+  judged terms), the latest documents' application codes and namespaces with their names, the
   package master's namespaces, and the SKL's file names (file 200 → NEW PERSON).
 
 The tables are the EMPTY shells `index` owns (so the read-schema version is consistent before
@@ -152,34 +152,30 @@ def _read_chunks(index_db) -> list[tuple[str, str]]:  # type: ignore[no-untyped-
 
 def _read_apps(index_db, registries) -> list[mp.AppNames]:  # type: ignore[no-untyped-def]
     """Each application of the latest documents, with its namespaces (the documents', then the
-    package master's) and its product abbreviations."""
+    package master's)."""
     master = parse_package_master(
         (registries / "inventory" / "package-master.yaml").read_text(encoding="utf-8")
     )
     conn = db.connect(index_db, read_only=True)
     try:
         rows = conn.execute(
-            "SELECT app_code, app_name, pkg_ns, product_abbr, product_full FROM documents "
+            "SELECT app_code, app_name, pkg_ns FROM documents "
             "WHERE is_latest = 1 AND app_code IS NOT NULL AND app_code != '' ORDER BY doc_key"
         ).fetchall()
     finally:
         conn.close()
     names: dict[str, str] = {}
     namespaces: dict[str, list[str]] = {}
-    products: dict[str, list[tuple[str, str]]] = {}
-    for code, name, ns, abbr, full in rows:
+    for code, name, ns in rows:
         names.setdefault(code, name or "")
         namespaces.setdefault(code, [])
-        products.setdefault(code, [])
         if ns and ns not in namespaces[code]:
             namespaces[code].append(ns)
-        if abbr and full and (abbr, full) not in products[code]:
-            products[code].append((abbr, full))
     apps = []
     for code in sorted(names):
         entry = master.get(code)
         ns = [*namespaces[code], *([entry.pkg_ns] if entry and entry.pkg_ns else [])]
-        apps.append(mp.AppNames(code, names[code], tuple(dict.fromkeys(ns)), tuple(products[code])))
+        apps.append(mp.AppNames(code, names[code], tuple(dict.fromkeys(ns))))
     return apps
 
 

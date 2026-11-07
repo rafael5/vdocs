@@ -49,18 +49,16 @@ def _seed(ctx):
         CREATE TABLE chunks (chunk_id TEXT PRIMARY KEY, section_id TEXT, doc_key TEXT,
                              part INTEGER, text TEXT);
         CREATE TABLE documents (doc_key TEXT PRIMARY KEY, app_code TEXT, app_name TEXT,
-                                pkg_ns TEXT, product_abbr TEXT, product_full TEXT,
-                                is_latest INTEGER);
+                                pkg_ns TEXT, is_latest INTEGER);
         """
     )
     conn.executemany(
-        "INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO documents VALUES (?, ?, ?, ?, ?)",
         [
-            ("VBECS/um", "VBECS", "VistA Blood Establishment Computer Software (VBECS)", "VBEC",
-             "VBECS", "VistA Blood Establishment Computer Software", 1),
-            ("XM/old", "XM", "MailMan", "XM", "XM", "MailMan", 0),  # not latest: not an app here
+            ("VBECS/um", "VBECS", "VistA Blood Establishment Computer Software (VBECS)", "VBEC", 1),
+            ("XM/old", "XM", "MailMan", "XM", 0),  # not latest: not an application here
         ],
-    )  # fmt: skip
+    )
     # index recognized file #200 and file #1 (both present so both can reconcile)
     conn.executemany(
         "INSERT INTO entities VALUES (?, ?, ?)",

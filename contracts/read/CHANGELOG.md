@@ -14,11 +14,11 @@ Additive (backward-compatible) — the search synonym table (keyword-search prop
 - **`v_search_synonyms`** — term → alternatives, in table order (`seq`), that every search front
   door ORs into an unquoted word or phrase that is a term: "blood bank" → ("blood bank" OR "VistA
   Blood Establishment Computer Software" OR "VBECS"). `match_case` 1 marks a term that matches
-  only as written (application codes, namespaces and product abbreviations, many of which are also
-  ordinary words); 0 matches in any case. `source` says where the row came from: the plain-English
-  package names, Kernel parts and judged terms of `registries/search-synonyms.yaml`, the
-  documents' application names, codes, namespaces and products, or the SKL's file names (file 200
-  → NEW PERSON, which the MCP used to read from `v_entity_skl`). The reader rules and their cases
+  only as written (application codes and namespaces, many of which are also ordinary words); 0
+  matches in any case. `source` says where the row came from: the plain-English package names,
+  Kernel parts and judged terms of `registries/search-synonyms.yaml`, the documents' application
+  codes and namespaces (each → the application's name), or the SKL's file names (file 200 → NEW
+  PERSON, which the MCP used to read from `v_entity_skl`). The reader rules and their cases
   are `contracts/query/v1.json` (`synonyms`).
 - **capability `search_synonyms`.**
 
